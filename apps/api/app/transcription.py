@@ -13,11 +13,12 @@ from fastapi import HTTPException, UploadFile
 from .models import InstrumentTuning, NotationViews, ScoreEvent, ScoreNote, TranscriptionResult
 from .tunings import build_custom_tuning, parse_note_name
 
-
 FRAME_LENGTH = 2048
 HOP_LENGTH = 256
 ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
+ONSET_ENERGY_WINDOW_SECONDS = 0.08
+MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 HARMONIC_WEIGHTS = [1.0, 0.55, 0.3, 0.15]
 HARMONIC_BAND_CENTS = 40.0
 SUPPRESSION_BAND_CENTS = 45.0
@@ -32,7 +33,6 @@ OCTAVE_ALIAS_PENALTY = 0.85
 
 OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO = 0.32
 OCTAVE_DYAD_MIN_PRIMARY_ENERGY_RATIO = 0.16
-
 
 PITCH_CLASS_TO_DOREMI = {
     "C": "ド",
@@ -74,7 +74,6 @@ PITCH_CLASS_TO_NUMBER = {
     "B": "7",
 }
 
-
 @dataclass
 class NoteCandidate:
     key: int
@@ -83,14 +82,12 @@ class NoteCandidate:
     pitch_class: str
     octave: int
 
-
 @dataclass
 class RawEvent:
     start_time: float
     end_time: float
     notes: list[NoteCandidate]
     is_gliss_like: bool
-
 
 @dataclass
 class NoteHypothesis:
@@ -105,7 +102,6 @@ class NoteHypothesis:
     octave_alias_penalty: float
     harmonics: list[dict[str, float]]
     subharmonics: list[dict[str, float]]
-
 
 def parse_tuning_json(tuning_json: str) -> InstrumentTuning:
     try:
@@ -122,7 +118,6 @@ def parse_tuning_json(tuning_json: str) -> InstrumentTuning:
         raise HTTPException(status_code=400, detail="Each tuning note must include noteName.")
 
     return build_custom_tuning(payload.get("name", "Custom Tuning"), note_names)
-
 
 async def read_audio(upload: UploadFile) -> tuple[np.ndarray, int]:
     if not upload.filename:
@@ -145,7 +140,6 @@ async def read_audio(upload: UploadFile) -> tuple[np.ndarray, int]:
 
     return audio.astype(np.float32), sample_rate
 
-
 def normalize_audio(audio: np.ndarray) -> np.ndarray:
     centered = audio - np.mean(audio)
     peak = np.max(np.abs(centered))
@@ -153,10 +147,8 @@ def normalize_audio(audio: np.ndarray) -> np.ndarray:
         return centered
     return centered / peak
 
-
 def cents_distance(freq_a: float, freq_b: float) -> float:
     return abs(1200.0 * np.log2(freq_a / freq_b))
-
 
 def snap_frequency_to_tuning(freq: float, tuning: InstrumentTuning) -> NoteCandidate | None:
     best_note = None
@@ -180,7 +172,6 @@ def snap_frequency_to_tuning(freq: float, tuning: InstrumentTuning) -> NoteCandi
         octave=octave,
     )
 
-
 def merge_time_ranges(ranges: list[tuple[float, float]], gap_tolerance: float = 0.06) -> list[tuple[float, float]]:
     if not ranges:
         return []
@@ -194,7 +185,6 @@ def merge_time_ranges(ranges: list[tuple[float, float]], gap_tolerance: float = 
         merged.append((start, end))
 
     return merged
-
 
 def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
@@ -267,7 +257,6 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     }
     return segments, tempo, debug_info
 
-
 def peak_energy_near(frequencies: np.ndarray, spectrum: np.ndarray, center_freq: float, band_cents: float = HARMONIC_BAND_CENTS) -> float:
     valid = frequencies > 0
     positive_freqs = frequencies[valid]
@@ -280,7 +269,6 @@ def peak_energy_near(frequencies: np.ndarray, spectrum: np.ndarray, center_freq:
     if not np.any(mask):
         return 0.0
     return float(np.max(positive_spectrum[mask]))
-
 
 def suppress_harmonics(spectrum: np.ndarray, frequencies: np.ndarray, base_frequency: float) -> np.ndarray:
     residual = spectrum.copy()
@@ -297,7 +285,6 @@ def suppress_harmonics(spectrum: np.ndarray, frequencies: np.ndarray, base_frequ
             global_mask[np.where(valid)[0][positive_mask]] = True
             residual[global_mask] *= 0.08
     return residual
-
 
 def build_raw_peaks(
     frequencies: np.ndarray,
@@ -337,7 +324,6 @@ def build_raw_peaks(
             break
 
     return peaks
-
 
 def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning: InstrumentTuning) -> list[NoteHypothesis]:
     hypotheses: list[NoteHypothesis] = []
@@ -410,13 +396,11 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
 
     return sorted(hypotheses, key=lambda item: item.score, reverse=True)
 
-
 def are_harmonic_related(note_a: NoteCandidate, note_b: NoteCandidate) -> bool:
     high = max(note_a.frequency, note_b.frequency)
     low = min(note_a.frequency, note_b.frequency)
     ratio = high / low if low else 0.0
     return any(abs(1200.0 * np.log2(ratio / multiple)) <= 30 for multiple in (2, 3, 4))
-
 
 def harmonic_relation_multiple(note_a: NoteCandidate, note_b: NoteCandidate) -> float | None:
     high = max(note_a.frequency, note_b.frequency)
@@ -426,7 +410,6 @@ def harmonic_relation_multiple(note_a: NoteCandidate, note_b: NoteCandidate) -> 
         if abs(1200.0 * np.log2(ratio / multiple)) <= 30:
             return multiple
     return None
-
 
 def allow_octave_secondary(primary: NoteHypothesis, hypothesis: NoteHypothesis, selected: list[NoteCandidate]) -> bool:
     for existing in selected:
@@ -442,6 +425,34 @@ def allow_octave_secondary(primary: NoteHypothesis, hypothesis: NoteHypothesis, 
         return True
     return False
 
+def onset_energy_gain(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    end_time: float,
+    target_frequency: float,
+) -> float:
+    window_samples = max(int(sample_rate * ONSET_ENERGY_WINDOW_SECONDS), 512)
+    start_sample = max(int(start_time * sample_rate), 0)
+    end_sample = min(int(end_time * sample_rate), len(audio))
+    if end_sample - start_sample < 512:
+        return 0.0
+
+    early_chunk = audio[start_sample:min(start_sample + window_samples, end_sample)]
+    pre_start = max(0, start_sample - window_samples)
+    pre_chunk = audio[pre_start:start_sample]
+    if len(pre_chunk) < 512 or len(early_chunk) < 512:
+        return 0.0
+
+    def _energy(chunk: np.ndarray) -> float:
+        n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))
+        spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
+        frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+        return peak_energy_near(frequencies, spectrum, target_frequency)
+
+    pre_energy = _energy(pre_chunk)
+    early_energy = _energy(early_chunk)
+    return (early_energy + 1e-6) / (pre_energy + 1e-6)
 
 def build_debug_candidates(ranked: list[NoteHypothesis], limit: int = 5) -> list[dict[str, Any]]:
     return [
@@ -460,7 +471,6 @@ def build_debug_candidates(ranked: list[NoteHypothesis], limit: int = 5) -> list
         }
         for hypothesis in ranked[:limit]
     ]
-
 
 def segment_peaks(
     audio: np.ndarray,
@@ -509,6 +519,7 @@ def segment_peaks(
         residual_ranked = rank_tuning_candidates(frequencies, residual_spectrum, tuning)
         for hypothesis in residual_ranked[:8]:
             reasons: list[str] = []
+            onset_gain: float | None = None
             if hypothesis.candidate.note_name == primary.candidate.note_name:
                 reasons.append("same-as-primary")
             if hypothesis.score < primary.score * secondary_score_ratio:
@@ -518,14 +529,8 @@ def segment_peaks(
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not allow_octave_secondary(primary, hypothesis, selected):
                 reasons.append("harmonic-related-to-selected")
             if recent_note_names and hypothesis.candidate.note_name in recent_note_names and hypothesis.candidate.frequency < primary.candidate.frequency:
-                has_fresh_alternative = any(
-                    other.candidate.note_name not in recent_note_names
-                    and other.candidate.note_name != primary.candidate.note_name
-                    and other.fundamental_ratio >= secondary_min_fundamental_ratio
-                    and other.score >= hypothesis.score * 0.6
-                    for other in residual_ranked[:8]
-                )
-                if has_fresh_alternative:
+                onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                if onset_gain < MIN_RECENT_NOTE_ONSET_GAIN:
                     reasons.append("recent-carryover-candidate")
             accepted = len(reasons) == 0
             secondary_decision_trail.append(
@@ -533,6 +538,7 @@ def segment_peaks(
                     "noteName": hypothesis.candidate.note_name,
                     "score": round(hypothesis.score, 6),
                     "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
+                    "onsetGain": None if onset_gain is None else round(onset_gain, 6),
                     "accepted": accepted,
                     "reasons": reasons,
                     "octaveDyadAllowed": allow_octave_secondary(primary, hypothesis, selected),
@@ -557,7 +563,6 @@ def segment_peaks(
         }
 
     return sorted(selected, key=lambda item: item.frequency), debug_payload
-
 
 def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
     if not raw_events:
@@ -595,6 +600,44 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
 
     return cleaned
 
+def suppress_subset_decay_events(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    cleaned: list[RawEvent] = [raw_events[0]]
+    for event in raw_events[1:]:
+        previous = cleaned[-1]
+        gap = event.start_time - previous.end_time
+        previous_note_names = {note.note_name for note in previous.notes}
+        event_note_names = {note.note_name for note in event.notes}
+        if gap <= 0.02 and event_note_names < previous_note_names:
+            continue
+        cleaned.append(event)
+
+    return cleaned
+
+def suppress_short_residual_tails(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 3:
+        return raw_events
+
+    cleaned: list[RawEvent] = [raw_events[0]]
+    for index in range(1, len(raw_events) - 1):
+        event = raw_events[index]
+        next_event = raw_events[index + 1]
+        duration = event.end_time - event.start_time
+        gap_to_next = next_event.start_time - event.end_time
+        if len(event.notes) == 1 and duration <= 0.14 and gap_to_next <= 0.12:
+            recent_notes = {note.note_name for note in cleaned[-1].notes}
+            if len(cleaned) > 1:
+                recent_notes |= {note.note_name for note in cleaned[-2].notes}
+            current_note = event.notes[0]
+            next_note_names = {note.note_name for note in next_event.notes}
+            if current_note.note_name in recent_notes and current_note.note_name not in next_note_names:
+                continue
+        cleaned.append(event)
+
+    cleaned.append(raw_events[-1])
+    return cleaned
 
 def merge_adjacent_events(raw_events: list[RawEvent]) -> list[RawEvent]:
     if not raw_events:
@@ -617,10 +660,8 @@ def merge_adjacent_events(raw_events: list[RawEvent]) -> list[RawEvent]:
 
     return merged
 
-
 def quantize_beat(value: float, step: float = 0.25) -> float:
     return round(value / step) * step
-
 
 def format_doremi(candidate: NoteCandidate) -> str:
     base = PITCH_CLASS_TO_DOREMI[candidate.pitch_class]
@@ -634,7 +675,6 @@ def format_doremi(candidate: NoteCandidate) -> str:
         return f"__{base}"
     return base
 
-
 def format_number(candidate: NoteCandidate) -> str:
     base = PITCH_CLASS_TO_NUMBER[candidate.pitch_class]
     if candidate.octave >= 6:
@@ -647,13 +687,20 @@ def format_number(candidate: NoteCandidate) -> str:
         return f"..{base}"
     return base
 
-
 def build_notation_views(events: list[ScoreEvent]) -> NotationViews:
     western = [" | ".join(note.pitch_class + str(note.octave) for note in event.notes) for event in events]
     numbered = [" ".join(note.label_number for note in event.notes) for event in events]
     vertical = [[note.label_doremi for note in event.notes] for event in events]
     return NotationViews(western=western, numbered=numbered, verticalDoReMi=vertical)
 
+def build_recent_note_names(raw_events: list[RawEvent]) -> set[str] | None:
+    if not raw_events:
+        return None
+
+    recent_note_names: set[str] = set()
+    for recent_event in raw_events[-4:]:
+        recent_note_names |= {note.note_name for note in recent_event.notes}
+    return recent_note_names
 
 async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debug: bool = False) -> TranscriptionResult:
     audio, sample_rate = await read_audio(upload)
@@ -665,7 +712,7 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
 
     for start_time, end_time in segments:
         duration = max(end_time - start_time, 0.08)
-        recent_note_names = {note.note_name for note in raw_events[-1].notes} if raw_events else None
+        recent_note_names = build_recent_note_names(raw_events)
         candidates, candidate_debug = segment_peaks(
             normalized,
             sample_rate,
@@ -689,7 +736,7 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         if candidate_debug:
             segment_candidates_debug.append(candidate_debug)
 
-    merged_events = merge_adjacent_events(suppress_resonant_carryover(raw_events))
+    merged_events = merge_adjacent_events(suppress_short_residual_tails(suppress_subset_decay_events(suppress_resonant_carryover(raw_events))))
     if not merged_events:
         raise HTTPException(status_code=422, detail="No musical notes were detected. Try a clearer recording or a different tuning.")
 
