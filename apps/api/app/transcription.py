@@ -23,6 +23,10 @@ MAX_POLYPHONY = 2
 MAX_HARMONIC_MULTIPLE = 4
 SECONDARY_SCORE_RATIO = 0.12
 SECONDARY_MIN_FUNDAMENTAL_RATIO = 0.18
+OCTAVE_ALIAS_RATIO_THRESHOLD = 1.15
+OCTAVE_ALIAS_MAX_FUNDAMENTAL_RATIO = 0.34
+OCTAVE_ALIAS_PENALTY = 0.85
+
 
 PITCH_CLASS_TO_DOREMI = {
     "C": "ド",
@@ -90,6 +94,9 @@ class NoteHypothesis:
     overtone_energy: float
     fundamental_ratio: float
     subharmonic_alias_energy: float
+    octave_alias_energy: float
+    octave_alias_ratio: float
+    octave_alias_penalty: float
     harmonics: list[dict[str, float]]
     subharmonics: list[dict[str, float]]
 
@@ -318,11 +325,17 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
         harmonic_support = fundamental_energy + overtone_energy
         fundamental_ratio = fundamental_energy / max(harmonic_support, 1e-9)
         subharmonic_alias_energy = (0.7 * subharmonic_energies[0]) + (0.45 * subharmonic_energies[1])
+        octave_alias_energy = subharmonic_energies[0]
+        octave_alias_ratio = octave_alias_energy / max(fundamental_energy, 1e-9)
+        octave_alias_penalty = 0.0
+        if octave_alias_ratio >= OCTAVE_ALIAS_RATIO_THRESHOLD and fundamental_ratio <= OCTAVE_ALIAS_MAX_FUNDAMENTAL_RATIO:
+            octave_alias_penalty = octave_alias_energy * OCTAVE_ALIAS_PENALTY
 
         score = (
             harmonic_support * (0.2 + 0.8 * fundamental_ratio)
             + (0.45 * fundamental_energy)
             - (0.6 * subharmonic_alias_energy)
+            - octave_alias_penalty
         )
 
         harmonics = [
@@ -351,6 +364,9 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
                 overtone_energy=overtone_energy,
                 fundamental_ratio=fundamental_ratio,
                 subharmonic_alias_energy=subharmonic_alias_energy,
+                octave_alias_energy=octave_alias_energy,
+                octave_alias_ratio=octave_alias_ratio,
+                octave_alias_penalty=octave_alias_penalty,
                 harmonics=harmonics,
                 subharmonics=subharmonics,
             )
@@ -375,6 +391,9 @@ def build_debug_candidates(ranked: list[NoteHypothesis], limit: int = 5) -> list
             "overtoneEnergy": round(hypothesis.overtone_energy, 6),
             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
             "subharmonicAliasEnergy": round(hypothesis.subharmonic_alias_energy, 6),
+            "octaveAliasEnergy": round(hypothesis.octave_alias_energy, 6),
+            "octaveAliasRatio": round(hypothesis.octave_alias_ratio, 6),
+            "octaveAliasPenalty": round(hypothesis.octave_alias_penalty, 6),
             "harmonics": hypothesis.harmonics,
             "subharmonics": hypothesis.subharmonics,
         }
@@ -410,6 +429,8 @@ def segment_peaks(
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     secondary_decision_trail: list[dict[str, Any]] = []
+    secondary_score_ratio = SECONDARY_SCORE_RATIO
+    secondary_min_fundamental_ratio = SECONDARY_MIN_FUNDAMENTAL_RATIO
 
     if MAX_POLYPHONY > 1:
         residual_spectrum = suppress_harmonics(spectrum, frequencies, primary.candidate.frequency)
@@ -418,13 +439,12 @@ def segment_peaks(
             reasons: list[str] = []
             if hypothesis.candidate.note_name == primary.candidate.note_name:
                 reasons.append("same-as-primary")
-            if hypothesis.score < primary.score * SECONDARY_SCORE_RATIO:
+            if hypothesis.score < primary.score * secondary_score_ratio:
                 reasons.append("score-below-threshold")
-            if hypothesis.fundamental_ratio < SECONDARY_MIN_FUNDAMENTAL_RATIO:
+            if hypothesis.fundamental_ratio < secondary_min_fundamental_ratio:
                 reasons.append("fundamental-ratio-too-low")
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected):
                 reasons.append("harmonic-related-to-selected")
-
             accepted = len(reasons) == 0
             secondary_decision_trail.append(
                 {
@@ -605,5 +625,8 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         warnings=warnings,
         debug=result_debug,
     )
+
+
+
 
 
