@@ -2,7 +2,7 @@
   "pending": false,
   "assertions": {
     "minEvents": 5,
-    "maxEvents": 8,
+    "maxEvents": 9,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {

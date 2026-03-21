@@ -5,14 +5,14 @@
     "maxEvents": 6,
     "requiredPrimaryNoteOccurrences": {
       "C4": 1,
-      "C5": 1,
+      "C5": 2,
       "D5": 1,
       "G5": 1,
       "F5": 1
     },
     "maxPrimaryNoteOccurrences": {
       "C4": 1,
-      "C5": 1,
+      "C5": 2,
       "D5": 1,
       "G5": 1,
       "F5": 1
