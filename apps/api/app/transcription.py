@@ -25,6 +25,7 @@ MAX_POLYPHONY = 2
 MAX_HARMONIC_MULTIPLE = 4
 SECONDARY_SCORE_RATIO = 0.12
 SECONDARY_MIN_FUNDAMENTAL_RATIO = 0.18
+SHORT_SEGMENT_SECONDARY_SCORE_RATIO = 0.06
 OCTAVE_ALIAS_RATIO_THRESHOLD = 1.15
 OCTAVE_ALIAS_MAX_FUNDAMENTAL_RATIO = 0.34
 OCTAVE_ALIAS_PENALTY = 0.85
@@ -469,6 +470,7 @@ def segment_peaks(
     tuning: InstrumentTuning,
     *,
     debug: bool = False,
+    recent_note_names: set[str] | None = None,
 ) -> tuple[list[NoteCandidate], dict[str, Any] | None]:
     start = int(start_time * sample_rate)
     end = int(end_time * sample_rate)
@@ -498,6 +500,8 @@ def segment_peaks(
     residual_ranked: list[NoteHypothesis] = []
     secondary_decision_trail: list[dict[str, Any]] = []
     secondary_score_ratio = SECONDARY_SCORE_RATIO
+    if end_time - start_time <= 0.14:
+        secondary_score_ratio = SHORT_SEGMENT_SECONDARY_SCORE_RATIO
     secondary_min_fundamental_ratio = SECONDARY_MIN_FUNDAMENTAL_RATIO
 
     if MAX_POLYPHONY > 1:
@@ -513,6 +517,16 @@ def segment_peaks(
                 reasons.append("fundamental-ratio-too-low")
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not allow_octave_secondary(primary, hypothesis, selected):
                 reasons.append("harmonic-related-to-selected")
+            if recent_note_names and hypothesis.candidate.note_name in recent_note_names and hypothesis.candidate.frequency < primary.candidate.frequency:
+                has_fresh_alternative = any(
+                    other.candidate.note_name not in recent_note_names
+                    and other.candidate.note_name != primary.candidate.note_name
+                    and other.fundamental_ratio >= secondary_min_fundamental_ratio
+                    and other.score >= hypothesis.score * 0.6
+                    for other in residual_ranked[:8]
+                )
+                if has_fresh_alternative:
+                    reasons.append("recent-carryover-candidate")
             accepted = len(reasons) == 0
             secondary_decision_trail.append(
                 {
@@ -551,14 +565,26 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
 
     cleaned = [raw_events[0]]
     for event in raw_events[1:]:
-        recent_notes = {note.note_name for note in cleaned[-1].notes}
+        immediate_previous_notes = cleaned[-1].notes
+        immediate_recent = {note.note_name for note in immediate_previous_notes}
+        older_recent: set[str] = set()
         if len(cleaned) > 1:
-            recent_notes.update(note.note_name for note in cleaned[-2].notes)
+            older_recent = {
+                note.note_name
+                for note in cleaned[-2].notes
+                if any(are_harmonic_related(note, previous_note) for previous_note in immediate_previous_notes)
+            }
+        recent_notes = immediate_recent | older_recent
+
         updated_event = event
         if len(event.notes) == 2:
             repeated_notes = [note for note in event.notes if note.note_name in recent_notes]
             fresh_notes = [note for note in event.notes if note.note_name not in recent_notes]
-            if len(repeated_notes) == 1 and len(fresh_notes) == 1 and repeated_notes[0].frequency < fresh_notes[0].frequency:
+            duration = event.end_time - event.start_time
+            if len(repeated_notes) == 1 and len(fresh_notes) == 1 and (
+                repeated_notes[0].frequency < fresh_notes[0].frequency
+                or duration <= 0.14
+            ):
                 updated_event = RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,
@@ -639,6 +665,7 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
 
     for start_time, end_time in segments:
         duration = max(end_time - start_time, 0.08)
+        recent_note_names = {note.note_name for note in raw_events[-1].notes} if raw_events else None
         candidates, candidate_debug = segment_peaks(
             normalized,
             sample_rate,
@@ -646,6 +673,7 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
             end_time,
             tuning,
             debug=debug,
+            recent_note_names=recent_note_names,
         )
         if not candidates:
             continue
