@@ -57,7 +57,8 @@ button {
 }
 
 .hero h1,
-.panel h2 {
+.panel h2,
+.workflow-card h3 {
   font-family: var(--font-heading);
   margin: 0;
 }
@@ -76,7 +77,8 @@ button {
 }
 
 .hero-card,
-.panel {
+.panel,
+.workflow-card {
   border: 1px solid var(--line);
   background: rgba(255, 250, 240, 0.85);
   backdrop-filter: blur(10px);
@@ -351,11 +353,115 @@ button:disabled {
   font-weight: 700;
 }
 
+.workflow-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.workflow-lead {
+  margin-top: -8px;
+}
+
+.workflow-composer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(240px, 0.85fr);
+  gap: 18px;
+}
+
+.workflow-card {
+  padding: 18px;
+}
+
+.workflow-card-primary {
+  background: linear-gradient(180deg, rgba(23, 126, 137, 0.08), rgba(255, 255, 255, 0.76));
+}
+
+.workflow-card-secondary {
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.workflow-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.expected-composer {
+  gap: 16px;
+}
+
+.phrase-rail-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(23, 126, 137, 0.15);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 250, 250, 0.88));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.phrase-rail-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.phrase-rail-preview {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px dashed rgba(23, 126, 137, 0.24);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.phrase-rail-preview.active {
+  border-style: solid;
+  background: linear-gradient(135deg, rgba(23, 126, 137, 0.14), rgba(242, 192, 120, 0.12));
+}
+
+.phrase-rail-chip,
+.phrase-rail-repeat {
+  display: grid;
+  gap: 4px;
+}
+
+.phrase-rail-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.composer-toolbar {
+  justify-content: space-between;
+  align-items: end;
+}
+
+.compact-field input {
+  min-width: 88px;
+  max-width: 108px;
+}
+
 .kalimba-selector {
   border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 18px 16px 12px;
+  border-radius: 22px;
+  padding: 18px 16px 14px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 247, 234, 0.85));
+}
+
+.kalimba-selector.enhanced {
+  display: grid;
+  gap: 16px;
+}
+
+.kalimba-selector-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
 }
 
 .kalimba-keys {
@@ -363,6 +469,10 @@ button:disabled {
   grid-template-columns: repeat(auto-fit, minmax(36px, 1fr));
   gap: 8px;
   align-items: end;
+}
+
+.kalimba-keys.rail {
+  grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
 }
 
 .kalimba-key {
@@ -377,11 +487,21 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.kalimba-key:hover {
+  transform: translateY(-1px);
+}
+
+.kalimba-key.rail {
+  padding: 12px 8px 14px;
+  border-radius: 999px;
 }
 
 .kalimba-key.selected {
   border-color: var(--accent);
-  background: linear-gradient(180deg, rgba(23, 126, 137, 0.18), rgba(255, 255, 255, 0.96));
+  background: linear-gradient(180deg, rgba(23, 126, 137, 0.2), rgba(255, 255, 255, 0.98));
   box-shadow: inset 0 -6px 0 rgba(23, 126, 137, 0.16), 0 0 0 2px rgba(23, 126, 137, 0.12);
 }
 
@@ -391,14 +511,13 @@ button:disabled {
 }
 
 .kalimba-key-note {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
   font-weight: 700;
   letter-spacing: 0.03em;
 }
 
-.expected-builder-row {
-  align-items: end;
+.kalimba-key-note.horizontal {
+  writing-mode: initial;
+  text-orientation: mixed;
 }
 
 .expected-repeat-field {
@@ -420,6 +539,13 @@ button:disabled {
   min-height: 56px;
 }
 
+.expected-summary-box.summary-hero {
+  display: grid;
+  gap: 6px;
+  align-items: start;
+  padding: 14px 16px;
+}
+
 .expected-performance-panel {
   display: grid;
   gap: 12px;
@@ -436,6 +562,10 @@ button:disabled {
   overflow: auto;
 }
 
+.expected-event-list.compact-list {
+  gap: 8px;
+}
+
 .expected-event-card {
   display: grid;
   gap: 8px;
@@ -445,10 +575,27 @@ button:disabled {
   background: rgba(255, 255, 255, 0.82);
 }
 
+.expected-event-card.compact {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.event-copy {
+  gap: 2px;
+}
+
+.workflow-action-dock {
+  padding: 16px 18px 0;
+  border-top: 1px solid rgba(30, 31, 31, 0.08);
+  background: linear-gradient(180deg, rgba(255, 250, 240, 0), rgba(255, 250, 240, 0.95) 22%);
+}
+
 @media (max-width: 960px) {
   .hero,
   .workspace-grid,
-  .editor-layout {
+  .editor-layout,
+  .workflow-composer-grid {
     grid-template-columns: 1fr;
   }
 
@@ -459,5 +606,13 @@ button:disabled {
 
   .hero h1 {
     max-width: unset;
+  }
+
+  .phrase-rail-preview,
+  .workflow-card-header,
+  .kalimba-selector-header,
+  .composer-toolbar {
+    grid-template-columns: 1fr;
+    display: grid;
   }
 }
