@@ -24,6 +24,16 @@ HARMONIC_WEIGHTS = [1.0, 0.55, 0.3, 0.15]
 HARMONIC_BAND_CENTS = 40.0
 SUPPRESSION_BAND_CENTS = 45.0
 MAX_POLYPHONY = 2
+GLISS_CLUSTER_MAX_GAP = 0.06
+GLISS_CLUSTER_MAX_EVENT_DURATION = 0.85
+GLISS_CLUSTER_MAX_TOTAL_DURATION = 1.2
+GLISS_CLUSTER_TARGET_NOTE_COUNT = 3
+GLISS_LEADING_SUBSET_MAX_DURATION = 0.18
+GLISS_LEADING_SUBSET_SCORE_RATIO = 4.0
+GLISS_TERTIARY_MAX_DURATION = 0.85
+GLISS_TERTIARY_SCORE_RATIO = 0.02
+GLISS_TERTIARY_MIN_SCORE = 20.0
+GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.9
 MAX_HARMONIC_MULTIPLE = 4
 SECONDARY_SCORE_RATIO = 0.12
 SECONDARY_MIN_FUNDAMENTAL_RATIO = 0.18
@@ -588,6 +598,39 @@ def segment_peaks(
                 selected.append(hypothesis.candidate)
                 break
 
+    if len(selected) == 2 and end_time - start_time <= GLISS_TERTIARY_MAX_DURATION:
+        selected_keys = sorted(note.key for note in selected)
+        if selected_keys[-1] - selected_keys[0] == 1:
+            extension_keys = {selected_keys[0] - 1, selected_keys[-1] + 1}
+            selected_names = {note.note_name for note in selected}
+            for hypothesis in residual_ranked[:4]:
+                candidate = hypothesis.candidate
+                if candidate.note_name in selected_names:
+                    continue
+                if candidate.key not in extension_keys:
+                    continue
+                if hypothesis.score < primary.score * GLISS_TERTIARY_SCORE_RATIO:
+                    continue
+                if hypothesis.score < GLISS_TERTIARY_MIN_SCORE:
+                    continue
+                if hypothesis.fundamental_ratio < GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO:
+                    continue
+                if any(are_harmonic_related(candidate, existing) for existing in selected):
+                    continue
+                selected.append(candidate)
+                secondary_decision_trail.append(
+                    {
+                        "noteName": candidate.note_name,
+                        "score": round(hypothesis.score, 6),
+                        "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
+                        "onsetGain": None,
+                        "accepted": True,
+                        "reasons": ["gliss-tertiary-extension"],
+                        "octaveDyadAllowed": False,
+                    }
+                )
+                break
+
     debug_payload = None
     if debug:
         debug_payload = {
@@ -707,10 +750,11 @@ def suppress_leading_single_transient(raw_events: list[RawEvent]) -> list[RawEve
     first_event = raw_events[0]
     next_event = raw_events[1]
     first_duration = first_event.end_time - first_event.start_time
+    next_note_names = {note.note_name for note in next_event.notes}
     if (
         len(first_event.notes) == 1
-        and len(next_event.notes) == 1
-        and first_event.notes[0].note_name == next_event.notes[0].note_name
+        and first_event.notes[0].note_name in next_note_names
+        and len(next_event.notes) >= 1
         and first_duration <= LEADING_SINGLE_TRANSIENT_MAX_DURATION
         and first_event.primary_score <= LEADING_SINGLE_TRANSIENT_MAX_SCORE
         and next_event.primary_score >= first_event.primary_score * LEADING_SINGLE_TRANSIENT_NEXT_SCORE_RATIO
@@ -719,6 +763,36 @@ def suppress_leading_single_transient(raw_events: list[RawEvent]) -> list[RawEve
 
     return raw_events
 
+
+
+def suppress_leading_gliss_subset_transients(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    cleaned: list[RawEvent] = []
+    index = 0
+    while index < len(raw_events):
+        current = raw_events[index]
+        if index + 1 < len(raw_events):
+            next_event = raw_events[index + 1]
+            current_duration = current.end_time - current.start_time
+            gap = next_event.start_time - current.end_time
+            current_note_names = {note.note_name for note in current.notes}
+            next_note_names = {note.note_name for note in next_event.notes}
+            if (
+                len(current.notes) == 1
+                and len(next_event.notes) >= 3
+                and current_note_names < next_note_names
+                and current_duration <= GLISS_LEADING_SUBSET_MAX_DURATION
+                and gap <= GLISS_CLUSTER_MAX_GAP
+                and next_event.primary_score >= current.primary_score * GLISS_LEADING_SUBSET_SCORE_RATIO
+            ):
+                index += 1
+                continue
+        cleaned.append(current)
+        index += 1
+
+    return cleaned
 
 def suppress_low_confidence_dyad_transients(raw_events: list[RawEvent]) -> list[RawEvent]:
     cleaned: list[RawEvent] = []
@@ -763,6 +837,62 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
         cleaned.append(updated_event)
 
     return cleaned
+
+def merge_short_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    merged: list[RawEvent] = []
+    index = 0
+    while index < len(raw_events):
+        current = raw_events[index]
+        if index + 1 >= len(raw_events):
+            merged.append(current)
+            break
+
+        following = raw_events[index + 1]
+        gap = following.start_time - current.end_time
+        current_duration = current.end_time - current.start_time
+        following_duration = following.end_time - following.start_time
+        combined_notes: dict[str, NoteCandidate] = {note.note_name: note for note in current.notes}
+        for note in following.notes:
+            combined_notes.setdefault(note.note_name, note)
+        combined_keys = sorted(note.key for note in combined_notes.values())
+        contiguous_keys = bool(combined_keys) and (combined_keys[-1] - combined_keys[0] + 1 == len(combined_keys))
+        overlap_count = len(current.notes) + len(following.notes) - len(combined_notes)
+        merge_pattern_ok = (
+            {len(current.notes), len(following.notes)} == {1, 2}
+            or (len(current.notes) == 2 and len(following.notes) == 2 and overlap_count == 1)
+            or (min(len(current.notes), len(following.notes)) == 1 and max(len(current.notes), len(following.notes)) == 3 and overlap_count >= 1)
+        )
+        can_merge = (
+            gap <= GLISS_CLUSTER_MAX_GAP
+            and current_duration <= GLISS_CLUSTER_MAX_EVENT_DURATION
+            and following_duration <= GLISS_CLUSTER_MAX_EVENT_DURATION
+            and (following.end_time - current.start_time) <= GLISS_CLUSTER_MAX_TOTAL_DURATION
+            and len(combined_notes) == GLISS_CLUSTER_TARGET_NOTE_COUNT
+            and contiguous_keys
+            and merge_pattern_ok
+        )
+        if can_merge:
+            merged.append(
+                RawEvent(
+                    start_time=current.start_time,
+                    end_time=following.end_time,
+                    notes=sorted(combined_notes.values(), key=lambda note: note.frequency),
+                    is_gliss_like=True,
+                    primary_note_name=current.primary_note_name,
+                    primary_score=max(current.primary_score, following.primary_score),
+                )
+            )
+            index += 2
+            continue
+
+        merged.append(current)
+        index += 1
+
+    return merged
+
 
 def suppress_bridging_octave_pairs(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 3:
@@ -931,7 +1061,17 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         if debug and candidate_debug:
             segment_candidates_debug.append(candidate_debug)
 
-    merged_events = merge_adjacent_events(suppress_short_residual_tails(suppress_bridging_octave_pairs(split_ambiguous_upper_octave_pairs(suppress_subset_decay_events(suppress_leading_single_transient(simplify_short_secondary_bleed(suppress_resonant_carryover(suppress_low_confidence_dyad_transients(raw_events)))))))))
+    processed_events = suppress_low_confidence_dyad_transients(raw_events)
+    processed_events = suppress_resonant_carryover(processed_events)
+    processed_events = simplify_short_secondary_bleed(processed_events)
+    processed_events = merge_short_gliss_clusters(processed_events)
+    processed_events = suppress_leading_gliss_subset_transients(processed_events)
+    processed_events = suppress_leading_single_transient(processed_events)
+    processed_events = suppress_subset_decay_events(processed_events)
+    processed_events = split_ambiguous_upper_octave_pairs(processed_events)
+    processed_events = suppress_bridging_octave_pairs(processed_events)
+    processed_events = suppress_short_residual_tails(processed_events)
+    merged_events = merge_adjacent_events(processed_events)
     if not merged_events:
         raise HTTPException(status_code=422, detail="No musical notes were detected. Try a clearer recording or a different tuning.")
 
@@ -989,14 +1129,4 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         warnings=warnings,
         debug=result_debug,
     )
-
-
-
-
-
-
-
-
-
-
 
