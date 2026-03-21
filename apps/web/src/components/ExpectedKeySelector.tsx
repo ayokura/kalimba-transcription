@@ -1,5 +1,7 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 import { InstrumentTuning } from "@/lib/types";
 
 type ExpectedKeySelectorProps = {
@@ -19,16 +21,12 @@ export function ExpectedKeySelector(props: ExpectedKeySelectorProps) {
     return <p className="muted">調律を選ぶと、ここで期待演奏のキーを選択できます。</p>;
   }
 
-  const centerIndex = tuning.notes.reduce((bestIndex, note, index, notes) => {
-    if (note.frequency <= notes[bestIndex].frequency) {
-      return index;
-    }
-    return bestIndex;
-  }, 0);
-
+  const centerIndex = Math.floor(tuning.notes.length / 2);
+  const maxDistance = Math.max(centerIndex, tuning.notes.length - centerIndex - 1);
   const selectedNotes = tuning.notes.filter((note) => selectedKeys.includes(note.key));
   const summary = selectedNotes.length > 0 ? selectedNotes.map((note) => note.noteName).join(" + ") : "キーを選択してください";
   const normalizedRepeatCount = repeatCount.trim().length > 0 ? repeatCount.trim() : "1";
+  const railStyle = { "--kalimba-key-count": String(tuning.notes.length) } as CSSProperties;
 
   return (
     <div className="expected-composer stack gap-lg">
@@ -75,28 +73,33 @@ export function ExpectedKeySelector(props: ExpectedKeySelectorProps) {
             <span className="eyebrow">Range Map</span>
             <strong>カリンバのキーから選択</strong>
           </div>
-          <span className="muted">物理配置順</span>
+          <span className="muted">物理配置順 / wide では横レール表示</span>
         </div>
-        <div className="kalimba-keys rail" role="group" aria-label="Expected kalimba keys">
-          {tuning.notes.map((note, index) => {
-            const distance = Math.abs(index - centerIndex);
-            const depth = Math.max(0, 7 - distance);
-            const isSelected = selectedKeys.includes(note.key);
-            return (
-              <button
-                key={note.key}
-                type="button"
-                className={`kalimba-key rail${isSelected ? " selected" : ""}`}
-                style={{ height: `${96 + depth * 10}px` }}
-                onClick={() => onToggleKey(note.key)}
-                aria-pressed={isSelected}
-                title={`Key ${note.key}: ${note.noteName}`}
-              >
-                <span className="kalimba-key-number">#{note.key}</span>
-                <span className="kalimba-key-note horizontal">{note.noteName}</span>
-              </button>
-            );
-          })}
+
+        <div className="kalimba-rail-viewport">
+          <div className="kalimba-keys rail physical" role="group" aria-label="Expected kalimba keys" style={railStyle}>
+            {tuning.notes.map((note, index) => {
+              const distance = Math.abs(index - centerIndex);
+              const heightWeight = maxDistance - distance;
+              const tineHeight = 126 + heightWeight * 18;
+              const isSelected = selectedKeys.includes(note.key);
+              return (
+                <button
+                  key={note.key}
+                  type="button"
+                  className={`kalimba-key rail physical${isSelected ? " selected" : ""}${distance === 0 ? " center" : ""}`}
+                  style={{ "--tine-height": `${tineHeight}px` } as CSSProperties}
+                  onClick={() => onToggleKey(note.key)}
+                  aria-pressed={isSelected}
+                  title={`Key ${note.key}: ${note.noteName}`}
+                >
+                  <span className="kalimba-key-number">#{note.key}</span>
+                  <span className="kalimba-key-spacer" />
+                  <span className="kalimba-key-note horizontal">{note.noteName}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
