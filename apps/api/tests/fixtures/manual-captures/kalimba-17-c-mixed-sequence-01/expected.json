@@ -1,11 +1,37 @@
 {
-  "pending": true,
+  "pending": false,
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
-    "requiredPrimaryNoteOccurrences": {},
-    "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {},
-    "maxEventNoteSetOccurrences": {}
+    "minEvents": 6,
+    "maxEvents": 6,
+    "requiredPrimaryNoteOccurrences": {
+      "C4": 1,
+      "C5": 1,
+      "D5": 1,
+      "G5": 1,
+      "F5": 1
+    },
+    "maxPrimaryNoteOccurrences": {
+      "C4": 1,
+      "C5": 1,
+      "D5": 1,
+      "G5": 1,
+      "F5": 1
+    },
+    "requiredEventNoteSetOccurrences": {
+      "C4": 1,
+      "C5": 1,
+      "D5": 1,
+      "C5+E5": 1,
+      "G5": 1,
+      "F5": 1
+    },
+    "maxEventNoteSetOccurrences": {
+      "C4": 1,
+      "C5": 1,
+      "D5": 1,
+      "C5+E5": 1,
+      "G5": 1,
+      "F5": 1
+    }
   }
 }
