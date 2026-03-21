@@ -19,6 +19,7 @@ ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
+PRIOR_ONSET_BACKTRACK_SECONDS = 0.55
 HARMONIC_WEIGHTS = [1.0, 0.55, 0.3, 0.15]
 HARMONIC_BAND_CENTS = 40.0
 SUPPRESSION_BAND_CENTS = 45.0
@@ -27,12 +28,32 @@ MAX_HARMONIC_MULTIPLE = 4
 SECONDARY_SCORE_RATIO = 0.12
 SECONDARY_MIN_FUNDAMENTAL_RATIO = 0.18
 SHORT_SEGMENT_SECONDARY_SCORE_RATIO = 0.06
+OVERTONE_DOMINANT_FUNDAMENTAL_RATIO = 0.18
+OVERTONE_DOMINANT_PENALTY_WEIGHT = 0.0
 OCTAVE_ALIAS_RATIO_THRESHOLD = 1.15
 OCTAVE_ALIAS_MAX_FUNDAMENTAL_RATIO = 0.34
 OCTAVE_ALIAS_PENALTY = 0.85
 
 OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO = 0.32
-OCTAVE_DYAD_MIN_PRIMARY_ENERGY_RATIO = 0.16
+OCTAVE_DYAD_MIN_PRIMARY_ENERGY_RATIO = 0.06
+OCTAVE_DYAD_UPPER_MIN_FUNDAMENTAL_RATIO = 0.95
+OCTAVE_DYAD_UPPER_HARMONIC_ENERGY_RATIO = 0.05
+OCTAVE_DYAD_UPPER_SCORE_RATIO = 0.03
+LOW_CONFIDENCE_DYAD_MAX_DURATION = 0.25
+LOW_CONFIDENCE_DYAD_MAX_SCORE = 120.0
+SHORT_SECONDARY_STRIP_MAX_DURATION = 0.28
+SHORT_SECONDARY_STRIP_MIN_SCORE = 60.0
+SHORT_SECONDARY_STRIP_NEXT_SCORE_RATIO = 5.0
+LEADING_SINGLE_TRANSIENT_MAX_DURATION = 0.3
+LEADING_SINGLE_TRANSIENT_MAX_SCORE = 150.0
+LEADING_SINGLE_TRANSIENT_NEXT_SCORE_RATIO = 8.0
+VERY_LOW_CONFIDENCE_EVENT_MAX_SCORE = 2.0
+BRIDGING_OCTAVE_PAIR_MAX_DURATION = 0.4
+BRIDGING_OCTAVE_PAIR_MAX_SCORE = 600.0
+SPLIT_UPPER_OCTAVE_PAIR_MIN_DURATION = 0.28
+SPLIT_UPPER_OCTAVE_PAIR_MAX_DURATION = 0.7
+SPLIT_UPPER_OCTAVE_PAIR_PRIMARY_SCORE_MAX = 800.0
+SPLIT_UPPER_OCTAVE_PAIR_FRACTION = 0.45
 
 PITCH_CLASS_TO_DOREMI = {
     "C": "ド",
@@ -88,6 +109,8 @@ class RawEvent:
     end_time: float
     notes: list[NoteCandidate]
     is_gliss_like: bool
+    primary_note_name: str = ""
+    primary_score: float = 0.0
 
 @dataclass
 class NoteHypothesis:
@@ -216,7 +239,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     segments: list[tuple[float, float]] = []
     for range_start, range_end in active_ranges:
         effective_range_start = range_start
-        prior_onsets = [time for time in onset_times if range_start - 0.55 <= time <= range_start + 0.005]
+        prior_onsets = [time for time in onset_times if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005]
         if prior_onsets:
             effective_range_start = prior_onsets[-1]
 
@@ -359,6 +382,8 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
             - (0.6 * subharmonic_alias_energy)
             - octave_alias_penalty
         )
+        if fundamental_ratio < OVERTONE_DOMINANT_FUNDAMENTAL_RATIO:
+            score -= OVERTONE_DOMINANT_PENALTY_WEIGHT * overtone_energy
 
         harmonics = [
             {
@@ -417,6 +442,17 @@ def allow_octave_secondary(primary: NoteHypothesis, hypothesis: NoteHypothesis, 
         if relation is None:
             continue
         if relation != 2.0:
+            return False
+        if hypothesis.candidate.frequency > existing.frequency and existing.octave > 4:
+            return False
+        if hypothesis.candidate.frequency > existing.frequency:
+            primary_octave_energy = next((item["energy"] for item in primary.harmonics if item["multiple"] == 2.0), 0.0)
+            if hypothesis.fundamental_ratio < OCTAVE_DYAD_UPPER_MIN_FUNDAMENTAL_RATIO:
+                return False
+            if primary_octave_energy > 0.0 and hypothesis.fundamental_energy < primary_octave_energy * OCTAVE_DYAD_UPPER_HARMONIC_ENERGY_RATIO:
+                return False
+            return True
+        if hypothesis.candidate.octave <= 4:
             return False
         if hypothesis.fundamental_ratio < OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO:
             return False
@@ -481,12 +517,12 @@ def segment_peaks(
     *,
     debug: bool = False,
     recent_note_names: set[str] | None = None,
-) -> tuple[list[NoteCandidate], dict[str, Any] | None]:
+) -> tuple[list[NoteCandidate], dict[str, Any] | None, NoteHypothesis | None]:
     start = int(start_time * sample_rate)
     end = int(end_time * sample_rate)
     segment = audio[start:end]
     if len(segment) < 512:
-        return [], None
+        return [], None, None
 
     analysis_samples = len(segment)
     if len(segment) > int(sample_rate * 0.1):
@@ -503,7 +539,7 @@ def segment_peaks(
 
     ranked = rank_tuning_candidates(frequencies, spectrum, tuning)
     if not ranked or ranked[0].score <= 1e-6:
-        return [], None
+        return [], None, None
 
     primary = ranked[0]
     selected = [primary.candidate]
@@ -520,13 +556,17 @@ def segment_peaks(
         for hypothesis in residual_ranked[:8]:
             reasons: list[str] = []
             onset_gain: float | None = None
+            octave_dyad_allowed = allow_octave_secondary(primary, hypothesis, selected)
+            score_ratio = secondary_score_ratio
+            if octave_dyad_allowed and hypothesis.candidate.frequency > primary.candidate.frequency:
+                score_ratio = min(score_ratio, OCTAVE_DYAD_UPPER_SCORE_RATIO)
             if hypothesis.candidate.note_name == primary.candidate.note_name:
                 reasons.append("same-as-primary")
-            if hypothesis.score < primary.score * secondary_score_ratio:
+            if hypothesis.score < primary.score * score_ratio and not octave_dyad_allowed:
                 reasons.append("score-below-threshold")
             if hypothesis.fundamental_ratio < secondary_min_fundamental_ratio:
                 reasons.append("fundamental-ratio-too-low")
-            if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not allow_octave_secondary(primary, hypothesis, selected):
+            if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not octave_dyad_allowed:
                 reasons.append("harmonic-related-to-selected")
             if recent_note_names and hypothesis.candidate.note_name in recent_note_names and hypothesis.candidate.frequency < primary.candidate.frequency:
                 onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
@@ -541,7 +581,7 @@ def segment_peaks(
                     "onsetGain": None if onset_gain is None else round(onset_gain, 6),
                     "accepted": accepted,
                     "reasons": reasons,
-                    "octaveDyadAllowed": allow_octave_secondary(primary, hypothesis, selected),
+                    "octaveDyadAllowed": octave_dyad_allowed,
                 }
             )
             if accepted:
@@ -562,7 +602,59 @@ def segment_peaks(
             "rawPeaks": build_raw_peaks(frequencies, spectrum, tuning),
         }
 
-    return sorted(selected, key=lambda item: item.frequency), debug_payload
+    return sorted(selected, key=lambda item: item.frequency), debug_payload, primary
+
+def split_ambiguous_upper_octave_pairs(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    split_events: list[RawEvent] = []
+    for index, event in enumerate(raw_events):
+        duration = event.end_time - event.start_time
+        if (
+            len(event.notes) == 2
+            and SPLIT_UPPER_OCTAVE_PAIR_MIN_DURATION <= duration <= SPLIT_UPPER_OCTAVE_PAIR_MAX_DURATION
+            and event.primary_score <= SPLIT_UPPER_OCTAVE_PAIR_PRIMARY_SCORE_MAX
+            and harmonic_relation_multiple(event.notes[0], event.notes[1]) == 2.0
+        ):
+            higher_note = max(event.notes, key=lambda note: note.frequency)
+            lower_note = min(event.notes, key=lambda note: note.frequency)
+            next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
+            previous_event = split_events[-1] if split_events else None
+            current_note_names = {note.note_name for note in event.notes}
+            previous_note_names = {note.note_name for note in previous_event.notes} if previous_event else set()
+            next_note_names = {note.note_name for note in next_event.notes} if next_event else set()
+            if (
+                event.primary_note_name == higher_note.note_name
+                and current_note_names != previous_note_names
+                and current_note_names != next_note_names
+            ):
+                split_offset = max(0.08, min(duration * SPLIT_UPPER_OCTAVE_PAIR_FRACTION, duration - 0.08))
+                split_time = event.start_time + split_offset
+                split_events.append(
+                    RawEvent(
+                        start_time=event.start_time,
+                        end_time=split_time,
+                        notes=[lower_note],
+                        is_gliss_like=event.is_gliss_like,
+                        primary_note_name=lower_note.note_name,
+                        primary_score=event.primary_score,
+                    )
+                )
+                split_events.append(
+                    RawEvent(
+                        start_time=split_time,
+                        end_time=event.end_time,
+                        notes=[higher_note],
+                        is_gliss_like=event.is_gliss_like,
+                        primary_note_name=higher_note.note_name,
+                        primary_score=event.primary_score,
+                    )
+                )
+                continue
+        split_events.append(event)
+
+    return split_events
 
 def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
     if not raw_events:
@@ -586,18 +678,117 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
             repeated_notes = [note for note in event.notes if note.note_name in recent_notes]
             fresh_notes = [note for note in event.notes if note.note_name not in recent_notes]
             duration = event.end_time - event.start_time
+            keep_short_octave_dyad = False
+            if len(repeated_notes) == 1 and len(fresh_notes) == 1:
+                keep_short_octave_dyad = (
+                    harmonic_relation_multiple(repeated_notes[0], fresh_notes[0]) == 2.0
+                    and duration <= 0.35
+                )
             if len(repeated_notes) == 1 and len(fresh_notes) == 1 and (
                 repeated_notes[0].frequency < fresh_notes[0].frequency
                 or duration <= 0.14
-            ):
+            ) and not keep_short_octave_dyad:
                 updated_event = RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,
                     notes=fresh_notes,
                     is_gliss_like=event.is_gliss_like,
+                    primary_note_name=fresh_notes[0].note_name,
+                    primary_score=event.primary_score,
                 )
         cleaned.append(updated_event)
 
+    return cleaned
+
+def suppress_leading_single_transient(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    first_event = raw_events[0]
+    next_event = raw_events[1]
+    first_duration = first_event.end_time - first_event.start_time
+    if (
+        len(first_event.notes) == 1
+        and len(next_event.notes) == 1
+        and first_event.notes[0].note_name == next_event.notes[0].note_name
+        and first_duration <= LEADING_SINGLE_TRANSIENT_MAX_DURATION
+        and first_event.primary_score <= LEADING_SINGLE_TRANSIENT_MAX_SCORE
+        and next_event.primary_score >= first_event.primary_score * LEADING_SINGLE_TRANSIENT_NEXT_SCORE_RATIO
+    ):
+        return raw_events[1:]
+
+    return raw_events
+
+
+def suppress_low_confidence_dyad_transients(raw_events: list[RawEvent]) -> list[RawEvent]:
+    cleaned: list[RawEvent] = []
+    for event in raw_events:
+        duration = event.end_time - event.start_time
+        if len(event.notes) == 2 and ((duration <= LOW_CONFIDENCE_DYAD_MAX_DURATION and event.primary_score <= LOW_CONFIDENCE_DYAD_MAX_SCORE) or event.primary_score <= VERY_LOW_CONFIDENCE_EVENT_MAX_SCORE):
+            continue
+        cleaned.append(event)
+    return cleaned
+
+def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    cleaned: list[RawEvent] = []
+    for index, event in enumerate(raw_events):
+        updated_event = event
+        duration = event.end_time - event.start_time
+        if (
+            len(event.notes) == 2
+            and duration <= SHORT_SECONDARY_STRIP_MAX_DURATION
+            and event.primary_score >= SHORT_SECONDARY_STRIP_MIN_SCORE
+        ):
+            primary_note = next((note for note in event.notes if note.note_name == event.primary_note_name), None)
+            if primary_note is not None:
+                lower_notes = [note for note in event.notes if note.note_name != primary_note.note_name and note.frequency < primary_note.frequency]
+                if len(lower_notes) == 1 and index + 1 < len(raw_events):
+                    next_event = raw_events[index + 1]
+                    if (
+                        len(next_event.notes) == 1
+                        and next_event.notes[0].note_name == primary_note.note_name
+                        and next_event.primary_score >= event.primary_score * SHORT_SECONDARY_STRIP_NEXT_SCORE_RATIO
+                    ):
+                        updated_event = RawEvent(
+                            start_time=event.start_time,
+                            end_time=event.end_time,
+                            notes=[primary_note],
+                            is_gliss_like=event.is_gliss_like,
+                            primary_note_name=primary_note.note_name,
+                            primary_score=event.primary_score,
+                        )
+        cleaned.append(updated_event)
+
+    return cleaned
+
+def suppress_bridging_octave_pairs(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 3:
+        return raw_events
+
+    cleaned: list[RawEvent] = [raw_events[0]]
+    for index in range(1, len(raw_events) - 1):
+        event = raw_events[index]
+        previous = cleaned[-1]
+        next_event = raw_events[index + 1]
+        duration = event.end_time - event.start_time
+        if (
+            len(event.notes) == 2
+            and len(previous.notes) == 1
+            and len(next_event.notes) == 1
+            and duration <= BRIDGING_OCTAVE_PAIR_MAX_DURATION
+            and event.primary_score <= BRIDGING_OCTAVE_PAIR_MAX_SCORE
+            and harmonic_relation_multiple(event.notes[0], event.notes[1]) == 2.0
+        ):
+            event_note_names = {note.note_name for note in event.notes}
+            neighbor_note_names = {previous.notes[0].note_name, next_event.notes[0].note_name}
+            if event_note_names == neighbor_note_names:
+                continue
+        cleaned.append(event)
+
+    cleaned.append(raw_events[-1])
     return cleaned
 
 def suppress_subset_decay_events(raw_events: list[RawEvent]) -> list[RawEvent]:
@@ -654,6 +845,8 @@ def merge_adjacent_events(raw_events: list[RawEvent]) -> list[RawEvent]:
                 end_time=event.end_time,
                 notes=previous.notes,
                 is_gliss_like=previous.is_gliss_like or event.is_gliss_like,
+                primary_note_name=previous.primary_note_name,
+                primary_score=max(previous.primary_score, event.primary_score),
             )
             continue
         merged.append(event)
@@ -713,7 +906,7 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
     for start_time, end_time in segments:
         duration = max(end_time - start_time, 0.08)
         recent_note_names = build_recent_note_names(raw_events)
-        candidates, candidate_debug = segment_peaks(
+        candidates, candidate_debug, primary = segment_peaks(
             normalized,
             sample_rate,
             start_time,
@@ -722,7 +915,7 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
             debug=debug,
             recent_note_names=recent_note_names,
         )
-        if not candidates:
+        if not candidates or primary is None:
             continue
 
         raw_events.append(
@@ -731,12 +924,14 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
                 end_time=end_time,
                 notes=candidates,
                 is_gliss_like=duration < 0.18,
+                primary_note_name=primary.candidate.note_name,
+                primary_score=primary.score,
             )
         )
-        if candidate_debug:
+        if debug and candidate_debug:
             segment_candidates_debug.append(candidate_debug)
 
-    merged_events = merge_adjacent_events(suppress_short_residual_tails(suppress_subset_decay_events(suppress_resonant_carryover(raw_events))))
+    merged_events = merge_adjacent_events(suppress_short_residual_tails(suppress_bridging_octave_pairs(split_ambiguous_upper_octave_pairs(suppress_subset_decay_events(suppress_leading_single_transient(simplify_short_secondary_bleed(suppress_resonant_carryover(suppress_low_confidence_dyad_transients(raw_events)))))))))
     if not merged_events:
         raise HTTPException(status_code=422, detail="No musical notes were detected. Try a clearer recording or a different tuning.")
 
@@ -794,4 +989,14 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         warnings=warnings,
         debug=result_debug,
     )
+
+
+
+
+
+
+
+
+
+
 

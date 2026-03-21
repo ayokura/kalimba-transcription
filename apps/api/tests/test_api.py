@@ -63,7 +63,7 @@ def test_tunings_endpoint_returns_presets() -> None:
 def test_segment_peaks_prefers_fundamental_for_strong_harmonics() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_note(587.3295, harmonics=(1.0, 0.9, 0.7))
-    candidates, debug = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    candidates, debug, _ = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
     assert candidates
     assert candidates[0].note_name == "D5"
     assert debug is not None
@@ -71,7 +71,7 @@ def test_segment_peaks_prefers_fundamental_for_strong_harmonics() -> None:
 def test_segment_peaks_detects_d5_and_a5_chord() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_chord((587.3295, 880.0))
-    candidates, debug = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    candidates, debug, _ = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
     note_names = [candidate.note_name for candidate in candidates]
     assert "D5" in note_names
     assert "A5" in note_names
@@ -81,13 +81,24 @@ def test_segment_peaks_detects_d5_and_a5_chord() -> None:
 def test_segment_peaks_allows_true_octave_dyad() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_chord((587.3295, 1174.6591))
-    candidates, debug = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    candidates, debug, _ = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
     note_names = [candidate.note_name for candidate in candidates]
     assert "D5" in note_names
     assert "D6" in note_names
     assert debug is not None
     assert any(
         item["noteName"] in {"D5", "D6"} and (item.get("accepted") or item.get("octaveDyadAllowed"))
+        for item in debug["secondaryDecisionTrail"]
+    )
+
+def test_segment_peaks_keeps_mono_d4_monophonic() -> None:
+    tuning = get_default_tunings()[0]
+    audio = synthesize_note(293.665)
+    candidates, debug, _ = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    assert [candidate.note_name for candidate in candidates] == ["D4"]
+    assert debug is not None
+    assert any(
+        item["noteName"] == "D5" and not item.get("accepted")
         for item in debug["secondaryDecisionTrail"]
     )
 
@@ -149,6 +160,21 @@ def test_suppress_resonant_carryover_prefers_fresh_ascending_note() -> None:
         ["C5", "E5"],
         ["G5"],
         ["F5"],
+    ]
+
+def test_suppress_resonant_carryover_keeps_true_short_octave_dyad() -> None:
+    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.6, notes=[d4], is_gliss_like=False),
+        RawEvent(start_time=0.6, end_time=0.88, notes=[d4, d5], is_gliss_like=False),
+    ]
+
+    cleaned = suppress_resonant_carryover(raw_events)
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [
+        ["D4"],
+        ["D4", "D5"],
     ]
 
 def test_suppress_short_residual_tails_drops_recent_single_note_tail() -> None:
