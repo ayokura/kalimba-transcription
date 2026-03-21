@@ -1,11 +1,23 @@
 {
-  "pending": true,
+  "pending": false,
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
-    "requiredPrimaryNoteOccurrences": {},
-    "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {},
-    "maxEventNoteSetOccurrences": {}
+    "minEvents": 5,
+    "maxEvents": 5,
+    "requiredPrimaryNoteOccurrences": {
+      "D4": 5
+    },
+    "maxPrimaryNoteOccurrences": {
+      "D6": 0,
+      "E6": 0,
+      "B4": 0
+    },
+    "requiredEventNoteSetOccurrences": {
+      "D4": 5
+    },
+    "maxEventNoteSetOccurrences": {
+      "B4+D6": 0,
+      "C4+D4": 0,
+      "E6+F4": 0
+    }
   }
 }
