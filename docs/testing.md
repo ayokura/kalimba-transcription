@@ -115,3 +115,29 @@ py -3.13 -m pytest apps/api/tests
 ## Current caveat
 
 The web app compiles cleanly. API syntax compiles cleanly with `py -3.13 -m compileall apps/api/app apps/api/tests`, but full runtime API tests were not completed because Python package resolution is inconsistent in this Windows environment outside the direct install flow.
+
+## Next manual capture priorities
+
+These are the next recommended recordings to collect after the current mixed-sequence fix.
+
+1. `D4` single-note repeats
+   - Goal: baseline low-note decay and octave misread behavior
+   - Likely failures: `D5/E4` mis-snap, over-segmentation, tail pickup
+2. `C4` single-note repeats
+   - Goal: lowest-range decay stability
+   - Likely failures: `C5` octave alias, false events in silence
+3. `D4 -> D5` separated single notes
+   - Goal: confirm low-note decay does not pollute the next higher note
+   - Likely failures: false dyads, carryover events
+4. `C4 + C5` octave dyad repeats
+   - Goal: preserve a true octave dyad while still suppressing octave alias errors
+   - Likely failures: one side disappearing, high-note bias
+5. `D4 + D5` octave dyad repeats
+   - Goal: verify octave handling in the lower register
+   - Likely failures: collapse to `D5`, spurious split events
+6. `B4 + D5` non-octave dyad repeats
+   - Goal: keep a normal dyad stable after the octave-focused fixes
+   - Likely failures: `D5` dominance, `B4` dropout
+7. Short mixed phrase: `C4 -> C4+C5 -> B4+D5 -> D4`
+   - Goal: evaluate transitions once atomic cases are stable
+   - Likely failures: decay contaminating the next event, segmentation drift
