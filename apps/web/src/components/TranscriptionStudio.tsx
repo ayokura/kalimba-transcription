@@ -237,6 +237,196 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     }
   }
 
+  const debugMain = (
+    <div className="stack gap-xl debug-main-stack">
+      <section className="panel workflow-panel debug-workflow-panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">Debug Capture</p>
+            <h2>再現データを収集</h2>
+          </div>
+          <span className="pill">{recording ? "Recording Ready" : "Awaiting Recording"}</span>
+        </div>
+        <p className="muted workflow-lead">
+          expected performance、解析実行、保存パック作成を主導線にして、認識評価を最短で回せる形にします。
+        </p>
+
+        <div className="debug-capture-grid">
+          <div className="workflow-card workflow-card-primary stack gap-lg debug-primary-card">
+            <div className="workflow-card-header">
+              <div>
+                <span className="eyebrow">Expected Performance</span>
+                <h3>期待演奏を組み立てる</h3>
+              </div>
+              <span className="muted">event 単位で保存</span>
+            </div>
+
+            <ExpectedKeySelector
+              tuning={selectedTuning}
+              selectedKeys={pendingExpectedKeys}
+              repeatCount={expectedRepeatCount}
+              onToggleKey={handleToggleExpectedKey}
+              onRepeatCountChange={setExpectedRepeatCount}
+              onCommitSelection={handleCommitExpectedSelection}
+              onClearSelection={() => setPendingExpectedKeys([])}
+            />
+
+            <div className="expected-performance-panel">
+              <div className="panel-header compact">
+                <div>
+                  <strong>期待演奏シーケンス</strong>
+                  <p className="muted">保存パックには event 単位で記録されます。</p>
+                </div>
+                <div className="row wrap">
+                  <button type="button" className="ghost" onClick={handleUndoExpectedEvent} disabled={expectedEvents.length === 0}>
+                    最後を取り消す
+                  </button>
+                  <button type="button" className="ghost" onClick={handleClearExpectedPerformance} disabled={expectedEvents.length === 0 && pendingExpectedKeys.length === 0}>
+                    すべてクリア
+                  </button>
+                </div>
+              </div>
+              <div className="expected-summary-box large summary-hero">
+                <span className="eyebrow">Summary</span>
+                <strong>{expectedNote || "未設定"}</strong>
+              </div>
+              {expectedEvents.length > 0 ? (
+                <div className="expected-event-list compact-list">
+                  {expectedEvents.map((event) => (
+                    <div key={`${event.index}-${event.display}`} className="expected-event-card compact">
+                      <span className="pill">#{event.index}</span>
+                      <div className="stack event-copy">
+                        <strong>{event.display}</strong>
+                        <span className="muted">{event.keys.map((key) => `${key.noteName} (#${key.key})`).join(" / ")}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted">まだ期待演奏は追加されていません。</p>
+              )}
+            </div>
+            <div className="workflow-action-dock stack gap-lg debug-action-dock">
+              <button className="primary wide" onClick={handleAnalyze} disabled={!recording || !selectedTuning || isAnalyzing}>
+                {isAnalyzing ? "解析中..." : "自動採譜する"}
+              </button>
+              <button className="secondary wide" onClick={handleDownloadCapture} disabled={!lastCapture || isAnalyzing || isSavingCapture}>
+                {isSavingCapture ? "保存パック作成中..." : "解析結果を保存パックでダウンロード"}
+              </button>
+              <p className="muted">保存内容: audio.wav / request.json / response.json / notes.md</p>
+            </div>
+          </div>
+
+
+          <div className="workflow-card workflow-card-secondary stack gap-lg debug-secondary-card">
+            <div className="workflow-card-header">
+              <div>
+                <span className="eyebrow">Capture Metadata</span>
+                <h3>ケース情報</h3>
+              </div>
+              <span className="muted">補助情報</span>
+            </div>
+            <label className="stack">
+              <span>ケースID (任意)</span>
+              <input value={captureCaseId} onChange={(event) => setCaptureCaseId(event.target.value)} placeholder="2026-03-21-d5-single-note-01" />
+            </label>
+            <label className="stack">
+              <span>テストメモ (任意)</span>
+              <textarea value={captureMemo} rows={2} onChange={(event) => setCaptureMemo(event.target.value)} />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <NotationPanel result={result} mode={notationMode} onModeChange={setNotationMode} />
+
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">Debug Metadata</p>
+            <h2>収集情報</h2>
+          </div>
+        </div>
+        <div className="stack gap-lg">
+          <div className="summary-strip">
+            <span>{lastCapture?.requestPayload.scenario ?? "manual-test"}</span>
+            <span>{lastCapture?.requestPayload.audio.sampleRate ?? "-"} Hz</span>
+            <span>{lastCapture?.requestPayload.audio.durationSec ?? "-"} sec</span>
+          </div>
+          <p className="muted">通常表記を優先して認識結果を確認し、必要なら保存パックを fixture に取り込みます。</p>
+          {lastCapture?.requestPayload.expectedPerformance ? (
+            <div className="warning-box">
+              <p>Expected: {lastCapture.requestPayload.expectedPerformance.summary}</p>
+            </div>
+          ) : null}
+          {result?.debug ? <pre className="debug-pre">{JSON.stringify(result.debug, null, 2)}</pre> : <p className="empty">解析後に debug 情報をここへ表示します。</p>}
+        </div>
+      </section>
+    </div>
+  );
+
+  const debugSide = (
+    <div className="stack gap-xl debug-side-stack">
+      <RecorderPanel disabled={isAnalyzing || isSavingCapture} onRecordingReady={setRecording} />
+      <TuningPanel
+        tunings={tunings}
+        selectedId={selectedTuningId}
+        onSelect={setSelectedTuningId}
+        customName={customName}
+        customNotes={customNotes}
+        onCustomNameChange={setCustomName}
+        onCustomNotesChange={setCustomNotes}
+      />
+    </div>
+  );
+
+  const userPrimary = (
+    <div className="stack gap-xl">
+      <RecorderPanel disabled={isAnalyzing || isSavingCapture} onRecordingReady={setRecording} />
+      <TuningPanel
+        tunings={tunings}
+        selectedId={selectedTuningId}
+        onSelect={setSelectedTuningId}
+        customName={customName}
+        customNotes={customNotes}
+        onCustomNameChange={setCustomName}
+        onCustomNotesChange={setCustomNotes}
+      />
+
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <p className="eyebrow">Workflow</p>
+            <h2>解析を実行</h2>
+          </div>
+        </div>
+        <p className="muted">録音と調律を用意したら解析します。詳細な再現データ収集は debug capture 画面で行います。</p>
+        <div className="debug-capture-grid">
+          <button className="primary wide" onClick={handleAnalyze} disabled={!recording || !selectedTuning || isAnalyzing}>
+            {isAnalyzing ? "解析中..." : "自動採譜する"}
+          </button>
+          <a href="/debug/capture" className="debug-link-card">
+            <strong>Debug capture 画面へ</strong>
+            <span>expected performance、保存パック、認識評価を扱います。</span>
+          </a>
+        </div>
+      </section>
+    </div>
+  );
+
+  const userSecondary = (
+    <div className="stack gap-xl">
+      <NotationPanel result={result} mode={notationMode} onModeChange={setNotationMode} />
+      <EditorPanel
+        result={result}
+        activeEventId={activeEventId}
+        onActiveEventIdChange={setActiveEventId}
+        tuning={selectedTuning}
+        onResultChange={setResult}
+      />
+    </div>
+  );
+
   return (
     <main className="shell">
       <section className="hero">
@@ -273,176 +463,21 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
 
       {error ? <div className="error-banner">{error}</div> : null}
 
-      <div className="workspace-grid">
-        <div className="stack gap-xl">
-          <RecorderPanel disabled={isAnalyzing || isSavingCapture} onRecordingReady={setRecording} />
-          <TuningPanel
-            tunings={tunings}
-            selectedId={selectedTuningId}
-            onSelect={setSelectedTuningId}
-            customName={customName}
-            customNotes={customNotes}
-            onCustomNameChange={setCustomName}
-            onCustomNotesChange={setCustomNotes}
-          />
-
-          {isDebug ? (
-            <section className="panel workflow-panel">
-              <div className="panel-header">
-                <div>
-                  <p className="eyebrow">Debug Capture</p>
-                  <h2>再現データを収集</h2>
-                </div>
-                <span className="pill">{recording ? "Recording Ready" : "Awaiting Recording"}</span>
-              </div>
-              <p className="muted workflow-lead">
-                expected performance とメモを残し、保存パックを回帰 fixture に流せる形でダウンロードします。
-              </p>
-
-              <div className="stack gap-lg">
-                <div className="workflow-card workflow-card-primary stack gap-lg">
-                  <div className="workflow-card-header">
-                    <div>
-                      <span className="eyebrow">Expected Performance</span>
-                      <h3>期待演奏を組み立てる</h3>
-                    </div>
-                    <span className="muted">event 単位で保存</span>
-                  </div>
-
-                  <ExpectedKeySelector
-                    tuning={selectedTuning}
-                    selectedKeys={pendingExpectedKeys}
-                    repeatCount={expectedRepeatCount}
-                    onToggleKey={handleToggleExpectedKey}
-                    onRepeatCountChange={setExpectedRepeatCount}
-                    onCommitSelection={handleCommitExpectedSelection}
-                    onClearSelection={() => setPendingExpectedKeys([])}
-                  />
-
-                  <div className="expected-performance-panel">
-                    <div className="panel-header compact">
-                      <div>
-                        <strong>期待演奏シーケンス</strong>
-                        <p className="muted">保存パックには event 単位で記録されます。</p>
-                      </div>
-                      <div className="row wrap">
-                        <button type="button" className="ghost" onClick={handleUndoExpectedEvent} disabled={expectedEvents.length === 0}>
-                          最後を取り消す
-                        </button>
-                        <button type="button" className="ghost" onClick={handleClearExpectedPerformance} disabled={expectedEvents.length === 0 && pendingExpectedKeys.length === 0}>
-                          すべてクリア
-                        </button>
-                      </div>
-                    </div>
-                    <div className="expected-summary-box large summary-hero">
-                      <span className="eyebrow">Summary</span>
-                      <strong>{expectedNote || "未設定"}</strong>
-                    </div>
-                    {expectedEvents.length > 0 ? (
-                      <div className="expected-event-list compact-list">
-                        {expectedEvents.map((event) => (
-                          <div key={`${event.index}-${event.display}`} className="expected-event-card compact">
-                            <span className="pill">#{event.index}</span>
-                            <div className="stack event-copy">
-                              <strong>{event.display}</strong>
-                              <span className="muted">{event.keys.map((key) => `${key.noteName} (#${key.key})`).join(" / ")}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="muted">まだ期待演奏は追加されていません。</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="workflow-card workflow-card-secondary stack gap-lg">
-                  <div className="workflow-card-header">
-                    <div>
-                      <span className="eyebrow">Capture Metadata</span>
-                      <h3>ケース情報</h3>
-                    </div>
-                    <span className="muted">補助情報</span>
-                  </div>
-                  <label className="stack">
-                    <span>ケースID (任意)</span>
-                    <input value={captureCaseId} onChange={(event) => setCaptureCaseId(event.target.value)} placeholder="2026-03-21-d5-single-note-01" />
-                  </label>
-                  <label className="stack">
-                    <span>テストメモ (任意)</span>
-                    <textarea value={captureMemo} rows={6} onChange={(event) => setCaptureMemo(event.target.value)} />
-                  </label>
-                </div>
-              </div>
-
-              <div className="workflow-action-dock stack gap-lg">
-                <button className="primary wide" onClick={handleAnalyze} disabled={!recording || !selectedTuning || isAnalyzing}>
-                  {isAnalyzing ? "解析中..." : "自動採譜する"}
-                </button>
-                <button className="secondary wide" onClick={handleDownloadCapture} disabled={!lastCapture || isAnalyzing || isSavingCapture}>
-                  {isSavingCapture ? "保存パック作成中..." : "解析結果を保存パックでダウンロード"}
-                </button>
-                <p className="muted">保存内容: audio.wav / request.json / response.json / notes.md</p>
-              </div>
-            </section>
-          ) : (
-            <section className="panel">
-              <div className="panel-header">
-                <div>
-                  <p className="eyebrow">Workflow</p>
-                  <h2>解析を実行</h2>
-                </div>
-              </div>
-              <p className="muted">録音と調律を用意したら解析します。詳細な再現データ収集は debug capture 画面で行います。</p>
-              <div className="stack gap-lg">
-                <button className="primary wide" onClick={handleAnalyze} disabled={!recording || !selectedTuning || isAnalyzing}>
-                  {isAnalyzing ? "解析中..." : "自動採譜する"}
-                </button>
-                <a href="/debug/capture" className="debug-link-card">
-                  <strong>Debug capture 画面へ</strong>
-                  <span>expected performance、保存パック、認識評価を扱います。</span>
-                </a>
-              </div>
-            </section>
-          )}
-        </div>
-
-        <div className="stack gap-xl">
-          <NotationPanel result={result} mode={notationMode} onModeChange={setNotationMode} />
-          {isDebug ? (
-            <section className="panel">
-              <div className="panel-header">
-                <div>
-                  <p className="eyebrow">Debug Metadata</p>
-                  <h2>収集情報</h2>
-                </div>
-              </div>
-              <div className="stack gap-lg">
-                <div className="summary-strip">
-                  <span>{lastCapture?.requestPayload.scenario ?? "manual-test"}</span>
-                  <span>{lastCapture?.requestPayload.audio.sampleRate ?? "-"} Hz</span>
-                  <span>{lastCapture?.requestPayload.audio.durationSec ?? "-"} sec</span>
-                </div>
-                <p className="muted">通常表記を優先して認識結果を確認し、必要なら保存パックを fixture に取り込みます。</p>
-                {lastCapture?.requestPayload.expectedPerformance ? (
-                  <div className="warning-box">
-                    <p>Expected: {lastCapture.requestPayload.expectedPerformance.summary}</p>
-                  </div>
-                ) : null}
-                {result?.debug ? <pre className="debug-pre">{JSON.stringify(result.debug, null, 2)}</pre> : <p className="empty">解析後に debug 情報をここへ表示します。</p>}
-              </div>
-            </section>
-          ) : (
-            <EditorPanel
-              result={result}
-              activeEventId={activeEventId}
-              onActiveEventIdChange={setActiveEventId}
-              tuning={selectedTuning}
-              onResultChange={setResult}
-            />
-          )}
-        </div>
+      <div className={isDebug ? "workspace-grid debug-workspace-grid" : "workspace-grid"}>
+        {isDebug ? (
+          <>
+            {debugMain}
+            {debugSide}
+          </>
+        ) : (
+          <>
+            {userPrimary}
+            {userSecondary}
+          </>
+        )}
       </div>
     </main>
   );
 }
+
+

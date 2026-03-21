@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg: #f4efe7;
   --bg-alt: #fffaf0;
   --ink: #1e1f1f;
@@ -591,6 +591,58 @@ button:disabled {
   background: linear-gradient(180deg, rgba(255, 250, 240, 0), rgba(255, 250, 240, 0.95) 22%);
 }
 
+.debug-workspace-grid {
+  grid-template-columns: minmax(0, 1.9fr) minmax(280px, 0.9fr);
+  align-items: start;
+}
+
+.debug-main-stack,
+.debug-side-stack,
+.debug-workflow-panel {
+  min-width: 0;
+}
+
+.debug-main-stack {
+  gap: 18px;
+}
+
+.debug-side-stack {
+  align-content: start;
+}
+
+.debug-side-stack .panel {
+  padding: 16px;
+}
+
+.debug-side-stack .panel-header {
+  margin-bottom: 8px;
+}
+
+.debug-side-stack .muted {
+  font-size: 0.92rem;
+}
+
+.debug-capture-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.78fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.debug-primary-card {
+  min-height: 640px;
+}
+
+.debug-secondary-card textarea {
+  min-height: 84px;
+}
+
+.debug-action-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: auto;
+}
 @media (max-width: 960px) {
   .hero,
   .workspace-grid,
@@ -616,4 +668,7 @@ button:disabled {
     display: grid;
   }
 }
+
+
+
 
