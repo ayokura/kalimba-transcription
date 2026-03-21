@@ -256,6 +256,46 @@ def suppress_harmonics(spectrum: np.ndarray, frequencies: np.ndarray, base_frequ
     return residual
 
 
+def build_raw_peaks(
+    frequencies: np.ndarray,
+    spectrum: np.ndarray,
+    tuning: InstrumentTuning,
+    *,
+    limit: int = 8,
+    min_frequency: float = 40.0,
+) -> list[dict[str, Any]]:
+    valid = (frequencies >= min_frequency) & (spectrum > 0)
+    if not np.any(valid):
+        return []
+
+    candidate_freqs = frequencies[valid]
+    candidate_spectrum = spectrum[valid]
+    ranked_indexes = np.argsort(candidate_spectrum)[::-1]
+
+    peaks: list[dict[str, Any]] = []
+    used_frequencies: list[float] = []
+    for index in ranked_indexes:
+        frequency = float(candidate_freqs[index])
+        if any(cents_distance(frequency, existing) < 35.0 for existing in used_frequencies):
+            continue
+
+        amplitude = float(candidate_spectrum[index])
+        snapped = snap_frequency_to_tuning(frequency, tuning)
+        peaks.append(
+            {
+                "frequency": round(frequency, 3),
+                "amplitude": round(amplitude, 6),
+                "snappedNote": snapped.note_name if snapped else None,
+                "centsToSnapped": round(cents_distance(frequency, snapped.frequency), 3) if snapped else None,
+            }
+        )
+        used_frequencies.append(frequency)
+        if len(peaks) >= limit:
+            break
+
+    return peaks
+
+
 def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning: InstrumentTuning) -> list[NoteHypothesis]:
     hypotheses: list[NoteHypothesis] = []
 
@@ -369,30 +409,48 @@ def segment_peaks(
     primary = ranked[0]
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
+    secondary_decision_trail: list[dict[str, Any]] = []
 
     if MAX_POLYPHONY > 1:
         residual_spectrum = suppress_harmonics(spectrum, frequencies, primary.candidate.frequency)
         residual_ranked = rank_tuning_candidates(frequencies, residual_spectrum, tuning)
-        for hypothesis in residual_ranked:
+        for hypothesis in residual_ranked[:8]:
+            reasons: list[str] = []
             if hypothesis.candidate.note_name == primary.candidate.note_name:
-                continue
+                reasons.append("same-as-primary")
             if hypothesis.score < primary.score * SECONDARY_SCORE_RATIO:
-                continue
+                reasons.append("score-below-threshold")
             if hypothesis.fundamental_ratio < SECONDARY_MIN_FUNDAMENTAL_RATIO:
-                continue
+                reasons.append("fundamental-ratio-too-low")
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected):
-                continue
-            selected.append(hypothesis.candidate)
-            break
+                reasons.append("harmonic-related-to-selected")
+
+            accepted = len(reasons) == 0
+            secondary_decision_trail.append(
+                {
+                    "noteName": hypothesis.candidate.note_name,
+                    "score": round(hypothesis.score, 6),
+                    "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
+                    "accepted": accepted,
+                    "reasons": reasons,
+                }
+            )
+            if accepted:
+                selected.append(hypothesis.candidate)
+                break
 
     debug_payload = None
     if debug:
         debug_payload = {
             "startTime": round(start_time, 4),
             "endTime": round(end_time, 4),
+            "durationSec": round(end_time - start_time, 4),
             "selectedNotes": [candidate.note_name for candidate in selected],
+            "primaryCandidate": build_debug_candidates([primary], limit=1)[0],
             "rankedCandidates": build_debug_candidates(ranked),
             "residualCandidates": build_debug_candidates(residual_ranked),
+            "secondaryDecisionTrail": secondary_decision_trail,
+            "rawPeaks": build_raw_peaks(frequencies, spectrum, tuning),
         }
 
     return sorted(selected, key=lambda item: item.frequency), debug_payload
@@ -547,3 +605,5 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         warnings=warnings,
         debug=result_debug,
     )
+
+
