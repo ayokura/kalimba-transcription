@@ -40,6 +40,7 @@ export type TranscriptionResult = {
   events: ScoreEvent[];
   notationViews: NotationViews;
   warnings: string[];
+  debug?: Record<string, unknown> | null;
 };
 
 export type NotationMode = "vertical" | "numbered" | "western";
