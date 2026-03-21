@@ -16,6 +16,8 @@ from .tunings import build_custom_tuning, parse_note_name
 
 FRAME_LENGTH = 2048
 HOP_LENGTH = 256
+ATTACK_ANALYSIS_SECONDS = 0.16
+ATTACK_ANALYSIS_RATIO = 0.35
 HARMONIC_WEIGHTS = [1.0, 0.55, 0.3, 0.15]
 HARMONIC_BAND_CENTS = 40.0
 SUPPRESSION_BAND_CENTS = 45.0
@@ -178,6 +180,21 @@ def snap_frequency_to_tuning(freq: float, tuning: InstrumentTuning) -> NoteCandi
     )
 
 
+def merge_time_ranges(ranges: list[tuple[float, float]], gap_tolerance: float = 0.06) -> list[tuple[float, float]]:
+    if not ranges:
+        return []
+
+    merged = [ranges[0]]
+    for start, end in ranges[1:]:
+        previous_start, previous_end = merged[-1]
+        if start <= previous_end + gap_tolerance:
+            merged[-1] = (previous_start, max(previous_end, end))
+            continue
+        merged.append((start, end))
+
+    return merged
+
+
 def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
@@ -198,19 +215,34 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     if active_start is not None:
         active_ranges.append((max(float(frame_times[active_start]) - 0.02, 0.0), librosa.get_duration(y=audio, sr=sample_rate)))
 
+    raw_active_ranges = active_ranges.copy()
+    active_ranges = merge_time_ranges(active_ranges)
+
     onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=HOP_LENGTH)
     onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sample_rate, hop_length=HOP_LENGTH, backtrack=True)
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
 
     segments: list[tuple[float, float]] = []
     for range_start, range_end in active_ranges:
-        range_onsets = [time for time in onset_times if range_start + 0.03 < time < range_end - 0.05]
+        effective_range_start = range_start
+        prior_onsets = [time for time in onset_times if range_start - 0.55 <= time <= range_start + 0.005]
+        if prior_onsets:
+            effective_range_start = prior_onsets[-1]
+
+        range_onsets = [time for time in onset_times if effective_range_start + 0.005 < time < range_end - 0.05]
+        supplemental_starts = [
+            start
+            for start, _ in raw_active_ranges
+            if effective_range_start + 0.05 < start < range_end - 0.05
+            and all(abs(start - onset) >= 0.24 for onset in range_onsets)
+        ]
+        boundary_times = sorted([*range_onsets, *supplemental_starts])
         deduped_onsets: list[float] = []
-        for time in range_onsets:
+        for time in boundary_times:
             if not deduped_onsets or time - deduped_onsets[-1] >= 0.18:
                 deduped_onsets.append(time)
 
-        starts = [range_start, *deduped_onsets]
+        starts = [effective_range_start, *deduped_onsets]
         for index, start_time in enumerate(starts):
             end_time = starts[index + 1] if index + 1 < len(starts) else range_end
             if end_time - start_time >= 0.08:
@@ -444,9 +476,17 @@ def segment_peaks(
     if len(segment) < 512:
         return [], None
 
-    n_fft = max(4096, 1 << int(np.ceil(np.log2(len(segment)))))
-    window = np.hanning(len(segment))
-    spectrum = np.abs(np.fft.rfft(segment * window, n=n_fft))
+    analysis_samples = len(segment)
+    if len(segment) > int(sample_rate * 0.1):
+        analysis_samples = min(
+            len(segment),
+            max(int(sample_rate * ATTACK_ANALYSIS_SECONDS), int(len(segment) * ATTACK_ANALYSIS_RATIO)),
+        )
+    analysis_segment = segment[:analysis_samples]
+
+    n_fft = max(4096, 1 << int(np.ceil(np.log2(len(analysis_segment)))))
+    window = np.hanning(len(analysis_segment))
+    spectrum = np.abs(np.fft.rfft(analysis_segment * window, n=n_fft))
     frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
 
     ranked = rank_tuning_candidates(frequencies, spectrum, tuning)
@@ -503,6 +543,31 @@ def segment_peaks(
         }
 
     return sorted(selected, key=lambda item: item.frequency), debug_payload
+
+
+def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if not raw_events:
+        return []
+
+    cleaned = [raw_events[0]]
+    for event in raw_events[1:]:
+        recent_notes = {note.note_name for note in cleaned[-1].notes}
+        if len(cleaned) > 1:
+            recent_notes.update(note.note_name for note in cleaned[-2].notes)
+        updated_event = event
+        if len(event.notes) == 2:
+            repeated_notes = [note for note in event.notes if note.note_name in recent_notes]
+            fresh_notes = [note for note in event.notes if note.note_name not in recent_notes]
+            if len(repeated_notes) == 1 and len(fresh_notes) == 1 and repeated_notes[0].frequency < fresh_notes[0].frequency:
+                updated_event = RawEvent(
+                    start_time=event.start_time,
+                    end_time=event.end_time,
+                    notes=fresh_notes,
+                    is_gliss_like=event.is_gliss_like,
+                )
+        cleaned.append(updated_event)
+
+    return cleaned
 
 
 def merge_adjacent_events(raw_events: list[RawEvent]) -> list[RawEvent]:
@@ -596,7 +661,7 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         if candidate_debug:
             segment_candidates_debug.append(candidate_debug)
 
-    merged_events = merge_adjacent_events(raw_events)
+    merged_events = merge_adjacent_events(suppress_resonant_carryover(raw_events))
     if not merged_events:
         raise HTTPException(status_code=422, detail="No musical notes were detected. Try a clearer recording or a different tuning.")
 
@@ -654,8 +719,4 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         warnings=warnings,
         debug=result_debug,
     )
-
-
-
-
 
