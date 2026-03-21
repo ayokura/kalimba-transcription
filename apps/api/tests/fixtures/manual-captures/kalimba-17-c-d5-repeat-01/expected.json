@@ -1,0 +1,15 @@
+{
+  "pending": false,
+  "assertions": {
+    "minEvents": 4,
+    "maxEvents": 6,
+    "requiredPrimaryNoteOccurrences": {
+      "D5": 4
+    },
+    "maxPrimaryNoteOccurrences": {
+      "E6": 1,
+      "B5": 1,
+      "A5": 1
+    }
+  }
+}
