@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import segment_peaks
+from app.transcription import NoteCandidate, RawEvent, segment_peaks, suppress_resonant_carryover
 
 client = TestClient(app)
 
@@ -135,3 +135,24 @@ def test_transcription_regression_for_repeated_d5() -> None:
     assert detected_d5 >= 4
     assert payload["debug"]["segments"]
 
+
+def test_suppress_resonant_carryover_prefers_fresh_ascending_note() -> None:
+    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
+    c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.4, notes=[c4], is_gliss_like=False),
+        RawEvent(start_time=0.4, end_time=0.8, notes=[c4, c5], is_gliss_like=False),
+        RawEvent(start_time=0.8, end_time=1.2, notes=[c4, d5], is_gliss_like=False),
+        RawEvent(start_time=1.2, end_time=1.6, notes=[d5, e5], is_gliss_like=False),
+    ]
+
+    cleaned = suppress_resonant_carryover(raw_events)
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [
+        ["C4"],
+        ["C5"],
+        ["D5"],
+        ["E5"],
+    ]
