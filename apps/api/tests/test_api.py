@@ -141,12 +141,16 @@ def test_suppress_resonant_carryover_prefers_fresh_ascending_note() -> None:
     c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
     d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
     e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
+    f5 = NoteCandidate(key=14, note_name="F5", frequency=698.4564628660078, pitch_class="F", octave=5)
+    g5 = NoteCandidate(key=3, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.4, notes=[c4], is_gliss_like=False),
         RawEvent(start_time=0.4, end_time=0.8, notes=[c4, c5], is_gliss_like=False),
         RawEvent(start_time=0.8, end_time=1.2, notes=[c4, d5], is_gliss_like=False),
-        RawEvent(start_time=1.2, end_time=1.6, notes=[d5, e5], is_gliss_like=False),
+        RawEvent(start_time=1.2, end_time=1.6, notes=[c5, e5], is_gliss_like=False),
+        RawEvent(start_time=1.6, end_time=2.0, notes=[g5], is_gliss_like=False),
+        RawEvent(start_time=2.0, end_time=2.1, notes=[f5, g5], is_gliss_like=True),
     ]
 
     cleaned = suppress_resonant_carryover(raw_events)
@@ -154,5 +158,8 @@ def test_suppress_resonant_carryover_prefers_fresh_ascending_note() -> None:
         ["C4"],
         ["C5"],
         ["D5"],
-        ["E5"],
+        ["C5", "E5"],
+        ["G5"],
+        ["F5"],
     ]
+
