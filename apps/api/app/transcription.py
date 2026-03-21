@@ -27,6 +27,9 @@ OCTAVE_ALIAS_RATIO_THRESHOLD = 1.15
 OCTAVE_ALIAS_MAX_FUNDAMENTAL_RATIO = 0.34
 OCTAVE_ALIAS_PENALTY = 0.85
 
+OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO = 0.32
+OCTAVE_DYAD_MIN_PRIMARY_ENERGY_RATIO = 0.16
+
 
 PITCH_CLASS_TO_DOREMI = {
     "C": "ド",
@@ -382,6 +385,31 @@ def are_harmonic_related(note_a: NoteCandidate, note_b: NoteCandidate) -> bool:
     return any(abs(1200.0 * np.log2(ratio / multiple)) <= 30 for multiple in (2, 3, 4))
 
 
+def harmonic_relation_multiple(note_a: NoteCandidate, note_b: NoteCandidate) -> float | None:
+    high = max(note_a.frequency, note_b.frequency)
+    low = min(note_a.frequency, note_b.frequency)
+    ratio = high / low if low else 0.0
+    for multiple in (2.0, 3.0, 4.0):
+        if abs(1200.0 * np.log2(ratio / multiple)) <= 30:
+            return multiple
+    return None
+
+
+def allow_octave_secondary(primary: NoteHypothesis, hypothesis: NoteHypothesis, selected: list[NoteCandidate]) -> bool:
+    for existing in selected:
+        relation = harmonic_relation_multiple(hypothesis.candidate, existing)
+        if relation is None:
+            continue
+        if relation != 2.0:
+            return False
+        if hypothesis.fundamental_ratio < OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO:
+            return False
+        if hypothesis.fundamental_energy < primary.fundamental_energy * OCTAVE_DYAD_MIN_PRIMARY_ENERGY_RATIO:
+            return False
+        return True
+    return False
+
+
 def build_debug_candidates(ranked: list[NoteHypothesis], limit: int = 5) -> list[dict[str, Any]]:
     return [
         {
@@ -443,7 +471,7 @@ def segment_peaks(
                 reasons.append("score-below-threshold")
             if hypothesis.fundamental_ratio < secondary_min_fundamental_ratio:
                 reasons.append("fundamental-ratio-too-low")
-            if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected):
+            if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not allow_octave_secondary(primary, hypothesis, selected):
                 reasons.append("harmonic-related-to-selected")
             accepted = len(reasons) == 0
             secondary_decision_trail.append(
@@ -453,6 +481,7 @@ def segment_peaks(
                     "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
                     "accepted": accepted,
                     "reasons": reasons,
+                    "octaveDyadAllowed": allow_octave_secondary(primary, hypothesis, selected),
                 }
             )
             if accepted:
