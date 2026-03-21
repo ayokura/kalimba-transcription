@@ -251,89 +251,68 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
           expected performance、解析実行、保存パック作成を主導線にして、認識評価を最短で回せる形にします。
         </p>
 
-        <div className="debug-capture-grid">
-          <div className="workflow-card workflow-card-primary stack gap-lg debug-primary-card">
-            <div className="workflow-card-header">
-              <div>
-                <span className="eyebrow">Expected Performance</span>
-                <h3>期待演奏を組み立てる</h3>
-              </div>
-              <span className="muted">event 単位で保存</span>
+        <div className="workflow-card workflow-card-primary stack gap-lg debug-primary-card">
+          <div className="workflow-card-header">
+            <div>
+              <span className="eyebrow">Expected Performance</span>
+              <h3>期待演奏を組み立てる</h3>
             </div>
-
-            <ExpectedKeySelector
-              tuning={selectedTuning}
-              selectedKeys={pendingExpectedKeys}
-              repeatCount={expectedRepeatCount}
-              onToggleKey={handleToggleExpectedKey}
-              onRepeatCountChange={setExpectedRepeatCount}
-              onCommitSelection={handleCommitExpectedSelection}
-              onClearSelection={() => setPendingExpectedKeys([])}
-            />
-
-            <div className="expected-performance-panel">
-              <div className="panel-header compact">
-                <div>
-                  <strong>期待演奏シーケンス</strong>
-                  <p className="muted">保存パックには event 単位で記録されます。</p>
-                </div>
-                <div className="row wrap">
-                  <button type="button" className="ghost" onClick={handleUndoExpectedEvent} disabled={expectedEvents.length === 0}>
-                    最後を取り消す
-                  </button>
-                  <button type="button" className="ghost" onClick={handleClearExpectedPerformance} disabled={expectedEvents.length === 0 && pendingExpectedKeys.length === 0}>
-                    すべてクリア
-                  </button>
-                </div>
-              </div>
-              <div className="expected-summary-box large summary-hero">
-                <span className="eyebrow">Summary</span>
-                <strong>{expectedNote || "未設定"}</strong>
-              </div>
-              {expectedEvents.length > 0 ? (
-                <div className="expected-event-list compact-list">
-                  {expectedEvents.map((event) => (
-                    <div key={`${event.index}-${event.display}`} className="expected-event-card compact">
-                      <span className="pill">#{event.index}</span>
-                      <div className="stack event-copy">
-                        <strong>{event.display}</strong>
-                        <span className="muted">{event.keys.map((key) => `${key.noteName} (#${key.key})`).join(" / ")}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="muted">まだ期待演奏は追加されていません。</p>
-              )}
-            </div>
-            <div className="workflow-action-dock stack gap-lg debug-action-dock">
-              <button className="primary wide" onClick={handleAnalyze} disabled={!recording || !selectedTuning || isAnalyzing}>
-                {isAnalyzing ? "解析中..." : "自動採譜する"}
-              </button>
-              <button className="secondary wide" onClick={handleDownloadCapture} disabled={!lastCapture || isAnalyzing || isSavingCapture}>
-                {isSavingCapture ? "保存パック作成中..." : "解析結果を保存パックでダウンロード"}
-              </button>
-              <p className="muted">保存内容: audio.wav / request.json / response.json / notes.md</p>
-            </div>
+            <span className="muted">event 単位で保存</span>
           </div>
 
+          <ExpectedKeySelector
+            tuning={selectedTuning}
+            selectedKeys={pendingExpectedKeys}
+            repeatCount={expectedRepeatCount}
+            onToggleKey={handleToggleExpectedKey}
+            onRepeatCountChange={setExpectedRepeatCount}
+            onCommitSelection={handleCommitExpectedSelection}
+            onClearSelection={() => setPendingExpectedKeys([])}
+          />
 
-          <div className="workflow-card workflow-card-secondary stack gap-lg debug-secondary-card">
-            <div className="workflow-card-header">
+          <div className="expected-performance-panel">
+            <div className="panel-header compact">
               <div>
-                <span className="eyebrow">Capture Metadata</span>
-                <h3>ケース情報</h3>
+                <strong>期待演奏シーケンス</strong>
+                <p className="muted">保存パックには event 単位で記録されます。</p>
               </div>
-              <span className="muted">補助情報</span>
+              <div className="row wrap">
+                <button type="button" className="ghost" onClick={handleUndoExpectedEvent} disabled={expectedEvents.length === 0}>
+                  最後を取り消す
+                </button>
+                <button type="button" className="ghost" onClick={handleClearExpectedPerformance} disabled={expectedEvents.length === 0 && pendingExpectedKeys.length === 0}>
+                  すべてクリア
+                </button>
+              </div>
             </div>
-            <label className="stack">
-              <span>ケースID (任意)</span>
-              <input value={captureCaseId} onChange={(event) => setCaptureCaseId(event.target.value)} placeholder="2026-03-21-d5-single-note-01" />
-            </label>
-            <label className="stack">
-              <span>テストメモ (任意)</span>
-              <textarea value={captureMemo} rows={2} onChange={(event) => setCaptureMemo(event.target.value)} />
-            </label>
+            <div className="expected-summary-box large summary-hero">
+              <span className="eyebrow">Summary</span>
+              <strong>{expectedNote || "未設定"}</strong>
+            </div>
+            {expectedEvents.length > 0 ? (
+              <div className="expected-event-list compact-list">
+                {expectedEvents.map((event) => (
+                  <div key={`${event.index}-${event.display}`} className="expected-event-card compact">
+                    <span className="pill">#{event.index}</span>
+                    <div className="stack event-copy">
+                      <strong>{event.display}</strong>
+                      <span className="muted">{event.keys.map((key) => `${key.noteName} (#${key.key})`).join(" / ")}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">まだ期待演奏は追加されていません。</p>
+            )}
+          </div>
+          <div className="workflow-action-dock stack gap-lg debug-action-dock">
+            <button className="primary wide" onClick={handleAnalyze} disabled={!recording || !selectedTuning || isAnalyzing}>
+              {isAnalyzing ? "解析中..." : "自動採譜する"}
+            </button>
+            <button className="secondary wide" onClick={handleDownloadCapture} disabled={!lastCapture || isAnalyzing || isSavingCapture}>
+              {isSavingCapture ? "保存パック作成中..." : "解析結果を保存パックでダウンロード"}
+            </button>
+            <p className="muted">保存内容: audio.wav / request.json / response.json / notes.md</p>
           </div>
         </div>
       </section>
@@ -377,9 +356,27 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
         onCustomNameChange={setCustomName}
         onCustomNotesChange={setCustomNotes}
       />
+      <section className="panel workflow-card workflow-card-secondary debug-secondary-card">
+        <div className="workflow-card-header">
+          <div>
+            <p className="eyebrow">Capture Metadata</p>
+            <h2>ケース情報</h2>
+          </div>
+          <span className="muted">補助情報</span>
+        </div>
+        <div className="stack gap-lg">
+          <label className="stack">
+            <span>ケースID (任意)</span>
+            <input value={captureCaseId} onChange={(event) => setCaptureCaseId(event.target.value)} placeholder="2026-03-21-d5-single-note-01" />
+          </label>
+          <label className="stack">
+            <span>テストメモ (任意)</span>
+            <textarea value={captureMemo} rows={3} onChange={(event) => setCaptureMemo(event.target.value)} />
+          </label>
+        </div>
+      </section>
     </div>
   );
-
   const userPrimary = (
     <div className="stack gap-xl">
       <RecorderPanel disabled={isAnalyzing || isSavingCapture} onRecordingReady={setRecording} />
@@ -479,5 +476,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     </main>
   );
 }
+
+
 
 
