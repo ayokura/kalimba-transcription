@@ -1,0 +1,13 @@
+node_modules/
+.next/
+dist/
+build/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.tsbuildinfo
+.venv/
+.env
+coverage/
+.pydeps/
+.pydeps313/
