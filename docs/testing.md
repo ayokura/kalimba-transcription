@@ -141,3 +141,4 @@ These are the next recommended recordings to collect after the current mixed-seq
 7. Short mixed phrase: `C4 -> C4+C5 -> B4+D5 -> D4`
    - Goal: evaluate transitions once atomic cases are stable
    - Likely failures: decay contaminating the next event, segmentation drift
+
