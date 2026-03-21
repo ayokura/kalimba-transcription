@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #f4efe7;
   --bg-alt: #fffaf0;
   --ink: #1e1f1f;
@@ -364,7 +364,7 @@ button:disabled {
 
 .workflow-composer-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(240px, 0.85fr);
+  grid-template-columns: 1fr;
   gap: 18px;
 }
 
@@ -616,3 +616,4 @@ button:disabled {
     display: grid;
   }
 }
+
