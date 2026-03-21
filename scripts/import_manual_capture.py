@@ -19,13 +19,23 @@ def main() -> int:
     parser.add_argument("--min-primary-occurrences", type=int)
     parser.add_argument("--max-primary-note", action="append", default=[])
     parser.add_argument("--max-primary-occurrences", type=int, default=1)
+    parser.add_argument("--required-event-note-set", action="append", default=[])
+    parser.add_argument("--max-event-note-set", action="append", default=[])
     parser.add_argument("--allow-incomplete", action="store_true")
     parser.add_argument("--root", type=Path, default=Path("apps/api/tests/fixtures/manual-captures"))
     args = parser.parse_args()
 
     has_expectation = any(
         value is not None and value != []
-        for value in (args.expected_note, args.min_events, args.max_events, args.min_primary_occurrences, args.max_primary_note)
+        for value in (
+            args.expected_note,
+            args.min_events,
+            args.max_events,
+            args.min_primary_occurrences,
+            args.max_primary_note,
+            args.required_event_note_set,
+            args.max_event_note_set,
+        )
     )
     if not has_expectation and not args.allow_incomplete:
         raise SystemExit("Refusing to create a weak fixture. Pass explicit expectations or use --allow-incomplete.")
@@ -50,6 +60,8 @@ def main() -> int:
             "maxEvents": args.max_events,
             "requiredPrimaryNoteOccurrences": {},
             "maxPrimaryNoteOccurrences": {},
+            "requiredEventNoteSetOccurrences": parse_note_set_assertions(args.required_event_note_set),
+            "maxEventNoteSetOccurrences": parse_note_set_assertions(args.max_event_note_set),
         },
     }
     if args.expected_note and args.min_primary_occurrences is not None:
@@ -59,6 +71,16 @@ def main() -> int:
 
     (target_dir / "expected.json").write_text(json.dumps(expected, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return 0
+
+
+def parse_note_set_assertions(entries: list[str]) -> dict[str, int]:
+    assertions: dict[str, int] = {}
+    for entry in entries:
+        note_set, separator, raw_count = entry.partition("=")
+        if separator != "=" or not note_set or not raw_count:
+            raise SystemExit(f"Invalid note-set assertion '{entry}'. Use NOTESET=COUNT, e.g. B4+D5=5")
+        assertions[note_set] = int(raw_count)
+    return assertions
 
 
 def _detect_prefix(names: list[str]) -> str:

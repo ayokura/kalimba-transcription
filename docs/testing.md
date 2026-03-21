@@ -79,7 +79,13 @@ Recommended case naming:
 A saved browser capture pack can be turned into an API regression fixture.
 
 ```powershell
-py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --expected-note D5 --min-events 4 --max-events 6 --min-primary-occurrences 4 --max-primary-note E6 --max-primary-note B5 --max-primary-note A5
+py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --min-events 5 --max-events 5 --required-event-note-set B4+D5=5
+```
+
+For a pending capture that should be stored but not executed yet:
+
+```powershell
+py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --allow-incomplete
 ```
 
 This extracts:
