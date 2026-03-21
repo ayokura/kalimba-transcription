@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import NoteCandidate, RawEvent, segment_peaks, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import NoteCandidate, RawEvent, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -177,6 +177,19 @@ def test_suppress_resonant_carryover_keeps_true_short_octave_dyad() -> None:
         ["D4", "D5"],
     ]
 
+def test_suppress_leading_gliss_subset_transients_drops_short_prefix() -> None:
+    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.09, notes=[c4], is_gliss_like=True, primary_note_name="C4", primary_score=80.0),
+        RawEvent(start_time=0.09, end_time=0.5, notes=[c4, e4, g4], is_gliss_like=True, primary_note_name="G4", primary_score=500.0),
+    ]
+
+    cleaned = suppress_leading_gliss_subset_transients(raw_events)
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [["C4", "E4", "G4"]]
+
 def test_suppress_short_residual_tails_drops_recent_single_note_tail() -> None:
     c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
     d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
@@ -214,6 +227,27 @@ def test_transcription_regression_for_manual_mixed_sequence() -> None:
         ["C5", "E5"],
         ["G5"],
         ["F5"],
+    ]
+
+def test_transcription_regression_for_manual_triple_glissando() -> None:
+    fixture = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-triple-glissando-ascending-01"
+    request_payload = json.loads((fixture / "request.json").read_text(encoding="utf-8"))
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", (fixture / "audio.wav").read_bytes(), "audio/wav")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert [sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]] == [
+        ["C4", "E4", "G4"],
+        ["A4", "D4", "F4"],
+        ["B4", "E4", "G4"],
+        ["A4", "C5", "F4"],
+        ["B4", "D5", "G4"],
+        ["A4", "C5", "E5"],
+        ["B4", "D5", "F5"],
+        ["C5", "E5", "G5"],
     ]
 
 def test_suppress_subset_decay_events_drops_contiguous_subset_tail() -> None:

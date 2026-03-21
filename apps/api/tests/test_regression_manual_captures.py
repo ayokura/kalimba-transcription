@@ -74,5 +74,9 @@ def test_manual_capture_regressions() -> None:
         for note_set, max_occurrences in assertions.get("maxEventNoteSetOccurrences", {}).items():
             assert note_sets.count(note_set) <= max_occurrences, fixture_dir.name
 
+        expected_note_sets_ordered = assertions.get("expectedEventNoteSetsOrdered")
+        if expected_note_sets_ordered is not None:
+            assert note_sets == expected_note_sets_ordered, fixture_dir.name
+
     if executed_fixtures == 0:
         pytest.skip("No completed manual capture fixtures available")
