@@ -466,7 +466,7 @@ def test_probe_four_note_gliss_pending_capture() -> None:
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
     ]
-    assert len(payload["events"]) <= 7
+    assert len(payload["events"]) <= 6
     assert note_sets.count("B4+D5+E4+G4") >= 2
 
 
@@ -598,4 +598,5 @@ def test_normalize_repeated_explicit_four_note_patterns_absorbs_short_gliss_pref
     ]
     assert normalized[1].start_time == pytest.approx(1.0)
     assert normalized[1].end_time == pytest.approx(1.9)
+
 

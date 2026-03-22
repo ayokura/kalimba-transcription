@@ -1,15 +1,24 @@
 {
-  "pending": true,
+  "pending": false,
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
+    "minEvents": 5,
+    "maxEvents": 5,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {},
-    "maxEventNoteSetOccurrences": {}
+    "requiredEventNoteSetOccurrences": {
+      "B4+D5+E4+G4": 5
+    },
+    "maxEventNoteSetOccurrences": {},
+    "expectedEventNoteSetsOrdered": [
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4"
+    ]
   },
-  "status": "pending",
-  "reason": "first five rolled takes are plausible and isolated via ignoredRanges, but the current recognizer still fragments the focused region; keep this as a recognition-improvement target",
+  "status": "completed",
+  "reason": "first five rolled takes are stable and are isolated via ignoredRanges; the final separated fragment is excluded from regression scope",
   "auditVerdict": "rolled-intent-first-five-takes-clean",
   "ignoredRanges": [
     {

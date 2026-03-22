@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-22-e4-plus-g4-plus-b4-plus-d5-repeat-05-kalimba-17-c
 - expected note: E4 + G4 + B4 + D5 x 5
 - capture intent: rolled_chord
@@ -21,8 +21,8 @@
 
 ## Review
 
-- summary: 先頭5回は rolled chord として妥当ですが、focused region でも認識はまだ割れます。
-- reason: 最後の別 take は評価範囲から外しましたが、先頭5回だけを見ても認識はまだ 1 chord に安定していません。
+- summary: 先頭5回は rolled chord として十分安定しています。
+- reason: 最後の別 take は評価範囲から外し、先頭5回だけを regression 対象にしました。
 
 ## Recapture Guidance
 
@@ -38,8 +38,8 @@
 
 - imported as rolled-chord target on 2026-03-23
 - evaluation scope excludes the final separated fragment via ignoredRanges: 24.5s-34.14s
-- first 5 takes are isolated as the evaluation scope, but the fixture remains pending until reconstruction stabilizes
+- first 5 takes reconstruct as full 4-note rolled chords and are now treated as regression material
 
 ## Independent Audit (2026-03-23)
 
-- Independent audit found monotonic rolled attacks across takes; E4/G4 are weaker than upper notes, and the first five takes are good focused material, but the recognizer still fragments them, so the fixture remains pending.
+- Independent audit found monotonic rolled attacks across takes; E4/G4 are weaker than upper notes, but the first five takes are stable enough to serve as a completed rolled-chord regression once the final separated take is excluded.
