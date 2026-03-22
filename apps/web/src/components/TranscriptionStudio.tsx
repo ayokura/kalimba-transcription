@@ -159,7 +159,10 @@ function buildDetectedEventDisplay(event: TranscriptionResult["events"][number],
     .join(" + ");
 }
 
-function buildIntentLabel(intent: CaptureIntent | null | undefined) {
+function buildIntentLabel(intent: string | null | undefined) {
+  if (intent == "ambiguous") {
+    return "ambiguous";
+  }
   return INTENT_OPTIONS.find((option) => option.value === intent)?.label ?? "未指定";
 }
 
@@ -175,6 +178,11 @@ function buildCaptureAssessment(
 
   const expectedEvents = expectedPerformance.events.map(buildExpectedEventDisplay);
   const detectedEvents = result.events.map((event) => buildDetectedEventDisplay(event, noteNamesByKey));
+  const gestureCounts = result.events.reduce<Record<string, number>>((counts, event) => {
+    counts[event.gesture] = (counts[event.gesture] ?? 0) + 1;
+    return counts;
+  }, {});
+  const dominantDetectedGesture = Object.entries(gestureCounts).sort((left, right) => right[1] - left[1])[0]?.[0] ?? "ambiguous";
   const total = Math.max(expectedEvents.length, detectedEvents.length);
   const events = Array.from({ length: total }, (_, index) => ({
     index: index + 1,
@@ -212,7 +220,7 @@ function buildCaptureAssessment(
         status: "pending",
         label: "改善対象",
         summary: "録音意図に対して segmentation がまだ粗いです。",
-        reason: `${buildIntentLabel(captureIntent)} としては現実的な崩れ方です。認識改善ターゲットとして保持してください。`,
+        reason: `${buildIntentLabel(captureIntent)} としては現実的な崩れ方です。検出側は ${buildIntentLabel(dominantDetectedGesture)} 優勢でした。認識改善ターゲットとして保持してください。`,
         mismatchCount,
         expectedEventCount: expectedEvents.length,
         detectedEventCount: detectedEvents.length,
@@ -226,7 +234,7 @@ function buildCaptureAssessment(
       status: "review_needed",
       label: "要確認",
       summary: "event の分割または束ね方に大きな差があります。",
-      reason: `${buildIntentLabel(captureIntent)} の想定に対して差が大きいため、録音意図と diff を確認してから fixture status を決めてください。`,
+      reason: `${buildIntentLabel(captureIntent)} の想定に対して差が大きく、検出側は ${buildIntentLabel(dominantDetectedGesture)} 優勢でした。録音意図と diff を確認してから fixture status を決めてください。`,
       mismatchCount,
       expectedEventCount: expectedEvents.length,
       detectedEventCount: detectedEvents.length,
@@ -240,7 +248,7 @@ function buildCaptureAssessment(
     status: "pending",
     label: "改善対象",
     summary: "一部の note-set または event 数がずれています。",
-    reason: `録音意図: ${buildIntentLabel(captureIntent)}。認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。`,
+    reason: `録音意図: ${buildIntentLabel(captureIntent)} / 検出傾向: ${buildIntentLabel(dominantDetectedGesture)}。認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。`,
     mismatchCount,
     expectedEventCount: expectedEvents.length,
     detectedEventCount: detectedEvents.length,
