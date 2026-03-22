@@ -21,8 +21,8 @@
 
 ## Review
 
-- summary: 録音意図に対して segmentation がまだ粗いです。
-- reason: rolled chord としては現実的な崩れ方です。検出側は rolled chord 優勢でした。認識改善ターゲットとして保持してください。
+- summary: 先頭5回は rolled chord として妥当ですが、focused region でも認識はまだ割れます。
+- reason: 最後の別 take は評価範囲から外しましたが、先頭5回だけを見ても認識はまだ 1 chord に安定していません。
 
 ## Recapture Guidance
 
@@ -37,10 +37,9 @@
 ## Fixture Import Notes
 
 - imported as rolled-chord target on 2026-03-23
-- current API output: 6 events, first 5 takes reconstruct as full 4-note rolled chords, final tail fragment remains
-- kept as `pending` because this is a realistic user input pattern worth improving
+- evaluation scope excludes the final separated fragment via ignoredRanges: 24.5s-34.14s
+- first 5 takes are isolated as the evaluation scope, but the fixture remains pending until reconstruction stabilizes
 
 ## Independent Audit (2026-03-23)
 
-- Independent audit found monotonic rolled attacks across takes; E4/G4 are weaker than upper notes, but the input pattern is realistic and should remain a recognition target.
-
+- Independent audit found monotonic rolled attacks across takes; E4/G4 are weaker than upper notes, and the first five takes are good focused material, but the recognizer still fragments them, so the fixture remains pending.

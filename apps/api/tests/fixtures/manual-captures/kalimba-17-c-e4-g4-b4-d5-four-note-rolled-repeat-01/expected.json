@@ -9,6 +9,12 @@
     "maxEventNoteSetOccurrences": {}
   },
   "status": "pending",
-  "reason": "rolled_chord intent is explicit and current transcription is close but still leaves tail fragments; keep as a recognition-improvement target",
-  "auditVerdict": "rolled-intent-realistic-input"
+  "reason": "first five rolled takes are plausible and isolated via ignoredRanges, but the current recognizer still fragments the focused region; keep this as a recognition-improvement target",
+  "auditVerdict": "rolled-intent-first-five-takes-clean",
+  "ignoredRanges": [
+    {
+      "startSec": 24.5,
+      "endSec": 34.14
+    }
+  ]
 }

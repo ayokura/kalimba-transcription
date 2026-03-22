@@ -80,17 +80,37 @@ Recommended case naming:
 
 `expected.json` should carry a `status` field.
 
-- `completed`: regression target, executed by pytest
+- `completed`: regression target, executed by pytest with strict assertions
 - `pending`: expected is provisional, keep for recognition work
 - `rerecord`: keep the case, but prioritize re-recording before treating it as a regression target
 - `review_needed`: metadata or expected performance needs human review first
 - `reference_only`: keep as a difficult example, but do not run in regression
 
-Current pytest behavior should execute only `completed` fixtures.
+Current pytest behavior:
+
+- `completed` fixtures run as strict regression tests
+- `pending` fixtures run as smoke probes only
+- `rerecord`, `review_needed`, and `reference_only` run through metadata validation only unless a dedicated probe test exists
+
+## Fixture Evaluation Scope
+
+Keep the original `audio.wav` untouched. If only part of the recording should count toward regression, describe that in `expected.json`.
+
+Supported optional fields:
+
+- `evaluationWindows`: explicit list of `{ "startSec": <float>, "endSec": <float> }`
+- `ignoredRanges`: explicit list of `{ "startSec": <float>, "endSec": <float> }`
+
+Rules:
+
+- use either `evaluationWindows` or `ignoredRanges`, never both
+- ranges are in seconds against the original `audio.wav`
+- prefer this over trimming the source file, so audits can still inspect the full recording
+- only `completed` fixtures should rely on these ranges for regression assertions
 
 ## Manual Capture Fixtures
 
-A saved browser capture pack can be turned into an API regression fixture.
+A saved browser capture pack can be turned into an API fixture.
 
 ```powershell
 py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --min-events 5 --max-events 5 --required-event-note-set B4+D5=5
@@ -99,10 +119,22 @@ py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --min-events 5
 For a pending capture that should be stored but not executed yet:
 
 ```powershell
-py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --allow-incomplete
+py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --status pending --reason "expected looks plausible but recognizer still fragments the gesture" --allow-incomplete
 ```
 
-This extracts:
+For a rerecord target with explicit guidance:
+
+```powershell
+py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --status rerecord --reason "strict chord ground truth is weak" --recommended-recapture "Record 5 clearly simultaneous takes." --recommended-recapture "Leave 1 second of silence between takes." --allow-incomplete
+```
+
+For a completed fixture that should only evaluate part of the source audio:
+
+```powershell
+py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --status completed --min-events 5 --max-events 5 --required-event-note-set C4+E4+G4=5 --evaluation-window 0.35:5.90
+```
+
+The importer extracts:
 
 - `audio.wav`
 - `request.json`
@@ -115,8 +147,8 @@ into `apps/api/tests/fixtures/manual-captures/<fixture-id>/`.
 Then run:
 
 ```powershell
-$env:PYTHONPATH='C:\src\calimba-score\.pydeps;C:\src\calimba-score\apps\api'
-py -3.13 -m pytest apps/api/tests
+$env:PYTHONPATH='C:\src\calimba-score\apps\api'
+.\.venv313\Scripts\python -m pytest apps/api/tests
 ```
 
 ## Recording Request Format
@@ -172,6 +204,7 @@ Independent audit should explicitly separate `recording quality` from `performan
 - Mark `rerecord` when clipping, noise, unstable attack timing, or inconsistent execution is the main problem.
 - Mark `review_needed` when the expected labels, intent, or metadata are likely wrong.
 - When audit changes fixture status, update both `expected.json` and `notes.md` so they do not drift.
+- If only part of the file is a trustworthy regression target, prefer `evaluationWindows` or `ignoredRanges` over trimming the source audio.
 
 - Use a separate analysis path based on direct waveform / FFT inspection, not the app's current predicted events.
 - Verify whether `expectedPerformance` still looks plausible from the raw audio.
@@ -184,7 +217,14 @@ This audit should happen after a small cluster of improvements lands, not after 
 
 ## Current caveat
 
-The web app compiles cleanly. API syntax compiles cleanly with `py -3.13 -m compileall apps/api/app apps/api/tests`, but full runtime API tests were not completed because Python package resolution is inconsistent in this Windows environment outside the direct install flow.
+The web app compiles cleanly. API syntax compiles cleanly with `py -3.13 -m compileall apps/api/app apps/api/tests`, and the canonical runtime path is now:
+
+```powershell
+$env:PYTHONPATH='C:\src\calimba-score\apps\api'
+.\.venv313\Scripts\python -m pytest apps/api/tests
+```
+
+`.pytest_cache` still emits an access denied warning in this Windows environment, but the test run itself is valid.
 
 ## Next manual capture priorities
 
@@ -211,4 +251,3 @@ These are the next recommended recordings to collect after the current mixed-seq
 7. Short mixed phrase: `C4 -> C4+C5 -> B4+D5 -> D4`
    - Goal: evaluate transitions once atomic cases are stable
    - Likely failures: decay contaminating the next event, segmentation drift
-
