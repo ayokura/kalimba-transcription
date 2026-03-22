@@ -83,10 +83,11 @@ function inferGlissDirection(events: ManualCaptureExpectedEvent[]) {
   return "mixed";
 }
 
-function buildScenarioSlug(expectedPerformance: ManualCaptureExpectedPerformance | null) {
+function buildScenarioSlug(expectedPerformance: ManualCaptureExpectedPerformance | null, captureIntent: CaptureIntent) {
   const events = expectedPerformance?.events ?? [];
+  const intentSlug = captureIntent !== "unknown" ? `-${captureIntent.replace(/_/g, "-")}` : "";
   if (events.length === 0) {
-    return "manual-test";
+    return `manual-test${intentSlug}`;
   }
 
   const uniqueDisplays = new Set(events.map((event) => event.display));
@@ -94,21 +95,26 @@ function buildScenarioSlug(expectedPerformance: ManualCaptureExpectedPerformance
   const lastEvent = events[events.length - 1];
 
   if (uniqueDisplays.size === 1) {
-    return `${buildEventSlug(firstEvent)}-repeat-${String(events.length).padStart(2, "0")}`;
+    return `${buildEventSlug(firstEvent)}-repeat-${String(events.length).padStart(2, "0")}${intentSlug}`;
   }
 
   const sameWidth = events.every((event) => event.keys.length === firstEvent.keys.length);
   const contiguousSweep = sameWidth && events.every(areContiguousEventKeys);
   if (contiguousSweep) {
-    return `${firstEvent.keys.length}-note-${inferGlissDirection(events)}-gliss-${buildEventSlug(firstEvent)}-to-${buildEventSlug(lastEvent)}`;
+    return `${firstEvent.keys.length}-note-${inferGlissDirection(events)}-gliss-${buildEventSlug(firstEvent)}-to-${buildEventSlug(lastEvent)}${intentSlug}`;
   }
 
-  return `${buildEventSlug(firstEvent)}-to-${buildEventSlug(lastEvent)}-sequence-${String(events.length).padStart(2, "0")}`;
+  return `${buildEventSlug(firstEvent)}-to-${buildEventSlug(lastEvent)}-sequence-${String(events.length).padStart(2, "0")}${intentSlug}`;
 }
 
-function buildDefaultCaptureIdForValues(generatedAt: string, tuning: InstrumentTuning | null, expectedPerformance: ManualCaptureExpectedPerformance | null) {
+function buildDefaultCaptureIdForValues(
+  generatedAt: string,
+  tuning: InstrumentTuning | null,
+  expectedPerformance: ManualCaptureExpectedPerformance | null,
+  captureIntent: CaptureIntent,
+) {
   const day = generatedAt.slice(0, 10);
-  const scenario = buildScenarioSlug(expectedPerformance);
+  const scenario = buildScenarioSlug(expectedPerformance, captureIntent);
   const tuningId = tuning?.id ?? "capture";
   return `${day}-${scenario}-${tuningId}`;
 }
@@ -382,8 +388,8 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const userReview = useMemo(() => buildResultOnlyAssessment(result), [result]);
   const activeReview = isDebug ? captureReview : userReview;
   const suggestedCaptureId = useMemo(
-    () => buildDefaultCaptureIdForValues(new Date().toISOString(), selectedTuning, expectedPerformance),
-    [selectedTuning, expectedPerformance],
+    () => buildDefaultCaptureIdForValues(new Date().toISOString(), selectedTuning, expectedPerformance, captureIntent),
+    [captureIntent, selectedTuning, expectedPerformance],
   );
 
   function handleToggleExpectedKey(key: number) {
@@ -468,7 +474,12 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     try {
       const caseId = captureCaseId.trim().length > 0
         ? captureCaseId.trim()
-        : buildDefaultCaptureIdForValues(lastCapture.generatedAt, lastCapture.requestPayload.tuning, expectedPerformance ?? lastCapture.requestPayload.expectedPerformance);
+        : buildDefaultCaptureIdForValues(
+            lastCapture.generatedAt,
+            lastCapture.requestPayload.tuning,
+            expectedPerformance ?? lastCapture.requestPayload.expectedPerformance,
+            captureIntent ?? lastCapture.requestPayload.captureIntent ?? "unknown",
+          );
       const archive = await buildCaptureArchive({
         caseId,
         audioWav: lastCapture.audioWav,
