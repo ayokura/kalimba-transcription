@@ -39,6 +39,7 @@ class ScoreEvent(BaseModel):
     duration_beat: float = Field(alias="durationBeat")
     notes: list[ScoreNote]
     is_gliss_like: bool = Field(alias="isGlissLike")
+    gesture: str = "ambiguous"
 
     model_config = {"populate_by_name": True}
 
@@ -49,6 +50,7 @@ class NotationViews(BaseModel):
     vertical_doremi: list[list[str]] = Field(alias="verticalDoReMi")
 
     model_config = {"populate_by_name": True}
+
 
 
 class TranscriptionResult(BaseModel):

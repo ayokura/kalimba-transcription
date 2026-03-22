@@ -10,6 +10,13 @@ type NotationPanelProps = {
   review?: CaptureAssessmentDetails | null;
 };
 
+function buildGestureLabel(gesture: string) {
+  if (gesture === "strict_chord") return "strict chord";
+  if (gesture === "rolled_chord") return "rolled chord";
+  if (gesture === "gliss") return "gliss";
+  return "ambiguous";
+}
+
 function buildReviewLine(reviewEvent: CaptureAssessmentDetails["events"][number] | undefined) {
   if (!reviewEvent) {
     return null;
@@ -92,6 +99,9 @@ export function NotationPanel({ result, mode, onModeChange, review }: NotationPa
                         <span key={`${event.id}-${note}`}>{note}</span>
                       ))}
                     </div>
+                    <div className="event-meta-row">
+                      <span className={`pill gesture-pill gesture-${event.gesture}`}>{buildGestureLabel(event.gesture)}</span>
+                    </div>
                     {reviewLine ? <div className={`event-review ${reviewEvent?.matches ? "match" : "mismatch"}`}>{reviewLine}</div> : null}
                     <footer>
                       <span>{event.startBeat}拍</span>
@@ -111,6 +121,9 @@ export function NotationPanel({ result, mode, onModeChange, review }: NotationPa
                     <div className="line-row">
                       <span className="line-index">{index + 1}</span>
                       <code>{entry}</code>
+                    </div>
+                    <div className="event-meta-row line">
+                      <span className={`pill gesture-pill gesture-${result.events[index]?.gesture ?? "ambiguous"}`}>{buildGestureLabel(result.events[index]?.gesture ?? "ambiguous")}</span>
                     </div>
                     {reviewLine ? <div className={`event-review line ${reviewEvent?.matches ? "match" : "mismatch"}`}>{reviewLine}</div> : null}
                   </div>

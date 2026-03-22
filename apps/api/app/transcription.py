@@ -1404,6 +1404,62 @@ def format_number(candidate: NoteCandidate) -> str:
         return f"..{base}"
     return base
 
+def contiguous_note_cluster(raw_event: RawEvent) -> bool:
+    keys = sorted(note.key for note in raw_event.notes)
+    if len(keys) < 2:
+        return False
+    return keys[-1] - keys[0] + 1 == len(keys)
+
+
+def classify_event_gesture(event: RawEvent, index: int, raw_events: list[RawEvent], merged_events: list[RawEvent]) -> str:
+    if len(event.notes) <= 1:
+        if event.is_gliss_like:
+            return "gliss"
+        return "ambiguous"
+
+    support_events = [
+        raw_event
+        for raw_event in raw_events
+        if raw_event.start_time <= event.end_time + 0.03 and raw_event.end_time >= event.start_time - 0.03
+    ]
+    support_count = len(support_events)
+    event_note_names = {note.note_name for note in event.notes}
+    support_subsets = [
+        {note.note_name for note in raw_event.notes}
+        for raw_event in support_events
+        if {note.note_name for note in raw_event.notes} < event_note_names
+    ]
+
+    previous_event = merged_events[index - 1] if index > 0 else None
+    next_event = merged_events[index + 1] if index + 1 < len(merged_events) else None
+    neighbor_progression = False
+    for neighbor in (previous_event, next_event):
+        if neighbor is None or len(neighbor.notes) != len(event.notes):
+            continue
+        if not contiguous_note_cluster(event) or not contiguous_note_cluster(neighbor):
+            continue
+        event_keys = sorted(note.key for note in event.notes)
+        neighbor_keys = sorted(note.key for note in neighbor.notes)
+        average_shift = float(np.mean([abs(a - b) for a, b in zip(event_keys, neighbor_keys)]))
+        if 0.4 <= average_shift <= 3.5 and set(event_keys) != set(neighbor_keys):
+            neighbor_progression = True
+            break
+
+    if event.is_gliss_like and contiguous_note_cluster(event) and neighbor_progression:
+        return "gliss"
+
+    if support_count >= 2 and support_subsets:
+        if contiguous_note_cluster(event) and neighbor_progression:
+            return "gliss"
+        return "rolled_chord"
+
+    if not event.is_gliss_like:
+        return "strict_chord"
+
+    return "ambiguous"
+
+
+
 def build_notation_views(events: list[ScoreEvent]) -> NotationViews:
     western = [" | ".join(note.pitch_class + str(note.octave) for note in event.notes) for event in events]
     numbered = [" ".join(note.label_number for note in event.notes) for event in events]
@@ -1502,6 +1558,7 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
                 durationBeat=duration_beat,
                 notes=notes,
                 isGlissLike=event.is_gliss_like,
+                gesture=classify_event_gesture(event, index - 1, raw_events, merged_events),
             )
         )
 
@@ -1518,8 +1575,9 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
                     "startTime": round(event.start_time, 4),
                     "endTime": round(event.end_time, 4),
                     "notes": [candidate.note_name for candidate in event.notes],
+                    "gesture": classify_event_gesture(event, index, raw_events, merged_events),
                 }
-                for event in merged_events
+                for index, event in enumerate(merged_events)
             ],
         }
 

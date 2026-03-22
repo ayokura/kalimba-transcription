@@ -26,6 +26,7 @@ export type ScoreEvent = {
   durationBeat: number;
   notes: ScoreNote[];
   isGlissLike: boolean;
+  gesture: string;
 };
 
 export type NotationViews = {

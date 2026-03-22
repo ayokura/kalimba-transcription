@@ -380,6 +380,42 @@ button:disabled {
   margin-left: 52px;
 }
 
+.event-meta-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.event-meta-row.line {
+  margin-left: 52px;
+}
+
+.gesture-pill {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
+.gesture-pill.gesture-strict_chord {
+  background: rgba(23, 126, 137, 0.16);
+  color: var(--accent-strong);
+}
+
+.gesture-pill.gesture-rolled_chord {
+  background: rgba(242, 192, 120, 0.18);
+  color: #82561a;
+}
+
+.gesture-pill.gesture-gliss {
+  background: rgba(166, 61, 64, 0.08);
+  color: var(--danger);
+}
+
+.gesture-pill.gesture-ambiguous {
+  background: rgba(30, 31, 31, 0.08);
+  color: var(--muted);
+}
+
 .debug-pre {
   margin: 0;
   overflow: auto;
