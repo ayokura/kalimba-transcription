@@ -62,12 +62,13 @@ Saved files inside the zip:
 
 Use the clickable kalimba key UI in the workflow panel.
 
-1. Click one or more keys to define the current expected event.
-2. Set `追加回数` if the same event repeats.
-3. Press `...を ... 回追加` to append it to the expected performance sequence.
-4. Use `最後を取り消す` or `すべてクリア` to fix mistakes.
+1. Select `録音の意図` first.
+2. Click one or more keys to define the current expected event.
+3. Set `追加回数` if the same event repeats.
+4. Press `...を ... 回追加` to append it to the expected performance sequence.
+5. Use `最後を取り消す` or `すべてクリア` to fix mistakes.
 
-This avoids typing note names by hand and records both physical key numbers and note names in `request.json`.
+This avoids typing note names by hand and records both physical key numbers and note names in `request.json`. The selected capture intent is also stored, so later review can distinguish strict chords from rolled chords or gliss-like gestures.
 
 Recommended case naming:
 

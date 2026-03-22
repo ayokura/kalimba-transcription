@@ -260,6 +260,12 @@ button:disabled {
   background: rgba(23, 126, 137, 0.08);
 }
 
+.review-pill.status-completed {
+  border-color: rgba(23, 126, 137, 0.28);
+  background: rgba(23, 126, 137, 0.18);
+  color: var(--accent-strong);
+}
+
 .review-box.status-pending,
 .review-pill.status-pending {
   border-color: rgba(242, 192, 120, 0.48);
@@ -537,6 +543,32 @@ button:disabled {
 .composer-toolbar {
   justify-content: space-between;
   align-items: end;
+}
+
+.intent-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.intent-option {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  min-height: 92px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.intent-option span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.intent-option.active {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(23, 126, 137, 0.14), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 0 0 2px rgba(23, 126, 137, 0.12);
 }
 
 .compact-field input {

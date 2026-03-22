@@ -9,6 +9,7 @@ import { RecorderPanel } from "@/components/RecorderPanel";
 import { TuningPanel } from "@/components/TuningPanel";
 import {
   CaptureAssessmentDetails,
+  CaptureIntent,
   ManualCaptureExpectedEvent,
   ManualCaptureExpectedPerformance,
   TranscriptionCapture,
@@ -21,6 +22,14 @@ import { InstrumentTuning, NotationMode, TranscriptionResult, TuningNote } from 
 type TranscriptionStudioProps = {
   mode: "user" | "debug";
 };
+
+const INTENT_OPTIONS: Array<{ value: CaptureIntent; label: string; description: string }> = [
+  { value: "strict_chord", label: "同時和音", description: "同じタイミングで鳴らす前提です。" },
+  { value: "rolled_chord", label: "rolled chord", description: "少しずらして順に入る和音です。" },
+  { value: "gliss", label: "gliss / sweep", description: "連続してなぞる系の意図です。" },
+  { value: "separated_notes", label: "単音列", description: "明確に区切った単音列です。" },
+  { value: "unknown", label: "未指定", description: "意図をまだ固定しません。" },
+];
 
 function buildCustomTuning(customName: string, customNotes: string): InstrumentTuning {
   const notes = customNotes
@@ -104,10 +113,6 @@ function buildDefaultCaptureIdForValues(generatedAt: string, tuning: InstrumentT
   return `${day}-${scenario}-${tuningId}`;
 }
 
-function buildDefaultCaptureId(capture: TranscriptionCapture) {
-  return buildDefaultCaptureIdForValues(capture.generatedAt, capture.requestPayload.tuning, capture.requestPayload.expectedPerformance);
-}
-
 function buildExpectedDisplay(notes: TuningNote[]): string {
   return notes.map((note) => note.noteName).join(" + ");
 }
@@ -154,10 +159,15 @@ function buildDetectedEventDisplay(event: TranscriptionResult["events"][number],
     .join(" + ");
 }
 
+function buildIntentLabel(intent: CaptureIntent | null | undefined) {
+  return INTENT_OPTIONS.find((option) => option.value === intent)?.label ?? "未指定";
+}
+
 function buildCaptureAssessment(
   expectedPerformance: ManualCaptureExpectedPerformance | null,
   result: TranscriptionResult | null,
   noteNamesByKey: Map<number, string>,
+  captureIntent: CaptureIntent | null,
 ): CaptureAssessmentDetails | null {
   if (!expectedPerformance || expectedPerformance.events.length === 0 || !result) {
     return null;
@@ -197,11 +207,26 @@ function buildCaptureAssessment(
     (expectedEvents.length > 0 && detectedEvents.length >= Math.ceil(expectedEvents.length * 1.5));
 
   if (severeFragmentation) {
+    if (captureIntent === "gliss" || captureIntent === "rolled_chord") {
+      return {
+        status: "pending",
+        label: "改善対象",
+        summary: "録音意図に対して segmentation がまだ粗いです。",
+        reason: `${buildIntentLabel(captureIntent)} としては現実的な崩れ方です。認識改善ターゲットとして保持してください。`,
+        mismatchCount,
+        expectedEventCount: expectedEvents.length,
+        detectedEventCount: detectedEvents.length,
+        extraEventCount,
+        missingEventCount,
+        events,
+      };
+    }
+
     return {
       status: "review_needed",
       label: "要確認",
       summary: "event の分割または束ね方に大きな差があります。",
-      reason: "slow gliss / rolled chord / fragment の混在が疑われます。録音意図と diff を確認してから fixture status を決めてください。",
+      reason: `${buildIntentLabel(captureIntent)} の想定に対して差が大きいため、録音意図と diff を確認してから fixture status を決めてください。`,
       mismatchCount,
       expectedEventCount: expectedEvents.length,
       detectedEventCount: detectedEvents.length,
@@ -215,13 +240,32 @@ function buildCaptureAssessment(
     status: "pending",
     label: "改善対象",
     summary: "一部の note-set または event 数がずれています。",
-    reason: "認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。",
+    reason: `録音意図: ${buildIntentLabel(captureIntent)}。認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。`,
     mismatchCount,
     expectedEventCount: expectedEvents.length,
     detectedEventCount: detectedEvents.length,
     extraEventCount,
     missingEventCount,
     events,
+  };
+}
+
+function buildResultOnlyAssessment(result: TranscriptionResult | null): CaptureAssessmentDetails | null {
+  if (!result || result.warnings.length === 0) {
+    return null;
+  }
+
+  return {
+    status: "review_needed",
+    label: "要確認",
+    summary: "自動採譜結果の確認が必要です。",
+    reason: result.warnings.join(" / "),
+    mismatchCount: 0,
+    expectedEventCount: 0,
+    detectedEventCount: result.events.length,
+    extraEventCount: 0,
+    missingEventCount: 0,
+    events: [],
   };
 }
 
@@ -239,6 +283,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [captureCaseId, setCaptureCaseId] = useState("");
   const [captureMemo, setCaptureMemo] = useState("");
+  const [captureIntent, setCaptureIntent] = useState<CaptureIntent>("unknown");
   const [lastCapture, setLastCapture] = useState<TranscriptionCapture | null>(null);
   const [isSavingCapture, setIsSavingCapture] = useState(false);
   const [pendingExpectedKeys, setPendingExpectedKeys] = useState<number[]>([]);
@@ -279,9 +324,11 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const noteNamesByKey = useMemo(() => new Map((selectedTuning?.notes ?? []).map((note) => [note.key, note.noteName])), [selectedTuning]);
   const expectedNote = expectedPerformance?.summary ?? "";
   const captureReview = useMemo(
-    () => buildCaptureAssessment(lastCapture?.requestPayload.expectedPerformance ?? expectedPerformance, result ?? lastCapture?.responsePayload ?? null, noteNamesByKey),
-    [expectedPerformance, lastCapture, noteNamesByKey, result],
+    () => buildCaptureAssessment(lastCapture?.requestPayload.expectedPerformance ?? expectedPerformance, result ?? lastCapture?.responsePayload ?? null, noteNamesByKey, lastCapture?.requestPayload.captureIntent ?? captureIntent),
+    [captureIntent, expectedPerformance, lastCapture, noteNamesByKey, result],
   );
+  const userReview = useMemo(() => buildResultOnlyAssessment(result), [result]);
+  const activeReview = isDebug ? captureReview : userReview;
   const suggestedCaptureId = useMemo(
     () => buildDefaultCaptureIdForValues(new Date().toISOString(), selectedTuning, expectedPerformance),
     [selectedTuning, expectedPerformance],
@@ -346,6 +393,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
         expectedNote,
         expectedPerformance,
         memo: captureMemo,
+        captureIntent,
       });
       setResult(capture.responsePayload);
       setActiveEventId(capture.responsePayload.events[0]?.id ?? null);
@@ -378,6 +426,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
           expectedNote: expectedNote.trim() || lastCapture.requestPayload.expectedNote,
           expectedPerformance: expectedPerformance ?? lastCapture.requestPayload.expectedPerformance,
           memo: captureMemo.trim() || lastCapture.requestPayload.memo,
+          captureIntent: captureIntent ?? lastCapture.requestPayload.captureIntent,
         },
         responsePayload: lastCapture.responsePayload,
         notes: {
@@ -414,6 +463,27 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
         <div className="workflow-card workflow-card-primary stack gap-lg debug-primary-card">
           <div className="workflow-card-header">
             <div>
+              <span className="eyebrow">Capture Intent</span>
+              <h3>録音の意図を指定する</h3>
+            </div>
+            <span className="muted">review 理由に使います</span>
+          </div>
+          <div className="intent-selector">
+            {INTENT_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={`intent-option ${captureIntent === option.value ? "active" : ""}`}
+                onClick={() => setCaptureIntent(option.value)}
+              >
+                <strong>{option.label}</strong>
+                <span>{option.description}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="workflow-card-header">
+            <div>
               <span className="eyebrow">Expected Performance</span>
               <h3>期待演奏を組み立てる</h3>
             </div>
@@ -448,6 +518,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
             <div className="expected-summary-box large summary-hero">
               <span className="eyebrow">Summary</span>
               <strong>{expectedNote || "未設定"}</strong>
+              <span className="muted">録音意図: {buildIntentLabel(captureIntent)}</span>
             </div>
             {expectedEvents.length > 0 ? (
               <div className="expected-event-list compact-list">
@@ -491,6 +562,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
             <span>{lastCapture?.requestPayload.scenario ?? "manual-test"}</span>
             <span>{lastCapture?.requestPayload.audio.sampleRate ?? "-"} Hz</span>
             <span>{lastCapture?.requestPayload.audio.durationSec ?? "-"} sec</span>
+            <span>intent {buildIntentLabel(lastCapture?.requestPayload.captureIntent ?? captureIntent)}</span>
           </div>
           <p className="muted">通常表記を優先して認識結果を確認し、必要なら保存パックを fixture に取り込みます。</p>
           {captureReview ? (
@@ -554,6 +626,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
       </section>
     </div>
   );
+
   const userPrimary = (
     <div className="stack gap-xl">
       <RecorderPanel disabled={isAnalyzing || isSavingCapture} onRecordingReady={setRecording} />
@@ -590,7 +663,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
 
   const userSecondary = (
     <div className="stack gap-xl">
-      <NotationPanel result={result} mode={notationMode} onModeChange={setNotationMode} />
+      <NotationPanel result={result} mode={notationMode} onModeChange={setNotationMode} review={activeReview} />
       <EditorPanel
         result={result}
         activeEventId={activeEventId}
@@ -619,9 +692,9 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
             {isDebug ? (
               <>
                 <li><a href="/">利用者向け画面へ戻る</a></li>
+                <li>録音意図の指定</li>
                 <li>Expected performance の入力</li>
                 <li>Capture pack の保存</li>
-                <li>通常表記中心の比較</li>
               </>
             ) : (
               <>
@@ -653,7 +726,3 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     </main>
   );
 }
-
-
-
-

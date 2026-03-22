@@ -5,6 +5,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8
 
 export type CaptureAssessmentStatus = "completed" | "pending" | "rerecord" | "review_needed" | "reference_only";
 
+export type CaptureIntent = "strict_chord" | "rolled_chord" | "gliss" | "separated_notes" | "unknown";
+
 export type CaptureAssessment = {
   status: CaptureAssessmentStatus;
   label: string;
@@ -52,6 +54,7 @@ export type ManualCaptureRequestPayload = {
   expectedNote: string | null;
   expectedPerformance: ManualCaptureExpectedPerformance | null;
   memo: string | null;
+  captureIntent: CaptureIntent | null;
   tuning: InstrumentTuning;
   audio: WavMetadata & {
     mimeType: string;
@@ -71,6 +74,7 @@ export type CreateTranscriptionOptions = {
   expectedNote?: string;
   expectedPerformance?: ManualCaptureExpectedPerformance | null;
   memo?: string;
+  captureIntent?: CaptureIntent | null;
 };
 
 export async function fetchTunings(): Promise<InstrumentTuning[]> {
@@ -117,6 +121,7 @@ export async function createTranscriptionWithCapture(
       expectedNote: cleanOptionalText(options.expectedNote),
       expectedPerformance: options.expectedPerformance ?? null,
       memo: cleanOptionalText(options.memo),
+      captureIntent: options.captureIntent ?? null,
       tuning,
       audio: {
         ...metadata,
