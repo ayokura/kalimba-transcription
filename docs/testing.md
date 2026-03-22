@@ -165,6 +165,14 @@ After an independent audit, update fixture status as needed.
 
 After each recognition-improvement round stabilizes, run an independent audit on the remaining pending fixtures.
 
+Independent audit should explicitly separate `recording quality` from `performance quality`.
+
+- Use raw waveform / STFT / FFT inspection and `request.json.captureIntent` as the primary evidence. Do not let the app's current prediction decide the verdict by itself.
+- Mark `pending` when the input looks musically valid and the recognizer is still the main problem.
+- Mark `rerecord` when clipping, noise, unstable attack timing, or inconsistent execution is the main problem.
+- Mark `review_needed` when the expected labels, intent, or metadata are likely wrong.
+- When audit changes fixture status, update both `expected.json` and `notes.md` so they do not drift.
+
 - Use a separate analysis path based on direct waveform / FFT inspection, not the app's current predicted events.
 - Verify whether `expectedPerformance` still looks plausible from the raw audio.
 - Classify each pending case as one of:
