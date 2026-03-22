@@ -1,0 +1,14 @@
+{
+  "pending": true,
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "status": "pending",
+  "reason": "rolled_chord intent is explicit and current transcription is close but still leaves tail fragments; keep as a recognition-improvement target",
+  "auditVerdict": "rolled-intent-realistic-input"
+}

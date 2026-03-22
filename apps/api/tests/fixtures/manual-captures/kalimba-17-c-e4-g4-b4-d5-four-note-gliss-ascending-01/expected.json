@@ -1,0 +1,14 @@
+{
+  "pending": true,
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "status": "pending",
+  "reason": "gliss intent is explicit; current transcription fragments the slow four-note sweep into 11 events, so keep it as a gliss reconstruction target",
+  "auditVerdict": "gliss-intent-realistic-input"
+}
