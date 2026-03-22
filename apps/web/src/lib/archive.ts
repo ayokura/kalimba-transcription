@@ -16,6 +16,7 @@ export type CaptureArchiveInput = {
     verdict?: CaptureAssessmentStatus;
     reviewSummary?: string;
     reviewReason?: string;
+    recaptureGuidance?: string[];
   };
 };
 
@@ -70,6 +71,7 @@ function buildNotesMarkdown(input: CaptureArchiveInput): string {
   const memo = input.notes.memo.trim() || "(empty)";
   const reviewSummary = input.notes.reviewSummary?.trim() || "(not specified)";
   const reviewReason = input.notes.reviewReason?.trim() || "(not specified)";
+  const recaptureGuidance = input.notes.recaptureGuidance?.filter((item) => item.trim().length > 0) ?? [];
   const performanceSection = buildExpectedPerformanceMarkdown(expectedPerformance);
 
   return [
@@ -90,6 +92,10 @@ function buildNotesMarkdown(input: CaptureArchiveInput): string {
     "",
     `- summary: ${reviewSummary}`,
     `- reason: ${reviewReason}`,
+    "",
+    "## Recapture Guidance",
+    "",
+    ...(recaptureGuidance.length > 0 ? recaptureGuidance.map((item) => `- ${item}`) : ["(not specified)"]),
     "",
     "## Memo",
     "",

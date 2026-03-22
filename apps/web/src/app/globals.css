@@ -607,6 +607,21 @@ button:disabled {
   box-shadow: 0 0 0 2px rgba(23, 126, 137, 0.12);
 }
 
+.recapture-guidance {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px dashed rgba(30, 31, 31, 0.14);
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.recapture-guidance ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.7;
+}
+
 .compact-field input {
   min-width: 88px;
   max-width: 108px;

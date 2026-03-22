@@ -215,6 +215,21 @@ function buildCaptureAssessment(
     (expectedEvents.length > 0 && detectedEvents.length >= Math.ceil(expectedEvents.length * 1.5));
 
   if (severeFragmentation) {
+    if (captureIntent === "strict_chord" && (dominantDetectedGesture === "rolled_chord" || dominantDetectedGesture === "gliss")) {
+      return {
+        status: "rerecord",
+        label: "再録音",
+        summary: "strict chord としては取り直し推奨です。",
+        reason: `${buildIntentLabel(captureIntent)} を期待しましたが、検出側は ${buildIntentLabel(dominantDetectedGesture)} 優勢でした。同時打鍵の厳密さを上げた再録音を推奨します。`,
+        mismatchCount,
+        expectedEventCount: expectedEvents.length,
+        detectedEventCount: detectedEvents.length,
+        extraEventCount,
+        missingEventCount,
+        events,
+      };
+    }
+
     if (captureIntent === "gliss" || captureIntent === "rolled_chord") {
       return {
         status: "pending",
@@ -256,6 +271,34 @@ function buildCaptureAssessment(
     missingEventCount,
     events,
   };
+}
+
+function buildRecaptureGuidance(
+  review: CaptureAssessmentDetails | null,
+  captureIntent: CaptureIntent,
+): string[] {
+  if (!review || review.status === "completed") {
+    return [];
+  }
+
+  const guidance: string[] = [];
+  if (captureIntent === "strict_chord") {
+    guidance.push("各反復で対象キーを同時に弾き、指をずらして順に入れない。", "各反復の間に明確な無音を入れる。", "和音の開始を揃え、slow gliss や rolled chord にならないようにする。");
+  } else if (captureIntent === "rolled_chord") {
+    guidance.push("毎回ほぼ同じ方向と速さで順に鳴らす。", "和音の各音の入り方が毎回大きく変わらないようにする。", "反復の間に明確な無音を入れる。");
+  } else if (captureIntent === "gliss") {
+    guidance.push("1 gesture ごとに一方向へ連続してなぞり、途中で止めない。", "各 gesture の間に無音を入れて区切る。", "狙ったキー範囲だけを sweep する。");
+  } else if (captureIntent === "separated_notes") {
+    guidance.push("各音をはっきり区切り、次の音まで十分に待つ。", "低音残響が長い場合でも、新しい打鍵の間隔を広めに取る。");
+  }
+
+  if (review.status === "rerecord") {
+    guidance.push("今回の録音は意図と検出結果の差が大きいため、同じ expected performance のまま録り直して比較する。");
+  } else if (review.status === "review_needed") {
+    guidance.push("再録音前に expected と detected の差分を見て、演奏意図自体が正しいか確認する。");
+  }
+
+  return guidance;
 }
 
 function buildResultOnlyAssessment(result: TranscriptionResult | null): CaptureAssessmentDetails | null {
@@ -335,6 +378,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     () => buildCaptureAssessment(lastCapture?.requestPayload.expectedPerformance ?? expectedPerformance, result ?? lastCapture?.responsePayload ?? null, noteNamesByKey, lastCapture?.requestPayload.captureIntent ?? captureIntent),
     [captureIntent, expectedPerformance, lastCapture, noteNamesByKey, result],
   );
+  const recaptureGuidance = useMemo(() => buildRecaptureGuidance(captureReview, lastCapture?.requestPayload.captureIntent ?? captureIntent), [captureIntent, captureReview, lastCapture]);
   const userReview = useMemo(() => buildResultOnlyAssessment(result), [result]);
   const activeReview = isDebug ? captureReview : userReview;
   const suggestedCaptureId = useMemo(
@@ -444,6 +488,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
           verdict: captureReview?.status,
           reviewSummary: captureReview?.summary,
           reviewReason: captureReview?.reason,
+          recaptureGuidance,
         },
       });
       downloadBlob(archive, `${caseId}.zip`);
@@ -588,6 +633,16 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
                 <span>detected {captureReview.detectedEventCount}</span>
                 <span>mismatch {captureReview.mismatchCount}</span>
               </div>
+              {recaptureGuidance.length > 0 ? (
+                <div className="recapture-guidance">
+                  <span className="eyebrow">Recapture Guidance</span>
+                  <ul>
+                    {recaptureGuidance.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           ) : lastCapture?.requestPayload.expectedPerformance ? (
             <div className="warning-box">
