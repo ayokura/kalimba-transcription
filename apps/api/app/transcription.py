@@ -30,10 +30,15 @@ GLISS_CLUSTER_MAX_TOTAL_DURATION = 1.2
 GLISS_CLUSTER_TARGET_NOTE_COUNT = 3
 GLISS_LEADING_SUBSET_MAX_DURATION = 0.18
 GLISS_LEADING_SUBSET_SCORE_RATIO = 4.0
-GLISS_TERTIARY_MAX_DURATION = 0.85
+GLISS_TERTIARY_MAX_DURATION = 1.35
 GLISS_TERTIARY_SCORE_RATIO = 0.02
 GLISS_TERTIARY_MIN_SCORE = 20.0
+GLISS_TERTIARY_STRONG_ONSET_GAIN = 5.0
+GLISS_TERTIARY_WEAK_ONSET_GAIN = 2.0
 GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.9
+CHORD_CLUSTER_MAX_GAP = 0.08
+CHORD_CLUSTER_MAX_SINGLETON_DURATION = 0.22
+CHORD_CLUSTER_MAX_TOTAL_DURATION = 1.6
 MAX_HARMONIC_MULTIPLE = 4
 SECONDARY_SCORE_RATIO = 0.12
 SECONDARY_MIN_FUNDAMENTAL_RATIO = 0.18
@@ -603,7 +608,8 @@ def segment_peaks(
         if selected_keys[-1] - selected_keys[0] == 1:
             extension_keys = {selected_keys[0] - 1, selected_keys[-1] + 1}
             selected_names = {note.note_name for note in selected}
-            for hypothesis in residual_ranked[:4]:
+            viable_extensions: list[tuple[NoteHypothesis, float]] = []
+            for hypothesis in residual_ranked[:6]:
                 candidate = hypothesis.candidate
                 if candidate.note_name in selected_names:
                     continue
@@ -617,19 +623,36 @@ def segment_peaks(
                     continue
                 if any(are_harmonic_related(candidate, existing) for existing in selected):
                     continue
-                selected.append(candidate)
+                onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, candidate.frequency)
+                viable_extensions.append((hypothesis, onset_gain))
+
+            chosen_extension: tuple[NoteHypothesis, float] | None = None
+            if viable_extensions:
+                strongest_by_score = max(viable_extensions, key=lambda item: item[0].score)
+                strong_onset_candidates = [
+                    item
+                    for item in viable_extensions
+                    if item[1] >= GLISS_TERTIARY_STRONG_ONSET_GAIN and item[0].score >= GLISS_TERTIARY_MIN_SCORE
+                ]
+                if strong_onset_candidates and strongest_by_score[1] < GLISS_TERTIARY_WEAK_ONSET_GAIN:
+                    chosen_extension = max(strong_onset_candidates, key=lambda item: item[1])
+                else:
+                    chosen_extension = strongest_by_score
+
+            if chosen_extension is not None:
+                hypothesis, onset_gain = chosen_extension
+                selected.append(hypothesis.candidate)
                 secondary_decision_trail.append(
                     {
-                        "noteName": candidate.note_name,
+                        "noteName": hypothesis.candidate.note_name,
                         "score": round(hypothesis.score, 6),
                         "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
-                        "onsetGain": None,
+                        "onsetGain": round(onset_gain, 6),
                         "accepted": True,
-                        "reasons": ["gliss-tertiary-extension"],
+                        "reasons": ["contiguous-tertiary-extension"],
                         "octaveDyadAllowed": False,
                     }
                 )
-                break
 
     debug_payload = None
     if debug:
@@ -983,6 +1006,112 @@ def merge_adjacent_events(raw_events: list[RawEvent]) -> list[RawEvent]:
 
     return merged
 
+def merge_short_chord_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    merged: list[RawEvent] = []
+    index = 0
+    while index < len(raw_events):
+        current = raw_events[index]
+        if index + 1 >= len(raw_events):
+            merged.append(current)
+            break
+
+        following = raw_events[index + 1]
+        gap = following.start_time - current.end_time
+        current_names = {note.note_name for note in current.notes}
+        following_names = {note.note_name for note in following.notes}
+        combined: dict[str, NoteCandidate] = {note.note_name: note for note in current.notes}
+        for note in following.notes:
+            combined.setdefault(note.note_name, note)
+        combined_keys = sorted(note.key for note in combined.values())
+        contiguous_keys = bool(combined_keys) and (combined_keys[-1] - combined_keys[0] + 1 == len(combined_keys))
+        combined_count = len(combined)
+        total_duration = following.end_time - current.start_time
+        is_singleton_plus_dyad = (
+            {len(current.notes), len(following.notes)} == {1, 2}
+            and not current_names.intersection(following_names)
+            and min(current.end_time - current.start_time, following.end_time - following.start_time) <= CHORD_CLUSTER_MAX_SINGLETON_DURATION
+        )
+        is_subset_to_triad = (
+            combined_count == 3
+            and (current_names < following_names or following_names < current_names)
+            and max(len(current.notes), len(following.notes)) == 3
+        )
+        if (
+            gap <= CHORD_CLUSTER_MAX_GAP
+            and total_duration <= CHORD_CLUSTER_MAX_TOTAL_DURATION
+            and combined_count == 3
+            and contiguous_keys
+            and (is_singleton_plus_dyad or is_subset_to_triad)
+        ):
+            merged.append(
+                RawEvent(
+                    start_time=current.start_time,
+                    end_time=following.end_time,
+                    notes=sorted(combined.values(), key=lambda note: note.frequency),
+                    is_gliss_like=current.is_gliss_like or following.is_gliss_like,
+                    primary_note_name=following.primary_note_name,
+                    primary_score=max(current.primary_score, following.primary_score),
+                )
+            )
+            index += 2
+            continue
+
+        merged.append(current)
+        index += 1
+
+    return merged
+
+
+def suppress_isolated_triad_extensions(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 3:
+        return raw_events
+
+    note_set_counts: dict[frozenset[str], int] = {}
+    for event in raw_events:
+        note_set = frozenset(note.note_name for note in event.notes)
+        note_set_counts[note_set] = note_set_counts.get(note_set, 0) + 1
+
+    cleaned: list[RawEvent] = []
+    for index, event in enumerate(raw_events):
+        event_note_set = frozenset(note.note_name for note in event.notes)
+        if len(event.notes) == 3 and note_set_counts.get(event_note_set, 0) == 1:
+            candidate_subsets = [
+                frozenset(subset)
+                for subset in (
+                    event_note_set - {note.note_name}
+                    for note in event.notes
+                )
+                if len(subset) == 2 and note_set_counts.get(frozenset(subset), 0) >= 3
+            ]
+            if candidate_subsets:
+                nearby_sets = [
+                    frozenset(note.note_name for note in raw_events[offset].notes)
+                    for offset in range(max(0, index - 2), min(len(raw_events), index + 3))
+                    if offset != index
+                ]
+                matching_subsets = [subset for subset in candidate_subsets if subset in nearby_sets]
+                if matching_subsets:
+                    target_subset = max(matching_subsets, key=lambda subset: note_set_counts[subset])
+                    target_notes = [note for note in event.notes if note.note_name in target_subset]
+                    cleaned.append(
+                        RawEvent(
+                            start_time=event.start_time,
+                            end_time=event.end_time,
+                            notes=sorted(target_notes, key=lambda note: note.frequency),
+                            is_gliss_like=event.is_gliss_like,
+                            primary_note_name=event.primary_note_name if event.primary_note_name in target_subset else target_notes[0].note_name,
+                            primary_score=event.primary_score,
+                        )
+                    )
+                    continue
+        cleaned.append(event)
+
+    return cleaned
+
+
 def quantize_beat(value: float, step: float = 0.25) -> float:
     return round(value / step) * step
 
@@ -1072,6 +1201,9 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
     processed_events = suppress_bridging_octave_pairs(processed_events)
     processed_events = suppress_short_residual_tails(processed_events)
     merged_events = merge_adjacent_events(processed_events)
+    merged_events = merge_short_chord_clusters(merged_events)
+    merged_events = merge_adjacent_events(merged_events)
+    merged_events = suppress_isolated_triad_extensions(merged_events)
     if not merged_events:
         raise HTTPException(status_code=422, detail="No musical notes were detected. Try a clearer recording or a different tuning.")
 
