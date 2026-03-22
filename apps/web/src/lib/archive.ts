@@ -1,4 +1,4 @@
-import type { ManualCaptureExpectedPerformance, ManualCaptureRequestPayload } from "@/lib/api";
+import type { CaptureAssessmentStatus, ManualCaptureExpectedPerformance, ManualCaptureRequestPayload } from "@/lib/api";
 import type { TranscriptionResult } from "@/lib/types";
 
 const textEncoder = new TextEncoder();
@@ -13,7 +13,9 @@ export type CaptureArchiveInput = {
     expectedPerformance?: ManualCaptureExpectedPerformance | null;
     memo: string;
     tester?: string;
-    verdict?: string;
+    verdict?: CaptureAssessmentStatus;
+    reviewSummary?: string;
+    reviewReason?: string;
   };
 };
 
@@ -65,6 +67,8 @@ function buildNotesMarkdown(input: CaptureArchiveInput): string {
   const expectedNote = input.notes.expectedNote.trim() || "(not specified)";
   const expectedPerformance = input.notes.expectedPerformance ?? null;
   const memo = input.notes.memo.trim() || "(empty)";
+  const reviewSummary = input.notes.reviewSummary?.trim() || "(not specified)";
+  const reviewReason = input.notes.reviewReason?.trim() || "(not specified)";
   const performanceSection = buildExpectedPerformanceMarkdown(expectedPerformance);
 
   return [
@@ -79,6 +83,11 @@ function buildNotesMarkdown(input: CaptureArchiveInput): string {
     "## Expected Performance",
     "",
     performanceSection,
+    "",
+    "## Review",
+    "",
+    `- summary: ${reviewSummary}`,
+    `- reason: ${reviewReason}`,
     "",
     "## Memo",
     "",

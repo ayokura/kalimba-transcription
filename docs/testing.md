@@ -118,6 +118,34 @@ $env:PYTHONPATH='C:\src\calimba-score\.pydeps;C:\src\calimba-score\apps\api'
 py -3.13 -m pytest apps/api/tests
 ```
 
+## Recording Request Format
+
+When asking for new manual recordings, always include the purpose of the capture.
+
+Recommended template:
+
+1. `goal`: what failure mode or ambiguity this recording is meant to test
+2. `gesture`: the intended performance style
+   - strict simultaneous chord
+   - rolled chord
+   - gliss / sweep
+   - separated single notes
+3. `notes`: exact target note-set or sequence
+4. `repetitions`: how many times to play it
+5. `spacing`: whether to leave clear silence between repetitions
+6. `success criteria`: what the recognizer should ideally output
+
+Example:
+
+- goal: distinguish strict four-note chord from slow rolled chord
+- gesture: strict simultaneous chord
+- notes: `E4 + G4 + B4 + D5`
+- repetitions: 5
+- spacing: leave clear silence between takes
+- success criteria: 5 events, each with `E4+G4+B4+D5`
+
+This makes later fixture review and independent audit much easier.
+
 ## Next automated tests to add
 
 1. API endpoint tests for `/api/health`, `/api/tunings`, and `/api/transcriptions` using WAV fixtures.

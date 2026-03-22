@@ -3,6 +3,31 @@ import { WavMetadata, toWavWithMetadata } from "@/lib/audio";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
+export type CaptureAssessmentStatus = "completed" | "pending" | "rerecord" | "review_needed" | "reference_only";
+
+export type CaptureAssessment = {
+  status: CaptureAssessmentStatus;
+  label: string;
+  summary: string;
+  reason: string;
+  mismatchCount: number;
+  expectedEventCount: number;
+  detectedEventCount: number;
+};
+
+export type CaptureAssessmentEvent = {
+  index: number;
+  expected: string | null;
+  detected: string | null;
+  matches: boolean;
+};
+
+export type CaptureAssessmentDetails = CaptureAssessment & {
+  events: CaptureAssessmentEvent[];
+  extraEventCount: number;
+  missingEventCount: number;
+};
+
 export type ManualCaptureExpectedKey = {
   key: number;
   noteName: string;

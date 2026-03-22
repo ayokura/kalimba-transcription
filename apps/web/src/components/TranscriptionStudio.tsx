@@ -8,6 +8,7 @@ import { NotationPanel } from "@/components/NotationPanel";
 import { RecorderPanel } from "@/components/RecorderPanel";
 import { TuningPanel } from "@/components/TuningPanel";
 import {
+  CaptureAssessmentDetails,
   ManualCaptureExpectedEvent,
   ManualCaptureExpectedPerformance,
   TranscriptionCapture,
@@ -139,6 +140,91 @@ function buildExpectedPerformance(events: ManualCaptureExpectedEvent[]): ManualC
   };
 }
 
+function buildExpectedEventDisplay(event: ManualCaptureExpectedEvent) {
+  return [...event.keys]
+    .sort((left, right) => left.key - right.key)
+    .map((key) => key.noteName)
+    .join(" + ");
+}
+
+function buildDetectedEventDisplay(event: TranscriptionResult["events"][number], noteNamesByKey: Map<number, string>) {
+  return [...event.notes]
+    .sort((left, right) => left.key - right.key)
+    .map((note) => noteNamesByKey.get(note.key) ?? `${note.pitchClass}${note.octave}`)
+    .join(" + ");
+}
+
+function buildCaptureAssessment(
+  expectedPerformance: ManualCaptureExpectedPerformance | null,
+  result: TranscriptionResult | null,
+  noteNamesByKey: Map<number, string>,
+): CaptureAssessmentDetails | null {
+  if (!expectedPerformance || expectedPerformance.events.length === 0 || !result) {
+    return null;
+  }
+
+  const expectedEvents = expectedPerformance.events.map(buildExpectedEventDisplay);
+  const detectedEvents = result.events.map((event) => buildDetectedEventDisplay(event, noteNamesByKey));
+  const total = Math.max(expectedEvents.length, detectedEvents.length);
+  const events = Array.from({ length: total }, (_, index) => ({
+    index: index + 1,
+    expected: expectedEvents[index] ?? null,
+    detected: detectedEvents[index] ?? null,
+    matches: (expectedEvents[index] ?? null) === (detectedEvents[index] ?? null),
+  }));
+
+  const mismatchCount = events.filter((event) => !event.matches).length;
+  const extraEventCount = Math.max(0, detectedEvents.length - expectedEvents.length);
+  const missingEventCount = Math.max(0, expectedEvents.length - detectedEvents.length);
+
+  if (mismatchCount === 0) {
+    return {
+      status: "completed",
+      label: "一致",
+      summary: "期待演奏と検出結果が一致しています。",
+      reason: "event 数と各 note-set がすべて一致しています。fixture 化して regression に昇格できます。",
+      mismatchCount,
+      expectedEventCount: expectedEvents.length,
+      detectedEventCount: detectedEvents.length,
+      extraEventCount,
+      missingEventCount,
+      events,
+    };
+  }
+
+  const severeFragmentation =
+    detectedEvents.length >= expectedEvents.length + 2 ||
+    (expectedEvents.length > 0 && detectedEvents.length >= Math.ceil(expectedEvents.length * 1.5));
+
+  if (severeFragmentation) {
+    return {
+      status: "review_needed",
+      label: "要確認",
+      summary: "event の分割または束ね方に大きな差があります。",
+      reason: "slow gliss / rolled chord / fragment の混在が疑われます。録音意図と diff を確認してから fixture status を決めてください。",
+      mismatchCount,
+      expectedEventCount: expectedEvents.length,
+      detectedEventCount: detectedEvents.length,
+      extraEventCount,
+      missingEventCount,
+      events,
+    };
+  }
+
+  return {
+    status: "pending",
+    label: "改善対象",
+    summary: "一部の note-set または event 数がずれています。",
+    reason: "認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。",
+    mismatchCount,
+    expectedEventCount: expectedEvents.length,
+    detectedEventCount: detectedEvents.length,
+    extraEventCount,
+    missingEventCount,
+    events,
+  };
+}
+
 export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const isDebug = mode === "debug";
   const [tunings, setTunings] = useState<InstrumentTuning[]>([]);
@@ -190,7 +276,12 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   }, [tuningSignature]);
 
   const expectedPerformance = useMemo(() => buildExpectedPerformance(expectedEvents), [expectedEvents]);
+  const noteNamesByKey = useMemo(() => new Map((selectedTuning?.notes ?? []).map((note) => [note.key, note.noteName])), [selectedTuning]);
   const expectedNote = expectedPerformance?.summary ?? "";
+  const captureReview = useMemo(
+    () => buildCaptureAssessment(lastCapture?.requestPayload.expectedPerformance ?? expectedPerformance, result ?? lastCapture?.responsePayload ?? null, noteNamesByKey),
+    [expectedPerformance, lastCapture, noteNamesByKey, result],
+  );
   const suggestedCaptureId = useMemo(
     () => buildDefaultCaptureIdForValues(new Date().toISOString(), selectedTuning, expectedPerformance),
     [selectedTuning, expectedPerformance],
@@ -293,6 +384,9 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
           expectedNote,
           expectedPerformance,
           memo: captureMemo,
+          verdict: captureReview?.status,
+          reviewSummary: captureReview?.summary,
+          reviewReason: captureReview?.reason,
         },
       });
       downloadBlob(archive, `${caseId}.zip`);
@@ -383,7 +477,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
         </div>
       </section>
 
-      <NotationPanel result={result} mode={notationMode} onModeChange={setNotationMode} />
+      <NotationPanel result={result} mode={notationMode} onModeChange={setNotationMode} review={captureReview} />
 
       <section className="panel">
         <div className="panel-header">
@@ -399,7 +493,23 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
             <span>{lastCapture?.requestPayload.audio.durationSec ?? "-"} sec</span>
           </div>
           <p className="muted">通常表記を優先して認識結果を確認し、必要なら保存パックを fixture に取り込みます。</p>
-          {lastCapture?.requestPayload.expectedPerformance ? (
+          {captureReview ? (
+            <div className={`review-box status-${captureReview.status}`}>
+              <div className="panel-header compact">
+                <div>
+                  <p className="eyebrow">Capture Review</p>
+                  <strong>{captureReview.summary}</strong>
+                </div>
+                <span className={`pill review-pill status-${captureReview.status}`}>{captureReview.label}</span>
+              </div>
+              <p>{captureReview.reason}</p>
+              <div className="summary-strip">
+                <span>expected {captureReview.expectedEventCount}</span>
+                <span>detected {captureReview.detectedEventCount}</span>
+                <span>mismatch {captureReview.mismatchCount}</span>
+              </div>
+            </div>
+          ) : lastCapture?.requestPayload.expectedPerformance ? (
             <div className="warning-box">
               <p>Expected: {lastCapture.requestPayload.expectedPerformance.summary}</p>
             </div>
