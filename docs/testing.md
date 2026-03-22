@@ -215,6 +215,15 @@ Independent audit should explicitly separate `recording quality` from `performan
 
 This audit should happen after a small cluster of improvements lands, not after every tiny tweak.
 
+Use the helper script when you want a fast raw-audio audit over the non-completed fixtures:
+
+```powershell
+$env:PYTHONPATH='C:\src\calimba-score\apps\api'
+.\.venv313\Scripts\python scripts/audit_manual_captures.py
+```
+
+This does not change fixture status by itself. It gives a quick waveform/STFT-based view of activity regions and rough target-note support, so you can decide whether a case is still `pending`, should move to `rerecord`, or should be narrowed with `evaluationWindows` / `ignoredRanges`.
+
 ## Current caveat
 
 The web app compiles cleanly. API syntax compiles cleanly with `py -3.13 -m compileall apps/api/app apps/api/tests`, and the canonical runtime path is now:
@@ -251,3 +260,4 @@ These are the next recommended recordings to collect after the current mixed-seq
 7. Short mixed phrase: `C4 -> C4+C5 -> B4+D5 -> D4`
    - Goal: evaluate transitions once atomic cases are stable
    - Likely failures: decay contaminating the next event, segmentation drift
+
