@@ -917,6 +917,42 @@ def merge_short_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
     return merged
 
 
+def simplify_short_gliss_prefix_to_contiguous_singleton(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    cleaned: list[RawEvent] = []
+    index = 0
+    while index < len(raw_events):
+        current = raw_events[index]
+        updated_event = current
+        if index + 1 < len(raw_events):
+            next_event = raw_events[index + 1]
+            duration = current.end_time - current.start_time
+            gap = next_event.start_time - current.end_time
+            if len(current.notes) == 2 and len(next_event.notes) >= 3 and duration <= 0.14 and gap <= GLISS_CLUSTER_MAX_GAP:
+                candidate_unions: list[tuple[NoteCandidate, list[int]]] = []
+                next_keys = sorted(note.key for note in next_event.notes)
+                for note in current.notes:
+                    merged_keys = sorted(set(next_keys + [note.key]))
+                    if merged_keys[-1] - merged_keys[0] + 1 == len(merged_keys) == 4:
+                        candidate_unions.append((note, merged_keys))
+                if len(candidate_unions) == 1:
+                    chosen_note = candidate_unions[0][0]
+                    updated_event = RawEvent(
+                        start_time=current.start_time,
+                        end_time=current.end_time,
+                        notes=[chosen_note],
+                        is_gliss_like=True,
+                        primary_note_name=chosen_note.note_name,
+                        primary_score=current.primary_score,
+                    )
+        cleaned.append(updated_event)
+        index += 1
+
+    return cleaned
+
+
 def merge_four_note_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 2:
         return raw_events
@@ -1335,6 +1371,8 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
         if len(event_set) <= 2 and event_set < dominant_set and nearby_dominant and duration <= 0.45:
             if previous_set == dominant_set and previous_gap <= 0.02:
                 continue
+            if index == len(raw_events) - 1 and previous_set == dominant_set and previous_gap <= 0.35:
+                continue
             if (
                 event.primary_score <= dominant_score * 0.8
                 and (
@@ -1681,6 +1719,7 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
     processed_events = suppress_resonant_carryover(processed_events)
     processed_events = simplify_short_secondary_bleed(processed_events)
     processed_events = merge_short_gliss_clusters(processed_events)
+    processed_events = simplify_short_gliss_prefix_to_contiguous_singleton(processed_events)
     processed_events = merge_four_note_gliss_clusters(processed_events)
     processed_events = suppress_leading_gliss_subset_transients(processed_events)
     processed_events = suppress_leading_gliss_neighbor_noise(processed_events)

@@ -37,5 +37,5 @@
 ## Fixture Import Notes
 
 - imported as ascending four-note gliss target on 2026-03-23
-- current API output: 11 events with heavy fragmentation and F4 noise contamination
+- current API output: 6 events, with two reconstructed 4-note events but remaining G4+B4+D5 / D5 / E4+F4 / G4+D5 fragments
 - kept as `pending` because slow gliss is a realistic user pattern and should remain an improvement target
