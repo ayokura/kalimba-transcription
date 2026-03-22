@@ -1,101 +1,101 @@
 {
   "capturedAt": "2026-03-22T06:04:10.836Z",
-  "scenario": "2026-03-22-c4-plus-e4-plus-g4-repeat-05-kalimba-17-c",
-  "expectedNote": "G4 + B4 + D5 x 5",
+  "scenario": "2026-03-22-e4-plus-g4-plus-b4-repeat-05-kalimba-17-c",
+  "expectedNote": "E4 + G4 + B4 x 5",
   "expectedPerformance": {
     "source": "clickable-kalimba-ui",
     "version": 1,
-    "summary": "G4 + B4 + D5 x 5",
+    "summary": "E4 + G4 + B4 x 5",
     "events": [
       {
         "index": 1,
         "keys": [
           {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
             "key": 11,
             "noteName": "G4"
           },
           {
             "key": 12,
             "noteName": "B4"
-          },
-          {
-            "key": 13,
-            "noteName": "D5"
           }
         ],
-        "display": "G4 + B4 + D5"
+        "display": "E4 + G4 + B4"
       },
       {
         "index": 2,
         "keys": [
           {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
             "key": 11,
             "noteName": "G4"
           },
           {
             "key": 12,
             "noteName": "B4"
-          },
-          {
-            "key": 13,
-            "noteName": "D5"
           }
         ],
-        "display": "G4 + B4 + D5"
+        "display": "E4 + G4 + B4"
       },
       {
         "index": 3,
         "keys": [
           {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
             "key": 11,
             "noteName": "G4"
           },
           {
             "key": 12,
             "noteName": "B4"
-          },
-          {
-            "key": 13,
-            "noteName": "D5"
           }
         ],
-        "display": "G4 + B4 + D5"
+        "display": "E4 + G4 + B4"
       },
       {
         "index": 4,
         "keys": [
           {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
             "key": 11,
             "noteName": "G4"
           },
           {
             "key": 12,
             "noteName": "B4"
-          },
-          {
-            "key": 13,
-            "noteName": "D5"
           }
         ],
-        "display": "G4 + B4 + D5"
+        "display": "E4 + G4 + B4"
       },
       {
         "index": 5,
         "keys": [
           {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
             "key": 11,
             "noteName": "G4"
           },
           {
             "key": 12,
             "noteName": "B4"
-          },
-          {
-            "key": 13,
-            "noteName": "D5"
           }
         ],
-        "display": "G4 + B4 + D5"
+        "display": "E4 + G4 + B4"
       }
     ]
   },
