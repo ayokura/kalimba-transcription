@@ -1065,6 +1065,116 @@ def merge_short_chord_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
     return merged
 
 
+def normalize_repeated_triad_patterns(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 4:
+        return raw_events
+
+    note_set_counts: dict[frozenset[str], int] = {}
+    for event in raw_events:
+        note_set = frozenset(note.note_name for note in event.notes)
+        if len(note_set) == 3:
+            note_set_counts[note_set] = note_set_counts.get(note_set, 0) + 1
+
+    if not note_set_counts:
+        return raw_events
+
+    dominant_set, dominant_count = max(note_set_counts.items(), key=lambda item: item[1])
+    if dominant_count < 3:
+        return raw_events
+
+    dominant_events = [event for event in raw_events if frozenset(note.note_name for note in event.notes) == dominant_set]
+    competing_four_note_family = any(
+        other_set != dominant_set and len(other_set & dominant_set) >= 2 and len(other_set | dominant_set) == 4
+        for other_set in note_set_counts
+    )
+    if dominant_count < 4 and competing_four_note_family:
+        return raw_events
+    dominant_score = float(np.median([event.primary_score for event in dominant_events])) if dominant_events else 0.0
+    dominant_notes_by_name: dict[str, NoteCandidate] = {}
+    for event in dominant_events:
+        for note in event.notes:
+            dominant_notes_by_name.setdefault(note.note_name, note)
+    dominant_notes = sorted((dominant_notes_by_name[name] for name in dominant_set), key=lambda note: note.frequency)
+
+    normalized: list[RawEvent] = []
+    for index, event in enumerate(raw_events):
+        event_set = frozenset(note.note_name for note in event.notes)
+        if event_set == dominant_set:
+            normalized.append(event)
+            continue
+
+        previous_set = frozenset(note.note_name for note in raw_events[index - 1].notes) if index > 0 else frozenset()
+        next_set = frozenset(note.note_name for note in raw_events[index + 1].notes) if index + 1 < len(raw_events) else frozenset()
+        previous_gap = event.start_time - raw_events[index - 1].end_time if index > 0 else 1.0
+        next_gap = raw_events[index + 1].start_time - event.end_time if index + 1 < len(raw_events) else 1.0
+        nearby_dominant = any(
+            0 <= offset < len(raw_events) and frozenset(note.note_name for note in raw_events[offset].notes) == dominant_set
+            for offset in (index - 2, index - 1, index + 1, index + 2)
+        )
+        between_dominant = (
+            index > 0
+            and index + 1 < len(raw_events)
+            and previous_set == dominant_set
+            and next_set == dominant_set
+            and previous_gap <= 0.18
+            and next_gap <= 0.18
+        )
+        duration = event.end_time - event.start_time
+        shared_note_count = len(event_set & dominant_set)
+
+        if (
+            len(event_set) <= 2
+            and duration <= 0.32
+            and event.primary_score <= dominant_score * 0.28
+            and (
+                (shared_note_count >= 1 and (
+                    (previous_set == dominant_set and previous_gap <= CHORD_CLUSTER_MAX_GAP)
+                    or (next_set == dominant_set and next_gap <= CHORD_CLUSTER_MAX_GAP)
+                    or between_dominant
+                ))
+                or (len(event_set) == 1 and nearby_dominant and event.primary_score <= dominant_score * 0.25)
+                or (len(event_set) == 2 and shared_note_count >= 1 and nearby_dominant and duration <= 0.2 and event.primary_score <= dominant_score * 0.12)
+            )
+        ):
+            continue
+
+        if event_set < dominant_set and nearby_dominant:
+            if len(event_set) == 2 or (len(event_set) == 1 and dominant_count >= 4 and event.primary_score <= dominant_score * 0.75):
+                normalized.append(
+                    RawEvent(
+                        start_time=event.start_time,
+                        end_time=event.end_time,
+                        notes=dominant_notes,
+                        is_gliss_like=event.is_gliss_like,
+                        primary_note_name=event.primary_note_name if event.primary_note_name in dominant_set else dominant_notes[0].note_name,
+                        primary_score=event.primary_score,
+                    )
+                )
+                continue
+
+        if (
+            len(event_set) == 3
+            and len(event_set & dominant_set) == 2
+            and note_set_counts.get(event_set, 0) <= 1
+            and nearby_dominant
+        ):
+            normalized.append(
+                RawEvent(
+                    start_time=event.start_time,
+                    end_time=event.end_time,
+                    notes=dominant_notes,
+                    is_gliss_like=event.is_gliss_like,
+                    primary_note_name=event.primary_note_name if event.primary_note_name in dominant_set else dominant_notes[0].note_name,
+                    primary_score=event.primary_score,
+                )
+            )
+            continue
+
+        normalized.append(event)
+
+    return normalized
+
+
 def suppress_isolated_triad_extensions(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 3:
         return raw_events
@@ -1202,6 +1312,8 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
     processed_events = suppress_short_residual_tails(processed_events)
     merged_events = merge_adjacent_events(processed_events)
     merged_events = merge_short_chord_clusters(merged_events)
+    merged_events = merge_adjacent_events(merged_events)
+    merged_events = normalize_repeated_triad_patterns(merged_events)
     merged_events = merge_adjacent_events(merged_events)
     merged_events = suppress_isolated_triad_extensions(merged_events)
     if not merged_events:

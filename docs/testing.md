@@ -113,6 +113,19 @@ py -3.13 -m pytest apps/api/tests
 3. Frontend interaction tests for notation mode switching and event editing.
 4. End-to-end browser test covering record or upload substitute, analyze, and edit flow.
 
+## Independent Audit Cadence
+
+After each recognition-improvement round stabilizes, run an independent audit on the remaining pending fixtures.
+
+- Use a separate analysis path based on direct waveform / FFT inspection, not the app's current predicted events.
+- Verify whether `expectedPerformance` still looks plausible from the raw audio.
+- Classify each pending case as one of:
+  - expected looks correct, keep improving recognition
+  - likely recording or performance issue, re-record first
+  - likely labeling or input mistake, fix fixture metadata first
+
+This audit should happen after a small cluster of improvements lands, not after every tiny tweak.
+
 ## Current caveat
 
 The web app compiles cleanly. API syntax compiles cleanly with `py -3.13 -m compileall apps/api/app apps/api/tests`, but full runtime API tests were not completed because Python package resolution is inconsistent in this Windows environment outside the direct install flow.
