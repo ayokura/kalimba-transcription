@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import NoteCandidate, RawEvent, classify_event_gesture, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import NoteCandidate, RawEvent, classify_event_gesture, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -466,8 +466,8 @@ def test_probe_four_note_gliss_pending_capture() -> None:
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
     ]
-    assert len(payload["events"]) <= 6
-    assert note_sets.count("B4+D5+E4+G4") >= 2
+    assert len(payload["events"]) <= 5
+    assert note_sets.count("B4+D5+E4+G4") >= 4
 
 
 def test_transcription_regression_for_manual_triple_glissando() -> None:
@@ -598,5 +598,34 @@ def test_normalize_repeated_explicit_four_note_patterns_absorbs_short_gliss_pref
     ]
     assert normalized[1].start_time == pytest.approx(1.0)
     assert normalized[1].end_time == pytest.approx(1.9)
+
+
+
+def test_normalize_repeated_four_note_gliss_patterns_promotes_subsets_and_drops_short_noise() -> None:
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=1.0, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="E4", primary_score=900.0),
+        RawEvent(start_time=1.3, end_time=2.4, notes=[g4, b4, d5], is_gliss_like=False, primary_note_name="G4", primary_score=600.0),
+        RawEvent(start_time=2.7, end_time=3.6, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="E4", primary_score=920.0),
+        RawEvent(start_time=4.0, end_time=4.9, notes=[d5], is_gliss_like=True, primary_note_name="D5", primary_score=580.0),
+        RawEvent(start_time=5.2, end_time=5.28, notes=[e4, f4], is_gliss_like=False, primary_note_name="F4", primary_score=110.0),
+        RawEvent(start_time=5.28, end_time=6.2, notes=[g4, d5], is_gliss_like=False, primary_note_name="D5", primary_score=560.0),
+    ]
+
+    normalized = normalize_repeated_four_note_gliss_patterns(raw_events)
+    assert [[note.note_name for note in event.notes] for event in normalized] == [
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+    ]
+
+
 
 
