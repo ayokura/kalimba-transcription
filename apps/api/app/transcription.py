@@ -36,6 +36,10 @@ GLISS_TERTIARY_MIN_SCORE = 20.0
 GLISS_TERTIARY_STRONG_ONSET_GAIN = 5.0
 GLISS_TERTIARY_WEAK_ONSET_GAIN = 2.0
 GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.9
+FOUR_NOTE_GLISS_EXTENSION_MAX_DURATION = 1.0
+FOUR_NOTE_GLISS_EXTENSION_SCORE_RATIO = 0.02
+FOUR_NOTE_GLISS_EXTENSION_MIN_SCORE = 18.0
+FOUR_NOTE_GLISS_EXTENSION_MIN_FUNDAMENTAL_RATIO = 0.82
 CHORD_CLUSTER_MAX_GAP = 0.08
 CHORD_CLUSTER_MAX_SINGLETON_DURATION = 0.22
 CHORD_CLUSTER_MAX_TOTAL_DURATION = 1.6
@@ -475,6 +479,94 @@ def allow_octave_secondary(primary: NoteHypothesis, hypothesis: NoteHypothesis, 
             return False
         return True
     return False
+
+
+def extend_contiguous_gliss_cluster(
+    selected: list[NoteCandidate],
+    ranked: list[NoteHypothesis],
+    residual_ranked: list[NoteHypothesis],
+    *,
+    primary_score: float,
+    duration: float,
+    target_note_count: int,
+) -> tuple[list[NoteCandidate], list[dict[str, Any]]]:
+    if len(selected) != 2 or duration > FOUR_NOTE_GLISS_EXTENSION_MAX_DURATION:
+        return selected, []
+
+    selected_keys = sorted(note.key for note in selected)
+    if selected_keys[-1] - selected_keys[0] < 2:
+        return selected, []
+
+    min_selected = selected_keys[0]
+    max_selected = selected_keys[-1]
+    start_min = max_selected - target_note_count + 1
+    start_max = min_selected
+    candidate_windows = [
+        list(range(start_key, start_key + target_note_count))
+        for start_key in range(start_min, start_max + 1)
+        if min_selected >= start_key and max_selected <= start_key + target_note_count - 1
+    ]
+    if not candidate_windows:
+        return selected, []
+
+    selected_names = {note.note_name for note in selected}
+    best_by_key: dict[int, NoteHypothesis] = {}
+    for hypotheses in (residual_ranked[:10], ranked[:10]):
+        for hypothesis in hypotheses:
+            if hypothesis.candidate.note_name in selected_names:
+                continue
+            existing = best_by_key.get(hypothesis.candidate.key)
+            if existing is None or hypothesis.score > existing.score:
+                best_by_key[hypothesis.candidate.key] = hypothesis
+
+    best_missing: list[NoteHypothesis] | None = None
+    best_window_score = -1.0
+    for window_keys in candidate_windows:
+        missing_keys = [key for key in window_keys if key not in selected_keys]
+        missing_hypotheses: list[NoteHypothesis] = []
+        valid_window = True
+        for key in missing_keys:
+            hypothesis = best_by_key.get(key)
+            if hypothesis is None:
+                valid_window = False
+                break
+            if hypothesis.score < primary_score * FOUR_NOTE_GLISS_EXTENSION_SCORE_RATIO:
+                valid_window = False
+                break
+            if hypothesis.score < FOUR_NOTE_GLISS_EXTENSION_MIN_SCORE:
+                valid_window = False
+                break
+            if hypothesis.fundamental_ratio < FOUR_NOTE_GLISS_EXTENSION_MIN_FUNDAMENTAL_RATIO:
+                valid_window = False
+                break
+            missing_hypotheses.append(hypothesis)
+        if not valid_window:
+            continue
+        total_score = sum(hypothesis.score for hypothesis in missing_hypotheses)
+        if total_score > best_window_score:
+            best_missing = missing_hypotheses
+            best_window_score = total_score
+
+    if best_missing is None:
+        return selected, []
+
+    extended = list(selected)
+    debug_entries: list[dict[str, Any]] = []
+    for hypothesis in best_missing:
+        extended.append(hypothesis.candidate)
+        debug_entries.append(
+            {
+                'noteName': hypothesis.candidate.note_name,
+                'score': round(hypothesis.score, 6),
+                'fundamentalRatio': round(hypothesis.fundamental_ratio, 6),
+                'onsetGain': None,
+                'accepted': True,
+                'reasons': [f'contiguous-{target_note_count}-note-gliss-extension'],
+                'octaveDyadAllowed': False,
+            }
+        )
+
+    return sorted(extended, key=lambda item: item.frequency), debug_entries
 
 def onset_energy_gain(
     audio: np.ndarray,
@@ -1333,22 +1425,61 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
     dominant_notes = sorted((dominant_notes_by_name[name] for name in dominant_set), key=lambda note: note.frequency)
 
     normalized: list[RawEvent] = []
-    for index, event in enumerate(raw_events):
+    index = 0
+    while index < len(raw_events):
+        event = raw_events[index]
         event_set = frozenset(note.note_name for note in event.notes)
+        duration = event.end_time - event.start_time
+
         if event_set == dominant_set:
             normalized.append(event)
+            index += 1
             continue
 
         previous_set = frozenset(note.note_name for note in raw_events[index - 1].notes) if index > 0 else frozenset()
-        next_set = frozenset(note.note_name for note in raw_events[index + 1].notes) if index + 1 < len(raw_events) else frozenset()
         previous_gap = event.start_time - raw_events[index - 1].end_time if index > 0 else 1.0
-        next_gap = raw_events[index + 1].start_time - event.end_time if index + 1 < len(raw_events) else 1.0
+        next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
+        next_set = frozenset(note.note_name for note in next_event.notes) if next_event is not None else frozenset()
+        next_gap = next_event.start_time - event.end_time if next_event is not None else 1.0
         nearby_dominant = any(
             0 <= offset < len(raw_events) and frozenset(note.note_name for note in raw_events[offset].notes) == dominant_set
             for offset in (index - 3, index - 2, index - 1, index + 1, index + 2, index + 3)
         )
-        duration = event.end_time - event.start_time
         shared_note_count = len(event_set & dominant_set)
+
+        if next_event is not None and next_set == dominant_set and next_gap <= GLISS_CLUSTER_MAX_GAP:
+            if len(event_set) >= 2 and event_set < dominant_set and shared_note_count >= 2 and duration <= 1.25:
+                normalized.append(
+                    RawEvent(
+                        start_time=event.start_time,
+                        end_time=next_event.end_time,
+                        notes=dominant_notes,
+                        is_gliss_like=event.is_gliss_like or next_event.is_gliss_like,
+                        primary_note_name=next_event.primary_note_name if next_event.primary_note_name in dominant_set else dominant_notes[0].note_name,
+                        primary_score=max(event.primary_score, next_event.primary_score),
+                    )
+                )
+                index += 2
+                continue
+
+            if (
+                len(event_set) == 1
+                and duration <= 0.12
+                and nearby_dominant
+                and event.primary_score <= dominant_score * 0.35
+            ):
+                normalized.append(
+                    RawEvent(
+                        start_time=event.start_time,
+                        end_time=next_event.end_time,
+                        notes=dominant_notes,
+                        is_gliss_like=event.is_gliss_like or next_event.is_gliss_like,
+                        primary_note_name=next_event.primary_note_name if next_event.primary_note_name in dominant_set else dominant_notes[0].note_name,
+                        primary_score=max(event.primary_score, next_event.primary_score),
+                    )
+                )
+                index += 2
+                continue
 
         if (
             len(event_set) == 3
@@ -1366,12 +1497,15 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
                     primary_score=event.primary_score,
                 )
             )
+            index += 1
             continue
 
         if len(event_set) <= 2 and event_set < dominant_set and nearby_dominant and duration <= 0.45:
             if previous_set == dominant_set and previous_gap <= 0.02:
+                index += 1
                 continue
             if index == len(raw_events) - 1 and previous_set == dominant_set and previous_gap <= 0.35:
+                index += 1
                 continue
             if (
                 event.primary_score <= dominant_score * 0.8
@@ -1381,12 +1515,13 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
                     or (index > 0 and previous_gap <= 0.02)
                 )
             ):
+                index += 1
                 continue
 
         normalized.append(event)
+        index += 1
 
     return normalized
-
 
 def normalize_repeated_triad_patterns(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 4:
