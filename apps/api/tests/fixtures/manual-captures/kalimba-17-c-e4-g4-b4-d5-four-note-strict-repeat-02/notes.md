@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: rerecord
 - scenario: 2026-03-22-e4-plus-g4-plus-b4-plus-d5-repeat-05-kalimba-17-c
 - expected note: E4 + G4 + B4 + D5 x 5
 - capture intent: strict_chord
@@ -39,3 +39,17 @@
 - imported as strict-chord boundary sample on 2026-03-23
 - current API output: 6 events, fragmented with mixed strict/gliss-like hints
 - kept as `rerecord` rather than `pending` because the strict intent is explicit but the performance is materially staggered
+
+## Independent Audit (2026-03-23)
+
+- raw band-energy audit found all four target notes in 4 of 5 takes
+- onset spread stayed small on most takes, so strict intent is plausible
+- one take weakens B4, but the main blocker is recognizer fragmentation rather than recording quality
+- fixture status promoted from `rerecord` to `pending`
+
+
+## Independent Audit Update (2026-03-23 late)
+
+- stricter review: recording quality is good, but the performed takes do not consistently establish a clean strict four-note ground truth
+- D5 dominates repeatedly, while E4 / G4 / B4 are too weak or staggered in some takes
+- status set back to `rerecord`

@@ -39,3 +39,8 @@
 - imported as rolled-chord target on 2026-03-23
 - current API output: 6 events, first 5 takes reconstruct as full 4-note rolled chords, final tail fragment remains
 - kept as `pending` because this is a realistic user input pattern worth improving
+
+## Independent Audit (2026-03-23)
+
+- Independent audit found monotonic rolled attacks across takes; E4/G4 are weaker than upper notes, but the input pattern is realistic and should remain a recognition target.
+

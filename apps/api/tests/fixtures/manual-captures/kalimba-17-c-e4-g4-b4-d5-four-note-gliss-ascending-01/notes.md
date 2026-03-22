@@ -39,3 +39,8 @@
 - imported as ascending four-note gliss target on 2026-03-23
 - current API output: 6 events, with two reconstructed 4-note events but remaining G4+B4+D5 / D5 / E4+F4 / G4+D5 fragments
 - kept as `pending` because slow gliss is a realistic user pattern and should remain an improvement target
+
+## Independent Audit (2026-03-23)
+
+- Independent audit found monotonic ascending sweeps in several takes; E4 is often weak but the gliss intent is still plausible and should remain a recognition target.
+

@@ -29,3 +29,7 @@ normal speed
 - this case is now superseded by explicit strict / rolled / gliss captures for the same note set
 - treat this fixture as legacy evidence until independent audit reclassifies it
 
+## Independent Audit (2026-03-23)
+
+- Independent audit confirms the note set can be plausible, but legacy scenario metadata and missing captureIntent still make this fixture unsuitable as a primary regression target.
+
