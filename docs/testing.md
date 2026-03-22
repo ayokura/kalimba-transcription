@@ -71,8 +71,9 @@ This avoids typing note names by hand and records both physical key numbers and 
 
 Recommended case naming:
 
-- `YYYY-MM-DD-<scenario>-<index>`
-- Example: `2026-03-21-b4-d5-double-note-01`
+- The debug capture UI now auto-generates a case ID when the field is left blank.
+- Format is roughly `YYYY-MM-DD-<auto-scenario>-<tuning-id>`.
+- You can still override it manually when needed.
 
 ## Manual Capture Fixtures
 

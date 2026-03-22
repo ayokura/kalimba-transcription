@@ -39,10 +39,72 @@ function buildCustomTuning(customName: string, customNotes: string): InstrumentT
   };
 }
 
+function slugifyCasePart(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\+/g, " plus ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
+function buildEventSlug(event: ManualCaptureExpectedEvent) {
+  return slugifyCasePart(event.display || event.keys.map((key) => key.noteName).join("-"));
+}
+
+function areContiguousEventKeys(event: ManualCaptureExpectedEvent) {
+  const sortedKeys = event.keys.map((key) => key.key).sort((left, right) => left - right);
+  if (sortedKeys.length < 2) {
+    return false;
+  }
+  return sortedKeys[sortedKeys.length - 1] - sortedKeys[0] + 1 === sortedKeys.length;
+}
+
+function inferGlissDirection(events: ManualCaptureExpectedEvent[]) {
+  const firstAverage = events[0].keys.reduce((sum, key) => sum + key.key, 0) / events[0].keys.length;
+  const lastAverage = events[events.length - 1].keys.reduce((sum, key) => sum + key.key, 0) / events[events.length - 1].keys.length;
+  if (lastAverage > firstAverage + 0.5) {
+    return "ascending";
+  }
+  if (lastAverage < firstAverage - 0.5) {
+    return "descending";
+  }
+  return "mixed";
+}
+
+function buildScenarioSlug(expectedPerformance: ManualCaptureExpectedPerformance | null) {
+  const events = expectedPerformance?.events ?? [];
+  if (events.length === 0) {
+    return "manual-test";
+  }
+
+  const uniqueDisplays = new Set(events.map((event) => event.display));
+  const firstEvent = events[0];
+  const lastEvent = events[events.length - 1];
+
+  if (uniqueDisplays.size === 1) {
+    return `${buildEventSlug(firstEvent)}-repeat-${String(events.length).padStart(2, "0")}`;
+  }
+
+  const sameWidth = events.every((event) => event.keys.length === firstEvent.keys.length);
+  const contiguousSweep = sameWidth && events.every(areContiguousEventKeys);
+  if (contiguousSweep) {
+    return `${firstEvent.keys.length}-note-${inferGlissDirection(events)}-gliss-${buildEventSlug(firstEvent)}-to-${buildEventSlug(lastEvent)}`;
+  }
+
+  return `${buildEventSlug(firstEvent)}-to-${buildEventSlug(lastEvent)}-sequence-${String(events.length).padStart(2, "0")}`;
+}
+
+function buildDefaultCaptureIdForValues(generatedAt: string, tuning: InstrumentTuning | null, expectedPerformance: ManualCaptureExpectedPerformance | null) {
+  const day = generatedAt.slice(0, 10);
+  const scenario = buildScenarioSlug(expectedPerformance);
+  const tuningId = tuning?.id ?? "capture";
+  return `${day}-${scenario}-${tuningId}`;
+}
+
 function buildDefaultCaptureId(capture: TranscriptionCapture) {
-  const day = capture.generatedAt.slice(0, 10);
-  const scenario = capture.requestPayload.scenario || "manual-test";
-  return `${day}-${scenario}-${capture.requestPayload.tuning.id}`;
+  return buildDefaultCaptureIdForValues(capture.generatedAt, capture.requestPayload.tuning, capture.requestPayload.expectedPerformance);
 }
 
 function buildExpectedDisplay(notes: TuningNote[]): string {
@@ -129,6 +191,10 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
 
   const expectedPerformance = useMemo(() => buildExpectedPerformance(expectedEvents), [expectedEvents]);
   const expectedNote = expectedPerformance?.summary ?? "";
+  const suggestedCaptureId = useMemo(
+    () => buildDefaultCaptureIdForValues(new Date().toISOString(), selectedTuning, expectedPerformance),
+    [selectedTuning, expectedPerformance],
+  );
 
   function handleToggleExpectedKey(key: number) {
     setPendingExpectedKeys((current) => (current.includes(key) ? current.filter((value) => value !== key) : [...current, key]));
@@ -183,8 +249,9 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setIsAnalyzing(true);
 
     try {
+      const resolvedCaseId = captureCaseId.trim().length > 0 ? captureCaseId.trim() : suggestedCaptureId;
       const capture = await createTranscriptionWithCapture(recording, selectedTuning, {
-        scenario: captureCaseId,
+        scenario: resolvedCaseId,
         expectedNote,
         expectedPerformance,
         memo: captureMemo,
@@ -193,7 +260,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
       setActiveEventId(capture.responsePayload.events[0]?.id ?? null);
       setLastCapture(capture);
       if (captureCaseId.trim().length === 0) {
-        setCaptureCaseId(buildDefaultCaptureId(capture));
+        setCaptureCaseId(resolvedCaseId);
       }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "解析に失敗しました。");
@@ -211,7 +278,9 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setIsSavingCapture(true);
 
     try {
-      const caseId = captureCaseId.trim().length > 0 ? captureCaseId.trim() : buildDefaultCaptureId(lastCapture);
+      const caseId = captureCaseId.trim().length > 0
+        ? captureCaseId.trim()
+        : buildDefaultCaptureIdForValues(lastCapture.generatedAt, lastCapture.requestPayload.tuning, expectedPerformance ?? lastCapture.requestPayload.expectedPerformance);
       const archive = await buildCaptureArchive({
         caseId,
         audioWav: lastCapture.audioWav,
@@ -367,7 +436,8 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
         <div className="stack gap-lg">
           <label className="stack">
             <span>ケースID (任意)</span>
-            <input value={captureCaseId} onChange={(event) => setCaptureCaseId(event.target.value)} placeholder="2026-03-21-d5-single-note-01" />
+            <input value={captureCaseId} onChange={(event) => setCaptureCaseId(event.target.value)} placeholder={suggestedCaptureId} />
+            <span className="muted">空欄なら `{suggestedCaptureId}` を使います。</span>
           </label>
           <label className="stack">
             <span>テストメモ (任意)</span>
