@@ -3,6 +3,7 @@ from pathlib import Path
 from io import BytesIO
 
 import numpy as np
+import pytest
 import soundfile as sf
 from fastapi.testclient import TestClient
 
@@ -545,3 +546,56 @@ def test_classify_event_gesture_gliss() -> None:
         RawEvent(start_time=0.52, end_time=1.0, notes=[d4, f4, a4], is_gliss_like=True),
     ]
     assert classify_event_gesture(merged_events[0], 0, merged_events, merged_events) == "gliss"
+
+
+
+def test_normalize_repeated_explicit_four_note_patterns_merges_leading_subset_into_dominant_take() -> None:
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.8, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="E4", primary_score=900.0),
+        RawEvent(start_time=1.0, end_time=2.05, notes=[g4, b4, d5], is_gliss_like=True, primary_note_name="G4", primary_score=640.0),
+        RawEvent(start_time=2.05, end_time=2.8, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="E4", primary_score=930.0),
+        RawEvent(start_time=3.1, end_time=3.9, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="B4", primary_score=910.0),
+        RawEvent(start_time=4.2, end_time=5.0, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="D5", primary_score=920.0),
+    ]
+
+    normalized = normalize_repeated_explicit_four_note_patterns(raw_events)
+    assert [[note.note_name for note in event.notes] for event in normalized] == [
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+    ]
+    assert normalized[1].start_time == pytest.approx(1.0)
+    assert normalized[1].end_time == pytest.approx(2.8)
+
+
+def test_normalize_repeated_explicit_four_note_patterns_absorbs_short_gliss_prefix_noise() -> None:
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.8, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="E4", primary_score=900.0),
+        RawEvent(start_time=1.0, end_time=1.08, notes=[f4], is_gliss_like=True, primary_note_name="F4", primary_score=120.0),
+        RawEvent(start_time=1.08, end_time=1.9, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="E4", primary_score=950.0),
+        RawEvent(start_time=2.2, end_time=3.0, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="G4", primary_score=920.0),
+        RawEvent(start_time=3.3, end_time=4.1, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="D5", primary_score=930.0),
+    ]
+
+    normalized = normalize_repeated_explicit_four_note_patterns(raw_events)
+    assert [[note.note_name for note in event.notes] for event in normalized] == [
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+    ]
+    assert normalized[1].start_time == pytest.approx(1.0)
+    assert normalized[1].end_time == pytest.approx(1.9)
+
