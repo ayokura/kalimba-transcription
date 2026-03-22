@@ -1139,7 +1139,7 @@ def normalize_repeated_triad_patterns(raw_events: list[RawEvent]) -> list[RawEve
             continue
 
         if event_set < dominant_set and nearby_dominant:
-            if len(event_set) == 2 or (len(event_set) == 1 and dominant_count >= 4 and event.primary_score <= dominant_score * 0.75):
+            if len(event_set) == 2 or (len(event_set) == 1 and next(iter(event_set), None) in dominant_set):
                 normalized.append(
                     RawEvent(
                         start_time=event.start_time,
