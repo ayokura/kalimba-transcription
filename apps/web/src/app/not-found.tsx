@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function NotFoundPage() {
   return (
     <main className="shell">
@@ -10,14 +12,14 @@ export default function NotFoundPage() {
         </div>
         <p className="muted">指定されたページは存在しません。トップページまたは debug capture 画面へ戻ってください。</p>
         <div className="row wrap">
-          <a href="/" className="debug-link-card">
+          <Link href="/" className="debug-link-card">
             <strong>トップページへ</strong>
             <span>利用者向け採譜画面を開きます。</span>
-          </a>
-          <a href="/debug/capture" className="debug-link-card">
+          </Link>
+          <Link href="/debug/capture" className="debug-link-card">
             <strong>Debug capture へ</strong>
             <span>手動テスト用の再現データ収集画面を開きます。</span>
-          </a>
+          </Link>
         </div>
       </section>
     </main>
