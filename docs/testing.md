@@ -75,6 +75,18 @@ Recommended case naming:
 - Format is roughly `YYYY-MM-DD-<auto-scenario>-<tuning-id>`.
 - You can still override it manually when needed.
 
+## Fixture Statuses
+
+`expected.json` should carry a `status` field.
+
+- `completed`: regression target, executed by pytest
+- `pending`: expected is provisional, keep for recognition work
+- `rerecord`: keep the case, but prioritize re-recording before treating it as a regression target
+- `review_needed`: metadata or expected performance needs human review first
+- `reference_only`: keep as a difficult example, but do not run in regression
+
+Current pytest behavior should execute only `completed` fixtures.
+
 ## Manual Capture Fixtures
 
 A saved browser capture pack can be turned into an API regression fixture.
@@ -114,6 +126,13 @@ py -3.13 -m pytest apps/api/tests
 4. End-to-end browser test covering record or upload substitute, analyze, and edit flow.
 
 ## Independent Audit Cadence
+
+After an independent audit, update fixture status as needed.
+
+- keep as `completed` when the expected performance is trustworthy and suitable for regression
+- keep as `pending` when the case is still a recognition target
+- move to `rerecord` when recording or performance quality is the main blocker
+- move to `review_needed` when the expected metadata is suspect
 
 After each recognition-improvement round stabilizes, run an independent audit on the remaining pending fixtures.
 

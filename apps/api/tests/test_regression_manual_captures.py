@@ -8,6 +8,16 @@ from app.main import app
 
 client = TestClient(app)
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "manual-captures"
+VALID_STATUSES = {"completed", "pending", "rerecord", "review_needed", "reference_only"}
+
+
+def fixture_status(expected: dict) -> str:
+    status = expected.get("status")
+    if status is not None:
+        if status not in VALID_STATUSES:
+            raise AssertionError(f"Unknown fixture status: {status}")
+        return status
+    return "pending" if expected.get("pending") else "completed"
 
 
 def primary_note_names(payload: dict) -> list[str]:
@@ -36,7 +46,8 @@ def test_manual_capture_regressions() -> None:
     for fixture_dir in fixture_dirs:
         request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
         expected = json.loads((fixture_dir / "expected.json").read_text(encoding="utf-8"))
-        if expected.get("pending"):
+        status = fixture_status(expected)
+        if status != "completed":
             continue
 
         executed_fixtures += 1

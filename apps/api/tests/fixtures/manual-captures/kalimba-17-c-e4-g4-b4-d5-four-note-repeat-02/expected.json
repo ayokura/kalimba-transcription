@@ -7,5 +7,13 @@
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
-  }
+  },
+  "status": "rerecord",
+  "reason": "slow arpeggiated / staggered four-note attack; independent audit suggests rerecord before treating as strict chord regression",
+  "recommendedRecapture": [
+    "Record the same four-note chord as 5 clearly simultaneous takes.",
+    "Leave about 1 second of silence between takes.",
+    "If you want to capture a slow gliss or rolled chord, save it as a separate fixture with that intent noted explicitly."
+  ],
+  "auditVerdict": "ambiguous-realistic-input"
 }

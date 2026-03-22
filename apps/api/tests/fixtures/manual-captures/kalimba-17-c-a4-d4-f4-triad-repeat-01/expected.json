@@ -1,11 +1,14 @@
 {
-  "pending": true,
+  "pending": false,
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
+    "minEvents": 5,
+    "maxEvents": 5,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {},
+    "requiredEventNoteSetOccurrences": {
+      "A4+D4+F4": 5
+    },
     "maxEventNoteSetOccurrences": {}
-  }
+  },
+  "status": "completed"
 }
