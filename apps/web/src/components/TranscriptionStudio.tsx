@@ -259,9 +259,6 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
       setResult(capture.responsePayload);
       setActiveEventId(capture.responsePayload.events[0]?.id ?? null);
       setLastCapture(capture);
-      if (captureCaseId.trim().length === 0) {
-        setCaptureCaseId(resolvedCaseId);
-      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "解析に失敗しました。");
     } finally {
