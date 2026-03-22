@@ -1,14 +1,14 @@
 {
-  "pending": false,
+  "pending": true,
   "assertions": {
-    "minEvents": 5,
-    "maxEvents": 5,
+    "minEvents": null,
+    "maxEvents": null,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {
-      "B4+D5+E4+G4": 5
-    },
+    "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "status": "completed"
+  "status": "review_needed",
+  "reason": "legacy four-note fixture lacks reliable captureIntent and scenario metadata; current intent-specific captures supersede it and independent audit is needed before treating it as a strict four-note regression again",
+  "auditVerdict": "legacy-metadata-ambiguous"
 }

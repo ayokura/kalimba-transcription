@@ -917,6 +917,91 @@ def merge_short_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
     return merged
 
 
+def merge_four_note_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    merged: list[RawEvent] = []
+    index = 0
+    while index < len(raw_events):
+        current = raw_events[index]
+        if index + 1 >= len(raw_events):
+            merged.append(current)
+            break
+
+        following = raw_events[index + 1]
+        gap = following.start_time - current.end_time
+        current_duration = current.end_time - current.start_time
+        following_duration = following.end_time - following.start_time
+        combined_notes: dict[str, NoteCandidate] = {note.note_name: note for note in current.notes}
+        for note in following.notes:
+            combined_notes.setdefault(note.note_name, note)
+        combined_keys = sorted(note.key for note in combined_notes.values())
+        contiguous_keys = bool(combined_keys) and (combined_keys[-1] - combined_keys[0] + 1 == len(combined_keys))
+        overlap_count = len(current.notes) + len(following.notes) - len(combined_notes)
+        merge_pattern_ok = (
+            {len(current.notes), len(following.notes)} == {1, 3}
+            or ({len(current.notes), len(following.notes)} == {2, 3} and overlap_count >= 1)
+        )
+        can_merge = (
+            gap <= GLISS_CLUSTER_MAX_GAP
+            and current_duration <= GLISS_CLUSTER_MAX_EVENT_DURATION
+            and following_duration <= GLISS_CLUSTER_MAX_EVENT_DURATION
+            and (following.end_time - current.start_time) <= GLISS_CLUSTER_MAX_TOTAL_DURATION
+            and len(combined_notes) == 4
+            and contiguous_keys
+            and merge_pattern_ok
+        )
+        if can_merge:
+            merged.append(
+                RawEvent(
+                    start_time=current.start_time,
+                    end_time=following.end_time,
+                    notes=sorted(combined_notes.values(), key=lambda note: note.frequency),
+                    is_gliss_like=True,
+                    primary_note_name=current.primary_note_name,
+                    primary_score=max(current.primary_score, following.primary_score),
+                )
+            )
+            index += 2
+            continue
+
+        merged.append(current)
+        index += 1
+
+    return merged
+
+
+def suppress_leading_gliss_neighbor_noise(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    cleaned: list[RawEvent] = []
+    index = 0
+    while index < len(raw_events):
+        current = raw_events[index]
+        if index + 1 < len(raw_events):
+            next_event = raw_events[index + 1]
+            current_duration = current.end_time - current.start_time
+            gap = next_event.start_time - current.end_time
+            current_note_names = {note.note_name for note in current.notes}
+            next_note_names = {note.note_name for note in next_event.notes}
+            if (
+                len(current.notes) == 2
+                and len(next_event.notes) >= 4
+                and len(current_note_names & next_note_names) == 1
+                and current_duration <= 0.14
+                and gap <= GLISS_CLUSTER_MAX_GAP
+                and next_event.primary_score >= current.primary_score * 1.2
+            ):
+                index += 1
+                continue
+        cleaned.append(current)
+        index += 1
+
+    return cleaned
+
+
 def suppress_bridging_octave_pairs(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 3:
         return raw_events
@@ -1596,7 +1681,9 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
     processed_events = suppress_resonant_carryover(processed_events)
     processed_events = simplify_short_secondary_bleed(processed_events)
     processed_events = merge_short_gliss_clusters(processed_events)
+    processed_events = merge_four_note_gliss_clusters(processed_events)
     processed_events = suppress_leading_gliss_subset_transients(processed_events)
+    processed_events = suppress_leading_gliss_neighbor_noise(processed_events)
     processed_events = suppress_leading_single_transient(processed_events)
     processed_events = suppress_subset_decay_events(processed_events)
     processed_events = split_ambiguous_upper_octave_pairs(processed_events)
