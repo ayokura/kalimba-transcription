@@ -22,7 +22,7 @@
 ## Review
 
 - summary: note-set の復元は通っており、この fixture は gliss の note-set regression として completed 扱いです。
-- reason: 5回とも E4+G4+B4+D5 へ再構成できています。gesture label はまだ rolled_chord 側ですが、これは別論点として追跡します。
+- reason: 5回とも E4+G4+B4+D5 へ再構成できています。gesture label も now `gliss` に揃いました。
 
 ## Recapture Guidance
 
@@ -38,9 +38,10 @@
 
 - imported as ascending four-note gliss target on 2026-03-23
 - current API output: 5 events, all reconstruct as E4+G4+B4+D5
-- promoted to `completed` for note-set reconstruction; gesture classification remains an open follow-up
+- promoted to `completed` for note-set reconstruction; gesture classification also aligns as `gliss`
 
 ## Independent Audit (2026-03-23)
 
-- Independent audit found monotonic ascending sweeps in several takes; E4 is often weak but the gliss intent is still plausible. Note reconstruction is now acceptable, but gesture labeling is still open.
+- Independent audit found monotonic ascending sweeps in several takes; E4 is often weak but the gliss intent is still plausible. Note reconstruction and gesture labeling are now both acceptable for regression use.
+
 

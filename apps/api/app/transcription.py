@@ -1853,6 +1853,12 @@ def classify_event_gesture(event: RawEvent, index: int, raw_events: list[RawEven
         if {note.note_name for note in raw_event.notes} < event_note_names
     ]
     all_support_gliss_like = bool(support_events) and all(raw_event.is_gliss_like for raw_event in support_events)
+    support_key_ranges = [
+        (min(note.key for note in raw_event.notes), max(note.key for note in raw_event.notes), raw_event.start_time)
+        for raw_event in support_events
+        if raw_event.notes
+    ]
+    support_key_ranges.sort(key=lambda item: item[2])
 
     previous_event = merged_events[index - 1] if index > 0 else None
     next_event = merged_events[index + 1] if index + 1 < len(merged_events) else None
@@ -1872,8 +1878,22 @@ def classify_event_gesture(event: RawEvent, index: int, raw_events: list[RawEven
     if event.is_gliss_like and contiguous_note_cluster(event) and neighbor_progression:
         return "gliss"
 
-    if event.is_gliss_like and contiguous_note_cluster(event) and support_subsets and all_support_gliss_like:
-        return "gliss"
+    if event.is_gliss_like and contiguous_note_cluster(event) and support_subsets:
+        event_keys = sorted(note.key for note in event.notes)
+        event_max_key = event_keys[-1]
+        if support_key_ranges:
+            first_min_key, first_max_key, _ = support_key_ranges[0]
+            last_min_key, last_max_key, _ = support_key_ranges[-1]
+            has_ascending_support_progression = (
+                support_count >= 3
+                and first_max_key < event_max_key
+                and last_max_key >= event_max_key
+                and last_min_key > first_min_key
+            )
+            if has_ascending_support_progression:
+                return "gliss"
+        if all_support_gliss_like:
+            return "gliss"
 
     if support_count >= 2 and support_subsets:
         if contiguous_note_cluster(event) and neighbor_progression:
@@ -2023,3 +2043,7 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         warnings=warnings,
         debug=result_debug,
     )
+
+
+
+
