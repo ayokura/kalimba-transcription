@@ -26,6 +26,7 @@ def test_explain_manual_capture_text_output() -> None:
     assert "fixture: kalimba-17-c-c4-repeat-01" in result.stdout
     assert "status: completed" in result.stdout
     assert "sourceProfile: acoustic_real" in result.stdout
+    assert "evaluationMode: full_audio" in result.stdout
 
 
 def test_explain_manual_capture_json_output() -> None:
@@ -36,3 +37,12 @@ def test_explain_manual_capture_json_output() -> None:
     assert payload["sourceProfile"] == "acoustic_real"
     assert payload["captureIntent"] == "strict_chord"
     assert payload["expectedSummary"] == "E4 + G4 + B4 + D5 x 6"
+def test_explain_manual_capture_json_output_with_ignored_ranges_reports_scope() -> None:
+    result = run_script("kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01", "--json")
+    payload = json.loads(result.stdout)
+    assert payload["evaluationMode"] == "ignored_ranges"
+    assert payload["sourceDurationSec"] > payload["evaluationDurationSec"]
+    assert any(event["scope"] == "out_of_scope" for event in payload["eventCoverage"])
+    assert any(event["scope"] == "in_scope" for event in payload["eventCoverage"])
+
+

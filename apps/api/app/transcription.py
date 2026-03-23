@@ -1462,17 +1462,17 @@ def normalize_repeated_four_note_family(raw_events: list[RawEvent]) -> list[RawE
             next_gap = next_event.start_time - event.end_time
             if (
                 len(event_set) == 2
-                and event_set < dominant_set
-                and next_set == dominant_set
+                and event_set < family_set
+                and next_set == family_set
                 and next_gap <= GLISS_CLUSTER_MAX_GAP
             ):
                 collapsed.append(
                     RawEvent(
                         start_time=event.start_time,
                         end_time=next_event.end_time,
-                        notes=dominant_notes,
+                        notes=family_notes,
                         is_gliss_like=False,
-                        primary_note_name=next_event.primary_note_name if next_event.primary_note_name in dominant_set else dominant_notes[0].note_name,
+                        primary_note_name=next_event.primary_note_name if next_event.primary_note_name in family_set else family_notes[0].note_name,
                         primary_score=max(event.primary_score, next_event.primary_score),
                     )
                 )
