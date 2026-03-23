@@ -401,14 +401,9 @@ button:disabled {
   color: var(--accent-strong);
 }
 
-.gesture-pill.gesture-rolled_chord {
+.gesture-pill.gesture-slide_chord {
   background: rgba(242, 192, 120, 0.18);
   color: #82561a;
-}
-
-.gesture-pill.gesture-gliss {
-  background: rgba(166, 61, 64, 0.08);
-  color: var(--danger);
 }
 
 .gesture-pill.gesture-ambiguous {
@@ -874,9 +869,3 @@ button:disabled {
     display: grid;
   }
 }
-
-
-
-
-
-

@@ -25,11 +25,17 @@ type TranscriptionStudioProps = {
 
 const INTENT_OPTIONS: Array<{ value: CaptureIntent; label: string; description: string }> = [
   { value: "strict_chord", label: "同時和音", description: "同じタイミングで鳴らす前提です。" },
-  { value: "rolled_chord", label: "rolled chord", description: "少しずらして順に入る和音です。" },
-  { value: "gliss", label: "gliss / sweep", description: "連続してなぞる系の意図です。" },
+  { value: "slide_chord", label: "スライド和音", description: "少しずらしてなぞる和音をまとめて扱います。" },
   { value: "separated_notes", label: "単音列", description: "明確に区切った単音列です。" },
   { value: "unknown", label: "未指定", description: "意図をまだ固定しません。" },
 ];
+
+function normalizeCaptureIntentFamily(intent: string | null | undefined): CaptureIntent | "ambiguous" {
+  if (intent === "strict_chord" || intent === "slide_chord" || intent === "separated_notes" || intent === "unknown" || intent === "ambiguous") {
+    return intent;
+  }
+  return "unknown";
+}
 
 function buildCustomTuning(customName: string, customNotes: string): InstrumentTuning {
   const notes = customNotes
@@ -85,7 +91,8 @@ function inferGlissDirection(events: ManualCaptureExpectedEvent[]) {
 
 function buildScenarioSlug(expectedPerformance: ManualCaptureExpectedPerformance | null, captureIntent: CaptureIntent) {
   const events = expectedPerformance?.events ?? [];
-  const intentSlug = captureIntent !== "unknown" ? `-${captureIntent.replace(/_/g, "-")}` : "";
+  const captureIntentFamily = normalizeCaptureIntentFamily(captureIntent);
+  const intentSlug = captureIntentFamily !== "unknown" ? `-${captureIntentFamily.replace(/_/g, "-")}` : "";
   if (events.length === 0) {
     return `manual-test${intentSlug}`;
   }
@@ -101,7 +108,7 @@ function buildScenarioSlug(expectedPerformance: ManualCaptureExpectedPerformance
   const sameWidth = events.every((event) => event.keys.length === firstEvent.keys.length);
   const contiguousSweep = sameWidth && events.every(areContiguousEventKeys);
   if (contiguousSweep) {
-    return `${firstEvent.keys.length}-note-${inferGlissDirection(events)}-gliss-${buildEventSlug(firstEvent)}-to-${buildEventSlug(lastEvent)}${intentSlug}`;
+    return `${firstEvent.keys.length}-note-${inferGlissDirection(events)}-slide-${buildEventSlug(firstEvent)}-to-${buildEventSlug(lastEvent)}${intentSlug}`;
   }
 
   return `${buildEventSlug(firstEvent)}-to-${buildEventSlug(lastEvent)}-sequence-${String(events.length).padStart(2, "0")}${intentSlug}`;
@@ -166,10 +173,11 @@ function buildDetectedEventDisplay(event: TranscriptionResult["events"][number],
 }
 
 function buildIntentLabel(intent: string | null | undefined) {
-  if (intent == "ambiguous") {
-    return "ambiguous";
+  const normalizedIntent = normalizeCaptureIntentFamily(intent);
+  if (normalizedIntent === "ambiguous") {
+    return "要確認";
   }
-  return INTENT_OPTIONS.find((option) => option.value === intent)?.label ?? "未指定";
+  return INTENT_OPTIONS.find((option) => option.value === normalizedIntent)?.label ?? "未指定";
 }
 
 function buildCaptureAssessment(
@@ -188,7 +196,9 @@ function buildCaptureAssessment(
     counts[event.gesture] = (counts[event.gesture] ?? 0) + 1;
     return counts;
   }, {});
-  const dominantDetectedGesture = Object.entries(gestureCounts).sort((left, right) => right[1] - left[1])[0]?.[0] ?? "ambiguous";
+  const dominantDetectedGesture = normalizeCaptureIntentFamily(
+    Object.entries(gestureCounts).sort((left, right) => right[1] - left[1])[0]?.[0] ?? "ambiguous",
+  );
   const total = Math.max(expectedEvents.length, detectedEvents.length);
   const events = Array.from({ length: total }, (_, index) => ({
     index: index + 1,
@@ -197,6 +207,7 @@ function buildCaptureAssessment(
     matches: (expectedEvents[index] ?? null) === (detectedEvents[index] ?? null),
   }));
 
+  const normalizedCaptureIntent = normalizeCaptureIntentFamily(captureIntent);
   const mismatchCount = events.filter((event) => !event.matches).length;
   const extraEventCount = Math.max(0, detectedEvents.length - expectedEvents.length);
   const missingEventCount = Math.max(0, expectedEvents.length - detectedEvents.length);
@@ -221,12 +232,12 @@ function buildCaptureAssessment(
     (expectedEvents.length > 0 && detectedEvents.length >= Math.ceil(expectedEvents.length * 1.5));
 
   if (severeFragmentation) {
-    if (captureIntent === "strict_chord" && (dominantDetectedGesture === "rolled_chord" || dominantDetectedGesture === "gliss")) {
+    if (normalizedCaptureIntent === "strict_chord" && dominantDetectedGesture === "slide_chord") {
       return {
         status: "rerecord",
         label: "再録音",
         summary: "strict chord としては取り直し推奨です。",
-        reason: `${buildIntentLabel(captureIntent)} を期待しましたが、検出側は ${buildIntentLabel(dominantDetectedGesture)} 優勢でした。同時打鍵の厳密さを上げた再録音を推奨します。`,
+        reason: `${buildIntentLabel(normalizedCaptureIntent)} を期待しましたが、検出側は ${buildIntentLabel(dominantDetectedGesture)} 優勢でした。同時打鍵の厳密さを上げた再録音を推奨します。`,
         mismatchCount,
         expectedEventCount: expectedEvents.length,
         detectedEventCount: detectedEvents.length,
@@ -236,12 +247,12 @@ function buildCaptureAssessment(
       };
     }
 
-    if (captureIntent === "gliss" || captureIntent === "rolled_chord") {
+    if (normalizedCaptureIntent === "slide_chord") {
       return {
         status: "pending",
         label: "改善対象",
         summary: "録音意図に対して segmentation がまだ粗いです。",
-        reason: `${buildIntentLabel(captureIntent)} としては現実的な崩れ方です。検出側は ${buildIntentLabel(dominantDetectedGesture)} 優勢でした。認識改善ターゲットとして保持してください。`,
+        reason: `${buildIntentLabel(normalizedCaptureIntent)} としては現実的な崩れ方です。検出側は ${buildIntentLabel(dominantDetectedGesture)} 優勢でした。認識改善ターゲットとして保持してください。`,
         mismatchCount,
         expectedEventCount: expectedEvents.length,
         detectedEventCount: detectedEvents.length,
@@ -255,7 +266,7 @@ function buildCaptureAssessment(
       status: "review_needed",
       label: "要確認",
       summary: "event の分割または束ね方に大きな差があります。",
-      reason: `${buildIntentLabel(captureIntent)} の想定に対して差が大きく、検出側は ${buildIntentLabel(dominantDetectedGesture)} 優勢でした。録音意図と diff を確認してから fixture status を決めてください。`,
+      reason: `${buildIntentLabel(normalizedCaptureIntent)} の想定に対して差が大きく、検出側は ${buildIntentLabel(dominantDetectedGesture)} 優勢でした。録音意図と diff を確認してから fixture status を決めてください。`,
       mismatchCount,
       expectedEventCount: expectedEvents.length,
       detectedEventCount: detectedEvents.length,
@@ -269,7 +280,7 @@ function buildCaptureAssessment(
     status: "pending",
     label: "改善対象",
     summary: "一部の note-set または event 数がずれています。",
-    reason: `録音意図: ${buildIntentLabel(captureIntent)} / 検出傾向: ${buildIntentLabel(dominantDetectedGesture)}。認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。`,
+    reason: `録音意図: ${buildIntentLabel(normalizedCaptureIntent)} / 検出傾向: ${buildIntentLabel(dominantDetectedGesture)}。認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。`,
     mismatchCount,
     expectedEventCount: expectedEvents.length,
     detectedEventCount: detectedEvents.length,
@@ -287,15 +298,25 @@ function buildRecaptureGuidance(
     return [];
   }
 
+  const normalizedCaptureIntent = normalizeCaptureIntentFamily(captureIntent);
   const guidance: string[] = [];
-  if (captureIntent === "strict_chord") {
-    guidance.push("各反復で対象キーを同時に弾き、指をずらして順に入れない。", "各反復の間に明確な無音を入れる。", "和音の開始を揃え、slow gliss や rolled chord にならないようにする。");
-  } else if (captureIntent === "rolled_chord") {
-    guidance.push("毎回ほぼ同じ方向と速さで順に鳴らす。", "和音の各音の入り方が毎回大きく変わらないようにする。", "反復の間に明確な無音を入れる。");
-  } else if (captureIntent === "gliss") {
-    guidance.push("1 gesture ごとに一方向へ連続してなぞり、途中で止めない。", "各 gesture の間に無音を入れて区切る。", "狙ったキー範囲だけを sweep する。");
-  } else if (captureIntent === "separated_notes") {
-    guidance.push("各音をはっきり区切り、次の音まで十分に待つ。", "低音残響が長い場合でも、新しい打鍵の間隔を広めに取る。");
+  if (normalizedCaptureIntent === "strict_chord") {
+    guidance.push(
+      "各反復で対象キーを同時に弾き、指をずらして順に入れない。",
+      "各反復の間に明確な無音を入れる。",
+      "和音の開始を揃え、スライド和音にならないようにする。",
+    );
+  } else if (normalizedCaptureIntent === "slide_chord") {
+    guidance.push(
+      "毎回ほぼ同じ方向と速さで順に鳴らす。",
+      "各反復の間に明確な無音を入れる。",
+      "対象キー以外に触れて出る接触音を減らす。",
+    );
+  } else if (normalizedCaptureIntent === "separated_notes") {
+    guidance.push(
+      "各音をはっきり区切り、次の音まで十分に待つ。",
+      "低音残響が長い場合でも、新しい打鍵の間隔を広めに取る。",
+    );
   }
 
   if (review.status === "rerecord") {

@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8
 
 export type CaptureAssessmentStatus = "completed" | "pending" | "rerecord" | "review_needed" | "reference_only";
 
-export type CaptureIntent = "strict_chord" | "rolled_chord" | "gliss" | "separated_notes" | "unknown";
+export type CaptureIntent = "strict_chord" | "slide_chord" | "separated_notes" | "unknown";
 
 export type CaptureAssessment = {
   status: CaptureAssessmentStatus;
