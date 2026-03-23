@@ -26,7 +26,7 @@ normal speed
 
 - fixture status moved to `review_needed`
 - original scenario metadata is incorrect and capture intent was never recorded
-- this case is now superseded by explicit strict / rolled / gliss captures for the same note set
+- this case is now superseded by explicit strict / slide_chord captures for the same note set
 - treat this fixture as legacy evidence until independent audit reclassifies it
 
 ## Independent Audit (2026-03-23)

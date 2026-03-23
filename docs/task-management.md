@@ -23,7 +23,7 @@ Create Issues for work that should survive a single debug session.
 Examples:
 
 - DSP accuracy themes
-- gliss / rolled-chord classification
+- `slide_chord` classification
 - debug UI improvements
 - editor workflow changes
 - test infrastructure work
@@ -66,8 +66,8 @@ This is where recording intent, rerecord guidance, fixture status, and audit not
 
 1. gesture classification
    - strict chord
-   - rolled chord
-   - gliss / sweep
+   - `slide_chord`
+   - `slide_chord` / sweep
    - ambiguous
 2. debug review UX
    - expected vs detected diff
@@ -75,7 +75,7 @@ This is where recording intent, rerecord guidance, fixture status, and audit not
    - fragment warnings
 3. editor UX
    - merge as chord
-   - bundle as gliss
+   - bundle as `slide_chord`
 4. broader recognition robustness
    - contact noise
    - room noise

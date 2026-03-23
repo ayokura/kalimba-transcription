@@ -28,7 +28,7 @@
 
 - 各反復で対象キーを同時に弾き、指をずらして順に入れない。
 - 各反復の間に明確な無音を入れる。
-- 和音の開始を揃え、slow gliss や rolled chord にならないようにする。
+- 和音の開始を揃え、slow slide_chord にならないようにする。
 
 ## Memo
 
@@ -37,7 +37,7 @@
 ## Fixture Import Notes
 
 - imported as strict-chord boundary sample on 2026-03-23
-- current API output: 6 events, fragmented with mixed strict/gliss-like hints
+- current API output: 6 events, fragmented with mixed strict/slide_chord-like hints
 - kept as `rerecord` rather than `pending` because the strict intent is explicit but the performance is materially staggered
 
 ## Independent Audit (2026-03-23)

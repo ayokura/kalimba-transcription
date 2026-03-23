@@ -519,7 +519,7 @@ def test_classify_event_gesture_strict_chord() -> None:
     assert classify_event_gesture(event, 0, [event], [event]) == "strict_chord"
 
 
-def test_classify_event_gesture_rolled_chord() -> None:
+def test_classify_event_gesture_slide_chord_from_subset_growth() -> None:
     e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
     g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
     b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
@@ -530,10 +530,10 @@ def test_classify_event_gesture_rolled_chord() -> None:
         RawEvent(start_time=0.5, end_time=0.7, notes=[e4, g4, b4], is_gliss_like=False),
     ]
     merged_event = RawEvent(start_time=0.0, end_time=0.7, notes=[e4, g4, b4, d5], is_gliss_like=False)
-    assert classify_event_gesture(merged_event, 0, raw_events, [merged_event]) == "rolled_chord"
+    assert classify_event_gesture(merged_event, 0, raw_events, [merged_event]) == "slide_chord"
 
 
-def test_classify_event_gesture_gliss() -> None:
+def test_classify_event_gesture_slide_chord_from_neighbor_progression() -> None:
     c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
     e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
     g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
@@ -545,7 +545,7 @@ def test_classify_event_gesture_gliss() -> None:
         RawEvent(start_time=0.0, end_time=0.5, notes=[c4, e4, g4], is_gliss_like=True),
         RawEvent(start_time=0.52, end_time=1.0, notes=[d4, f4, a4], is_gliss_like=True),
     ]
-    assert classify_event_gesture(merged_events[0], 0, merged_events, merged_events) == "gliss"
+    assert classify_event_gesture(merged_events[0], 0, merged_events, merged_events) == "slide_chord"
 
 
 
@@ -630,7 +630,7 @@ def test_normalize_repeated_four_note_gliss_patterns_promotes_subsets_and_drops_
 
 
 
-def test_classify_event_gesture_gliss_from_gliss_like_family_without_neighbor_shift() -> None:
+def test_classify_event_gesture_slide_chord_from_gliss_like_family_without_neighbor_shift() -> None:
     e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
     g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
     b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
@@ -642,6 +642,4 @@ def test_classify_event_gesture_gliss_from_gliss_like_family_without_neighbor_sh
     ]
     merged_event = RawEvent(start_time=0.0, end_time=1.1, notes=[e4, g4, b4, d5], is_gliss_like=True)
 
-    assert classify_event_gesture(merged_event, 0, raw_events, [merged_event]) == "gliss"
-
-
+    assert classify_event_gesture(merged_event, 0, raw_events, [merged_event]) == "slide_chord"

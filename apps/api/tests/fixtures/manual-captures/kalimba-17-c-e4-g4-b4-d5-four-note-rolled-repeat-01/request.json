@@ -120,7 +120,7 @@
     ]
   },
   "memo": null,
-  "captureIntent": "rolled_chord",
+  "captureIntent": "slide_chord",
   "tuning": {
     "id": "kalimba-17-c",
     "name": "17 Key C Major",

@@ -27,4 +27,4 @@ slow speed
 
 - Record 5 takes with clearly simultaneous four-note attack.
 - Leave about 1 second of silence between takes.
-- If the intent is a slow rolled chord or gliss, capture that as a separate case and state the intent explicitly.
+- If the intent is a slow slide_chord, capture that as a separate case and state the intent explicitly.

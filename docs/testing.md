@@ -68,7 +68,7 @@ Use the clickable kalimba key UI in the workflow panel.
 4. Press `...を ... 回追加` to append it to the expected performance sequence.
 5. Use `最後を取り消す` or `すべてクリア` to fix mistakes.
 
-This avoids typing note names by hand and records both physical key numbers and note names in `request.json`. The selected capture intent is also stored, so later review can distinguish strict chords from rolled chords or gliss-like gestures.
+This avoids typing note names by hand and records both physical key numbers and note names in `request.json`. The selected capture intent is also stored, so later review can distinguish strict chords from `slide_chord` gestures.
 
 Recommended case naming:
 
@@ -160,8 +160,8 @@ Recommended template:
 1. `goal`: what failure mode or ambiguity this recording is meant to test
 2. `gesture`: the intended performance style
    - strict simultaneous chord
-   - rolled chord
-   - gliss / sweep
+   - `slide_chord`
+   - `slide_chord` / sweep
    - separated single notes
 3. `notes`: exact target note-set or sequence
 4. `repetitions`: how many times to play it
@@ -170,7 +170,7 @@ Recommended template:
 
 Example:
 
-- goal: distinguish strict four-note chord from slow rolled chord
+- goal: distinguish strict four-note chord from slow `slide_chord`
 - gesture: strict simultaneous chord
 - notes: `E4 + G4 + B4 + D5`
 - repetitions: 5
@@ -237,7 +237,7 @@ $env:PYTHONPATH='C:\src\calimba-score\apps\api'
 
 ## Next manual capture priorities
 
-These are the next recommended recordings to collect after the current four-note rolled/gliss regression fixes.
+These are the next recommended recordings to collect after the current four-note `slide_chord` regression fixes.
 
 1. `E4 + G4 + B4 + D5` strict simultaneous chord re-record
    - Goal: replace the current `rerecord` strict fixture with a clean simultaneous four-note ground truth
@@ -256,8 +256,8 @@ These are the next recommended recordings to collect after the current four-note
    - Target: `kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01`
    - Goal: either recover original intent from notes/audio history or keep it as `review_needed` / `reference_only`
    - This is lower priority than the explicit strict re-record above
-4. Additional rolled/gliss speed variants only after strict rerecord is stable
-   - `E4 + G4 + B4 + D5` rolled chord at a second speed
-   - `E4 -> G4 -> B4 -> D5` gliss at a second speed
-   - These are no longer the immediate bottleneck because the current rolled and gliss fixtures already regress cleanly
+4. Additional `slide_chord` speed variants only after strict rerecord is stable
+   - `E4 + G4 + B4 + D5` `slide_chord` at a second speed
+   - `E4 -> G4 -> B4 -> D5` `slide_chord` at a second speed
+   - These are no longer the immediate bottleneck because the current `slide_chord` fixtures already regress cleanly
 

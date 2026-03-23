@@ -1832,12 +1832,8 @@ def contiguous_note_cluster(raw_event: RawEvent) -> bool:
     if len(keys) < 2:
         return False
     return keys[-1] - keys[0] + 1 == len(keys)
-
-
 def classify_event_gesture(event: RawEvent, index: int, raw_events: list[RawEvent], merged_events: list[RawEvent]) -> str:
     if len(event.notes) <= 1:
-        if event.is_gliss_like:
-            return "gliss"
         return "ambiguous"
 
     support_events = [
@@ -1876,7 +1872,7 @@ def classify_event_gesture(event: RawEvent, index: int, raw_events: list[RawEven
             break
 
     if event.is_gliss_like and contiguous_note_cluster(event) and neighbor_progression:
-        return "gliss"
+        return "slide_chord"
 
     if event.is_gliss_like and contiguous_note_cluster(event) and support_subsets:
         event_keys = sorted(note.key for note in event.notes)
@@ -1891,21 +1887,17 @@ def classify_event_gesture(event: RawEvent, index: int, raw_events: list[RawEven
                 and last_min_key > first_min_key
             )
             if has_ascending_support_progression:
-                return "gliss"
+                return "slide_chord"
         if all_support_gliss_like:
-            return "gliss"
+            return "slide_chord"
 
     if support_count >= 2 and support_subsets:
-        if contiguous_note_cluster(event) and neighbor_progression:
-            return "gliss"
-        return "rolled_chord"
+        return "slide_chord"
 
     if not event.is_gliss_like:
         return "strict_chord"
 
     return "ambiguous"
-
-
 
 def build_notation_views(events: list[ScoreEvent]) -> NotationViews:
     western = [" | ".join(note.pitch_class + str(note.octave) for note in event.notes) for event in events]
@@ -2043,7 +2035,3 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         warnings=warnings,
         debug=result_debug,
     )
-
-
-
-

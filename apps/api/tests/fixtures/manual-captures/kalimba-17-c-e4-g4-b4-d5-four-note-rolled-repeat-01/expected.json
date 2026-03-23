@@ -18,8 +18,8 @@
     ]
   },
   "status": "completed",
-  "reason": "first five rolled takes are stable and are isolated via ignoredRanges; the final separated fragment is excluded from regression scope",
-  "auditVerdict": "rolled-intent-first-five-takes-clean",
+  "reason": "first five slide_chord takes are stable and are isolated via ignoredRanges; the final separated fragment is excluded from regression scope",
+  "auditVerdict": "slide-chord-intent-first-five-takes-clean",
   "ignoredRanges": [
     {
       "startSec": 24.5,

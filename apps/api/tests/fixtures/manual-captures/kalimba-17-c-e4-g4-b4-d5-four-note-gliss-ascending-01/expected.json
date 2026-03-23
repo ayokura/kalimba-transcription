@@ -18,6 +18,6 @@
     ]
   },
   "status": "completed",
-  "reason": "gliss intent remains realistic and the current reconstruction now returns 5 full four-note sweep events; this fixture can serve as a completed regression target",
-  "auditVerdict": "gliss-intent-now-reconstructed"
+  "reason": "slide_chord intent remains realistic and the current reconstruction now returns 5 full four-note sweep events; this fixture can serve as a completed regression target",
+  "auditVerdict": "slide-chord-intent-now-reconstructed"
 }
