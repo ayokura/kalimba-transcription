@@ -96,6 +96,9 @@ Longer term, intent should move from recording-level metadata to event-level met
 
 ## Future Input Source Profiles
 
+For a detailed comparison between the current acoustic recognizer and the local app/synth reference audio, see [app-synth-audio-gap-analysis.md](C:/src/calimba-score/docs/app-synth-audio-gap-analysis.md).
+
+
 Long term, the recognizer should not assume one acoustic environment.
 Different input sources should be represented explicitly.
 
