@@ -111,6 +111,94 @@ def _normalization_summary(debug_payload: dict[str, Any], detected_event_count: 
     }
 
 
+def _note_set_from_debug_event(event: dict[str, Any], key: str) -> str:
+    notes = event.get(key) or []
+    return "+".join(sorted(notes))
+
+
+def _events_overlap(left_start: float, left_end: float, right_start: float, right_end: float) -> bool:
+    return left_start < right_end and left_end > right_start
+
+
+def _normalization_decisions(debug_payload: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    raw_events = debug_payload.get("segmentCandidates") or []
+    merged_events = debug_payload.get("mergedEvents") or []
+    decisions: list[dict[str, Any]] = []
+    reason_counts: dict[str, int] = {}
+
+    for raw_index, raw_event in enumerate(raw_events, start=1):
+        raw_start = float(raw_event["startTime"])
+        raw_end = float(raw_event["endTime"])
+        raw_note_set = _note_set_from_debug_event(raw_event, "selectedNotes")
+        overlapping: list[tuple[int, dict[str, Any]]] = []
+        for merged_index, merged_event in enumerate(merged_events, start=1):
+            merged_start = float(merged_event["startTime"])
+            merged_end = float(merged_event["endTime"])
+            if _events_overlap(raw_start, raw_end, merged_start, merged_end):
+                overlapping.append((merged_index, merged_event))
+
+        if not overlapping:
+            rule = "dropped_after_raw"
+            decisions.append(
+                {
+                    "rawIndex": raw_index,
+                    "startTime": raw_start,
+                    "endTime": raw_end,
+                    "noteSet": raw_note_set,
+                    "rule": rule,
+                    "targetMergedIndices": [],
+                }
+            )
+            reason_counts[rule] = reason_counts.get(rule, 0) + 1
+            continue
+
+        if len(overlapping) > 1:
+            rule = "split_across_merged"
+            decisions.append(
+                {
+                    "rawIndex": raw_index,
+                    "startTime": raw_start,
+                    "endTime": raw_end,
+                    "noteSet": raw_note_set,
+                    "rule": rule,
+                    "targetMergedIndices": [merged_index for merged_index, _ in overlapping],
+                }
+            )
+            reason_counts[rule] = reason_counts.get(rule, 0) + 1
+            continue
+
+        merged_index, merged_event = overlapping[0]
+        merged_note_set = _note_set_from_debug_event(merged_event, "notes")
+        merged_start = float(merged_event["startTime"])
+        merged_end = float(merged_event["endTime"])
+        if raw_note_set == merged_note_set and abs(raw_start - merged_start) < 1e-3 and abs(raw_end - merged_end) < 1e-3:
+            continue
+        if raw_note_set == merged_note_set:
+            rule = "merged_duplicate"
+        else:
+            raw_notes = set(raw_note_set.split("+")) if raw_note_set else set()
+            merged_notes = set(merged_note_set.split("+")) if merged_note_set else set()
+            if raw_notes < merged_notes:
+                rule = "merged_subset_into"
+            elif merged_notes < raw_notes:
+                rule = "simplified_to_subset"
+            else:
+                rule = "overlap_rebundled"
+        decisions.append(
+            {
+                "rawIndex": raw_index,
+                "startTime": raw_start,
+                "endTime": raw_end,
+                "noteSet": raw_note_set,
+                "rule": rule,
+                "targetMergedIndices": [merged_index],
+            }
+        )
+        reason_counts[rule] = reason_counts.get(rule, 0) + 1
+
+    return decisions, dict(sorted(reason_counts.items(), key=lambda item: (-item[1], item[0])))
+
+
 def build_explanation(fixture_dir: Path) -> dict[str, Any]:
     request_payload, expected = load_fixture(fixture_dir)
     validate_request_metadata(fixture_dir, request_payload)
@@ -157,6 +245,7 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
         )
     expected_events = (request_payload.get("expectedPerformance") or {}).get("events") or []
     expected_event_count = len(expected_events)
+    normalization_decisions, normalization_reason_counts = _normalization_decisions(full_debug)
     summary.update(
         {
             "status": fixture_status(expected),
@@ -189,6 +278,8 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
             "isolatedSingletonCount": _isolated_singleton_count(coverage_events),
             "phraseBreakGuess": _phrase_break_guess(coverage_events),
             "normalizationSummary": _normalization_summary(full_debug, len(payload.get("events", []))),
+            "normalizationDecisions": normalization_decisions,
+            "normalizationReasonCounts": normalization_reason_counts,
         }
     )
     return summary
@@ -237,6 +328,17 @@ def print_text(summary: dict[str, Any]) -> None:
             f"segments={normalization['segmentCount']} / raw={normalization['rawEventCount']} / merged={normalization['mergedEventCount']} / "
             f"detected={summary['eventCount']} / rawToMergedDelta={normalization['rawToMergedDelta']}"
         )
+    if summary.get("normalizationReasonCounts"):
+        counts = " / ".join(f"{key}:{value}" for key, value in summary["normalizationReasonCounts"].items())
+        print(f"normalizationReasonCounts: {counts}")
+    if summary.get("normalizationDecisions"):
+        print("normalizationDecisions:")
+        for item in summary["normalizationDecisions"]:
+            targets = ",".join(str(index) for index in item["targetMergedIndices"]) or "-"
+            print(
+                f"  - raw#{item['rawIndex']} {item['noteSet']} "
+                f"{item['startTime']}->{item['endTime']} {item['rule']} -> {targets}"
+            )
     print(f"isolatedSingletonCount: {summary.get('isolatedSingletonCount', 0)}")
     if summary.get("phraseBreakGuess"):
         print(f"phraseBreakGuess: {summary['phraseBreakGuess']}")
