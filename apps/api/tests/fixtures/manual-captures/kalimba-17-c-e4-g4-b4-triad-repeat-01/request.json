@@ -198,5 +198,6 @@
     "durationSec": 17.76,
     "mimeType": "audio/wav",
     "sizeBytes": 3409964
-  }
+  },
+  "sourceProfile": "acoustic_real"
 }

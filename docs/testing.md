@@ -54,7 +54,7 @@ After each analysis, use the workflow panel to build a single zip.
 Saved files inside the zip:
 
 - `audio.wav`: exact WAV sent to API
-- `request.json`: capture time, tuning, scenario, expected note summary, expected performance events, memo, audio metadata
+- `request.json`: capture time, tuning, scenario, expected note summary, expected performance events, memo, source profile, audio metadata
 - `response.json`: raw API response body
 - `notes.md`: tester notes template with expected performance summary
 
@@ -68,7 +68,7 @@ Use the clickable kalimba key UI in the workflow panel.
 4. Press `...を ... 回追加` to append it to the expected performance sequence.
 5. Use `最後を取り消す` or `すべてクリア` to fix mistakes.
 
-This avoids typing note names by hand and records both physical key numbers and note names in `request.json`. The selected capture intent is also stored, so later review can distinguish strict chords from `slide_chord` gestures.
+This avoids typing note names by hand and records both physical key numbers and note names in `request.json`. The selected capture intent is also stored, so later review can distinguish strict chords from `slide_chord` gestures. Browser-recorded captures currently default to `sourceProfile = acoustic_real`.
 
 Recommended case naming:
 

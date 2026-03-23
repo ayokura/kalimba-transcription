@@ -135,11 +135,13 @@ def audit_fixture(fixture_dir: Path) -> str:
     tuning_notes = {note["noteName"]: float(note["frequency"]) for note in request_payload["tuning"]["notes"]}
     expected_notes = extract_expected_notes(request_payload)
     capture_intent = request_payload.get("captureIntent", "(unknown)")
+    source_profile = request_payload.get("sourceProfile", "(unknown)")
 
     lines = [
         f"## {fixture_dir.name}",
         f"- status: {status}",
         f"- intent: {capture_intent}",
+        f"- sourceProfile: {source_profile}",
         f"- durationSec: {request_payload['audio']['durationSec']}",
         f"- activityRegions: {len(regions)}",
     ]

@@ -7,6 +7,8 @@ export type CaptureAssessmentStatus = "completed" | "pending" | "rerecord" | "re
 
 export type CaptureIntent = "strict_chord" | "slide_chord" | "separated_notes" | "unknown";
 
+export type SourceProfile = "acoustic_real" | "app_synth";
+
 export type CaptureAssessment = {
   status: CaptureAssessmentStatus;
   label: string;
@@ -55,6 +57,7 @@ export type ManualCaptureRequestPayload = {
   expectedPerformance: ManualCaptureExpectedPerformance | null;
   memo: string | null;
   captureIntent: CaptureIntent | null;
+  sourceProfile: SourceProfile;
   tuning: InstrumentTuning;
   audio: WavMetadata & {
     mimeType: string;
@@ -75,6 +78,7 @@ export type CreateTranscriptionOptions = {
   expectedPerformance?: ManualCaptureExpectedPerformance | null;
   memo?: string;
   captureIntent?: CaptureIntent | null;
+  sourceProfile?: SourceProfile;
 };
 
 export async function fetchTunings(): Promise<InstrumentTuning[]> {
@@ -122,6 +126,7 @@ export async function createTranscriptionWithCapture(
       expectedPerformance: options.expectedPerformance ?? null,
       memo: cleanOptionalText(options.memo),
       captureIntent: options.captureIntent ?? null,
+      sourceProfile: options.sourceProfile ?? "acoustic_real",
       tuning,
       audio: {
         ...metadata,

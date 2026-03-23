@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 REQUIRED_FILES = ("audio.wav", "request.json", "response.json", "notes.md")
+DEFAULT_SOURCE_PROFILE = "acoustic_real"
 VALID_STATUSES = {"completed", "pending", "rerecord", "review_needed", "reference_only"}
 
 
@@ -70,6 +71,12 @@ def main() -> int:
                 raise FileNotFoundError(f"Missing {source_name} in archive")
             with archive.open(source_name) as source, (target_dir / file_name).open("wb") as destination:
                 shutil.copyfileobj(source, destination)
+
+    request_path = target_dir / "request.json"
+    request_payload = json.loads(request_path.read_text(encoding="utf-8"))
+    if not request_payload.get("sourceProfile"):
+        request_payload["sourceProfile"] = DEFAULT_SOURCE_PROFILE
+        request_path.write_text(json.dumps(request_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     expected: dict[str, Any] = {
         "pending": status != "completed",

@@ -68,6 +68,7 @@ function buildNotesMarkdown(input: CaptureArchiveInput): string {
   const expectedNote = input.notes.expectedNote.trim() || "(not specified)";
   const expectedPerformance = input.notes.expectedPerformance ?? null;
   const captureIntent = input.requestPayload.captureIntent ?? "unknown";
+  const sourceProfile = input.requestPayload.sourceProfile;
   const memo = input.notes.memo.trim() || "(empty)";
   const reviewSummary = input.notes.reviewSummary?.trim() || "(not specified)";
   const reviewReason = input.notes.reviewReason?.trim() || "(not specified)";
@@ -82,6 +83,7 @@ function buildNotesMarkdown(input: CaptureArchiveInput): string {
     `- scenario: ${input.requestPayload.scenario}`,
     `- expected note: ${expectedNote}`,
     `- capture intent: ${captureIntent}`,
+    `- source profile: ${sourceProfile}`,
     `- captured at: ${input.requestPayload.capturedAt}`,
     "",
     "## Expected Performance",

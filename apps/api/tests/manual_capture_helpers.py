@@ -10,6 +10,7 @@ import soundfile as sf
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "manual-captures"
 VALID_STATUSES = {"completed", "pending", "rerecord", "review_needed", "reference_only"}
+VALID_SOURCE_PROFILES = {"acoustic_real", "app_synth"}
 ASSERTION_KEYS = {
     "minEvents",
     "maxEvents",
@@ -42,6 +43,12 @@ def load_fixture(fixture_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
     expected = json.loads((fixture_dir / "expected.json").read_text(encoding="utf-8"))
     return request_payload, expected
+
+
+def validate_request_metadata(fixture_dir: Path, request_payload: dict[str, Any]) -> None:
+    source_profile = request_payload.get("sourceProfile")
+    if not isinstance(source_profile, str) or source_profile not in VALID_SOURCE_PROFILES:
+        raise AssertionError(f"{fixture_dir.name}: request.sourceProfile must be one of {sorted(VALID_SOURCE_PROFILES)}")
 
 
 def fixture_status(expected: dict[str, Any]) -> str:
