@@ -237,7 +237,7 @@ $env:PYTHONPATH='C:\src\calimba-score\apps\api'
 
 ## Next manual capture priorities
 
-These are the next recommended recordings to collect after the current four-note rolled/gliss fixes.
+These are the next recommended recordings to collect after the current four-note rolled/gliss regression fixes.
 
 1. `E4 + G4 + B4 + D5` strict simultaneous chord re-record
    - Goal: replace the current `rerecord` strict fixture with a clean simultaneous four-note ground truth
@@ -245,25 +245,18 @@ These are the next recommended recordings to collect after the current four-note
    - Repetitions: 5
    - Spacing: leave about 1 second of silence between takes
    - Success criteria: `5 events`, each with `E4+G4+B4+D5`
-2. `E4 + G4 + B4 + D5` slow rolled chord at a second speed
-   - Goal: make sure the current rolled regression is not overfit to a single attack speed
-   - Gesture: rolled chord
-   - Repetitions: 5
-   - Spacing: clear silence between takes
-   - Success criteria: all five takes remain four-note events after reconstruction
-3. `E4 -> G4 -> B4 -> D5` slow gliss at a second speed
-   - Goal: confirm the new four-note gliss reconstruction holds across a slower or slightly faster sweep
-   - Gesture: gliss
-   - Repetitions: 5
-   - Spacing: clear silence between takes
-   - Success criteria: `5 events`, each reconstructed as `E4+G4+B4+D5`
-4. 3-note strict reference chord if 4-note strict remains physically unstable
+   - Performance note: keep the four attacks as simultaneous as possible; do not intentionally roll the chord
+2. 3-note strict reference chord if 4-note strict remains physically unstable
    - Goal: preserve a clean simultaneous reference even if 4-note strict chord remains ergonomically difficult
    - Gesture: strict chord
    - Notes: `C4 + E4 + G4` or `A4 + C5 + E5`
    - Repetitions: 5
-5. Legacy four-note fixture follow-up only if needed
+   - Spacing: leave about 1 second of silence between takes
+3. Legacy four-note fixture follow-up only if needed
    - Target: `kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01`
-   - Goal: either recover original intent from notes/audio history or replace it with a fresh explicit-intent recording
+   - Goal: either recover original intent from notes/audio history or keep it as `review_needed` / `reference_only`
    - This is lower priority than the explicit strict re-record above
-
+4. Additional rolled/gliss speed variants only after strict rerecord is stable
+   - `E4 + G4 + B4 + D5` rolled chord at a second speed
+   - `E4 -> G4 -> B4 -> D5` gliss at a second speed
+   - These are no longer the immediate bottleneck because the current rolled and gliss fixtures already regress cleanly
