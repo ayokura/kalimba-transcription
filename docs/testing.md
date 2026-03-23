@@ -260,3 +260,4 @@ These are the next recommended recordings to collect after the current four-note
    - `E4 + G4 + B4 + D5` rolled chord at a second speed
    - `E4 -> G4 -> B4 -> D5` gliss at a second speed
    - These are no longer the immediate bottleneck because the current rolled and gliss fixtures already regress cleanly
+
