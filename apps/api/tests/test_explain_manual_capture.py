@@ -32,6 +32,7 @@ def test_explain_manual_capture_json_output() -> None:
     result = run_script("kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03", "--json")
     payload = json.loads(result.stdout)
     assert payload["fixtureId"] == "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03"
-    assert payload["status"] == "rerecord"
+    assert payload["status"] == "pending"
     assert payload["sourceProfile"] == "acoustic_real"
     assert payload["captureIntent"] == "strict_chord"
+    assert payload["expectedSummary"] == "E4 + G4 + B4 + D5 x 6"

@@ -1,11 +1,11 @@
 {
   "capturedAt": "2026-03-23T12:08:24.941Z",
-  "scenario": "2026-03-23-e4-plus-g4-plus-b4-plus-d5-repeat-05-strict-chord-kalimba-17-c",
-  "expectedNote": "E4 + G4 + B4 + D5 x 5",
+  "scenario": "2026-03-23-e4-plus-g4-plus-b4-plus-d5-repeat-06-strict-chord-kalimba-17-c",
+  "expectedNote": "E4 + G4 + B4 + D5 x 6",
   "expectedPerformance": {
     "source": "clickable-kalimba-ui",
     "version": 1,
-    "summary": "E4 + G4 + B4 + D5 x 5",
+    "summary": "E4 + G4 + B4 + D5 x 6",
     "events": [
       {
         "index": 1,
@@ -97,6 +97,28 @@
       },
       {
         "index": 5,
+        "keys": [
+          {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          },
+          {
+            "key": 12,
+            "noteName": "B4"
+          },
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "E4 + G4 + B4 + D5"
+      },
+      {
+        "index": 6,
         "keys": [
           {
             "key": 10,

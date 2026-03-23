@@ -1,16 +1,16 @@
 # Manual Notes
 
 - tester: manual
-- verdict: rerecord
-- scenario: 2026-03-23-e4-plus-g4-plus-b4-plus-d5-repeat-05-strict-chord-kalimba-17-c
-- expected note: E4 + G4 + B4 + D5 x 5
+- verdict: pending
+- scenario: 2026-03-23-e4-plus-g4-plus-b4-plus-d5-repeat-06-strict-chord-kalimba-17-c
+- expected note: E4 + G4 + B4 + D5 x 6
 - capture intent: strict_chord
 - source profile: acoustic_real
 - captured at: 2026-03-23T12:08:24.941Z
 
 ## Expected Performance
 
-- summary: E4 + G4 + B4 + D5 x 5
+- summary: E4 + G4 + B4 + D5 x 6
 
 ### Events
 
@@ -42,3 +42,10 @@
 - imported on 2026-03-23 as the best current strict 4-note rerecord candidate
 - raw audit found 6 activity regions with strong four-note support across all regions
 - current recognizer still fragments the performance, so this remains `rerecord` rather than `completed`
+
+
+## Expected Count Correction (2026-03-23)
+
+- human ear-check confirmed this take contains 6 intended repetitions, not 5
+- status changed from `rerecord` to `pending` because the metadata correction removes the main rerecord rationale
+- the remaining blocker is recognizer fragmentation into 7 events, not recording quality

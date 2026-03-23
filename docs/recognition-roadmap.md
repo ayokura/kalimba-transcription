@@ -19,18 +19,18 @@
 
 ## Current Bottleneck
 
-The main remaining blocker is not recognizer coverage for `slide_chord`.
-It is the lack of one clean four-note `strict_chord` ground-truth fixture for:
+The main remaining blocker is now four-note `strict_chord` reconstruction quality.
+We have a plausible pending strict fixture, but not a completed regression-grade reference yet:
 
-- `E4 + G4 + B4 + D5`
+- `kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03`
 
-Until that exists, four-note simultaneous-chord work has a weak reference baseline.
+The current task is to convert that valid input into stable recognizer behavior rather than to keep rerecording blindly.
 
 ## Active Fixture Policy
 
 ### Primary active rerecord target
 - `kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03`
-- status: `rerecord`
+- status: `pending`
 - issue: [#1](https://github.com/ayokura/kalimba-transcription/issues/1)
 
 ### Legacy reference only

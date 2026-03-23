@@ -1,6 +1,6 @@
 {
   "pending": true,
-  "status": "rerecord",
+  "status": "pending",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -9,11 +9,6 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "best available strict four-note rerecord so far, but it still contains 6 raw attack regions and recognizer fragmentation; keep as the primary rerecord target",
-  "auditVerdict": "strict-intent-best-current-rerecord",
-  "recommendedRecapture": [
-    "Record the same four-note chord as 5 clearly simultaneous takes.",
-    "Aim for balanced attack so E4 / G4 / B4 are as audible as D5.",
-    "Leave about 1 second of silence between takes."
-  ]
+  "reason": "human ear-check corrected this take to x6 rather than x5; all 6 raw activity regions support the target four-note chord, so this is now a recognition-improvement target rather than a rerecord target",
+  "auditVerdict": "expected-x6-confirmed-recognizer-fragmented"
 }

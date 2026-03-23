@@ -246,8 +246,8 @@ $env:PYTHONPATH='C:\src\calimba-score\apps\api'
 
 These are the next recommended recordings to collect after the current four-note `slide_chord` regression fixes.
 
-1. `E4 + G4 + B4 + D5` strict simultaneous chord re-record
-   - Goal: replace the current `rerecord` strict fixture with a clean simultaneous four-note ground truth
+1. `E4 + G4 + B4 + D5` strict simultaneous chord follow-up only if needed
+   - Goal: only re-record if later recognizer work or audit shows the current x6 pending fixture is still not representative
    - Gesture: strict chord
    - Repetitions: 5
    - Spacing: leave about 1 second of silence between takes
