@@ -97,6 +97,20 @@ def _event_compression(expected_event_count: int, detected_event_count: int) -> 
     }
 
 
+def _normalization_summary(debug_payload: dict[str, Any], detected_event_count: int) -> dict[str, Any]:
+    segment_count = len(debug_payload.get("segments") or [])
+    raw_event_count = len(debug_payload.get("segmentCandidates") or [])
+    merged_event_count = len(debug_payload.get("mergedEvents") or [])
+    return {
+        "segmentCount": segment_count,
+        "rawEventCount": raw_event_count,
+        "mergedEventCount": merged_event_count,
+        "segmentToRawDelta": segment_count - raw_event_count,
+        "rawToMergedDelta": raw_event_count - merged_event_count,
+        "mergedToDetectedDelta": merged_event_count - detected_event_count,
+    }
+
+
 def build_explanation(fixture_dir: Path) -> dict[str, Any]:
     request_payload, expected = load_fixture(fixture_dir)
     validate_request_metadata(fixture_dir, request_payload)
@@ -128,8 +142,9 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
     summary = explain_fixture_output(fixture_dir, payload, expected)
     source_duration_sec = float(sf.info(source_audio_path).duration)
     evaluation_duration_sec = _evaluation_duration(source_duration_sec, evaluation_windows, ignored_ranges)
+    full_debug = full_payload.get("debug", {})
     coverage_events = []
-    for event in full_payload.get("debug", {}).get("mergedEvents", []):
+    for event in full_debug.get("mergedEvents", []):
         note_set = "+".join(sorted(event.get("notes") or []))
         coverage_events.append(
             {
@@ -164,6 +179,7 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
             "dominantGestureMix": _dominant_gesture_mix(coverage_events),
             "isolatedSingletonCount": _isolated_singleton_count(coverage_events),
             "phraseBreakGuess": _phrase_break_guess(coverage_events),
+            "normalizationSummary": _normalization_summary(full_debug, len(payload.get("events", []))),
         }
     )
     return summary
@@ -199,6 +215,13 @@ def print_text(summary: dict[str, Any]) -> None:
     if summary.get("dominantGestureMix"):
         mix = " / ".join(f"{key}:{value}" for key, value in summary["dominantGestureMix"].items())
         print(f"dominantGestureMix: {mix}")
+    if summary.get("normalizationSummary"):
+        normalization = summary["normalizationSummary"]
+        print(
+            "normalizationSummary: "
+            f"segments={normalization['segmentCount']} / raw={normalization['rawEventCount']} / merged={normalization['mergedEventCount']} / "
+            f"detected={summary['eventCount']} / rawToMergedDelta={normalization['rawToMergedDelta']}"
+        )
     print(f"isolatedSingletonCount: {summary.get('isolatedSingletonCount', 0)}")
     if summary.get("phraseBreakGuess"):
         print(f"phraseBreakGuess: {summary['phraseBreakGuess']}")

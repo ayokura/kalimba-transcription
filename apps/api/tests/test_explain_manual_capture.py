@@ -77,4 +77,6 @@ def test_explain_manual_capture_reports_pending_summary_hints() -> None:
     assert payload["eventCompression"]["expected"] == 17
     assert payload["eventCompression"]["detected"] == 15
     assert payload["dominantGestureMix"]["ambiguous"] >= 1
+    assert payload["normalizationSummary"]["segmentCount"] >= payload["normalizationSummary"]["rawEventCount"]
+    assert payload["normalizationSummary"]["rawEventCount"] >= payload["normalizationSummary"]["mergedEventCount"]
     assert isinstance(payload["phraseBreakGuess"], list)
