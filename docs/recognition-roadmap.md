@@ -105,6 +105,36 @@ Do **not** use it as:
 Reason:
 - it reflects app rendering and phone capture behavior, not real kalimba acoustics or hand technique
 
+## App-Video Arpeggio Candidate
+
+The later half of the local smartphone-app reference is not best understood as `slide_chord`.
+It is better treated as an `arpeggio candidate` / broken-chord reference.
+
+Current evidence from `.codex-media/derived-analysis/kira-kira-expected-performance.json`:
+- strongest candidate block: about `15.41s-22.83s`
+- clearest arpeggio-like sub-block: about `19.25s-20.89s`
+- projected sequence in that sub-block: `F4+F5 / A4 / C5 / A5 / A4 / F4`
+
+Interpretation:
+- this is useful as a reference for future `arpeggio` semantics and sample planning
+- it is not a current acoustic regression target
+- it should not be folded into `slide_chord` semantics
+
+Near-term use:
+- keep the source media local under `.codex-media/`
+- use the derived event sequence only as `reference_only` design evidence
+- collect equivalent real-device samples before recognizer work starts
+
+## Future Real-Device Sample Families
+
+The app-video analysis suggests these real-device families are worth collecting later:
+- wide-register dyads such as `G5 + C4`, `C5 + G4`, `F4 + F5`
+- wide-register triads such as `G5 + E4 + G4`
+- chord-to-single continuations such as `B4 + D5 -> D5`
+- broken-chord / `arpeggio` patterns such as `F4+F5 / A4 / C5 / A5 / A4 / F4`
+
+These should be recorded as real-device fixtures, not derived directly from the app video.
+
 ## Recording Request Template
 
 Use this structure whenever asking for new manual data:
