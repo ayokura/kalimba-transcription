@@ -94,6 +94,61 @@ Recommended future shape:
 
 That structure matches the eventual product better than a single recording-wide intent field.
 
+## Event-Level Intent Schema Draft
+
+Recommended capture shape once mixed recordings become normal:
+
+```json
+{
+  "expectedPerformance": {
+    "defaultCaptureIntent": "separated_notes",
+    "events": [
+      {
+        "index": 1,
+        "display": "C4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 2,
+        "display": "E4 + G4 + C5",
+        "intent": "slide_chord"
+      },
+      {
+        "index": 3,
+        "display": "F4 / A4 / C5 / A4",
+        "intent": "arpeggio"
+      }
+    ]
+  }
+}
+```
+
+Rules:
+- `defaultCaptureIntent` remains optional convenience metadata
+- `events[].intent` overrides the recording default
+- old fixtures with only recording-level intent remain valid until migration is complete
+- explainability should compare both pitch content and intended gesture family
+
+## Mixed Capture Collection Policy
+
+Once event-level intent exists, mixed recordings should be accepted when:
+- the phrase is short enough to annotate reliably
+- `slide_chord` and `arpeggio` sections are explicitly marked
+- the expected event list is stable enough to act as a `pending` target
+
+Recommended operator guidance:
+- keep one phrase per recording when possible
+- if mixing gesture families, annotate boundaries explicitly
+- prefer `reference_only` over forcing low-confidence mixed phrases into `completed`
+
+## Migration Order
+
+1. keep current recording-level `captureIntent` support
+2. add optional `events[].intent` in exported/request metadata
+3. update explainability CLI to surface event-level intent mismatches
+4. update debug capture UI to let the operator set intent per event
+5. only then start collecting mixed `slide_chord` + `arpeggio` fixtures at scale
+
 ## Future Phase
 
 Later, move beyond gesture labels and model arpeggio as one of:
