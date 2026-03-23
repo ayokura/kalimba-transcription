@@ -391,8 +391,12 @@ def build_raw_peaks(
 
 def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning: InstrumentTuning, *, debug: bool = False) -> list[NoteHypothesis]:
     note_freqs = np.array([note.frequency for note in tuning.notes])
-    all_target_freqs = np.concatenate([note_freqs * m for m in range(1, MAX_HARMONIC_MULTIPLE + 1)] + [note_freqs / 2.0, note_freqs / 3.0])
-    all_target_freqs[all_target_freqs < 40] = 0.0
+    harmonic_targets = np.concatenate([note_freqs * m for m in range(1, MAX_HARMONIC_MULTIPLE + 1)])
+    sub_half_targets = note_freqs / 2.0
+    sub_third_targets = note_freqs / 3.0
+    sub_half_targets[sub_half_targets < 40.0] = 0.0
+    sub_third_targets[sub_third_targets < 40.0] = 0.0
+    all_target_freqs = np.concatenate([harmonic_targets, sub_half_targets, sub_third_targets])
     all_energies = batch_peak_energies(frequencies, spectrum, all_target_freqs)
 
     n_notes = len(tuning.notes)
