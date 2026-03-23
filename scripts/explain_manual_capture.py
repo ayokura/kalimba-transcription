@@ -50,6 +50,53 @@ def _evaluation_duration(source_duration_sec: float, evaluation_windows: list[di
     return source_duration_sec
 
 
+def _dominant_gesture_mix(coverage_events: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for event in coverage_events:
+        gesture = event.get("gesture") or "ambiguous"
+        counts[gesture] = counts.get(gesture, 0) + 1
+    return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
+def _phrase_break_guess(coverage_events: list[dict[str, Any]]) -> list[int]:
+    breaks: list[int] = []
+    for index in range(len(coverage_events) - 1):
+        current = coverage_events[index]
+        following = coverage_events[index + 1]
+        gap = float(following["startTime"]) - float(current["endTime"])
+        if gap >= 0.45:
+            breaks.append(index + 1)
+    return breaks
+
+
+def _isolated_singleton_count(coverage_events: list[dict[str, Any]]) -> int:
+    count = 0
+    for index, event in enumerate(coverage_events):
+        note_set = event.get("noteSet") or ""
+        if "+" in note_set:
+            continue
+        start = float(event["startTime"])
+        end = float(event["endTime"])
+        duration = end - start
+        previous = coverage_events[index - 1] if index > 0 else None
+        following = coverage_events[index + 1] if index + 1 < len(coverage_events) else None
+        prev_gap = start - float(previous["endTime"]) if previous is not None else 1.0
+        next_gap = float(following["startTime"]) - end if following is not None else 1.0
+        if duration <= 0.18 and (prev_gap <= 0.2 or next_gap <= 0.2):
+            count += 1
+    return count
+
+
+def _event_compression(expected_event_count: int, detected_event_count: int) -> dict[str, Any] | None:
+    if expected_event_count <= 0:
+        return None
+    return {
+        "expected": expected_event_count,
+        "detected": detected_event_count,
+        "compressionRatio": round(detected_event_count / expected_event_count, 3),
+    }
+
+
 def build_explanation(fixture_dir: Path) -> dict[str, Any]:
     request_payload, expected = load_fixture(fixture_dir)
     validate_request_metadata(fixture_dir, request_payload)
@@ -93,6 +140,7 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
                 "scope": _scope_for_event(float(event["startTime"]), float(event["endTime"]), evaluation_windows, ignored_ranges),
             }
         )
+    expected_event_count = len(((request_payload.get("expectedPerformance") or {}).get("events") or []))
     summary.update(
         {
             "status": fixture_status(expected),
@@ -112,6 +160,10 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
             "evaluationDurationSec": round(evaluation_duration_sec, 4),
             "fullEventCount": len(full_payload.get("events", [])),
             "eventCoverage": coverage_events,
+            "eventCompression": _event_compression(expected_event_count, len(payload.get("events", []))),
+            "dominantGestureMix": _dominant_gesture_mix(coverage_events),
+            "isolatedSingletonCount": _isolated_singleton_count(coverage_events),
+            "phraseBreakGuess": _phrase_break_guess(coverage_events),
         }
     )
     return summary
@@ -141,6 +193,15 @@ def print_text(summary: dict[str, Any]) -> None:
     print(f"evaluationMode: {summary['evaluationMode']}")
     print(f"sourceDurationSec: {summary['sourceDurationSec']}")
     print(f"evaluationDurationSec: {summary['evaluationDurationSec']}")
+    if summary.get("eventCompression") is not None:
+        compression = summary["eventCompression"]
+        print(f"eventCompression: expected {compression['expected']} / detected {compression['detected']} / ratio {compression['compressionRatio']}")
+    if summary.get("dominantGestureMix"):
+        mix = " / ".join(f"{key}:{value}" for key, value in summary["dominantGestureMix"].items())
+        print(f"dominantGestureMix: {mix}")
+    print(f"isolatedSingletonCount: {summary.get('isolatedSingletonCount', 0)}")
+    if summary.get("phraseBreakGuess"):
+        print(f"phraseBreakGuess: {summary['phraseBreakGuess']}")
     if summary.get("eventCoverage"):
         in_scope = [event for event in summary['eventCoverage'] if event['scope'] == 'in_scope']
         out_of_scope = [event for event in summary['eventCoverage'] if event['scope'] == 'out_of_scope']

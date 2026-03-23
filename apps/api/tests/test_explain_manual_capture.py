@@ -69,3 +69,12 @@ def test_assertion_failure_details_report_order_mismatch() -> None:
     details = assertion_failure_details(ROOT / "apps" / "api" / "tests" / "fixtures" / "manual-captures" / "kalimba-17-c-c4-repeat-01", payload, expected)
 
     assert any(item["code"] == "event_order_mismatch" for item in details)
+
+
+def test_explain_manual_capture_reports_pending_summary_hints() -> None:
+    result = run_script("kalimba-17-c-c4-to-g4-sequence-17-01", "--json")
+    payload = json.loads(result.stdout)
+    assert payload["eventCompression"]["expected"] == 17
+    assert payload["eventCompression"]["detected"] == 12
+    assert payload["dominantGestureMix"]["ambiguous"] >= 1
+    assert isinstance(payload["phraseBreakGuess"], list)
