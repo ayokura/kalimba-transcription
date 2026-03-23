@@ -930,6 +930,10 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
             if len(repeated_notes) == 1 and len(fresh_notes) == 1 and (
                 repeated_notes[0].frequency < fresh_notes[0].frequency
                 or duration <= 0.14
+                or (
+                    repeated_notes[0].frequency > fresh_notes[0].frequency * 2.0
+                    and not are_harmonic_related(repeated_notes[0], fresh_notes[0])
+                )
             ) and not keep_short_octave_dyad:
                 updated_event = RawEvent(
                     start_time=event.start_time,

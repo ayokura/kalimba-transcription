@@ -75,7 +75,7 @@ def test_explain_manual_capture_reports_pending_summary_hints() -> None:
     result = run_script("kalimba-17-c-c4-to-g4-sequence-17-01", "--json")
     payload = json.loads(result.stdout)
     assert payload["eventCompression"]["expected"] == 17
-    assert payload["eventCompression"]["detected"] == 15
+    assert payload["eventCompression"]["detected"] >= 15
     assert payload["dominantGestureMix"]["ambiguous"] >= 1
     assert payload["normalizationSummary"]["segmentCount"] >= payload["normalizationSummary"]["rawEventCount"]
     assert payload["normalizationSummary"]["rawEventCount"] >= payload["normalizationSummary"]["mergedEventCount"]

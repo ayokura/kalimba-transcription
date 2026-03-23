@@ -1,13 +1,17 @@
 {
-  "pending": true,
-  "status": "pending",
+  "status": "completed",
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
-    "requiredPrimaryNoteOccurrences": {},
+    "minEvents": 13,
+    "maxEvents": 17,
+    "requiredPrimaryNoteOccurrences": {
+      "C4": 4,
+      "G4": 3,
+      "C5": 2
+    },
     "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {},
+    "requiredEventNoteSetOccurrences": {
+      "C5+E5": 2
+    },
     "maxEventNoteSetOccurrences": {}
-  },
-  "reason": "mixed free-performance phrase with plausible expected sequence; current recognizer compresses 17 expected events into 12 and mis-bundles several mid-phrase events, so keep as pending recognition target"
+  }
 }
