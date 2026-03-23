@@ -11,6 +11,10 @@ type EditorPanelProps = {
   onResultChange: (result: TranscriptionResult) => void;
 };
 
+function sanitizeEditedEvent(event: ScoreEvent): ScoreEvent {
+  return { ...event, gesture: "ambiguous", isGlissLike: false };
+}
+
 export function EditorPanel({
   result,
   activeEventId,
@@ -38,7 +42,7 @@ export function EditorPanel({
       }
 
       const nextNotes = event.notes.slice(0, -1);
-      return nextNotes.length > 0 ? [{ ...event, notes: nextNotes }] : [];
+      return nextNotes.length > 0 ? [sanitizeEditedEvent({ ...event, notes: nextNotes })] : [];
     });
 
     updateEvents(nextEvents);
@@ -52,7 +56,7 @@ export function EditorPanel({
     const baseNote = tuning.notes[0];
     const nextEvents = result.events.map((event) =>
       event.id === activeEvent.id
-        ? { ...event, notes: [...event.notes, noteFromName(baseNote.noteName, baseNote.key)] }
+        ? sanitizeEditedEvent({ ...event, notes: [...event.notes, noteFromName(baseNote.noteName, baseNote.key)] })
         : event,
     );
     updateEvents(nextEvents);
@@ -68,12 +72,11 @@ export function EditorPanel({
     }
     const current = result.events[index];
     const next = result.events[index + 1];
-    const merged: ScoreEvent = {
+    const merged: ScoreEvent = sanitizeEditedEvent({
       ...current,
       durationBeat: current.durationBeat + next.durationBeat,
       notes: [...current.notes, ...next.notes],
-      isGlissLike: current.isGlissLike || next.isGlissLike,
-    };
+    });
     const nextEvents = [...result.events.slice(0, index), merged, ...result.events.slice(index + 2)];
     updateEvents(nextEvents);
     onActiveEventIdChange(merged.id);
@@ -85,18 +88,18 @@ export function EditorPanel({
     }
     const index = result.events.findIndex((event) => event.id === activeEvent.id);
     const midpoint = Math.ceil(activeEvent.notes.length / 2);
-    const first: ScoreEvent = {
+    const first: ScoreEvent = sanitizeEditedEvent({
       ...activeEvent,
       notes: activeEvent.notes.slice(0, midpoint),
       durationBeat: Math.max(activeEvent.durationBeat / 2, 0.25),
-    };
-    const second: ScoreEvent = {
+    });
+    const second: ScoreEvent = sanitizeEditedEvent({
       ...activeEvent,
       id: `${activeEvent.id}-b`,
       startBeat: activeEvent.startBeat + first.durationBeat,
       durationBeat: Math.max(activeEvent.durationBeat - first.durationBeat, 0.25),
       notes: activeEvent.notes.slice(midpoint),
-    };
+    });
     const nextEvents = [...result.events.slice(0, index), first, second, ...result.events.slice(index + 1)];
     updateEvents(nextEvents);
     onActiveEventIdChange(first.id);
