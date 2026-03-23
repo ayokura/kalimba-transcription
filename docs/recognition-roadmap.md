@@ -89,6 +89,30 @@ When collection resumes, prefer paired samples for the same pitch set:
 
 This will make family boundaries testable without changing pitch content.
 
+## Future Input Source Profiles
+
+Long term, the recognizer should not assume one acoustic environment.
+Different input sources should be represented explicitly.
+
+Initial profile split:
+- `acoustic_real`: real kalimba recorded by microphone
+- `app_synth`: smartphone or software kalimba app audio/video
+
+Likely future dimensions inside `acoustic_real`:
+- close mic vs room mic
+- quiet room vs noisy room
+- different phone / laptop microphone responses
+- different kalimba models and resonance behavior
+
+Policy:
+- primary regression stays on `acoustic_real`
+- app-derived material stays `reference_only` until a separate profile exists
+- source profile should affect fixture status, evaluation policy, and future feature normalization
+
+Why this matters:
+- phone app audio can still be useful for pattern discovery and symbolic references
+- but mixing it directly into the real-device regression pool will blur recognizer tuning decisions
+
 ## Smartphone App Reference Video
 
 Local path:
