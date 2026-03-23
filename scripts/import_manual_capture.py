@@ -74,8 +74,21 @@ def main() -> int:
 
     request_path = target_dir / "request.json"
     request_payload = json.loads(request_path.read_text(encoding="utf-8"))
+    request_changed = False
     if not request_payload.get("sourceProfile"):
         request_payload["sourceProfile"] = DEFAULT_SOURCE_PROFILE
+        request_changed = True
+    expected_performance = request_payload.get("expectedPerformance") or {}
+    capture_intent = request_payload.get("captureIntent")
+    if expected_performance and capture_intent and not expected_performance.get("defaultCaptureIntent"):
+        expected_performance["defaultCaptureIntent"] = capture_intent
+        request_changed = True
+    for event in expected_performance.get("events") or []:
+        if capture_intent and "intent" not in event:
+            event["intent"] = capture_intent
+            request_changed = True
+    if request_changed:
+        request_payload["expectedPerformance"] = expected_performance or request_payload.get("expectedPerformance")
         request_path.write_text(json.dumps(request_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     expected: dict[str, Any] = {

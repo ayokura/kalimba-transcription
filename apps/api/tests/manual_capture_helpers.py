@@ -11,6 +11,7 @@ import soundfile as sf
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "manual-captures"
 VALID_STATUSES = {"completed", "pending", "rerecord", "review_needed", "reference_only"}
 VALID_SOURCE_PROFILES = {"acoustic_real", "app_synth"}
+VALID_CAPTURE_INTENTS = {"strict_chord", "slide_chord", "arpeggio", "separated_notes", "unknown"}
 ASSERTION_KEYS = {
     "minEvents",
     "maxEvents",
@@ -49,6 +50,20 @@ def validate_request_metadata(fixture_dir: Path, request_payload: dict[str, Any]
     source_profile = request_payload.get("sourceProfile")
     if not isinstance(source_profile, str) or source_profile not in VALID_SOURCE_PROFILES:
         raise AssertionError(f"{fixture_dir.name}: request.sourceProfile must be one of {sorted(VALID_SOURCE_PROFILES)}")
+
+    capture_intent = request_payload.get("captureIntent")
+    if capture_intent is not None and (not isinstance(capture_intent, str) or capture_intent not in VALID_CAPTURE_INTENTS):
+        raise AssertionError(f"{fixture_dir.name}: request.captureIntent must be one of {sorted(VALID_CAPTURE_INTENTS)} or null")
+
+    expected_performance = request_payload.get("expectedPerformance") or {}
+    default_capture_intent = expected_performance.get("defaultCaptureIntent")
+    if default_capture_intent is not None and (not isinstance(default_capture_intent, str) or default_capture_intent not in VALID_CAPTURE_INTENTS):
+        raise AssertionError(f"{fixture_dir.name}: expectedPerformance.defaultCaptureIntent must be one of {sorted(VALID_CAPTURE_INTENTS)} or null")
+
+    for index, event in enumerate(expected_performance.get("events") or [], start=1):
+        event_intent = event.get("intent")
+        if event_intent is not None and (not isinstance(event_intent, str) or event_intent not in VALID_CAPTURE_INTENTS):
+            raise AssertionError(f"{fixture_dir.name}: expectedPerformance.events[{index}].intent must be one of {sorted(VALID_CAPTURE_INTENTS)} or null")
 
 
 def fixture_status(expected: dict[str, Any]) -> str:

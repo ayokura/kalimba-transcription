@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8
 
 export type CaptureAssessmentStatus = "completed" | "pending" | "rerecord" | "review_needed" | "reference_only";
 
-export type CaptureIntent = "strict_chord" | "slide_chord" | "separated_notes" | "unknown";
+export type CaptureIntent = "strict_chord" | "slide_chord" | "arpeggio" | "separated_notes" | "unknown";
 
 export type SourceProfile = "acoustic_real" | "app_synth";
 
@@ -41,12 +41,14 @@ export type ManualCaptureExpectedEvent = {
   index: number;
   keys: ManualCaptureExpectedKey[];
   display: string;
+  intent?: CaptureIntent | null;
 };
 
 export type ManualCaptureExpectedPerformance = {
   source: "clickable-kalimba-ui";
   version: 1;
   summary: string;
+  defaultCaptureIntent?: CaptureIntent | null;
   events: ManualCaptureExpectedEvent[];
 };
 

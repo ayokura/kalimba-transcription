@@ -100,6 +100,8 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
             "auditVerdict": expected.get("auditVerdict"),
             "sourceProfile": request_payload.get("sourceProfile"),
             "captureIntent": request_payload.get("captureIntent"),
+            "defaultCaptureIntent": (request_payload.get("expectedPerformance") or {}).get("defaultCaptureIntent"),
+            "eventIntents": [event.get("intent") for event in ((request_payload.get("expectedPerformance") or {}).get("events") or [])],
             "scenario": request_payload.get("scenario"),
             "expectedSummary": (request_payload.get("expectedPerformance") or {}).get("summary"),
             "evaluationWindows": evaluation_windows,
@@ -120,6 +122,11 @@ def print_text(summary: dict[str, Any]) -> None:
     print(f"status: {summary['status']}")
     print(f"sourceProfile: {summary['sourceProfile']}")
     print(f"captureIntent: {summary['captureIntent']}")
+    if summary.get("defaultCaptureIntent") is not None:
+        print(f"defaultCaptureIntent: {summary['defaultCaptureIntent']}")
+    event_intents = [intent for intent in summary.get("eventIntents", []) if intent is not None]
+    if event_intents:
+        print(f"eventIntents: {' / '.join(event_intents)}")
     if summary.get("scenario"):
         print(f"scenario: {summary['scenario']}")
     if summary.get("expectedSummary"):

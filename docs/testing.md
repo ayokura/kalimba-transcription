@@ -68,7 +68,7 @@ Use the clickable kalimba key UI in the workflow panel.
 4. Press `...を ... 回追加` to append it to the expected performance sequence.
 5. Use `最後を取り消す` or `すべてクリア` to fix mistakes.
 
-This avoids typing note names by hand and records both physical key numbers and note names in `request.json`. The selected capture intent is also stored, so later review can distinguish strict chords from `slide_chord` gestures. Browser-recorded captures currently default to `sourceProfile = acoustic_real`.
+This avoids typing note names by hand and records both physical key numbers and note names in `request.json`. The selected capture intent is stored both as a recording-level field and, for new captures, on each expected event. Browser-recorded captures currently default to `sourceProfile = acoustic_real`.
 
 Recommended case naming:
 

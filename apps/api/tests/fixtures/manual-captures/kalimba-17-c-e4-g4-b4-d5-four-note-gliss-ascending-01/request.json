@@ -27,7 +27,8 @@
             "noteName": "D5"
           }
         ],
-        "display": "E4 + G4 + B4 + D5"
+        "display": "E4 + G4 + B4 + D5",
+        "intent": "slide_chord"
       },
       {
         "index": 2,
@@ -49,7 +50,8 @@
             "noteName": "D5"
           }
         ],
-        "display": "E4 + G4 + B4 + D5"
+        "display": "E4 + G4 + B4 + D5",
+        "intent": "slide_chord"
       },
       {
         "index": 3,
@@ -71,7 +73,8 @@
             "noteName": "D5"
           }
         ],
-        "display": "E4 + G4 + B4 + D5"
+        "display": "E4 + G4 + B4 + D5",
+        "intent": "slide_chord"
       },
       {
         "index": 4,
@@ -93,7 +96,8 @@
             "noteName": "D5"
           }
         ],
-        "display": "E4 + G4 + B4 + D5"
+        "display": "E4 + G4 + B4 + D5",
+        "intent": "slide_chord"
       },
       {
         "index": 5,
@@ -115,9 +119,11 @@
             "noteName": "D5"
           }
         ],
-        "display": "E4 + G4 + B4 + D5"
+        "display": "E4 + G4 + B4 + D5",
+        "intent": "slide_chord"
       }
-    ]
+    ],
+    "defaultCaptureIntent": "slide_chord"
   },
   "memo": null,
   "captureIntent": "slide_chord",

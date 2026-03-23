@@ -26,12 +26,13 @@ type TranscriptionStudioProps = {
 const INTENT_OPTIONS: Array<{ value: CaptureIntent; label: string; description: string }> = [
   { value: "strict_chord", label: "同時和音", description: "同じタイミングで鳴らす前提です。" },
   { value: "slide_chord", label: "スライド和音", description: "少しずらしてなぞる和音をまとめて扱います。" },
+  { value: "arpeggio", label: "アルペジオ", description: "和音を順に分散して鳴らす意図です。" },
   { value: "separated_notes", label: "単音列", description: "明確に区切った単音列です。" },
   { value: "unknown", label: "未指定", description: "意図をまだ固定しません。" },
 ];
 
 function normalizeCaptureIntentFamily(intent: string | null | undefined): CaptureIntent | "ambiguous" {
-  if (intent === "strict_chord" || intent === "slide_chord" || intent === "separated_notes" || intent === "unknown" || intent === "ambiguous") {
+  if (intent === "strict_chord" || intent === "slide_chord" || intent === "arpeggio" || intent === "separated_notes" || intent === "unknown" || intent === "ambiguous") {
     return intent;
   }
   return "unknown";
@@ -145,15 +146,23 @@ function buildExpectedSummary(events: ManualCaptureExpectedEvent[]): string {
     .join(" / ");
 }
 
-function buildExpectedPerformance(events: ManualCaptureExpectedEvent[]): ManualCaptureExpectedPerformance | null {
+function buildExpectedPerformance(events: ManualCaptureExpectedEvent[], fallbackIntent: CaptureIntent): ManualCaptureExpectedPerformance | null {
   if (events.length === 0) {
     return null;
   }
+
+  const explicitIntents = [...new Set(events.map((event) => event.intent).filter((intent): intent is CaptureIntent => Boolean(intent)))];
+  const defaultCaptureIntent = explicitIntents.length === 1
+    ? explicitIntents[0]
+    : fallbackIntent !== "unknown"
+      ? fallbackIntent
+      : null;
 
   return {
     source: "clickable-kalimba-ui",
     version: 1,
     summary: buildExpectedSummary(events),
+    defaultCaptureIntent,
     events,
   };
 }
@@ -247,7 +256,7 @@ function buildCaptureAssessment(
       };
     }
 
-    if (normalizedCaptureIntent === "slide_chord") {
+    if (normalizedCaptureIntent === "slide_chord" || normalizedCaptureIntent === "arpeggio") {
       return {
         status: "pending",
         label: "改善対象",
@@ -311,6 +320,12 @@ function buildRecaptureGuidance(
       "毎回ほぼ同じ方向と速さで順に鳴らす。",
       "各反復の間に明確な無音を入れる。",
       "対象キー以外に触れて出る接触音を減らす。",
+    );
+  } else if (normalizedCaptureIntent === "arpeggio") {
+    guidance.push(
+      "和音を一方向に分散して鳴らし、各音の順序を毎回そろえる。",
+      "各反復の間に明確な無音を入れる。",
+      "スライドのように連続接触させず、順次打鍵として分ける。",
     );
   } else if (normalizedCaptureIntent === "separated_notes") {
     guidance.push(
@@ -398,7 +413,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setExpectedRepeatCount("1");
   }, [tuningSignature]);
 
-  const expectedPerformance = useMemo(() => buildExpectedPerformance(expectedEvents), [expectedEvents]);
+  const expectedPerformance = useMemo(() => buildExpectedPerformance(expectedEvents, captureIntent), [captureIntent, expectedEvents]);
   const noteNamesByKey = useMemo(() => new Map((selectedTuning?.notes ?? []).map((note) => [note.key, note.noteName])), [selectedTuning]);
   const expectedNote = expectedPerformance?.summary ?? "";
   const captureReview = useMemo(
@@ -437,6 +452,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
           index: nextEvents.length + 1,
           keys: selectedNotes.map((note) => ({ key: note.key, noteName: note.noteName })),
           display,
+          intent: captureIntent !== "unknown" ? captureIntent : null,
         });
       }
       return nextEvents;
@@ -613,6 +629,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
                     <div className="stack event-copy">
                       <strong>{event.display}</strong>
                       <span className="muted">{event.keys.map((key) => `${key.noteName} (#${key.key})`).join(" / ")}</span>
+                      {event.intent ? <span className="muted">intent: {buildIntentLabel(event.intent)}</span> : null}
                     </div>
                   </div>
                 ))}

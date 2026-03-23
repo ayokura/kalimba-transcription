@@ -406,6 +406,11 @@ button:disabled {
   color: #82561a;
 }
 
+.gesture-pill.gesture-arpeggio {
+  background: rgba(157, 120, 242, 0.16);
+  color: #5d3e91;
+}
+
 .gesture-pill.gesture-ambiguous {
   background: rgba(30, 31, 31, 0.08);
   color: var(--muted);

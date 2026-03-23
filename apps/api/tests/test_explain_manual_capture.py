@@ -36,7 +36,10 @@ def test_explain_manual_capture_json_output() -> None:
     assert payload["status"] == "completed"
     assert payload["sourceProfile"] == "acoustic_real"
     assert payload["captureIntent"] == "strict_chord"
+    assert payload["defaultCaptureIntent"] == "strict_chord"
+    assert all(intent == "strict_chord" for intent in payload["eventIntents"])
     assert payload["expectedSummary"] == "E4 + G4 + B4 + D5 x 6"
+
 def test_explain_manual_capture_json_output_with_ignored_ranges_reports_scope() -> None:
     result = run_script("kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01", "--json")
     payload = json.loads(result.stdout)
