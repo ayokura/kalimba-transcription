@@ -30,6 +30,7 @@ DEFAULT_ASSERTIONS = {
     "maxEventNoteSetOccurrences": {},
 }
 RangeSpec = dict[str, float]
+AssertionFailureDetail = dict[str, Any]
 
 
 def list_fixture_dirs() -> list[Path]:
@@ -200,54 +201,132 @@ def validate_expected_metadata(fixture_dir: Path, expected: dict[str, Any]) -> N
 
 
 
-def assertion_failures(fixture_dir: Path, payload: dict[str, Any], expected: dict[str, Any]) -> list[str]:
+def assertion_failure_details(fixture_dir: Path, payload: dict[str, Any], expected: dict[str, Any]) -> list[AssertionFailureDetail]:
     primary_notes = primary_note_names(payload)
     note_sets = event_note_sets(payload)
     assertions = normalized_assertions(expected)
-    failures: list[str] = []
+    failures: list[AssertionFailureDetail] = []
 
     min_events = assertions.get("minEvents")
-    if min_events is not None and len(payload["events"]) < min_events:
-        failures.append(f"minEvents expected >= {min_events}, got {len(payload['events'])}")
+    event_count = len(payload["events"])
+    if min_events is not None and event_count < min_events:
+        failures.append(
+            {
+                "code": "event_count_too_low",
+                "name": "Expected event count not reached",
+                "assertionKey": "minEvents",
+                "subject": "event_count",
+                "expected": {"operator": ">=", "value": min_events},
+                "actual": event_count,
+                "message": f"minEvents expected >= {min_events}, got {event_count}",
+            }
+        )
 
     max_events = assertions.get("maxEvents")
-    if max_events is not None and len(payload["events"]) > max_events:
-        failures.append(f"maxEvents expected <= {max_events}, got {len(payload['events'])}")
+    if max_events is not None and event_count > max_events:
+        failures.append(
+            {
+                "code": "event_count_too_high",
+                "name": "Detected event count exceeds expected range",
+                "assertionKey": "maxEvents",
+                "subject": "event_count",
+                "expected": {"operator": "<=", "value": max_events},
+                "actual": event_count,
+                "message": f"maxEvents expected <= {max_events}, got {event_count}",
+            }
+        )
 
     for note_name, min_occurrences in assertions.get("requiredPrimaryNoteOccurrences", {}).items():
         actual = primary_notes.count(note_name)
         if actual < min_occurrences:
-            failures.append(f"requiredPrimaryNoteOccurrences[{note_name}] expected >= {min_occurrences}, got {actual}")
+            failures.append(
+                {
+                    "code": "primary_note_missing",
+                    "name": "Primary note under-detected",
+                    "assertionKey": "requiredPrimaryNoteOccurrences",
+                    "subject": note_name,
+                    "expected": {"operator": ">=", "value": min_occurrences},
+                    "actual": actual,
+                    "message": f"requiredPrimaryNoteOccurrences[{note_name}] expected >= {min_occurrences}, got {actual}",
+                }
+            )
 
     for note_name, max_occurrences in assertions.get("maxPrimaryNoteOccurrences", {}).items():
         actual = primary_notes.count(note_name)
         if actual > max_occurrences:
-            failures.append(f"maxPrimaryNoteOccurrences[{note_name}] expected <= {max_occurrences}, got {actual}")
+            failures.append(
+                {
+                    "code": "primary_note_excess",
+                    "name": "Primary note over-detected",
+                    "assertionKey": "maxPrimaryNoteOccurrences",
+                    "subject": note_name,
+                    "expected": {"operator": "<=", "value": max_occurrences},
+                    "actual": actual,
+                    "message": f"maxPrimaryNoteOccurrences[{note_name}] expected <= {max_occurrences}, got {actual}",
+                }
+            )
 
     for note_set, min_occurrences in assertions.get("requiredEventNoteSetOccurrences", {}).items():
         actual = note_sets.count(note_set)
         if actual < min_occurrences:
-            failures.append(f"requiredEventNoteSetOccurrences[{note_set}] expected >= {min_occurrences}, got {actual}")
+            failures.append(
+                {
+                    "code": "note_set_missing",
+                    "name": "Expected note-set under-detected",
+                    "assertionKey": "requiredEventNoteSetOccurrences",
+                    "subject": note_set,
+                    "expected": {"operator": ">=", "value": min_occurrences},
+                    "actual": actual,
+                    "message": f"requiredEventNoteSetOccurrences[{note_set}] expected >= {min_occurrences}, got {actual}",
+                }
+            )
 
     for note_set, max_occurrences in assertions.get("maxEventNoteSetOccurrences", {}).items():
         actual = note_sets.count(note_set)
         if actual > max_occurrences:
-            failures.append(f"maxEventNoteSetOccurrences[{note_set}] expected <= {max_occurrences}, got {actual}")
+            failures.append(
+                {
+                    "code": "note_set_excess",
+                    "name": "Detected note-set over-produced",
+                    "assertionKey": "maxEventNoteSetOccurrences",
+                    "subject": note_set,
+                    "expected": {"operator": "<=", "value": max_occurrences},
+                    "actual": actual,
+                    "message": f"maxEventNoteSetOccurrences[{note_set}] expected <= {max_occurrences}, got {actual}",
+                }
+            )
 
     expected_note_sets_ordered = assertions.get("expectedEventNoteSetsOrdered")
     if expected_note_sets_ordered is not None and note_sets != expected_note_sets_ordered:
-        failures.append("expectedEventNoteSetsOrdered mismatch")
+        failures.append(
+            {
+                "code": "event_order_mismatch",
+                "name": "Detected event order differs from expected sequence",
+                "assertionKey": "expectedEventNoteSetsOrdered",
+                "subject": "ordered_note_sets",
+                "expected": expected_note_sets_ordered,
+                "actual": note_sets,
+                "message": "expectedEventNoteSetsOrdered mismatch",
+            }
+        )
 
     return failures
 
 
+def assertion_failures(fixture_dir: Path, payload: dict[str, Any], expected: dict[str, Any]) -> list[str]:
+    return [detail["message"] for detail in assertion_failure_details(fixture_dir, payload, expected)]
+
+
 def explain_fixture_output(fixture_dir: Path, payload: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
+    assertion_failure_info = assertion_failure_details(fixture_dir, payload, expected)
     return {
         "fixtureId": fixture_dir.name,
         "eventCount": len(payload.get("events", [])),
         "primaryNotes": primary_note_names(payload),
         "eventNoteSets": event_note_sets(payload),
-        "assertionFailures": assertion_failures(fixture_dir, payload, expected),
+        "assertionFailures": [detail["message"] for detail in assertion_failure_info],
+        "assertionFailureDetails": assertion_failure_info,
+        "reasonCodes": [detail["code"] for detail in assertion_failure_info],
     }
 
 def build_evaluation_audio_bytes(fixture_dir: Path, expected: dict[str, Any]) -> bytes:

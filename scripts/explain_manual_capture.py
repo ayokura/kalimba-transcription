@@ -155,11 +155,14 @@ def print_text(summary: dict[str, Any]) -> None:
         print("recommendedRecapture:")
         for item in summary['recommendedRecapture']:
             print(f"  - {item}")
-    failures = summary.get("assertionFailures") or []
+    reason_codes = summary.get("reasonCodes") or []
+    if reason_codes:
+        print(f"reasonCodes: {' / '.join(reason_codes)}")
+    failures = summary.get("assertionFailureDetails") or []
     if failures:
         print("assertionFailures:")
         for item in failures:
-            print(f"  - {item}")
+            print(f"  - [{item['code']}] {item['message']}")
     else:
         print("assertionFailures: (none)")
 

@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from manual_capture_helpers import assertion_failure_details
+
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "scripts" / "explain_manual_capture.py"
 
@@ -49,3 +51,21 @@ def test_explain_manual_capture_json_output_with_ignored_ranges_reports_scope() 
     assert any(event["scope"] == "in_scope" for event in payload["eventCoverage"])
 
 
+
+
+def test_assertion_failure_details_report_order_mismatch() -> None:
+    payload = {
+        "events": [
+            {"notes": [{"pitchClass": "C", "octave": 4}]},
+            {"notes": [{"pitchClass": "E", "octave": 4}]},
+        ]
+    }
+    expected = {
+        "assertions": {
+            "expectedEventNoteSetsOrdered": ["E4", "C4"],
+        }
+    }
+
+    details = assertion_failure_details(ROOT / "apps" / "api" / "tests" / "fixtures" / "manual-captures" / "kalimba-17-c-c4-repeat-01", payload, expected)
+
+    assert any(item["code"] == "event_order_mismatch" for item in details)
