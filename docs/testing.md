@@ -193,7 +193,8 @@ After an independent audit, update fixture status as needed.
 - keep as `completed` when the expected performance is trustworthy and suitable for regression
 - keep as `pending` when the case is still a recognition target
 - move to `rerecord` when recording or performance quality is the main blocker
-- move to `review_needed` when the expected metadata is suspect`r`n- move to `reference_only` when a legacy capture is still informative but should no longer drive recognizer work
+- move to `review_needed` when the expected metadata is suspect
+- move to `reference_only` when a legacy capture is still informative but should no longer drive recognizer work
 
 After each recognition-improvement round stabilizes, run an independent audit on the remaining pending fixtures.
 
@@ -244,28 +245,27 @@ $env:PYTHONPATH='C:\src\calimba-score\apps\api'
 
 ## Next manual capture priorities
 
-These are the next recommended recordings to collect after the current four-note `slide_chord` regression fixes.
+There is no single blocking capture pattern right now. The main immediate bottlenecks are `arpeggio` design and explainability, not missing core regression samples.
 
-1. `E4 + G4 + B4 + D5` strict simultaneous chord follow-up only if needed
-   - Goal: only re-record if later recognizer work or audit shows the current x6 pending fixture is still not representative
-   - Gesture: strict chord
-   - Repetitions: 5
-   - Spacing: leave about 1 second of silence between takes
-   - Success criteria: `5 events`, each with `E4+G4+B4+D5`
-   - Performance note: keep the four attacks as simultaneous as possible; do not intentionally roll the chord
-2. 3-note strict reference chord if 4-note strict remains physically unstable
-   - Goal: preserve a clean simultaneous reference even if 4-note strict chord remains ergonomically difficult
-   - Gesture: strict chord
-   - Notes: `C4 + E4 + G4` or `A4 + C5 + E5`
-   - Repetitions: 5
-   - Spacing: leave about 1 second of silence between takes
-3. Legacy four-note fixture follow-up only if needed
-   - Target: `kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01`
-   - Goal: either recover original intent from notes/audio history or keep it as `review_needed` / `reference_only`
-   - This is lower priority than the explicit strict re-record above
-4. Additional `slide_chord` speed variants only after strict rerecord is stable
-   - `E4 + G4 + B4 + D5` `slide_chord` at a second speed
-   - `E4 -> G4 -> B4 -> D5` `slide_chord` at a second speed
-   - These are no longer the immediate bottleneck because the current `slide_chord` fixtures already regress cleanly
+Recommended collection strategy:
+
+1. Free performance captures are acceptable
+   - Prefer short, musically coherent phrases rather than random isolated notes
+   - Always include `Expected Performance`
+   - Add a brief memo when a section is intentionally `strict_chord`, `slide_chord`, `arpeggio`, or plain `separated_notes`
+   - Expect these to land as `pending` or `reference_only` first, not necessarily `completed`
+
+2. Targeted captures are still useful when they serve a design question
+   - Highest-value future target: paired `arpeggio` vs `slide_chord` samples for the same note set
+   - Example note sets: `C4 + E4 + G4`, `A4 + C5 + E5`, `E4 + G4 + B4 + D5`
+   - Goal: make the category boundary testable without changing pitch content
+
+3. Use intent notes when one recording mixes techniques
+   - The current schema still stores recording-level `captureIntent`, but future design assumes event-level intent
+   - Until event-level editing exists, note mixed-intent sections in the memo so fixture review can recover them later
+
+4. Only request explicit re-records when a case blocks recognition work
+   - Example: a capture is the best candidate for a strict baseline but the attacks are too staggered
+   - Otherwise, prefer collecting broader musical material and triaging it with `pending / review_needed / reference_only`
 
 
