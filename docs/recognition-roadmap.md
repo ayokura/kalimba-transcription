@@ -11,7 +11,9 @@
 - four-note ascending `slide_chord`
 
 ### Not yet complete
-- clean four-note `strict_chord` reference
+- fixture explainability reason codes
+- `arpeggio` data-model introduction
+- source-profile aware evaluation policy
 
 ### Explicitly not a current acoustic regression target
 - legacy four-note fixture with broken metadata
@@ -71,7 +73,7 @@ Tracking issue:
 1. keep the completed strict four-note baseline stable
 2. improve fixture explainability and coverage reporting
 3. prepare `arpeggio` semantics and future source-profile support
-4. do not expand speculative four-note recognizer heuristics without a better strict reference
+4. keep editor gesture handling safe before adding `arpeggio`
 5. start arpeggio sample collection only after the data model boundary is fixed
 
 ## Suggested Future Sample Matrix
@@ -89,6 +91,8 @@ When collection resumes, prefer paired samples for the same pitch set:
 - `E4 + G4 + B4 + D5`
 
 This will make family boundaries testable without changing pitch content.
+
+Longer term, intent should move from recording-level metadata to event-level metadata. The current one-intent-per-capture model is acceptable only because fixtures are deliberately collected as one-gesture-per-take.
 
 ## Future Input Source Profiles
 
