@@ -24,6 +24,8 @@ ONSET_ENERGY_WINDOW_SECONDS = 0.08
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO = 0.18
 RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO = 0.6
+RECENT_PRIMARY_REPLACEMENT_RELAXED_FUNDAMENTAL_RATIO = 0.45
+RECENT_PRIMARY_REPLACEMENT_STRONG_ONSET_GAIN = 100.0
 RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_GAIN = 20.0
 RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_RATIO = 8.0
 RECENT_UPPER_SECONDARY_MIN_DURATION = 0.22
@@ -736,10 +738,14 @@ def maybe_replace_stale_recent_primary(
             continue
         if hypothesis.score < primary.score * RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO:
             continue
-        if hypothesis.fundamental_ratio < RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO:
+        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+        relaxed_recent_primary = (
+            hypothesis.fundamental_ratio >= RECENT_PRIMARY_REPLACEMENT_RELAXED_FUNDAMENTAL_RATIO
+            and onset_gain >= RECENT_PRIMARY_REPLACEMENT_STRONG_ONSET_GAIN
+        )
+        if hypothesis.fundamental_ratio < RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO and not relaxed_recent_primary:
             continue
 
-        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
         if (
             onset_gain >= RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_GAIN
             and onset_gain >= max(primary_onset_gain, 1e-6) * RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_RATIO
