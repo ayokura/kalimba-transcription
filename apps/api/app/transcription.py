@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import math
 from dataclasses import dataclass
 from typing import Any
 
@@ -131,7 +132,7 @@ class RawEvent:
     primary_note_name: str = ""
     primary_score: float = 0.0
 
-@dataclass
+@dataclass(slots=True)
 class NoteHypothesis:
     candidate: NoteCandidate
     score: float
@@ -142,8 +143,9 @@ class NoteHypothesis:
     octave_alias_energy: float
     octave_alias_ratio: float
     octave_alias_penalty: float
-    harmonics: list[dict[str, float]]
-    subharmonics: list[dict[str, float]]
+    second_harmonic_energy: float = 0.0
+    harmonics: list[dict[str, float]] | None = None
+    subharmonics: list[dict[str, float]] | None = None
 
 def parse_tuning_json(tuning_json: str) -> InstrumentTuning:
     try:
@@ -190,7 +192,7 @@ def normalize_audio(audio: np.ndarray) -> np.ndarray:
     return centered / peak
 
 def cents_distance(freq_a: float, freq_b: float) -> float:
-    return abs(1200.0 * np.log2(freq_a / freq_b))
+    return abs(1200.0 * math.log2(freq_a / freq_b))
 
 def snap_frequency_to_tuning(freq: float, tuning: InstrumentTuning) -> NoteCandidate | None:
     best_note = None
@@ -285,7 +287,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         duration = librosa.get_duration(y=audio, sr=sample_rate)
         segments = [(0.0, duration)]
 
-    tempo_array, _ = librosa.beat.beat_track(y=audio, sr=sample_rate, hop_length=HOP_LENGTH)
+    tempo_array, _ = librosa.beat.beat_track(onset_envelope=onset_env, sr=sample_rate, hop_length=HOP_LENGTH)
     tempo = float(np.asarray(tempo_array).reshape(-1)[0]) if np.asarray(tempo_array).size else 90.0
     if tempo <= 1.0:
         tempo = 90.0
@@ -311,6 +313,26 @@ def peak_energy_near(frequencies: np.ndarray, spectrum: np.ndarray, center_freq:
     if not np.any(mask):
         return 0.0
     return float(np.max(positive_spectrum[mask]))
+
+def batch_peak_energies(frequencies: np.ndarray, spectrum: np.ndarray, center_freqs: np.ndarray, band_cents: float = HARMONIC_BAND_CENTS) -> np.ndarray:
+    valid = frequencies > 0
+    positive_freqs = frequencies[valid]
+    positive_spectrum = spectrum[valid]
+    if len(positive_freqs) == 0 or len(center_freqs) == 0:
+        return np.zeros(len(center_freqs))
+
+    valid_centers = center_freqs > 0
+    log_positive = np.log2(positive_freqs)
+    log_centers = np.full(len(center_freqs), -np.inf)
+    log_centers[valid_centers] = np.log2(center_freqs[valid_centers])
+
+    distances = np.abs(1200.0 * (log_positive[np.newaxis, :] - log_centers[:, np.newaxis]))
+    masks = distances <= band_cents
+    results = np.zeros(len(center_freqs))
+    for i in range(len(center_freqs)):
+        if valid_centers[i] and np.any(masks[i]):
+            results[i] = float(np.max(positive_spectrum[masks[i]]))
+    return results
 
 def suppress_harmonics(spectrum: np.ndarray, frequencies: np.ndarray, base_frequency: float) -> np.ndarray:
     residual = spectrum.copy()
@@ -367,10 +389,24 @@ def build_raw_peaks(
 
     return peaks
 
-def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning: InstrumentTuning) -> list[NoteHypothesis]:
+def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning: InstrumentTuning, *, debug: bool = False) -> list[NoteHypothesis]:
+    note_freqs = np.array([note.frequency for note in tuning.notes])
+    harmonic_targets = np.concatenate([note_freqs * m for m in range(1, MAX_HARMONIC_MULTIPLE + 1)])
+    sub_half_targets = note_freqs / 2.0
+    sub_third_targets = note_freqs / 3.0
+    sub_half_targets[sub_half_targets < 40.0] = 0.0
+    sub_third_targets[sub_third_targets < 40.0] = 0.0
+    all_target_freqs = np.concatenate([harmonic_targets, sub_half_targets, sub_third_targets])
+    all_energies = batch_peak_energies(frequencies, spectrum, all_target_freqs)
+
+    n_notes = len(tuning.notes)
+    harmonic_energy_matrix = all_energies[: n_notes * MAX_HARMONIC_MULTIPLE].reshape(MAX_HARMONIC_MULTIPLE, n_notes)
+    sub_half_energies = all_energies[n_notes * MAX_HARMONIC_MULTIPLE : n_notes * MAX_HARMONIC_MULTIPLE + n_notes]
+    sub_third_energies = all_energies[n_notes * MAX_HARMONIC_MULTIPLE + n_notes :]
+
     hypotheses: list[NoteHypothesis] = []
 
-    for note in tuning.notes:
+    for note_index, note in enumerate(tuning.notes):
         pitch_class, octave = parse_note_name(note.note_name)
         candidate = NoteCandidate(
             key=note.key,
@@ -380,9 +416,9 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
             octave=octave,
         )
 
-        harmonic_energies = [peak_energy_near(frequencies, spectrum, note.frequency * harmonic_index) for harmonic_index in range(1, MAX_HARMONIC_MULTIPLE + 1)]
+        harmonic_energies = [float(harmonic_energy_matrix[h, note_index]) for h in range(MAX_HARMONIC_MULTIPLE)]
         subharmonic_frequencies = [note.frequency / 2.0, note.frequency / 3.0]
-        subharmonic_energies = [peak_energy_near(frequencies, spectrum, sub_freq) if sub_freq >= 40 else 0.0 for sub_freq in subharmonic_frequencies]
+        subharmonic_energies = [float(sub_half_energies[note_index]), float(sub_third_energies[note_index])]
 
         fundamental_energy = harmonic_energies[0]
         overtone_energy = sum(weight * energy for weight, energy in zip(HARMONIC_WEIGHTS[1:], harmonic_energies[1:]))
@@ -404,23 +440,26 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
         if fundamental_ratio < OVERTONE_DOMINANT_FUNDAMENTAL_RATIO:
             score -= OVERTONE_DOMINANT_PENALTY_WEIGHT * overtone_energy
 
-        harmonics = [
-            {
-                "multiple": float(index),
-                "frequency": round(note.frequency * index, 3),
-                "energy": round(energy, 6),
-                "weight": HARMONIC_WEIGHTS[index - 1],
-            }
-            for index, energy in enumerate(harmonic_energies, start=1)
-        ]
-        subharmonics = [
-            {
-                "multiple": 1.0 / float(index + 1),
-                "frequency": round(subharmonic_frequencies[index], 3),
-                "energy": round(subharmonic_energies[index], 6),
-            }
-            for index in range(len(subharmonic_frequencies))
-        ]
+        harmonics = None
+        subharmonics = None
+        if debug:
+            harmonics = [
+                {
+                    "multiple": float(index),
+                    "frequency": round(note.frequency * index, 3),
+                    "energy": round(energy, 6),
+                    "weight": HARMONIC_WEIGHTS[index - 1],
+                }
+                for index, energy in enumerate(harmonic_energies, start=1)
+            ]
+            subharmonics = [
+                {
+                    "multiple": 1.0 / float(index + 1),
+                    "frequency": round(subharmonic_frequencies[index], 3),
+                    "energy": round(subharmonic_energies[index], 6),
+                }
+                for index in range(len(subharmonic_frequencies))
+            ]
 
         hypotheses.append(
             NoteHypothesis(
@@ -433,6 +472,7 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
                 octave_alias_energy=octave_alias_energy,
                 octave_alias_ratio=octave_alias_ratio,
                 octave_alias_penalty=octave_alias_penalty,
+                second_harmonic_energy=harmonic_energies[1] if len(harmonic_energies) > 1 else 0.0,
                 harmonics=harmonics,
                 subharmonics=subharmonics,
             )
@@ -444,14 +484,18 @@ def are_harmonic_related(note_a: NoteCandidate, note_b: NoteCandidate) -> bool:
     high = max(note_a.frequency, note_b.frequency)
     low = min(note_a.frequency, note_b.frequency)
     ratio = high / low if low else 0.0
-    return any(abs(1200.0 * np.log2(ratio / multiple)) <= 30 for multiple in (2, 3, 4))
+    if ratio <= 0.0:
+        return False
+    return any(abs(1200.0 * math.log2(ratio / multiple)) <= 30 for multiple in (2, 3, 4))
 
 def harmonic_relation_multiple(note_a: NoteCandidate, note_b: NoteCandidate) -> float | None:
     high = max(note_a.frequency, note_b.frequency)
     low = min(note_a.frequency, note_b.frequency)
     ratio = high / low if low else 0.0
+    if ratio <= 0.0:
+        return None
     for multiple in (2.0, 3.0, 4.0):
-        if abs(1200.0 * np.log2(ratio / multiple)) <= 30:
+        if abs(1200.0 * math.log2(ratio / multiple)) <= 30:
             return multiple
     return None
 
@@ -465,7 +509,7 @@ def allow_octave_secondary(primary: NoteHypothesis, hypothesis: NoteHypothesis, 
         if hypothesis.candidate.frequency > existing.frequency and existing.octave > 4:
             return False
         if hypothesis.candidate.frequency > existing.frequency:
-            primary_octave_energy = next((item["energy"] for item in primary.harmonics if item["multiple"] == 2.0), 0.0)
+            primary_octave_energy = primary.second_harmonic_energy
             if hypothesis.fundamental_ratio < OCTAVE_DYAD_UPPER_MIN_FUNDAMENTAL_RATIO:
                 return False
             if primary_octave_energy > 0.0 and hypothesis.fundamental_energy < primary_octave_energy * OCTAVE_DYAD_UPPER_HARMONIC_ENERGY_RATIO:
@@ -609,8 +653,8 @@ def build_debug_candidates(ranked: list[NoteHypothesis], limit: int = 5) -> list
             "octaveAliasEnergy": round(hypothesis.octave_alias_energy, 6),
             "octaveAliasRatio": round(hypothesis.octave_alias_ratio, 6),
             "octaveAliasPenalty": round(hypothesis.octave_alias_penalty, 6),
-            "harmonics": hypothesis.harmonics,
-            "subharmonics": hypothesis.subharmonics,
+            "harmonics": hypothesis.harmonics or [],
+            "subharmonics": hypothesis.subharmonics or [],
         }
         for hypothesis in ranked[:limit]
     ]
@@ -644,7 +688,7 @@ def segment_peaks(
     spectrum = np.abs(np.fft.rfft(analysis_segment * window, n=n_fft))
     frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
 
-    ranked = rank_tuning_candidates(frequencies, spectrum, tuning)
+    ranked = rank_tuning_candidates(frequencies, spectrum, tuning, debug=debug)
     if not ranked or ranked[0].score <= 1e-6:
         return [], None, None
 
@@ -659,7 +703,7 @@ def segment_peaks(
 
     if MAX_POLYPHONY > 1:
         residual_spectrum = suppress_harmonics(spectrum, frequencies, primary.candidate.frequency)
-        residual_ranked = rank_tuning_candidates(frequencies, residual_spectrum, tuning)
+        residual_ranked = rank_tuning_candidates(frequencies, residual_spectrum, tuning, debug=debug)
         for hypothesis in residual_ranked[:8]:
             reasons: list[str] = []
             onset_gain: float | None = None
