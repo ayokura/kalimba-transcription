@@ -1,0 +1,13 @@
+{
+  "pending": true,
+  "status": "pending",
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "reason": "mixed free-performance phrase with plausible expected sequence; current recognizer compresses 17 expected events into 12 and mis-bundles several mid-phrase events, so keep as pending recognition target"
+}
