@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: rerecord
+- verdict: reference_only
 - scenario: 2026-03-22-e4-plus-g4-plus-b4-plus-d5-repeat-05-kalimba-17-c
 - expected note: E4 + G4 + B4 + D5 x 5
 - capture intent: strict_chord
@@ -53,3 +53,9 @@
 - stricter review: recording quality is good, but the performed takes do not consistently establish a clean strict four-note ground truth
 - D5 dominates repeatedly, while E4 / G4 / B4 are too weak or staggered in some takes
 - status set back to `rerecord`
+
+
+## Fixture Position Update (2026-03-23)
+
+- superseded by `kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03` as the main strict 4-note rerecord target
+- retained only as `reference_only` evidence

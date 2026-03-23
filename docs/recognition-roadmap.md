@@ -29,7 +29,7 @@ Until that exists, four-note simultaneous-chord work has a weak reference baseli
 ## Active Fixture Policy
 
 ### Primary active rerecord target
-- `kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02`
+- `kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03`
 - status: `rerecord`
 - issue: [#1](https://github.com/ayokura/kalimba-transcription/issues/1)
 

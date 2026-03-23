@@ -1,0 +1,14 @@
+{
+  "pending": true,
+  "status": "reference_only",
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "reason": "alternate strict four-note rerecord kept as weaker reference evidence; strict-repeat-03 is the main rerecord target",
+  "auditVerdict": "strict-intent-weaker-than-repeat-03"
+}

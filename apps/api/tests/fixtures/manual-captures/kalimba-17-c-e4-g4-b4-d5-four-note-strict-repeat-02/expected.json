@@ -8,12 +8,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "status": "rerecord",
-  "reason": "independent audit found the strict intent is explicit but the performed takes do not consistently establish a clean four-note simultaneous ground truth; keep this as a rerecord target rather than a regression fixture",
-  "auditVerdict": "strict-intent-ground-truth-weak",
-  "recommendedRecapture": [
-    "Record the same four-note chord as 5 clearly simultaneous takes.",
-    "Aim for balanced attack so E4 / G4 / B4 are as audible as D5.",
-    "Leave about 1 second of silence between takes."
-  ]
+  "status": "reference_only",
+  "reason": "older strict four-note rerecord attempt kept as reference evidence only; superseded by strict-repeat-03 as the primary rerecord target",
+  "auditVerdict": "strict-intent-superseded-by-repeat-03"
 }
