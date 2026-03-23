@@ -12,3 +12,4 @@ coverage/
 .pydeps/
 .pydeps313/
 .claude/
+.codex-*/
