@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import NoteCandidate, RawEvent, classify_event_gesture, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import NoteCandidate, RawEvent, classify_event_gesture, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -91,6 +91,26 @@ def test_segment_peaks_allows_true_octave_dyad() -> None:
         item["noteName"] in {"D5", "D6"} and (item.get("accepted") or item.get("octaveDyadAllowed"))
         for item in debug["secondaryDecisionTrail"]
     )
+
+def test_detect_segments_reports_tempo_debug_metrics() -> None:
+    sample_rate = 44100
+    gap = np.zeros(int(sample_rate * 0.35), dtype=np.float32)
+    audio = np.concatenate([
+        synthesize_note(329.6275569128699, sample_rate=sample_rate, duration=0.28),
+        gap,
+        synthesize_note(391.99543598174927, sample_rate=sample_rate, duration=0.28),
+        gap,
+        synthesize_note(523.2511306011972, sample_rate=sample_rate, duration=0.28),
+    ]).astype(np.float32)
+
+    segments, tempo, debug = detect_segments(audio, sample_rate)
+
+    assert len(segments) >= 3
+    assert 30.0 <= tempo <= 300.0
+    assert debug["tempoHopLength"] == 1024
+    assert debug["tempoAudioDurationSec"] > 0
+    assert debug["tempoEstimationMs"] >= 0
+
 
 def test_segment_peaks_keeps_mono_d4_monophonic() -> None:
     tuning = get_default_tunings()[0]

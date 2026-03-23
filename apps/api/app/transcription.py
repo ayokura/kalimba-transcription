@@ -4,6 +4,7 @@ import io
 import json
 import math
 from dataclasses import dataclass
+from time import perf_counter
 from typing import Any
 
 import librosa
@@ -16,6 +17,7 @@ from .tunings import build_custom_tuning, parse_note_name
 
 FRAME_LENGTH = 2048
 HOP_LENGTH = 256
+TEMPO_ESTIMATION_HOP_LENGTH = 1024
 ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
@@ -287,7 +289,15 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         duration = librosa.get_duration(y=audio, sr=sample_rate)
         segments = [(0.0, duration)]
 
-    tempo_array, _ = librosa.beat.beat_track(onset_envelope=onset_env, sr=sample_rate, hop_length=HOP_LENGTH)
+    tempo_audio_duration_sec = float(librosa.get_duration(y=audio, sr=sample_rate))
+    tempo_start = perf_counter()
+    tempo_onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=TEMPO_ESTIMATION_HOP_LENGTH)
+    tempo_array, _ = librosa.beat.beat_track(
+        onset_envelope=tempo_onset_env,
+        sr=sample_rate,
+        hop_length=TEMPO_ESTIMATION_HOP_LENGTH,
+    )
+    tempo_estimation_ms = (perf_counter() - tempo_start) * 1000.0
     tempo = float(np.asarray(tempo_array).reshape(-1)[0]) if np.asarray(tempo_array).size else 90.0
     if tempo <= 1.0:
         tempo = 90.0
@@ -298,6 +308,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),
         "tempoRaw": round(tempo, 4),
+        "tempoHopLength": TEMPO_ESTIMATION_HOP_LENGTH,
+        "tempoAudioDurationSec": round(tempo_audio_duration_sec, 4),
+        "tempoEstimationMs": round(tempo_estimation_ms, 3),
     }
     return segments, tempo, debug_info
 
