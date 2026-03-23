@@ -237,27 +237,33 @@ $env:PYTHONPATH='C:\src\calimba-score\apps\api'
 
 ## Next manual capture priorities
 
-These are the next recommended recordings to collect after the current mixed-sequence fix.
+These are the next recommended recordings to collect after the current four-note rolled/gliss fixes.
 
-1. `D4` single-note repeats
-   - Goal: baseline low-note decay and octave misread behavior
-   - Likely failures: `D5/E4` mis-snap, over-segmentation, tail pickup
-2. `C4` single-note repeats
-   - Goal: lowest-range decay stability
-   - Likely failures: `C5` octave alias, false events in silence
-3. `D4 -> D5` separated single notes
-   - Goal: confirm low-note decay does not pollute the next higher note
-   - Likely failures: false dyads, carryover events
-4. `C4 + C5` octave dyad repeats
-   - Goal: preserve a true octave dyad while still suppressing octave alias errors
-   - Likely failures: one side disappearing, high-note bias
-5. `D4 + D5` octave dyad repeats
-   - Goal: verify octave handling in the lower register
-   - Likely failures: collapse to `D5`, spurious split events
-6. `B4 + D5` non-octave dyad repeats
-   - Goal: keep a normal dyad stable after the octave-focused fixes
-   - Likely failures: `D5` dominance, `B4` dropout
-7. Short mixed phrase: `C4 -> C4+C5 -> B4+D5 -> D4`
-   - Goal: evaluate transitions once atomic cases are stable
-   - Likely failures: decay contaminating the next event, segmentation drift
+1. `E4 + G4 + B4 + D5` strict simultaneous chord re-record
+   - Goal: replace the current `rerecord` strict fixture with a clean simultaneous four-note ground truth
+   - Gesture: strict chord
+   - Repetitions: 5
+   - Spacing: leave about 1 second of silence between takes
+   - Success criteria: `5 events`, each with `E4+G4+B4+D5`
+2. `E4 + G4 + B4 + D5` slow rolled chord at a second speed
+   - Goal: make sure the current rolled regression is not overfit to a single attack speed
+   - Gesture: rolled chord
+   - Repetitions: 5
+   - Spacing: clear silence between takes
+   - Success criteria: all five takes remain four-note events after reconstruction
+3. `E4 -> G4 -> B4 -> D5` slow gliss at a second speed
+   - Goal: confirm the new four-note gliss reconstruction holds across a slower or slightly faster sweep
+   - Gesture: gliss
+   - Repetitions: 5
+   - Spacing: clear silence between takes
+   - Success criteria: `5 events`, each reconstructed as `E4+G4+B4+D5`
+4. 3-note strict reference chord if 4-note strict remains physically unstable
+   - Goal: preserve a clean simultaneous reference even if 4-note strict chord remains ergonomically difficult
+   - Gesture: strict chord
+   - Notes: `C4 + E4 + G4` or `A4 + C5 + E5`
+   - Repetitions: 5
+5. Legacy four-note fixture follow-up only if needed
+   - Target: `kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01`
+   - Goal: either recover original intent from notes/audio history or replace it with a fresh explicit-intent recording
+   - This is lower priority than the explicit strict re-record above
 

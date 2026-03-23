@@ -1852,6 +1852,7 @@ def classify_event_gesture(event: RawEvent, index: int, raw_events: list[RawEven
         for raw_event in support_events
         if {note.note_name for note in raw_event.notes} < event_note_names
     ]
+    all_support_gliss_like = bool(support_events) and all(raw_event.is_gliss_like for raw_event in support_events)
 
     previous_event = merged_events[index - 1] if index > 0 else None
     next_event = merged_events[index + 1] if index + 1 < len(merged_events) else None
@@ -1869,6 +1870,9 @@ def classify_event_gesture(event: RawEvent, index: int, raw_events: list[RawEven
             break
 
     if event.is_gliss_like and contiguous_note_cluster(event) and neighbor_progression:
+        return "gliss"
+
+    if event.is_gliss_like and contiguous_note_cluster(event) and support_subsets and all_support_gliss_like:
         return "gliss"
 
     if support_count >= 2 and support_subsets:
@@ -2019,8 +2023,3 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         warnings=warnings,
         debug=result_debug,
     )
-
-
-
-
-
