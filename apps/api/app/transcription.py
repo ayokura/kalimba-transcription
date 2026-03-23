@@ -259,6 +259,27 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sample_rate, hop_length=HOP_LENGTH, backtrack=True)
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
 
+    gap_injected_segments: list[tuple[float, float]] = []
+    qualifying_gap_run: list[tuple[float, float]] = []
+    for index in range(len(active_ranges) - 1):
+        previous_end = active_ranges[index][1]
+        next_start = active_ranges[index + 1][0]
+        gap_onsets = [time for time in onset_times if previous_end + 0.05 < time < next_start - 0.05]
+        qualifies = (
+            len(gap_onsets) == 1
+            and gap_onsets[0] - previous_end >= 0.35
+            and next_start - gap_onsets[0] >= 0.35
+        )
+        if qualifies:
+            qualifying_gap_run.append((gap_onsets[0], next_start))
+            continue
+        if len(qualifying_gap_run) >= 3:
+            gap_injected_segments.extend(qualifying_gap_run)
+        qualifying_gap_run = []
+
+    if len(qualifying_gap_run) >= 3:
+        gap_injected_segments.extend(qualifying_gap_run)
+
     segments: list[tuple[float, float]] = []
     for range_start, range_end in active_ranges:
         effective_range_start = range_start
@@ -285,6 +306,12 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
             if end_time - start_time >= 0.08:
                 segments.append((start_time, end_time))
 
+    for start_time, end_time in gap_injected_segments:
+        if end_time - start_time >= 0.08:
+            segments.append((start_time, end_time))
+
+    segments = sorted(segments)
+
     if not segments:
         duration = librosa.get_duration(y=audio, sr=sample_rate)
         segments = [(0.0, duration)]
@@ -305,6 +332,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     debug_info = {
         "onsetTimes": onset_times,
         "activeRanges": [[round(start, 4), round(end, 4)] for start, end in active_ranges],
+        "gapInjectedSegments": [[round(start, 4), round(end, 4)] for start, end in gap_injected_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),
         "tempoRaw": round(tempo, 4),
