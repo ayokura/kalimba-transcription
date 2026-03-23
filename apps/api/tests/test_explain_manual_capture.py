@@ -1,0 +1,37 @@
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+SCRIPT = ROOT / "scripts" / "explain_manual_capture.py"
+
+
+def run_script(*args: str) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    env.setdefault("PYTHONPATH", str(ROOT / "apps" / "api"))
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), *args],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        env=env,
+        check=True,
+    )
+
+
+def test_explain_manual_capture_text_output() -> None:
+    result = run_script("kalimba-17-c-c4-repeat-01")
+    assert "fixture: kalimba-17-c-c4-repeat-01" in result.stdout
+    assert "status: completed" in result.stdout
+    assert "sourceProfile: acoustic_real" in result.stdout
+
+
+def test_explain_manual_capture_json_output() -> None:
+    result = run_script("kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02", "--json")
+    payload = json.loads(result.stdout)
+    assert payload["fixtureId"] == "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02"
+    assert payload["status"] == "rerecord"
+    assert payload["sourceProfile"] == "acoustic_real"
+    assert payload["captureIntent"] == "strict_chord"

@@ -19,6 +19,7 @@ from manual_capture_helpers import (
     normalized_assertions,
     primary_note_names,
     validate_expected_metadata,
+    assertion_failures,
 )
 
 client = TestClient(app)
@@ -26,33 +27,10 @@ COMPLETED_FIXTURES = fixture_dirs_for_status("completed")
 
 
 def assert_fixture_output(fixture_dir: Path, payload: dict, expected: dict) -> None:
-    primary_notes = primary_note_names(payload)
-    note_sets = event_note_sets(payload)
-    assertions = normalized_assertions(expected)
+    failures = assertion_failures(fixture_dir, payload, expected)
+    assert not failures, f"{fixture_dir.name}: {'; '.join(failures)}"
 
-    min_events = assertions.get("minEvents")
-    if min_events is not None:
-        assert len(payload["events"]) >= min_events, fixture_dir.name
 
-    max_events = assertions.get("maxEvents")
-    if max_events is not None:
-        assert len(payload["events"]) <= max_events, fixture_dir.name
-
-    for note_name, min_occurrences in assertions.get("requiredPrimaryNoteOccurrences", {}).items():
-        assert primary_notes.count(note_name) >= min_occurrences, fixture_dir.name
-
-    for note_name, max_occurrences in assertions.get("maxPrimaryNoteOccurrences", {}).items():
-        assert primary_notes.count(note_name) <= max_occurrences, fixture_dir.name
-
-    for note_set, min_occurrences in assertions.get("requiredEventNoteSetOccurrences", {}).items():
-        assert note_sets.count(note_set) >= min_occurrences, fixture_dir.name
-
-    for note_set, max_occurrences in assertions.get("maxEventNoteSetOccurrences", {}).items():
-        assert note_sets.count(note_set) <= max_occurrences, fixture_dir.name
-
-    expected_note_sets_ordered = assertions.get("expectedEventNoteSetsOrdered")
-    if expected_note_sets_ordered is not None:
-        assert note_sets == expected_note_sets_ordered, fixture_dir.name
 
 
 @pytest.mark.parametrize("fixture_dir", COMPLETED_FIXTURES, ids=fixture_id)

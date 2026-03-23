@@ -183,6 +183,58 @@ def validate_expected_metadata(fixture_dir: Path, expected: dict[str, Any]) -> N
             raise AssertionError(f"{fixture_dir.name}: completed fixtures require at least one concrete assertion")
 
 
+
+
+def assertion_failures(fixture_dir: Path, payload: dict[str, Any], expected: dict[str, Any]) -> list[str]:
+    primary_notes = primary_note_names(payload)
+    note_sets = event_note_sets(payload)
+    assertions = normalized_assertions(expected)
+    failures: list[str] = []
+
+    min_events = assertions.get("minEvents")
+    if min_events is not None and len(payload["events"]) < min_events:
+        failures.append(f"minEvents expected >= {min_events}, got {len(payload['events'])}")
+
+    max_events = assertions.get("maxEvents")
+    if max_events is not None and len(payload["events"]) > max_events:
+        failures.append(f"maxEvents expected <= {max_events}, got {len(payload['events'])}")
+
+    for note_name, min_occurrences in assertions.get("requiredPrimaryNoteOccurrences", {}).items():
+        actual = primary_notes.count(note_name)
+        if actual < min_occurrences:
+            failures.append(f"requiredPrimaryNoteOccurrences[{note_name}] expected >= {min_occurrences}, got {actual}")
+
+    for note_name, max_occurrences in assertions.get("maxPrimaryNoteOccurrences", {}).items():
+        actual = primary_notes.count(note_name)
+        if actual > max_occurrences:
+            failures.append(f"maxPrimaryNoteOccurrences[{note_name}] expected <= {max_occurrences}, got {actual}")
+
+    for note_set, min_occurrences in assertions.get("requiredEventNoteSetOccurrences", {}).items():
+        actual = note_sets.count(note_set)
+        if actual < min_occurrences:
+            failures.append(f"requiredEventNoteSetOccurrences[{note_set}] expected >= {min_occurrences}, got {actual}")
+
+    for note_set, max_occurrences in assertions.get("maxEventNoteSetOccurrences", {}).items():
+        actual = note_sets.count(note_set)
+        if actual > max_occurrences:
+            failures.append(f"maxEventNoteSetOccurrences[{note_set}] expected <= {max_occurrences}, got {actual}")
+
+    expected_note_sets_ordered = assertions.get("expectedEventNoteSetsOrdered")
+    if expected_note_sets_ordered is not None and note_sets != expected_note_sets_ordered:
+        failures.append("expectedEventNoteSetsOrdered mismatch")
+
+    return failures
+
+
+def explain_fixture_output(fixture_dir: Path, payload: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "fixtureId": fixture_dir.name,
+        "eventCount": len(payload.get("events", [])),
+        "primaryNotes": primary_note_names(payload),
+        "eventNoteSets": event_note_sets(payload),
+        "assertionFailures": assertion_failures(fixture_dir, payload, expected),
+    }
+
 def build_evaluation_audio_bytes(fixture_dir: Path, expected: dict[str, Any]) -> bytes:
     windows = parse_ranges(expected, "evaluationWindows")
     ignored = parse_ranges(expected, "ignoredRanges")
