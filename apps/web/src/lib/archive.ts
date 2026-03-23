@@ -116,7 +116,8 @@ function buildExpectedPerformanceMarkdown(expectedPerformance: ManualCaptureExpe
   const lines = [`- summary: ${expectedPerformance.summary}`, "", "### Events", ""];
   for (const event of expectedPerformance.events) {
     const keys = event.keys.map((key) => `${key.noteName} (#${key.key})`).join(", ");
-    lines.push(`- ${event.index}. ${event.display} :: ${keys}`);
+    const intentSuffix = event.intent ? ` [intent: ${event.intent}]` : "";
+    lines.push(`- ${event.index}. ${event.display}${intentSuffix} :: ${keys}`);
   }
   return lines.join("\n");
 }

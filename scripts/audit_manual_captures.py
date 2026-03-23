@@ -136,11 +136,14 @@ def audit_fixture(fixture_dir: Path) -> str:
     expected_notes = extract_expected_notes(request_payload)
     capture_intent = request_payload.get("captureIntent", "(unknown)")
     source_profile = request_payload.get("sourceProfile", "(unknown)")
+    default_capture_intent = (request_payload.get("expectedPerformance") or {}).get("defaultCaptureIntent")
+    expected_events = (request_payload.get("expectedPerformance") or {}).get("events") or []
 
     lines = [
         f"## {fixture_dir.name}",
         f"- status: {status}",
         f"- intent: {capture_intent}",
+        f"- defaultCaptureIntent: {default_capture_intent or "(none)"}",
         f"- sourceProfile: {source_profile}",
         f"- durationSec: {request_payload['audio']['durationSec']}",
         f"- activityRegions: {len(regions)}",
@@ -148,6 +151,12 @@ def audit_fixture(fixture_dir: Path) -> str:
 
     if expected_notes:
         lines.append(f"- expectedNotes: {' + '.join(expected_notes)}")
+    if expected_events:
+        event_summary = " / ".join(
+            f"{event.get('index')}: {event.get('display')} [{event.get('intent') or "(none)"}]"
+            for event in expected_events
+        )
+        lines.append(f"- expectedEvents: {event_summary}")
     if expected.get("reason"):
         lines.append(f"- currentReason: {expected['reason']}")
 

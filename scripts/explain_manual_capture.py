@@ -155,7 +155,8 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
                 "scope": _scope_for_event(float(event["startTime"]), float(event["endTime"]), evaluation_windows, ignored_ranges),
             }
         )
-    expected_event_count = len(((request_payload.get("expectedPerformance") or {}).get("events") or []))
+    expected_events = (request_payload.get("expectedPerformance") or {}).get("events") or []
+    expected_event_count = len(expected_events)
     summary.update(
         {
             "status": fixture_status(expected),
@@ -164,7 +165,15 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
             "sourceProfile": request_payload.get("sourceProfile"),
             "captureIntent": request_payload.get("captureIntent"),
             "defaultCaptureIntent": (request_payload.get("expectedPerformance") or {}).get("defaultCaptureIntent"),
-            "eventIntents": [event.get("intent") for event in ((request_payload.get("expectedPerformance") or {}).get("events") or [])],
+            "eventIntents": [event.get("intent") for event in expected_events],
+            "expectedEvents": [
+                {
+                    "index": event.get("index"),
+                    "display": event.get("display"),
+                    "intent": event.get("intent"),
+                }
+                for event in expected_events
+            ],
             "scenario": request_payload.get("scenario"),
             "expectedSummary": (request_payload.get("expectedPerformance") or {}).get("summary"),
             "evaluationWindows": evaluation_windows,
@@ -194,7 +203,13 @@ def print_text(summary: dict[str, Any]) -> None:
         print(f"defaultCaptureIntent: {summary['defaultCaptureIntent']}")
     event_intents = [intent for intent in summary.get("eventIntents", []) if intent is not None]
     if event_intents:
-        print(f"eventIntents: {' / '.join(event_intents)}")
+        print(f"eventIntents: {' / ' .join(event_intents)}")
+    expected_events = summary.get("expectedEvents") or []
+    if expected_events:
+        print("expectedEvents:")
+        for event in expected_events:
+            intent = event.get("intent") if event.get("intent") is not None else "(none)"
+            print(f"  - {event.get('index')}: {event.get('display')} [intent: {intent}]")
     if summary.get("scenario"):
         print(f"scenario: {summary['scenario']}")
     if summary.get("expectedSummary"):

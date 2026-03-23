@@ -40,6 +40,8 @@ def test_explain_manual_capture_json_output() -> None:
     assert payload["captureIntent"] == "strict_chord"
     assert payload["defaultCaptureIntent"] == "strict_chord"
     assert all(intent == "strict_chord" for intent in payload["eventIntents"])
+    assert len(payload["expectedEvents"]) == 6
+    assert all(event["intent"] == "strict_chord" for event in payload["expectedEvents"])
     assert payload["expectedSummary"] == "E4 + G4 + B4 + D5 x 6"
 
 def test_explain_manual_capture_json_output_with_ignored_ranges_reports_scope() -> None:
@@ -76,6 +78,8 @@ def test_explain_manual_capture_reports_pending_summary_hints() -> None:
     payload = json.loads(result.stdout)
     assert payload["eventCompression"]["expected"] == 17
     assert payload["eventCompression"]["detected"] == 15
+    assert len(payload["expectedEvents"]) == 17
+    assert all(event["intent"] is None for event in payload["expectedEvents"])
     assert payload["dominantGestureMix"]["ambiguous"] >= 1
     assert payload["normalizationSummary"]["segmentCount"] >= payload["normalizationSummary"]["rawEventCount"]
     assert payload["normalizationSummary"]["rawEventCount"] >= payload["normalizationSummary"]["mergedEventCount"]
