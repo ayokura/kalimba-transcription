@@ -8,7 +8,8 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "status": "review_needed",
-  "reason": "legacy four-note fixture lacks reliable captureIntent and scenario metadata; current intent-specific captures supersede it and independent audit is needed before treating it as a strict four-note regression again",
-  "auditVerdict": "legacy-metadata-ambiguous"
+  "status": "reference_only",
+  "reason": "legacy four-note fixture lacks reliable captureIntent and scenario metadata; explicit strict and slide_chord fixtures supersede it, so it is preserved as reference_only evidence",
+  "auditVerdict": "legacy-reference-only"
 }
+

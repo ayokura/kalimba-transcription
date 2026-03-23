@@ -193,7 +193,7 @@ After an independent audit, update fixture status as needed.
 - keep as `completed` when the expected performance is trustworthy and suitable for regression
 - keep as `pending` when the case is still a recognition target
 - move to `rerecord` when recording or performance quality is the main blocker
-- move to `review_needed` when the expected metadata is suspect
+- move to `review_needed` when the expected metadata is suspect`r`n- move to `reference_only` when a legacy capture is still informative but should no longer drive recognizer work
 
 After each recognition-improvement round stabilizes, run an independent audit on the remaining pending fixtures.
 
@@ -260,4 +260,5 @@ These are the next recommended recordings to collect after the current four-note
    - `E4 + G4 + B4 + D5` `slide_chord` at a second speed
    - `E4 -> G4 -> B4 -> D5` `slide_chord` at a second speed
    - These are no longer the immediate bottleneck because the current `slide_chord` fixtures already regress cleanly
+
 
