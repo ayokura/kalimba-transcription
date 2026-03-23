@@ -1,14 +1,16 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "completed",
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
-    "requiredPrimaryNoteOccurrences": {},
+    "minEvents": 6,
+    "maxEvents": 6,
+    "requiredPrimaryNoteOccurrences": {
+      "E4": 6
+    },
     "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {},
+    "requiredEventNoteSetOccurrences": {
+      "B4+D5+E4+G4": 6
+    },
     "maxEventNoteSetOccurrences": {}
-  },
-  "reason": "human ear-check corrected this take to x6 rather than x5; all 6 raw activity regions support the target four-note chord, so this is now a recognition-improvement target rather than a rerecord target",
-  "auditVerdict": "expected-x6-confirmed-recognizer-fragmented"
+  }
 }

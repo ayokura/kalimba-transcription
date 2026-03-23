@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-23-e4-plus-g4-plus-b4-plus-d5-repeat-06-strict-chord-kalimba-17-c
 - expected note: E4 + G4 + B4 + D5 x 6
 - capture intent: strict_chord
@@ -19,33 +19,26 @@
 - 3. E4 + G4 + B4 + D5 :: E4 (#10), G4 (#11), B4 (#12), D5 (#13)
 - 4. E4 + G4 + B4 + D5 :: E4 (#10), G4 (#11), B4 (#12), D5 (#13)
 - 5. E4 + G4 + B4 + D5 :: E4 (#10), G4 (#11), B4 (#12), D5 (#13)
+- 6. E4 + G4 + B4 + D5 :: E4 (#10), G4 (#11), B4 (#12), D5 (#13)
 
 ## Review
 
-- summary: event の分割または束ね方に大きな差があります。
-- reason: 同時和音 の想定に対して差が大きく、検出側は 同時和音 優勢でした。録音意図と diff を確認してから fixture status を決めてください。
-
-## Recapture Guidance
-
-- 各反復で対象キーを同時に弾き、指をずらして順に入れない。
-- 各反復の間に明確な無音を入れる。
-- 和音の開始を揃え、スライド和音にならないようにする。
-- 再録音前に expected と detected の差分を見て、演奏意図自体が正しいか確認する。
+- summary: strict 4音の 6 反復が期待どおり検出され、completed fixture に昇格しました。
+- reason: human ear-check で x6 に訂正した take を recognizer が 6 event の strict chord として安定復元できることを確認しました。
 
 ## Memo
 
-(empty)
+- 2026-03-23: strict four-note normalization により 6 event / full chord x6 を確認
 
 
 ## Fixture Import Notes
 
 - imported on 2026-03-23 as the best current strict 4-note rerecord candidate
 - raw audit found 6 activity regions with strong four-note support across all regions
-- current recognizer still fragments the performance, so this remains `rerecord` rather than `completed`
+- 2026-03-23 update: recognizer now restores the take as `E4+G4+B4+D5 x 6`, so this fixture is `completed`
 
 
 ## Expected Count Correction (2026-03-23)
 
 - human ear-check confirmed this take contains 6 intended repetitions, not 5
-- status changed from `rerecord` to `pending` because the metadata correction removes the main rerecord rationale
-- the remaining blocker is recognizer fragmentation into 7 events, not recording quality
+- final status is `completed` after the recognizer was updated to match the corrected x6 expectation

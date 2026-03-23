@@ -19,19 +19,20 @@
 
 ## Current Bottleneck
 
-The main remaining blocker is now four-note `strict_chord` reconstruction quality.
-We have a plausible pending strict fixture, but not a completed regression-grade reference yet:
+The strict four-note reference is now stable. The main remaining bottlenecks are:
 
-- `kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03`
-
-The current task is to convert that valid input into stable recognizer behavior rather than to keep rerecording blindly.
+- fixture explainability coverage and reason codes ([#5](https://github.com/ayokura/kalimba-transcription/issues/5))
+- `arpeggio` modeling separate from `slide_chord` ([#6](https://github.com/ayokura/kalimba-transcription/issues/6))
+- future source-profile differentiation for app/synth input ([#7](https://github.com/ayokura/kalimba-transcription/issues/7))
+- tempo-estimation optimization ([#10](https://github.com/ayokura/kalimba-transcription/issues/10))
 
 ## Active Fixture Policy
 
-### Primary active rerecord target
+### Completed strict four-note reference
 - `kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03`
-- status: `pending`
+- status: `completed`
 - issue: [#1](https://github.com/ayokura/kalimba-transcription/issues/1)
+- note: recognizer now restores `E4+G4+B4+D5 x 6`
 
 ### Legacy reference only
 - `kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01`
@@ -67,9 +68,9 @@ Tracking issue:
 
 ## Immediate Next Engineering Tasks
 
-1. wait for clean four-note `strict_chord` rerecord
-2. promote that rerecord to `completed` when it satisfies regression conditions
-3. keep `slide_chord` recognition stable while strict baseline is rebuilt
+1. keep the completed strict four-note baseline stable
+2. improve fixture explainability and coverage reporting
+3. prepare `arpeggio` semantics and future source-profile support
 4. do not expand speculative four-note recognizer heuristics without a better strict reference
 5. start arpeggio sample collection only after the data model boundary is fixed
 
