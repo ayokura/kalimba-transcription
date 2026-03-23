@@ -169,13 +169,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Audit manual capture fixtures from raw audio.")
     parser.add_argument("--root", type=Path, default=Path("apps/api/tests/fixtures/manual-captures"))
     parser.add_argument("--status", action="append", default=["pending", "rerecord", "review_needed"])
+    parser.add_argument("--source-profile", action="append", default=[])
     args = parser.parse_args()
+
+    allowed_profiles = set(args.source_profile) if args.source_profile else None
 
     targets = []
     for fixture_dir in sorted(path for path in args.root.iterdir() if path.is_dir()):
         expected = json.loads((fixture_dir / "expected.json").read_text(encoding="utf-8"))
-        if fixture_status(expected) in set(args.status):
-            targets.append(fixture_dir)
+        if fixture_status(expected) not in set(args.status):
+            continue
+        request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+        source_profile = request_payload.get("sourceProfile", "(unknown)")
+        if allowed_profiles and source_profile not in allowed_profiles:
+            continue
+        targets.append(fixture_dir)
 
     for index, fixture_dir in enumerate(targets):
         if index:

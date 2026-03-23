@@ -222,6 +222,13 @@ $env:PYTHONPATH='C:\src\calimba-score\apps\api'
 .\.venv313\Scripts\python scripts/audit_manual_captures.py
 ```
 
+You can also limit the audit to one source profile:
+
+```powershell
+$env:PYTHONPATH='C:\src\calimba-score\apps\api'
+.\.venv313\Scripts\python scripts/audit_manual_captures.py --source-profile acoustic_real
+```
+
 This does not change fixture status by itself. It gives a quick waveform/STFT-based view of activity regions and rough target-note support, so you can decide whether a case is still `pending`, should move to `rerecord`, or should be narrowed with `evaluationWindows` / `ignoredRanges`.
 
 ## Current caveat
