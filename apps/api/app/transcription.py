@@ -22,6 +22,15 @@ ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
+RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO = 0.18
+RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO = 0.6
+RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_GAIN = 20.0
+RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_RATIO = 8.0
+RECENT_UPPER_SECONDARY_MIN_DURATION = 0.22
+RECENT_UPPER_SECONDARY_PRIMARY_ONSET_GAIN = 20.0
+UPPER_SECONDARY_WEAK_ONSET_MIN_DURATION = 0.4
+UPPER_SECONDARY_WEAK_ONSET_MAX_GAIN = 30.0
+UPPER_SECONDARY_WEAK_ONSET_SCORE_RATIO = 0.14
 PRIOR_ONSET_BACKTRACK_SECONDS = 0.55
 HARMONIC_WEIGHTS = [1.0, 0.55, 0.3, 0.15]
 HARMONIC_BAND_CENTS = 40.0
@@ -700,6 +709,54 @@ def build_debug_candidates(ranked: list[NoteHypothesis], limit: int = 5) -> list
         for hypothesis in ranked[:limit]
     ]
 
+def maybe_replace_stale_recent_primary(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    end_time: float,
+    primary: NoteHypothesis,
+    ranked: list[NoteHypothesis],
+    recent_note_names: set[str] | None,
+) -> tuple[NoteHypothesis, float | None, dict[str, Any] | None]:
+    if not recent_note_names or primary.candidate.note_name not in recent_note_names:
+        return primary, None, None
+
+    duration = end_time - start_time
+    if duration > 0.45:
+        return primary, None, None
+
+    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+    if primary_onset_gain >= MIN_RECENT_NOTE_ONSET_GAIN:
+        return primary, primary_onset_gain, None
+
+    for hypothesis in ranked[1:6]:
+        if hypothesis.candidate.note_name == primary.candidate.note_name:
+            continue
+        if hypothesis.candidate.frequency >= primary.candidate.frequency:
+            continue
+        if hypothesis.score < primary.score * RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO:
+            continue
+        if hypothesis.fundamental_ratio < RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO:
+            continue
+
+        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+        if (
+            onset_gain >= RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_GAIN
+            and onset_gain >= max(primary_onset_gain, 1e-6) * RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_RATIO
+        ):
+            return (
+                hypothesis,
+                onset_gain,
+                {
+                    "replacedPrimaryNote": primary.candidate.note_name,
+                    "replacementNote": hypothesis.candidate.note_name,
+                    "replacedPrimaryOnsetGain": round(primary_onset_gain, 6),
+                    "replacementOnsetGain": round(onset_gain, 6),
+                },
+            )
+
+    return primary, primary_onset_gain, None
+
 def segment_peaks(
     audio: np.ndarray,
     sample_rate: int,
@@ -734,6 +791,15 @@ def segment_peaks(
         return [], None, None
 
     primary = ranked[0]
+    primary, primary_onset_gain, primary_promotion_debug = maybe_replace_stale_recent_primary(
+        audio,
+        sample_rate,
+        start_time,
+        end_time,
+        primary,
+        ranked,
+        recent_note_names,
+    )
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     secondary_decision_trail: list[dict[str, Any]] = []
@@ -749,6 +815,7 @@ def segment_peaks(
             reasons: list[str] = []
             onset_gain: float | None = None
             octave_dyad_allowed = allow_octave_secondary(primary, hypothesis, selected)
+            segment_duration = end_time - start_time
             score_ratio = secondary_score_ratio
             if octave_dyad_allowed and hypothesis.candidate.frequency > primary.candidate.frequency:
                 score_ratio = min(score_ratio, OCTAVE_DYAD_UPPER_SCORE_RATIO)
@@ -760,10 +827,35 @@ def segment_peaks(
                 reasons.append("fundamental-ratio-too-low")
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not octave_dyad_allowed:
                 reasons.append("harmonic-related-to-selected")
-            if recent_note_names and hypothesis.candidate.note_name in recent_note_names and hypothesis.candidate.frequency < primary.candidate.frequency:
+            if recent_note_names and hypothesis.candidate.note_name in recent_note_names:
                 onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
-                if onset_gain < MIN_RECENT_NOTE_ONSET_GAIN:
-                    reasons.append("recent-carryover-candidate")
+                if hypothesis.candidate.frequency < primary.candidate.frequency:
+                    if onset_gain < MIN_RECENT_NOTE_ONSET_GAIN:
+                        reasons.append("recent-carryover-candidate")
+                else:
+                    if primary_onset_gain is None:
+                        primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                    if (
+                        primary_onset_gain >= RECENT_UPPER_SECONDARY_PRIMARY_ONSET_GAIN
+                        and segment_duration >= RECENT_UPPER_SECONDARY_MIN_DURATION
+                        and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
+                    ):
+                        reasons.append("recent-carryover-candidate")
+            if (
+                not reasons
+                and hypothesis.candidate.frequency > primary.candidate.frequency
+                and segment_duration >= UPPER_SECONDARY_WEAK_ONSET_MIN_DURATION
+            ):
+                if primary_onset_gain is None:
+                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                if primary_onset_gain >= RECENT_UPPER_SECONDARY_PRIMARY_ONSET_GAIN:
+                    if onset_gain is None:
+                        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                    if (
+                        onset_gain < UPPER_SECONDARY_WEAK_ONSET_MAX_GAIN
+                        and hypothesis.score < primary.score * UPPER_SECONDARY_WEAK_ONSET_SCORE_RATIO
+                    ):
+                        reasons.append("weak-upper-secondary")
             accepted = len(reasons) == 0
             secondary_decision_trail.append(
                 {
@@ -839,6 +931,8 @@ def segment_peaks(
             "durationSec": round(end_time - start_time, 4),
             "selectedNotes": [candidate.note_name for candidate in selected],
             "primaryCandidate": build_debug_candidates([primary], limit=1)[0],
+            "primaryOnsetGain": None if primary_onset_gain is None else round(primary_onset_gain, 6),
+            "primaryPromotion": primary_promotion_debug,
             "rankedCandidates": build_debug_candidates(ranked),
             "residualCandidates": build_debug_candidates(residual_ranked),
             "secondaryDecisionTrail": secondary_decision_trail,
@@ -2287,3 +2381,5 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
         warnings=warnings,
         debug=result_debug,
     )
+
+

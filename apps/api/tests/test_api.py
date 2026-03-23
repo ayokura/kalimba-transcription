@@ -44,6 +44,18 @@ def synthesize_repeated_chord(frequencies: tuple[float, ...], repeats: int = 4, 
         chunks.extend([chord, silence])
     return np.concatenate(chunks)
 
+def synthesize_note_tail(
+    frequency: float,
+    *,
+    sample_rate: int = 44100,
+    duration: float = 0.36,
+    offset: float = 0.24,
+) -> np.ndarray:
+    full = synthesize_note(frequency, sample_rate=sample_rate, duration=duration + offset)
+    start = int(sample_rate * offset)
+    end = start + int(sample_rate * duration)
+    return full[start:end]
+
 def wav_bytes(audio: np.ndarray, sample_rate: int = 44100) -> bytes:
     buffer = BytesIO()
     sf.write(buffer, audio, sample_rate, format="WAV")
@@ -122,6 +134,95 @@ def test_segment_peaks_keeps_mono_d4_monophonic() -> None:
         item["noteName"] == "D5" and not item.get("accepted")
         for item in debug["secondaryDecisionTrail"]
     )
+
+def test_segment_peaks_replaces_stale_recent_primary_with_fresh_lower_onset() -> None:
+    tuning = get_default_tunings()[0]
+    total_duration = 1.2
+    audio = np.zeros(int(44100 * total_duration), dtype=np.float32)
+    stale_e5 = synthesize_note(659.2551138257398, duration=0.9)
+    fresh_c4 = synthesize_note(261.6255653005986, duration=0.36)
+    audio[:len(stale_e5)] += stale_e5
+    start = int(44100 * 0.5)
+    audio[start:start + len(fresh_c4)] += fresh_c4
+    peak = np.max(np.abs(audio))
+    audio = audio if peak < 1e-6 else (audio / peak).astype(np.float32)
+
+    candidates, debug, primary = segment_peaks(
+        audio,
+        44100,
+        0.5,
+        0.86,
+        tuning,
+        debug=True,
+        recent_note_names={"E5"},
+    )
+
+    assert primary is not None
+    assert primary.candidate.note_name == "C4"
+    assert [candidate.note_name for candidate in candidates] == ["C4"]
+    assert debug is not None
+    if debug["primaryPromotion"] is not None:
+        assert debug["primaryPromotion"]["replacedPrimaryNote"] == "E5"
+        assert debug["primaryPromotion"]["replacementNote"] == "C4"
+        assert debug["primaryPromotion"]["replacementOnsetGain"] > debug["primaryPromotion"]["replacedPrimaryOnsetGain"]
+
+
+def test_segment_peaks_suppresses_recent_upper_carryover_with_weak_onset() -> None:
+    tuning = get_default_tunings()[0]
+    total_duration = 1.3
+    audio = np.zeros(int(44100 * total_duration), dtype=np.float32)
+    stale_e5 = synthesize_note(659.2551138257398, duration=1.0)
+    fresh_g4 = synthesize_note(391.99543598174927, duration=0.5)
+    audio[:len(stale_e5)] += stale_e5
+    start = int(44100 * 0.5)
+    audio[start:start + len(fresh_g4)] += fresh_g4
+    peak = np.max(np.abs(audio))
+    audio = audio if peak < 1e-6 else (audio / peak).astype(np.float32)
+
+    candidates, debug, primary = segment_peaks(
+        audio,
+        44100,
+        0.5,
+        1.0,
+        tuning,
+        debug=True,
+        recent_note_names={"E5", "G4"},
+    )
+
+    assert primary is not None
+    assert primary.candidate.note_name == "G4"
+    assert [candidate.note_name for candidate in candidates] == ["G4"]
+    assert debug is not None
+    assert any(
+        item["noteName"] == "E5" and not item.get("accepted") and "recent-carryover-candidate" in item.get("reasons", [])
+        for item in debug["secondaryDecisionTrail"]
+    )
+
+
+def test_segment_peaks_keeps_fresh_recent_upper_dyad_when_both_notes_attack() -> None:
+    tuning = get_default_tunings()[0]
+    total_duration = 1.0
+    audio = np.zeros(int(44100 * total_duration), dtype=np.float32)
+    fresh_e5 = synthesize_note(659.2551138257398, duration=0.45)
+    fresh_c5 = synthesize_note(523.2511306011972, duration=0.45)
+    start = int(44100 * 0.5)
+    audio[start:start + len(fresh_e5)] += fresh_e5
+    audio[start:start + len(fresh_c5)] += fresh_c5
+    peak = np.max(np.abs(audio))
+    audio = audio if peak < 1e-6 else (audio / peak).astype(np.float32)
+
+    candidates, debug, _ = segment_peaks(
+        audio,
+        44100,
+        0.5,
+        0.95,
+        tuning,
+        debug=True,
+        recent_note_names={"C5", "E5"},
+    )
+
+    assert sorted(candidate.note_name for candidate in candidates) == ["C5", "E5"]
+    assert debug is not None
 
 def test_transcription_regression_for_repeated_octave_dyad() -> None:
     tuning = get_default_tunings()[0]
