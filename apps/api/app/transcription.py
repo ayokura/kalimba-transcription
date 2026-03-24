@@ -48,6 +48,15 @@ LOWER_SECONDARY_WEAK_ONSET_MIN_PRIMARY_GAIN = 20.0
 LOWER_SECONDARY_WEAK_ONSET_MAX_GAIN = 2.5
 LOWER_SECONDARY_WEAK_ONSET_MAX_RATIO = 0.08
 LOWER_SECONDARY_WEAK_ONSET_SCORE_RATIO = 0.35
+LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_DURATION = 0.32
+LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_LOWER_SCORE_RATIO = 0.4
+LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_LOWER_FUNDAMENTAL_RATIO = 0.85
+LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO = 0.94
+LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_UPPER_SCORE_RATIO = 0.15
+LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_PRIMARY_SCORE_RATIO = 0.04
+LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_FUNDAMENTAL_RATIO_DELTA = 0.12
+LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_PRIMARY_INTERVAL_CENTS = 1000.0
+LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_PRIMARY_INTERVAL_CENTS = 700.0
 ASCENDING_PRIMARY_RUN_MIN_LENGTH = 3
 ASCENDING_PRIMARY_RUN_MAX_DURATION = 0.45
 ASCENDING_PRIMARY_RUN_SECONDARY_SCORE_RATIO = 0.35
@@ -870,13 +879,20 @@ def maybe_promote_lower_secondary_to_recent_upper_octave(
     segment_duration: float,
     recent_note_names: set[str] | None = None,
 ) -> tuple[NoteHypothesis, str | None]:
-    if not recent_note_names or segment_duration > 0.32:
+    if segment_duration > LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_DURATION:
         return accepted_secondary, None
     if accepted_secondary.candidate.frequency >= primary.candidate.frequency:
         return accepted_secondary, None
-    if accepted_secondary.candidate.note_name in recent_note_names:
+    if recent_note_names and accepted_secondary.candidate.note_name in recent_note_names:
         return accepted_secondary, None
-    if accepted_secondary.fundamental_ratio > 0.88:
+    if accepted_secondary.score > primary.score * LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_LOWER_SCORE_RATIO:
+        return accepted_secondary, None
+    if accepted_secondary.fundamental_ratio > LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_LOWER_FUNDAMENTAL_RATIO:
+        return accepted_secondary, None
+    if (
+        abs(cents_distance(primary.candidate.frequency, accepted_secondary.candidate.frequency))
+        < LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_PRIMARY_INTERVAL_CENTS
+    ):
         return accepted_secondary, None
 
     target_octave = accepted_secondary.candidate.octave + 1
@@ -889,15 +905,21 @@ def maybe_promote_lower_secondary_to_recent_upper_octave(
             continue
         if hypothesis.candidate.frequency >= primary.candidate.frequency:
             continue
-        if hypothesis.candidate.note_name not in recent_note_names:
+        if (
+            abs(cents_distance(primary.candidate.frequency, hypothesis.candidate.frequency))
+            > LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_PRIMARY_INTERVAL_CENTS
+        ):
             continue
-        if hypothesis.fundamental_ratio < 0.94:
+        if hypothesis.fundamental_ratio < LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO:
             continue
-        if hypothesis.score < accepted_secondary.score * 0.15:
+        if (
+            hypothesis.fundamental_ratio - accepted_secondary.fundamental_ratio
+            < LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_FUNDAMENTAL_RATIO_DELTA
+        ):
             continue
-        if hypothesis.score < primary.score * 0.05:
+        if hypothesis.score < accepted_secondary.score * LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_UPPER_SCORE_RATIO:
             continue
-        if abs(cents_distance(primary.candidate.frequency, hypothesis.candidate.frequency)) > 700.0:
+        if hypothesis.score < primary.score * LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_PRIMARY_SCORE_RATIO:
             continue
         return hypothesis, accepted_secondary.candidate.note_name
 
