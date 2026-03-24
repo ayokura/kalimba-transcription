@@ -13,6 +13,27 @@ import soundfile as sf
 VALID_STATUSES = {"completed", "pending", "rerecord", "review_needed", "reference_only"}
 
 
+def fixture_taxonomy(request_payload: dict[str, Any]) -> str:
+    performance = request_payload.get("expectedPerformance") or {}
+    events = performance.get("events") or []
+    if not events:
+        return "no_expected_events"
+
+    note_sets = [tuple(sorted(key.get("noteName") for key in (event.get("keys") or []) if key.get("noteName"))) for event in events]
+    unique_note_sets = {note_set for note_set in note_sets if note_set}
+    event_intents = [event.get("intent") for event in events if event.get("intent") is not None]
+
+    if len(unique_note_sets) <= 1 and len(events) >= 2:
+        return "single_event_repeat"
+    if len(events) >= 4 and len(unique_note_sets) <= max(2, len(events) // 2):
+        return "small_repeated_phrase"
+    if len(set(event_intents)) > 1:
+        return "mixed_phrase"
+    if len(events) >= 8:
+        return "free_performance"
+    return "mixed_phrase"
+
+
 @dataclass
 class ActivityRegion:
     start_sec: float
@@ -136,6 +157,7 @@ def audit_fixture(fixture_dir: Path) -> str:
     expected_notes = extract_expected_notes(request_payload)
     capture_intent = request_payload.get("captureIntent", "(unknown)")
     source_profile = request_payload.get("sourceProfile", "(unknown)")
+    taxonomy = fixture_taxonomy(request_payload)
     default_capture_intent = (request_payload.get("expectedPerformance") or {}).get("defaultCaptureIntent")
     expected_events = (request_payload.get("expectedPerformance") or {}).get("events") or []
 
@@ -145,6 +167,7 @@ def audit_fixture(fixture_dir: Path) -> str:
         f"- intent: {capture_intent}",
         f"- defaultCaptureIntent: {default_capture_intent or "(none)"}",
         f"- sourceProfile: {source_profile}",
+        f"- taxonomy: {taxonomy}",
         f"- durationSec: {request_payload['audio']['durationSec']}",
         f"- activityRegions: {len(regions)}",
     ]
@@ -179,20 +202,36 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=Path("apps/api/tests/fixtures/manual-captures"))
     parser.add_argument("--status", action="append", default=["pending", "rerecord", "review_needed"])
     parser.add_argument("--source-profile", action="append", default=[])
+    parser.add_argument("--taxonomy-summary", action="store_true")
+    parser.add_argument("--summary-only", action="store_true")
     args = parser.parse_args()
 
     allowed_profiles = set(args.source_profile) if args.source_profile else None
 
     targets = []
+    taxonomy_counts: dict[tuple[str, str], int] = {}
     for fixture_dir in sorted(path for path in args.root.iterdir() if path.is_dir()):
         expected = json.loads((fixture_dir / "expected.json").read_text(encoding="utf-8"))
-        if fixture_status(expected) not in set(args.status):
+        status = fixture_status(expected)
+        if status not in set(args.status):
             continue
         request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
         source_profile = request_payload.get("sourceProfile", "(unknown)")
         if allowed_profiles and source_profile not in allowed_profiles:
             continue
         targets.append(fixture_dir)
+        taxonomy = fixture_taxonomy(request_payload)
+        key = (status, taxonomy)
+        taxonomy_counts[key] = taxonomy_counts.get(key, 0) + 1
+
+    if args.taxonomy_summary:
+        print("## Fixture Taxonomy Summary")
+        for (status, taxonomy), count in sorted(taxonomy_counts.items()):
+            print(f"- {status} / {taxonomy}: {count}")
+        if args.summary_only:
+            return 0
+        if targets:
+            print()
 
     for index, fixture_dir in enumerate(targets):
         if index:

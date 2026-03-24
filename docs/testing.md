@@ -230,6 +230,21 @@ $env:PYTHONPATH='C:\src\calimba-score\apps\api'
 .\.venv313\Scripts\python scripts/audit_manual_captures.py --source-profile acoustic_real
 ```
 
+To inspect corpus balance instead of per-fixture audio details:
+
+```powershell
+$env:PYTHONPATH='C:\src\calimba-score\apps\api'
+.\.venv313\Scripts\python scripts/audit_manual_captures.py --status completed --status pending --status rerecord --status review_needed --status reference_only --taxonomy-summary --summary-only
+```
+
+Current taxonomy buckets are heuristic and intended for collection planning, not for hard gating:
+
+- `single_event_repeat`
+- `small_repeated_phrase`
+- `mixed_phrase`
+- `free_performance`
+- `no_expected_events`
+
 This does not change fixture status by itself. It gives a quick waveform/STFT-based view of activity regions and rough target-note support, so you can decide whether a case is still `pending`, should move to `rerecord`, or should be narrowed with `evaluationWindows` / `ignoredRanges`.
 
 ## Current caveat
