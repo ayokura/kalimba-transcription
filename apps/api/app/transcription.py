@@ -122,6 +122,7 @@ LOW_CONFIDENCE_DYAD_MAX_SCORE = 120.0
 SHORT_SECONDARY_STRIP_MAX_DURATION = 0.28
 SHORT_SECONDARY_STRIP_MIN_SCORE = 60.0
 SHORT_SECONDARY_STRIP_NEXT_SCORE_RATIO = 5.0
+RESONANT_CARRYOVER_PHRASE_RESET_MIN_GAP = 0.45
 LEADING_SINGLE_TRANSIENT_MAX_DURATION = 0.3
 LEADING_SINGLE_TRANSIENT_MAX_SCORE = 150.0
 LEADING_SINGLE_TRANSIENT_NEXT_SCORE_RATIO = 8.0
@@ -1406,7 +1407,7 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
         return []
 
     cleaned = [raw_events[0]]
-    for event in raw_events[1:]:
+    for index, event in enumerate(raw_events[1:], start=1):
         immediate_previous_notes = cleaned[-1].notes
         immediate_recent = {note.note_name for note in immediate_previous_notes}
         older_recent: set[str] = set()
@@ -1429,10 +1430,20 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
                     harmonic_relation_multiple(repeated_notes[0], fresh_notes[0]) == 2.0
                     and duration <= 0.35
                 )
+            keep_phrase_reset_ascending_dyad = False
+            if len(repeated_notes) == 1 and len(fresh_notes) == 1 and index + 1 < len(raw_events):
+                next_event = raw_events[index + 1]
+                next_gap = next_event.start_time - event.end_time
+                if (
+                    len(next_event.notes) == 1
+                    and next_gap >= RESONANT_CARRYOVER_PHRASE_RESET_MIN_GAP
+                    and next_event.notes[0].frequency < repeated_notes[0].frequency
+                ):
+                    keep_phrase_reset_ascending_dyad = True
             if len(repeated_notes) == 1 and len(fresh_notes) == 1 and (
                 repeated_notes[0].frequency < fresh_notes[0].frequency
                 or duration <= 0.14
-            ) and not keep_short_octave_dyad:
+            ) and not keep_short_octave_dyad and not keep_phrase_reset_ascending_dyad:
                 updated_event = RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,
@@ -1645,7 +1656,12 @@ def merge_short_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
                 {len(current.notes), len(following.notes)} == {1, 2}
                 and max(current_duration, following_duration) <= 0.18
             )
-            or (len(current.notes) == 2 and len(following.notes) == 2 and overlap_count == 1)
+            or (
+                len(current.notes) == 2
+                and len(following.notes) == 2
+                and overlap_count == 1
+                and (following.is_gliss_like or following_duration <= 0.18)
+            )
             or (min(len(current.notes), len(following.notes)) == 1 and max(len(current.notes), len(following.notes)) == 3 and overlap_count >= 1)
         )
         can_merge = (
@@ -1690,13 +1706,21 @@ def simplify_short_gliss_prefix_to_contiguous_singleton(raw_events: list[RawEven
             next_event = raw_events[index + 1]
             duration = current.end_time - current.start_time
             gap = next_event.start_time - current.end_time
-            if len(current.notes) == 2 and len(next_event.notes) >= 3 and duration <= 0.14 and gap <= GLISS_CLUSTER_MAX_GAP:
+            if len(current.notes) == 2 and duration <= 0.14 and gap <= GLISS_CLUSTER_MAX_GAP:
                 candidate_unions: list[tuple[NoteCandidate, list[int]]] = []
                 next_keys = sorted(note.key for note in next_event.notes)
-                for note in current.notes:
-                    merged_keys = sorted(set(next_keys + [note.key]))
-                    if merged_keys[-1] - merged_keys[0] + 1 == len(merged_keys) == 4:
-                        candidate_unions.append((note, merged_keys))
+                target_union_size = 4 if len(next_event.notes) >= 3 else 3
+                if len(next_event.notes) >= 2 and not next_event.is_gliss_like:
+                    for note in current.notes:
+                        merged_keys = sorted(set(next_keys + [note.key]))
+                        if merged_keys[-1] - merged_keys[0] + 1 == len(merged_keys) == target_union_size:
+                            candidate_unions.append((note, merged_keys))
+                if len(next_event.notes) >= 3:
+                    candidate_unions = []
+                    for note in current.notes:
+                        merged_keys = sorted(set(next_keys + [note.key]))
+                        if merged_keys[-1] - merged_keys[0] + 1 == len(merged_keys) == 4:
+                            candidate_unions.append((note, merged_keys))
                 if len(candidate_unions) == 1:
                     chosen_note = candidate_unions[0][0]
                     updated_event = RawEvent(

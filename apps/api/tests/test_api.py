@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, classify_event_gesture, collapse_same_start_primary_singletons, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, classify_event_gesture, collapse_same_start_primary_singletons, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -329,8 +329,8 @@ def test_transcription_recovers_late_c5_e5_head_in_c4_to_g4_fixture() -> None:
         for event in payload["events"]
     ]
     assert len(payload["events"]) == 17
-    assert note_sets.count("C5+E5") >= 4
-    assert note_sets[-3] == "C5+E5"
+    assert note_sets[-3:] == ["C5", "E5+G5", "G4"]
+    assert "C5+E5+G5" not in note_sets
 
 def test_transcription_recovers_trailing_g4_in_c4_to_g4_fixture() -> None:
     fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-g4-sequence-17-01"
@@ -425,6 +425,25 @@ def test_suppress_resonant_carryover_keeps_true_short_octave_dyad() -> None:
         ["D4", "D5"],
     ]
 
+def test_suppress_resonant_carryover_keeps_phrase_reset_ascending_dyad() -> None:
+    c5 = NoteCandidate(key=14, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
+    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
+    g5 = NoteCandidate(key=3, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.08, notes=[c5, e5], is_gliss_like=True, primary_note_name="C5", primary_score=121.0),
+        RawEvent(start_time=0.08, end_time=0.33, notes=[e5, g5], is_gliss_like=False, primary_note_name="G5", primary_score=554.7),
+        RawEvent(start_time=0.92, end_time=1.24, notes=[g4], is_gliss_like=False, primary_note_name="G4", primary_score=260.0),
+    ]
+
+    cleaned = suppress_resonant_carryover(raw_events)
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [
+        ["C5", "E5"],
+        ["E5", "G5"],
+        ["G4"],
+    ]
+
 def test_collapse_same_start_primary_singletons_prefers_singleton_over_lower_carryover() -> None:
     e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
     a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
@@ -484,6 +503,32 @@ def test_merge_short_chord_clusters_does_not_merge_gliss_like_head_with_dyad() -
 
     merged = merge_short_chord_clusters(raw_events)
     assert [[note.note_name for note in event.notes] for event in merged] == [["C5", "E5"], ["G5"]]
+
+def test_merge_short_gliss_clusters_does_not_merge_gliss_head_with_longer_overlapping_dyad() -> None:
+    c5 = NoteCandidate(key=13, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
+    e5 = NoteCandidate(key=15, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
+    g5 = NoteCandidate(key=17, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.0667, notes=[c5, e5], is_gliss_like=True, primary_note_name="C5", primary_score=121.0),
+        RawEvent(start_time=0.0667, end_time=0.3174, notes=[e5, g5], is_gliss_like=False, primary_note_name="G5", primary_score=554.7),
+    ]
+
+    merged = merge_short_gliss_clusters(raw_events)
+    assert [[note.note_name for note in event.notes] for event in merged] == [["C5", "E5"], ["E5", "G5"]]
+
+def test_simplify_short_gliss_prefix_to_contiguous_singleton_handles_dyad_head_before_dyad() -> None:
+    c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
+    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
+    g5 = NoteCandidate(key=3, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.0667, notes=[c5, e5], is_gliss_like=True, primary_note_name="C5", primary_score=121.0),
+        RawEvent(start_time=0.0667, end_time=0.3174, notes=[e5, g5], is_gliss_like=False, primary_note_name="G5", primary_score=554.7),
+    ]
+
+    cleaned = simplify_short_gliss_prefix_to_contiguous_singleton(raw_events)
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [["C5"], ["E5", "G5"]]
 
 
 def test_merge_short_chord_clusters_merges_subset_into_following_triad() -> None:
