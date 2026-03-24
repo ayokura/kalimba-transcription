@@ -43,11 +43,16 @@ SHORT_SECONDARY_WEAK_ONSET_MIN_PRIMARY_GAIN = 15.0
 SHORT_SECONDARY_WEAK_ONSET_MAX_GAIN = 2.5
 SHORT_SECONDARY_WEAK_ONSET_MAX_RATIO = 0.08
 SHORT_SECONDARY_WEAK_ONSET_SCORE_RATIO = 0.55
+LOWER_SECONDARY_WEAK_ONSET_MAX_DURATION = 0.45
+LOWER_SECONDARY_WEAK_ONSET_MIN_PRIMARY_GAIN = 20.0
+LOWER_SECONDARY_WEAK_ONSET_MAX_GAIN = 2.5
+LOWER_SECONDARY_WEAK_ONSET_MAX_RATIO = 0.08
+LOWER_SECONDARY_WEAK_ONSET_SCORE_RATIO = 0.35
 ASCENDING_PRIMARY_RUN_MIN_LENGTH = 3
 ASCENDING_PRIMARY_RUN_MAX_DURATION = 0.45
 ASCENDING_PRIMARY_RUN_SECONDARY_SCORE_RATIO = 0.35
 ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN = 8.0
-ADJACENT_SEPARATED_DYAD_MAX_DURATION = 0.45
+ADJACENT_SEPARATED_DYAD_MAX_DURATION = 0.6
 ADJACENT_SEPARATED_DYAD_RUN_MIN_FORWARD_SUPPORT = 2
 PRIOR_ONSET_BACKTRACK_SECONDS = 0.55
 HARMONIC_WEIGHTS = [1.0, 0.55, 0.3, 0.15]
@@ -937,7 +942,7 @@ def segment_peaks(
                         or (
                             ascending_primary_run_ceiling is not None
                             and segment_duration <= ASCENDING_PRIMARY_RUN_MAX_DURATION
-                            and primary.candidate.frequency > ascending_primary_run_ceiling
+                            and primary.candidate.frequency >= ascending_primary_run_ceiling
                             and hypothesis.candidate.frequency < ascending_primary_run_ceiling
                             and onset_gain < ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN
                         )
@@ -985,10 +990,27 @@ def segment_peaks(
                         reasons.append("weak-secondary-onset")
             if (
                 not reasons
+                and segment_duration <= LOWER_SECONDARY_WEAK_ONSET_MAX_DURATION
+                and hypothesis.candidate.frequency < primary.candidate.frequency
+                and not octave_dyad_allowed
+            ):
+                if primary_onset_gain is None:
+                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                if primary_onset_gain >= LOWER_SECONDARY_WEAK_ONSET_MIN_PRIMARY_GAIN:
+                    if onset_gain is None:
+                        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                    if (
+                        onset_gain < LOWER_SECONDARY_WEAK_ONSET_MAX_GAIN
+                        and onset_gain < primary_onset_gain * LOWER_SECONDARY_WEAK_ONSET_MAX_RATIO
+                        and hypothesis.score < primary.score * LOWER_SECONDARY_WEAK_ONSET_SCORE_RATIO
+                    ):
+                        reasons.append("weak-lower-secondary")
+            if (
+                not reasons
                 and ascending_primary_run_ceiling is not None
                 and segment_duration <= ASCENDING_PRIMARY_RUN_MAX_DURATION
                 and hypothesis.candidate.frequency < primary.candidate.frequency
-                and primary.candidate.frequency > ascending_primary_run_ceiling
+                and primary.candidate.frequency >= ascending_primary_run_ceiling
                 and hypothesis.candidate.frequency < ascending_primary_run_ceiling
                 and hypothesis.score < primary.score * ASCENDING_PRIMARY_RUN_SECONDARY_SCORE_RATIO
                 and hypothesis.candidate.note_name != primary.candidate.note_name
@@ -2652,6 +2674,8 @@ def build_recent_ascending_primary_run_ceiling(raw_events: list[RawEvent]) -> fl
             break
         primary_note = next((note for note in recent_event.notes if note.note_name == recent_event.primary_note_name), None)
         if primary_note is None:
+            break
+        if recent_primary_frequencies and primary_note.frequency > recent_primary_frequencies[-1]:
             break
         recent_primary_frequencies.append(primary_note.frequency)
         if len(recent_primary_frequencies) >= 4:

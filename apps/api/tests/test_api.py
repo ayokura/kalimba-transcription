@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, classify_event_gesture, collapse_same_start_primary_singletons, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, classify_event_gesture, collapse_same_start_primary_singletons, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -240,6 +240,55 @@ def test_segment_peaks_keeps_fresh_recent_upper_dyad_when_both_notes_attack() ->
 
     assert sorted(candidate.note_name for candidate in candidates) == ["C5", "E5"]
     assert debug is not None
+
+def test_build_recent_ascending_primary_run_ceiling_uses_latest_suffix() -> None:
+    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
+    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    d6 = NoteCandidate(key=1, note_name="D6", frequency=1174.6590716696303, pitch_class="D", octave=6)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.2, notes=[d6], is_gliss_like=False, primary_note_name="D6", primary_score=500.0),
+        RawEvent(start_time=0.2, end_time=0.4, notes=[d4], is_gliss_like=False, primary_note_name="D4", primary_score=120.0),
+        RawEvent(start_time=0.4, end_time=0.6, notes=[f4], is_gliss_like=False, primary_note_name="F4", primary_score=130.0),
+        RawEvent(start_time=0.6, end_time=0.8, notes=[g4], is_gliss_like=False, primary_note_name="G4", primary_score=140.0),
+    ]
+
+    assert build_recent_ascending_primary_run_ceiling(raw_events) == g4.frequency
+
+
+
+
+def test_segment_peaks_suppresses_weak_lower_secondary_without_recent_context() -> None:
+    tuning = get_default_tunings()[0]
+    total_duration = 1.0
+    audio = np.zeros(int(44100 * total_duration), dtype=np.float32)
+    stale_e4 = synthesize_note(329.6275569128699, duration=0.9)
+    fresh_a4 = synthesize_note(440.0, duration=0.35)
+    audio[:len(stale_e4)] += stale_e4
+    start = int(44100 * 0.5)
+    audio[start:start + len(fresh_a4)] += fresh_a4
+    peak = np.max(np.abs(audio))
+    audio = audio if peak < 1e-6 else (audio / peak).astype(np.float32)
+
+    candidates, debug, primary = segment_peaks(
+        audio,
+        44100,
+        0.5,
+        0.9,
+        tuning,
+        debug=True,
+        recent_note_names={"A4"},
+    )
+
+    assert primary is not None
+    assert primary.candidate.note_name == "A4"
+    assert [candidate.note_name for candidate in candidates] == ["A4"]
+    assert debug is not None
+    assert any(
+        item["noteName"] == "E4" and not item.get("accepted")
+        for item in debug["secondaryDecisionTrail"]
+    )
 
 def test_transcription_regression_for_repeated_octave_dyad() -> None:
     tuning = get_default_tunings()[0]
