@@ -290,6 +290,27 @@ def test_segment_peaks_suppresses_weak_lower_secondary_without_recent_context() 
         for item in debug["secondaryDecisionTrail"]
     )
 
+def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = [
+        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
+        for event in payload["events"]
+    ]
+    assert "C5+G5" not in note_sets
+    assert note_sets.count("G5") >= 2
+
+
 def test_transcription_regression_for_repeated_octave_dyad() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_repeated_chord((587.3295, 1174.6591))

@@ -873,6 +873,10 @@ def segment_peaks(
     debug: bool = False,
     recent_note_names: set[str] | None = None,
     ascending_primary_run_ceiling: float | None = None,
+    ascending_singleton_suffix_ceiling: float | None = None,
+    ascending_singleton_suffix_note_names: set[str] | None = None,
+    previous_primary_note_name: str | None = None,
+    previous_primary_was_singleton: bool = False,
 ) -> tuple[list[NoteCandidate], dict[str, Any] | None, NoteHypothesis | None]:
     start = int(start_time * sample_rate)
     end = int(end_time * sample_rate)
@@ -1021,6 +1025,25 @@ def segment_peaks(
                     onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
                 if onset_gain < MIN_RECENT_NOTE_ONSET_GAIN:
                     reasons.append("ascending-singleton-carryover")
+            if (
+                not reasons
+                and segment_duration <= 0.22
+                and previous_primary_was_singleton
+                and previous_primary_note_name == primary.candidate.note_name
+                and ascending_singleton_suffix_ceiling is not None
+                and primary.candidate.frequency >= ascending_singleton_suffix_ceiling
+                and hypothesis.candidate.frequency < primary.candidate.frequency
+                and hypothesis.score < primary.score * ASCENDING_PRIMARY_RUN_SECONDARY_SCORE_RATIO
+                and hypothesis.candidate.note_name != primary.candidate.note_name
+                and hypothesis.candidate.note_name not in (ascending_singleton_suffix_note_names or set())
+                and not octave_dyad_allowed
+            ):
+                if primary_onset_gain is None:
+                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                if onset_gain is None:
+                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                if primary_onset_gain < MIN_RECENT_NOTE_ONSET_GAIN and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN:
+                    reasons.append("repeated-primary-carryover")
             accepted = len(reasons) == 0
             secondary_decision_trail.append(
                 {
@@ -2691,6 +2714,37 @@ def build_recent_ascending_primary_run_ceiling(raw_events: list[RawEvent]) -> fl
         return None
     return recent_primary_frequencies[-1]
 
+
+
+def build_recent_ascending_singleton_suffix(raw_events: list[RawEvent]) -> tuple[float | None, set[str]]:
+    if not raw_events:
+        return None, set()
+
+    recent_primary_notes: list[NoteCandidate] = []
+    for recent_event in reversed(raw_events):
+        if len(recent_event.notes) != 1 or recent_event.primary_note_name is None:
+            break
+        primary_note = recent_event.notes[0]
+        if primary_note.note_name != recent_event.primary_note_name:
+            break
+        if recent_primary_notes and primary_note.frequency > recent_primary_notes[-1].frequency:
+            break
+        recent_primary_notes.append(primary_note)
+        if len(recent_primary_notes) >= 4:
+            break
+
+    if len(recent_primary_notes) < ASCENDING_PRIMARY_RUN_MIN_LENGTH:
+        return None, set()
+
+    recent_primary_notes.reverse()
+    recent_primary_frequencies = [note.frequency for note in recent_primary_notes]
+    if any(current < previous for previous, current in zip(recent_primary_frequencies, recent_primary_frequencies[1:])):
+        return None, set()
+    if recent_primary_frequencies[-1] <= recent_primary_frequencies[0]:
+        return None, set()
+
+    return recent_primary_frequencies[-1], {note.note_name for note in recent_primary_notes}
+
 async def transcribe_audio(
     upload: UploadFile,
     tuning: InstrumentTuning,
@@ -2709,6 +2763,9 @@ async def transcribe_audio(
         duration = max(end_time - start_time, 0.08)
         recent_note_names = build_recent_note_names(raw_events)
         ascending_primary_run_ceiling = build_recent_ascending_primary_run_ceiling(raw_events)
+        ascending_singleton_suffix_ceiling, ascending_singleton_suffix_note_names = build_recent_ascending_singleton_suffix(raw_events)
+        previous_primary_note_name = raw_events[-1].primary_note_name if raw_events else None
+        previous_primary_was_singleton = bool(raw_events and len(raw_events[-1].notes) == 1)
         candidates, candidate_debug, primary = segment_peaks(
             normalized,
             sample_rate,
@@ -2718,6 +2775,10 @@ async def transcribe_audio(
             debug=debug,
             recent_note_names=recent_note_names,
             ascending_primary_run_ceiling=ascending_primary_run_ceiling,
+            ascending_singleton_suffix_ceiling=ascending_singleton_suffix_ceiling,
+            ascending_singleton_suffix_note_names=ascending_singleton_suffix_note_names,
+            previous_primary_note_name=previous_primary_note_name,
+            previous_primary_was_singleton=previous_primary_was_singleton,
         )
         if not candidates or primary is None:
             continue
