@@ -14,6 +14,7 @@ if str(TESTS_DIR) not in sys.path:
     sys.path.append(str(TESTS_DIR))
 
 from app.main import app
+from app.transcription import REPEATED_PATTERN_PASS_IDS
 from manual_capture_helpers import (
     FIXTURE_ROOT,
     build_evaluation_audio_bytes,
@@ -199,7 +200,7 @@ def _normalization_decisions(debug_payload: dict[str, Any]) -> tuple[list[dict[s
     return decisions, dict(sorted(reason_counts.items(), key=lambda item: (-item[1], item[0])))
 
 
-def build_explanation(fixture_dir: Path) -> dict[str, Any]:
+def build_explanation(fixture_dir: Path, disabled_passes: list[str] | None = None) -> dict[str, Any]:
     request_payload, expected = load_fixture(fixture_dir)
     validate_request_metadata(fixture_dir, request_payload)
     validate_expected_metadata(fixture_dir, expected)
@@ -209,9 +210,13 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
     source_audio_bytes = source_audio_path.read_bytes()
     scoped_audio_bytes = build_evaluation_audio_bytes(fixture_dir, expected)
 
+    request_data = {"tuning": json.dumps(request_payload["tuning"]), "debug": "true"}
+    if disabled_passes:
+        request_data["disabledRepeatedPatternPasses"] = json.dumps(disabled_passes)
+
     response = client.post(
         "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        data=request_data,
         files={"file": ("audio.wav", scoped_audio_bytes, "audio/wav")},
     )
     response.raise_for_status()
@@ -221,7 +226,7 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
     if evaluation_windows or ignored_ranges:
         full_response = client.post(
             "/api/transcriptions",
-            data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+            data=request_data,
             files={"file": ("audio.wav", source_audio_bytes, "audio/wav")},
         )
         full_response.raise_for_status()
@@ -280,6 +285,8 @@ def build_explanation(fixture_dir: Path) -> dict[str, Any]:
             "normalizationSummary": _normalization_summary(full_debug, len(payload.get("events", []))),
             "normalizationDecisions": normalization_decisions,
             "normalizationReasonCounts": normalization_reason_counts,
+            "disabledRepeatedPatternPasses": full_debug.get("disabledRepeatedPatternPasses") or [],
+            "repeatedPatternPassTrace": full_debug.get("repeatedPatternPassTrace") or [],
         }
     )
     return summary
@@ -328,6 +335,17 @@ def print_text(summary: dict[str, Any]) -> None:
             f"segments={normalization['segmentCount']} / raw={normalization['rawEventCount']} / merged={normalization['mergedEventCount']} / "
             f"detected={summary['eventCount']} / rawToMergedDelta={normalization['rawToMergedDelta']}"
         )
+    disabled_passes = summary.get("disabledRepeatedPatternPasses") or []
+    if disabled_passes:
+        print(f"disabledRepeatedPatternPasses: {', '.join(disabled_passes)}")
+    if summary.get("repeatedPatternPassTrace"):
+        print("repeatedPatternPassTrace:")
+        for item in summary["repeatedPatternPassTrace"]:
+            state = "enabled" if item["enabled"] else "disabled"
+            print(
+                f"  - {item['pass']} [{state}] before={item['beforeEventCount']} after={item['afterEventCount']} "
+                f"changed={item['changed']} mergeAfter={item['mergeAfter']}"
+            )
     if summary.get("normalizationReasonCounts"):
         counts = " / ".join(f"{key}:{value}" for key, value in summary["normalizationReasonCounts"].items())
         print(f"normalizationReasonCounts: {counts}")
@@ -370,15 +388,25 @@ def print_text(summary: dict[str, Any]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Explain a manual capture fixture against current recognizer output.")
-    parser.add_argument("fixture_id", help="Fixture directory name under apps/api/tests/fixtures/manual-captures")
+    parser.add_argument("fixture_id", nargs="?", help="Fixture directory name under apps/api/tests/fixtures/manual-captures")
     parser.add_argument("--json", action="store_true", dest="as_json")
+    parser.add_argument("--disable-pass", action="append", dest="disabled_passes", default=[], choices=REPEATED_PATTERN_PASS_IDS)
+    parser.add_argument("--list-passes", action="store_true")
     args = parser.parse_args()
+
+    if args.list_passes:
+        for pass_id in REPEATED_PATTERN_PASS_IDS:
+            print(pass_id)
+        return 0
+
+    if not args.fixture_id:
+        parser.error("fixture_id is required unless --list-passes is used")
 
     fixture_dir = FIXTURE_ROOT / args.fixture_id
     if not fixture_dir.exists():
         raise SystemExit(f"Fixture not found: {fixture_dir}")
 
-    summary = build_explanation(fixture_dir)
+    summary = build_explanation(fixture_dir, disabled_passes=args.disabled_passes)
     if args.as_json:
         print(json.dumps(summary, indent=2, ensure_ascii=False))
     else:

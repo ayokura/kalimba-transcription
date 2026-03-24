@@ -86,3 +86,22 @@ def test_explain_manual_capture_reports_pending_summary_hints() -> None:
     assert payload["normalizationReasonCounts"]
     assert any(item["rule"] == "merged_duplicate" for item in payload["normalizationDecisions"])
     assert isinstance(payload["phraseBreakGuess"], list)
+
+def test_explain_manual_capture_reports_disabled_pass_trace() -> None:
+    result = run_script(
+        "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
+        "--json",
+        "--disable-pass",
+        "normalize_repeated_four_note_family",
+    )
+    payload = json.loads(result.stdout)
+    assert payload["disabledRepeatedPatternPasses"] == ["normalize_repeated_four_note_family"]
+    pass_trace = next(item for item in payload["repeatedPatternPassTrace"] if item["pass"] == "normalize_repeated_four_note_family")
+    assert pass_trace["enabled"] is False
+
+
+def test_explain_manual_capture_lists_repeated_pattern_passes() -> None:
+    result = run_script("--list-passes")
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    assert "normalize_repeated_four_note_family" in lines
+    assert "normalize_repeated_triad_patterns" in lines

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import NoteCandidate, RawEvent, classify_event_gesture, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, classify_event_gesture, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -815,3 +815,52 @@ def test_classify_event_gesture_slide_chord_from_gliss_like_family_without_neigh
     merged_event = RawEvent(start_time=0.0, end_time=1.1, notes=[e4, g4, b4, d5], is_gliss_like=True)
 
     assert classify_event_gesture(merged_event, 0, raw_events, [merged_event]) == "slide_chord"
+
+def test_repeated_pattern_pass_ids_are_unique() -> None:
+    assert len(REPEATED_PATTERN_PASS_IDS) == len(set(REPEATED_PATTERN_PASS_IDS))
+
+
+def test_apply_repeated_pattern_passes_can_disable_triad_normalizer() -> None:
+    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
+    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
+    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.75, notes=[d4, f4], is_gliss_like=False, primary_note_name="D4", primary_score=700.0),
+        RawEvent(start_time=1.0, end_time=1.7, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=900.0),
+        RawEvent(start_time=2.0, end_time=2.7, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="F4", primary_score=920.0),
+        RawEvent(start_time=3.0, end_time=3.7, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="A4", primary_score=910.0),
+    ]
+
+    enabled, _ = apply_repeated_pattern_passes(raw_events)
+    disabled, trace = apply_repeated_pattern_passes(
+        raw_events,
+        disabled_passes=frozenset({"normalize_repeated_triad_patterns"}),
+        debug=True,
+    )
+
+    assert sorted(note.note_name for note in enabled[0].notes) == ["A4", "D4", "F4"]
+    assert sorted(note.note_name for note in disabled[0].notes) == ["D4", "F4"]
+    triad_trace = next(item for item in trace if item["pass"] == "normalize_repeated_triad_patterns")
+    assert triad_trace["enabled"] is False
+
+
+def test_transcription_debug_reports_disabled_repeated_pattern_passes() -> None:
+    tuning = get_default_tunings()[0]
+    audio = synthesize_repeated_chord((293.6647679174076, 349.2282314330039, 440.0), repeats=4)
+
+    response = client.post(
+        "/api/transcriptions",
+        data={
+            "tuning": json.dumps(tuning.model_dump(by_alias=True)),
+            "debug": "true",
+            "disabledRepeatedPatternPasses": json.dumps(["normalize_repeated_triad_patterns"]),
+        },
+        files={"file": ("d4-f4-a4.wav", wav_bytes(audio), "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["debug"]["disabledRepeatedPatternPasses"] == ["normalize_repeated_triad_patterns"]
+    triad_trace = next(item for item in payload["debug"]["repeatedPatternPassTrace"] if item["pass"] == "normalize_repeated_triad_patterns")
+    assert triad_trace["enabled"] is False

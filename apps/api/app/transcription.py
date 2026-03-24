@@ -3,9 +3,10 @@ from __future__ import annotations
 import io
 import json
 import math
+from collections import Counter
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Any
+from typing import Any, Callable
 
 import librosa
 import numpy as np
@@ -145,6 +146,14 @@ class RawEvent:
     primary_note_name: str = ""
     primary_score: float = 0.0
 
+
+@dataclass(frozen=True, slots=True)
+class RepeatedPatternPass:
+    name: str
+    fn: Callable[[list["RawEvent"]], list["RawEvent"]]
+    merge_after: bool = True
+
+
 @dataclass(slots=True)
 class NoteHypothesis:
     candidate: NoteCandidate
@@ -175,6 +184,28 @@ def parse_tuning_json(tuning_json: str) -> InstrumentTuning:
         raise HTTPException(status_code=400, detail="Each tuning note must include noteName.")
 
     return build_custom_tuning(payload.get("name", "Custom Tuning"), note_names)
+
+
+def parse_disabled_repeated_pattern_passes(raw_value: str | None) -> frozenset[str]:
+    if raw_value is None or not raw_value.strip():
+        return frozenset()
+
+    try:
+        parsed = json.loads(raw_value)
+    except json.JSONDecodeError:
+        parsed = [item.strip() for item in raw_value.split(",") if item.strip()]
+
+    if isinstance(parsed, str):
+        parsed = [parsed]
+    if not isinstance(parsed, list) or not all(isinstance(item, str) for item in parsed):
+        raise HTTPException(status_code=400, detail="disabledRepeatedPatternPasses must be a JSON string array or comma-separated string.")
+
+    disabled = frozenset(item.strip() for item in parsed if item.strip())
+    unknown = sorted(disabled - set(REPEATED_PATTERN_PASS_IDS))
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown repeated-pattern pass ids: {', '.join(unknown)}")
+    return disabled
+
 
 async def read_audio(upload: UploadFile) -> tuple[np.ndarray, int]:
     if not upload.filename:
@@ -2150,6 +2181,84 @@ def suppress_isolated_triad_extensions(raw_events: list[RawEvent]) -> list[RawEv
     return cleaned
 
 
+def _debug_event_signature(raw_event: RawEvent) -> tuple[float, float, tuple[str, ...], bool]:
+    return (
+        round(raw_event.start_time, 4),
+        round(raw_event.end_time, 4),
+        tuple(sorted(note.note_name for note in raw_event.notes)),
+        raw_event.is_gliss_like,
+    )
+
+
+def _debug_event_payload_from_signature(signature: tuple[float, float, tuple[str, ...], bool]) -> dict[str, Any]:
+    start_time, end_time, notes, is_gliss_like = signature
+    return {
+        "startTime": start_time,
+        "endTime": end_time,
+        "notes": list(notes),
+        "isGlissLike": is_gliss_like,
+    }
+
+
+def repeated_pattern_passes() -> tuple[RepeatedPatternPass, ...]:
+    return (
+        RepeatedPatternPass("normalize_repeated_four_note_family", normalize_repeated_four_note_family, merge_after=True),
+        RepeatedPatternPass("normalize_repeated_four_note_gliss_patterns", normalize_repeated_four_note_gliss_patterns, merge_after=True),
+        RepeatedPatternPass("normalize_repeated_explicit_four_note_patterns", normalize_repeated_explicit_four_note_patterns, merge_after=True),
+        RepeatedPatternPass("normalize_repeated_triad_patterns", normalize_repeated_triad_patterns, merge_after=True),
+        RepeatedPatternPass("normalize_strict_four_note_subsets", normalize_strict_four_note_subsets, merge_after=True),
+        RepeatedPatternPass("suppress_repeated_triad_blips", suppress_repeated_triad_blips, merge_after=False),
+        RepeatedPatternPass("suppress_isolated_triad_extensions", suppress_isolated_triad_extensions, merge_after=False),
+    )
+
+
+REPEATED_PATTERN_PASS_IDS = tuple(pass_entry.name for pass_entry in repeated_pattern_passes())
+
+
+def apply_repeated_pattern_passes(
+    raw_events: list[RawEvent],
+    *,
+    disabled_passes: frozenset[str] | None = None,
+    debug: bool = False,
+) -> tuple[list[RawEvent], list[dict[str, Any]]]:
+    disabled = disabled_passes or frozenset()
+    trace: list[dict[str, Any]] = []
+    current = raw_events
+
+    for pass_entry in repeated_pattern_passes():
+        before_signatures = [_debug_event_signature(event) for event in current]
+        next_events = current if pass_entry.name in disabled else pass_entry.fn(current)
+        if pass_entry.merge_after:
+            next_events = merge_adjacent_events(next_events)
+        after_signatures = [_debug_event_signature(event) for event in next_events]
+
+        if debug:
+            before_counter = Counter(before_signatures)
+            after_counter = Counter(after_signatures)
+            removed: list[dict[str, Any]] = []
+            added: list[dict[str, Any]] = []
+            for signature, count in (before_counter - after_counter).items():
+                removed.extend(_debug_event_payload_from_signature(signature) for _ in range(count))
+            for signature, count in (after_counter - before_counter).items():
+                added.extend(_debug_event_payload_from_signature(signature) for _ in range(count))
+            trace.append(
+                {
+                    "pass": pass_entry.name,
+                    "enabled": pass_entry.name not in disabled,
+                    "mergeAfter": pass_entry.merge_after,
+                    "beforeEventCount": len(before_signatures),
+                    "afterEventCount": len(after_signatures),
+                    "changed": before_signatures != after_signatures,
+                    "removed": removed,
+                    "added": added,
+                }
+            )
+
+        current = next_events
+
+    return current, trace
+
+
 def quantize_beat(value: float, step: float = 0.25) -> float:
     return round(value / step) * step
 
@@ -2264,7 +2373,13 @@ def build_recent_note_names(raw_events: list[RawEvent]) -> set[str] | None:
         recent_note_names |= {note.note_name for note in recent_event.notes}
     return recent_note_names
 
-async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debug: bool = False) -> TranscriptionResult:
+async def transcribe_audio(
+    upload: UploadFile,
+    tuning: InstrumentTuning,
+    *,
+    debug: bool = False,
+    disabled_repeated_pattern_passes: frozenset[str] | None = None,
+) -> TranscriptionResult:
     audio, sample_rate = await read_audio(upload)
     normalized = normalize_audio(audio)
     segments, tempo, segment_debug = detect_segments(normalized, sample_rate)
@@ -2316,18 +2431,11 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
     merged_events = merge_adjacent_events(processed_events)
     merged_events = merge_short_chord_clusters(merged_events)
     merged_events = merge_adjacent_events(merged_events)
-    merged_events = normalize_repeated_four_note_family(merged_events)
-    merged_events = merge_adjacent_events(merged_events)
-    merged_events = normalize_repeated_four_note_gliss_patterns(merged_events)
-    merged_events = merge_adjacent_events(merged_events)
-    merged_events = normalize_repeated_explicit_four_note_patterns(merged_events)
-    merged_events = merge_adjacent_events(merged_events)
-    merged_events = normalize_repeated_triad_patterns(merged_events)
-    merged_events = merge_adjacent_events(merged_events)
-    merged_events = normalize_strict_four_note_subsets(merged_events)
-    merged_events = merge_adjacent_events(merged_events)
-    merged_events = suppress_repeated_triad_blips(merged_events)
-    merged_events = suppress_isolated_triad_extensions(merged_events)
+    merged_events, repeated_pattern_pass_trace = apply_repeated_pattern_passes(
+        merged_events,
+        disabled_passes=disabled_repeated_pattern_passes,
+        debug=debug,
+    )
     if not merged_events:
         raise HTTPException(status_code=422, detail="No musical notes were detected. Try a clearer recording or a different tuning.")
 
@@ -2377,6 +2485,8 @@ async def transcribe_audio(upload: UploadFile, tuning: InstrumentTuning, *, debu
                 }
                 for index, event in enumerate(merged_events)
             ],
+            "disabledRepeatedPatternPasses": sorted(disabled_repeated_pattern_passes or ()),
+            "repeatedPatternPassTrace": repeated_pattern_pass_trace,
         }
 
     return TranscriptionResult(

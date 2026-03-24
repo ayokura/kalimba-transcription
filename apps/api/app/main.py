@@ -4,7 +4,7 @@ from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from .models import InstrumentTuning, TranscriptionResult
-from .transcription import parse_tuning_json, transcribe_audio
+from .transcription import parse_disabled_repeated_pattern_passes, parse_tuning_json, transcribe_audio
 from .tunings import get_default_tunings
 
 
@@ -34,6 +34,13 @@ async def create_transcription(
     file: UploadFile = File(...),
     tuning: str = Form(...),
     debug: bool = Form(False),
+    disabledRepeatedPatternPasses: str | None = Form(None),
 ) -> TranscriptionResult:
     parsed_tuning = parse_tuning_json(tuning)
-    return await transcribe_audio(file, parsed_tuning, debug=debug)
+    disabled_passes = parse_disabled_repeated_pattern_passes(disabledRepeatedPatternPasses)
+    return await transcribe_audio(
+        file,
+        parsed_tuning,
+        debug=debug,
+        disabled_repeated_pattern_passes=disabled_passes,
+    )
