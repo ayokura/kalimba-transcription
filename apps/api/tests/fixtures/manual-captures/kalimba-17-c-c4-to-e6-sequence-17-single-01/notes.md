@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-24-c4-to-e6-sequence-17-separated-notes-kalimba-17-c
 - expected note: C4 / D4 / E4 / F4 / G4 / A4 / B4 / C5 / D5 / E5 / F5 / G5 / A5 / B5 / C6 / D6 / E6
 - capture intent: separated_notes
@@ -35,14 +35,10 @@
 
 ## Review
 
-- summary: 一部の note-set または event 数がずれています。
-- reason: 録音意図: 単音列 / 検出傾向: 要確認。認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。
-
-## Recapture Guidance
-
-- 各音をはっきり区切り、次の音まで十分に待つ。
-- 低音残響が長い場合でも、新しい打鍵の間隔を広めに取る。
+- summary: expected 縺ｨ detected 縺御ｸ閾ｴ縺励※縺・∪縺吶Ａr
+- reason: 騾｣邯壹＠縺・separated-notes 縺ｮ蜈ｨ髻ｳ蝓滉ｸ頑・繧・completed fixture 縺ｨ縺励※蝗ｺ螳壹＠縺ｾ縺励◆縲Ａr
 
 ## Memo
 
 - continuous articulation: notes were played back-to-back without intentional silence between them
+
