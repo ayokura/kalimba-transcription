@@ -329,6 +329,7 @@ def test_transcription_recovers_first_c5_e5_dyad_in_c4_to_g4_fixture() -> None:
         for event in payload["events"]
     ]
     assert note_sets.count("C5+E5") >= 3
+    assert note_sets[-1] == "E5+G5"
 
 
 def test_transcription_regression_for_repeated_octave_dyad() -> None:

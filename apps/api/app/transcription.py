@@ -863,6 +863,46 @@ def maybe_replace_stale_recent_primary(
 
     return primary, primary_onset_gain, None
 
+def maybe_promote_lower_secondary_to_recent_upper_octave(
+    primary: NoteHypothesis,
+    accepted_secondary: NoteHypothesis,
+    residual_ranked: list[NoteHypothesis],
+    segment_duration: float,
+    recent_note_names: set[str] | None = None,
+) -> tuple[NoteHypothesis, str | None]:
+    if not recent_note_names or segment_duration > 0.32:
+        return accepted_secondary, None
+    if accepted_secondary.candidate.frequency >= primary.candidate.frequency:
+        return accepted_secondary, None
+    if accepted_secondary.candidate.note_name in recent_note_names:
+        return accepted_secondary, None
+    if accepted_secondary.fundamental_ratio > 0.88:
+        return accepted_secondary, None
+
+    target_octave = accepted_secondary.candidate.octave + 1
+    for hypothesis in residual_ranked[:8]:
+        if hypothesis.candidate.note_name == accepted_secondary.candidate.note_name:
+            continue
+        if hypothesis.candidate.pitch_class != accepted_secondary.candidate.pitch_class:
+            continue
+        if hypothesis.candidate.octave != target_octave:
+            continue
+        if hypothesis.candidate.frequency >= primary.candidate.frequency:
+            continue
+        if hypothesis.candidate.note_name not in recent_note_names:
+            continue
+        if hypothesis.fundamental_ratio < 0.94:
+            continue
+        if hypothesis.score < accepted_secondary.score * 0.15:
+            continue
+        if hypothesis.score < primary.score * 0.05:
+            continue
+        if abs(cents_distance(primary.candidate.frequency, hypothesis.candidate.frequency)) > 700.0:
+            continue
+        return hypothesis, accepted_secondary.candidate.note_name
+
+    return accepted_secondary, None
+
 def segment_peaks(
     audio: np.ndarray,
     sample_rate: int,
@@ -913,6 +953,7 @@ def segment_peaks(
     )
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
+    promoted_secondary_to_recent_upper_octave = False
     secondary_decision_trail: list[dict[str, Any]] = []
     secondary_score_ratio = SECONDARY_SCORE_RATIO
     if end_time - start_time <= 0.14:
@@ -1057,22 +1098,39 @@ def segment_peaks(
                 if primary_onset_gain < MIN_RECENT_NOTE_ONSET_GAIN and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN:
                     reasons.append("repeated-primary-carryover")
             accepted = len(reasons) == 0
+            accepted_hypothesis = hypothesis
+            debug_reasons = reasons
+            if accepted and hypothesis.candidate.frequency < primary.candidate.frequency and not octave_dyad_allowed:
+                accepted_hypothesis, promoted_from = maybe_promote_lower_secondary_to_recent_upper_octave(
+                    primary,
+                    hypothesis,
+                    residual_ranked,
+                    segment_duration,
+                    recent_note_names,
+                )
+                if promoted_from is not None:
+                    promoted_secondary_to_recent_upper_octave = True
+                    debug_reasons = [f"promoted-from-{promoted_from}"]
             secondary_decision_trail.append(
                 {
-                    "noteName": hypothesis.candidate.note_name,
-                    "score": round(hypothesis.score, 6),
-                    "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
+                    "noteName": accepted_hypothesis.candidate.note_name if accepted else hypothesis.candidate.note_name,
+                    "score": round(accepted_hypothesis.score if accepted else hypothesis.score, 6),
+                    "fundamentalRatio": round(accepted_hypothesis.fundamental_ratio if accepted else hypothesis.fundamental_ratio, 6),
                     "onsetGain": None if onset_gain is None else round(onset_gain, 6),
                     "accepted": accepted,
-                    "reasons": reasons,
+                    "reasons": debug_reasons,
                     "octaveDyadAllowed": octave_dyad_allowed,
                 }
             )
             if accepted:
-                selected.append(hypothesis.candidate)
+                selected.append(accepted_hypothesis.candidate)
                 break
 
-    if len(selected) == 2 and end_time - start_time <= GLISS_TERTIARY_MAX_DURATION:
+    if (
+        len(selected) == 2
+        and not promoted_secondary_to_recent_upper_octave
+        and end_time - start_time <= GLISS_TERTIARY_MAX_DURATION
+    ):
         selected_keys = sorted(note.key for note in selected)
         if selected_keys[-1] - selected_keys[0] == 1:
             extension_keys = {selected_keys[0] - 1, selected_keys[-1] + 1}
@@ -2892,6 +2950,7 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
 
 
 
