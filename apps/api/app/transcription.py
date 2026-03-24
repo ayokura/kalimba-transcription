@@ -23,6 +23,9 @@ RMS_MEDIAN_THRESHOLD_MAX_PEAK_RATIO = 0.45
 NESTED_SEGMENT_DEDUP_MAX_START_DELTA = 0.02
 SEGMENT_OVERLAP_TRIM_MAX_OVERLAP = 0.18
 SEGMENT_OVERLAP_TRIM_MIN_DURATION = 0.18
+TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE = 0.18
+TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE = 0.7
+TERMINAL_ORPHAN_SEGMENT_DURATION = 0.32
 ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
@@ -399,6 +402,23 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     if len(qualifying_gap_run) >= 3:
         gap_injected_segments.extend(qualifying_gap_run)
 
+    terminal_orphan_segments: list[tuple[float, float]] = []
+    if active_ranges:
+        audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
+        last_range_end = active_ranges[-1][1]
+        trailing_onsets = [
+            onset_time
+            for onset_time in onset_times
+            if last_range_end + TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE
+            <= onset_time
+            <= min(last_range_end + TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE, audio_duration - 0.08)
+        ]
+        if len(trailing_onsets) == 1:
+            orphan_start = trailing_onsets[0]
+            orphan_end = min(orphan_start + TERMINAL_ORPHAN_SEGMENT_DURATION, audio_duration)
+            if orphan_end - orphan_start >= 0.08:
+                terminal_orphan_segments.append((orphan_start, orphan_end))
+
     segments: list[tuple[float, float]] = []
     for range_start, range_end in active_ranges:
         effective_range_start = range_start
@@ -428,6 +448,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for start_time, end_time in gap_injected_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
+    for start_time, end_time in terminal_orphan_segments:
+        if end_time - start_time >= 0.08:
+            segments.append((start_time, end_time))
 
     segments = dedupe_nested_segments(segments)
     segments = trim_small_overlapping_segments(segments)
@@ -453,6 +476,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "onsetTimes": onset_times,
         "activeRanges": [[round(start, 4), round(end, 4)] for start, end in active_ranges],
         "gapInjectedSegments": [[round(start, 4), round(end, 4)] for start, end in gap_injected_segments],
+        "terminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_orphan_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),
         "tempoRaw": round(tempo, 4),

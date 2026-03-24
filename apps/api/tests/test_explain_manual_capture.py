@@ -77,7 +77,7 @@ def test_explain_manual_capture_reports_pending_summary_hints() -> None:
     result = run_script("kalimba-17-c-c4-to-g4-sequence-17-01", "--json")
     payload = json.loads(result.stdout)
     assert payload["eventCompression"]["expected"] == 17
-    assert payload["eventCompression"]["detected"] == 15
+    assert payload["eventCompression"]["detected"] == 16
     assert len(payload["expectedEvents"]) == 17
     assert all(event["intent"] is None for event in payload["expectedEvents"])
     assert payload["dominantGestureMix"]["ambiguous"] >= 1
@@ -105,3 +105,4 @@ def test_explain_manual_capture_lists_repeated_pattern_passes() -> None:
     lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
     assert "normalize_repeated_four_note_family" in lines
     assert "normalize_repeated_triad_patterns" in lines
+

@@ -329,7 +329,25 @@ def test_transcription_recovers_first_c5_e5_dyad_in_c4_to_g4_fixture() -> None:
         for event in payload["events"]
     ]
     assert note_sets.count("C5+E5") >= 3
-    assert note_sets[-1] == "E5+G5"
+    assert note_sets[-2] == "E5+G5"
+
+
+def test_transcription_recovers_trailing_g4_in_c4_to_g4_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-g4-sequence-17-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    primary_notes = [f"{event['notes'][0]['pitchClass']}{event['notes'][0]['octave']}" for event in payload["events"]]
+    assert len(payload["events"]) >= 16
+    assert primary_notes[-1] == "G4"
 
 
 def test_transcription_regression_for_repeated_octave_dyad() -> None:
@@ -1005,4 +1023,5 @@ def test_transcription_debug_reports_disabled_repeated_pattern_passes() -> None:
     assert payload["debug"]["disabledRepeatedPatternPasses"] == ["normalize_repeated_triad_patterns"]
     triad_trace = next(item for item in payload["debug"]["repeatedPatternPassTrace"] if item["pass"] == "normalize_repeated_triad_patterns")
     assert triad_trace["enabled"] is False
+
 
