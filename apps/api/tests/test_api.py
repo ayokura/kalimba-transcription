@@ -311,7 +311,7 @@ def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture
     assert note_sets.count("G5") >= 2
 
 
-def test_transcription_recovers_first_c5_e5_dyad_in_c4_to_g4_fixture() -> None:
+def test_transcription_recovers_late_c5_e5_head_in_c4_to_g4_fixture() -> None:
     fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-g4-sequence-17-01"
     request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
     audio_bytes = (fixture_dir / "audio.wav").read_bytes()
@@ -328,9 +328,9 @@ def test_transcription_recovers_first_c5_e5_dyad_in_c4_to_g4_fixture() -> None:
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
     ]
-    assert note_sets.count("C5+E5") >= 3
-    assert note_sets[-2] == "E5+G5"
-
+    assert len(payload["events"]) == 17
+    assert note_sets.count("C5+E5") >= 4
+    assert note_sets[-3] == "C5+E5"
 
 def test_transcription_recovers_trailing_g4_in_c4_to_g4_fixture() -> None:
     fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-g4-sequence-17-01"
@@ -464,12 +464,26 @@ def test_merge_short_chord_clusters_merges_singleton_and_dyad_into_triad() -> No
     g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
 
     raw_events = [
-        RawEvent(start_time=0.0, end_time=0.14, notes=[c4], is_gliss_like=True, primary_note_name="C4", primary_score=80.0),
+        RawEvent(start_time=0.0, end_time=0.14, notes=[c4], is_gliss_like=False, primary_note_name="C4", primary_score=80.0),
         RawEvent(start_time=0.14, end_time=0.9, notes=[e4, g4], is_gliss_like=False, primary_note_name="G4", primary_score=500.0),
     ]
 
     merged = merge_short_chord_clusters(raw_events)
     assert [[note.note_name for note in event.notes] for event in merged] == [["C4", "E4", "G4"]]
+
+
+def test_merge_short_chord_clusters_does_not_merge_gliss_like_head_with_dyad() -> None:
+    c5 = NoteCandidate(key=13, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
+    e5 = NoteCandidate(key=15, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
+    g5 = NoteCandidate(key=17, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.0667, notes=[c5, e5], is_gliss_like=True, primary_note_name="C5", primary_score=121.0),
+        RawEvent(start_time=0.0667, end_time=0.3174, notes=[g5], is_gliss_like=False, primary_note_name="G5", primary_score=554.7),
+    ]
+
+    merged = merge_short_chord_clusters(raw_events)
+    assert [[note.note_name for note in event.notes] for event in merged] == [["C5", "E5"], ["G5"]]
 
 
 def test_merge_short_chord_clusters_merges_subset_into_following_triad() -> None:
@@ -1023,5 +1037,4 @@ def test_transcription_debug_reports_disabled_repeated_pattern_passes() -> None:
     assert payload["debug"]["disabledRepeatedPatternPasses"] == ["normalize_repeated_triad_patterns"]
     triad_trace = next(item for item in payload["debug"]["repeatedPatternPassTrace"] if item["pass"] == "normalize_repeated_triad_patterns")
     assert triad_trace["enabled"] is False
-
 

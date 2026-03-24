@@ -26,6 +26,10 @@ SEGMENT_OVERLAP_TRIM_MIN_DURATION = 0.18
 TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE = 0.18
 TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE = 0.7
 TERMINAL_ORPHAN_SEGMENT_DURATION = 0.32
+ACTIVE_RANGE_START_CLUSTER_MIN_GAP = 0.45
+ACTIVE_RANGE_START_CLUSTER_MAX_SPAN = 0.09
+ACTIVE_RANGE_START_CLUSTER_MAX_DURATION = 0.35
+CLUSTERED_RANGE_HEAD_MIN_DURATION = 0.05
 ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
@@ -52,6 +56,14 @@ LOWER_SECONDARY_WEAK_ONSET_MAX_GAIN = 2.5
 LOWER_SECONDARY_WEAK_ONSET_MAX_RATIO = 0.08
 LOWER_SECONDARY_WEAK_ONSET_SCORE_RATIO = 0.35
 LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_DURATION = 0.32
+STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MAX_DURATION = 0.12
+STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MAX_PRIMARY_ONSET_GAIN = 1.5
+STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MAX_PRIMARY_FUNDAMENTAL_RATIO = 0.85
+STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO = 0.95
+STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_UPPER_SCORE_RATIO = 0.25
+STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_UPPER_ALIAS_RATIO = 1.2
+STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_SUPPORTING_SCORE_RATIO = 0.75
+STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_SCORE = 121.0
 LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_LOWER_SCORE_RATIO = 0.4
 LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_LOWER_FUNDAMENTAL_RATIO = 0.85
 LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO = 0.94
@@ -420,11 +432,25 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
                 terminal_orphan_segments.append((orphan_start, orphan_end))
 
     segments: list[tuple[float, float]] = []
-    for range_start, range_end in active_ranges:
+    for range_index, (range_start, range_end) in enumerate(active_ranges):
         effective_range_start = range_start
+        previous_range_end = active_ranges[range_index - 1][1] if range_index > 0 else None
         prior_onsets = [time for time in onset_times if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005]
+        relaxed_head_segment = False
         if prior_onsets:
             effective_range_start = prior_onsets[-1]
+            if (
+                previous_range_end is not None
+                and range_start - previous_range_end >= ACTIVE_RANGE_START_CLUSTER_MIN_GAP
+                and range_end - range_start <= ACTIVE_RANGE_START_CLUSTER_MAX_DURATION
+            ):
+                trailing_cluster = [
+                    time for time in prior_onsets
+                    if effective_range_start - time <= ACTIVE_RANGE_START_CLUSTER_MAX_SPAN
+                ]
+                if len(trailing_cluster) >= 2:
+                    effective_range_start = trailing_cluster[0]
+                    relaxed_head_segment = True
 
         range_onsets = [time for time in onset_times if effective_range_start + 0.005 < time < range_end - 0.05]
         supplemental_starts = [
@@ -442,7 +468,8 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         starts = [effective_range_start, *deduped_onsets]
         for index, start_time in enumerate(starts):
             end_time = starts[index + 1] if index + 1 < len(starts) else range_end
-            if end_time - start_time >= 0.08:
+            min_duration = CLUSTERED_RANGE_HEAD_MIN_DURATION if relaxed_head_segment and index == 0 else 0.08
+            if end_time - start_time >= min_duration:
                 segments.append((start_time, end_time))
 
     for start_time, end_time in gap_injected_segments:
@@ -949,6 +976,74 @@ def maybe_promote_lower_secondary_to_recent_upper_octave(
 
     return accepted_secondary, None
 
+
+def maybe_promote_stale_primary_to_upper_octave(
+    primary: NoteHypothesis,
+    ranked: list[NoteHypothesis],
+    segment_duration: float,
+    primary_onset_gain: float | None,
+    recent_note_names: set[str] | None,
+) -> tuple[NoteHypothesis, dict[str, Any] | None]:
+    if segment_duration > STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MAX_DURATION:
+        return primary, None
+    if not recent_note_names or primary.candidate.note_name not in recent_note_names:
+        return primary, None
+    if primary.candidate.octave > 4:
+        return primary, None
+    if primary.fundamental_ratio > STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MAX_PRIMARY_FUNDAMENTAL_RATIO:
+        return primary, None
+    if primary_onset_gain is not None and primary_onset_gain > STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MAX_PRIMARY_ONSET_GAIN:
+        return primary, None
+
+    target_octave = primary.candidate.octave + 1
+    upper_candidate: NoteHypothesis | None = None
+    for hypothesis in ranked[1:6]:
+        if hypothesis.candidate.pitch_class != primary.candidate.pitch_class:
+            continue
+        if hypothesis.candidate.octave != target_octave:
+            continue
+        if hypothesis.score < primary.score * STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_UPPER_SCORE_RATIO:
+            continue
+        if hypothesis.fundamental_ratio < STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO:
+            continue
+        if hypothesis.octave_alias_ratio < STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_UPPER_ALIAS_RATIO:
+            continue
+        upper_candidate = hypothesis
+        break
+    if upper_candidate is None:
+        return primary, None
+
+    has_supporting_high = any(
+        hypothesis.candidate.note_name != upper_candidate.candidate.note_name
+        and hypothesis.candidate.frequency > upper_candidate.candidate.frequency
+        and hypothesis.score >= primary.score * STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_SUPPORTING_SCORE_RATIO
+        and hypothesis.fundamental_ratio >= STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO
+        and not are_harmonic_related(hypothesis.candidate, upper_candidate.candidate)
+        for hypothesis in ranked[1:6]
+    )
+    if not has_supporting_high:
+        return primary, None
+
+    upper_candidate = NoteHypothesis(
+        candidate=upper_candidate.candidate,
+        score=max(upper_candidate.score, STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_SCORE),
+        fundamental_energy=upper_candidate.fundamental_energy,
+        overtone_energy=upper_candidate.overtone_energy,
+        fundamental_ratio=upper_candidate.fundamental_ratio,
+        subharmonic_alias_energy=upper_candidate.subharmonic_alias_energy,
+        octave_alias_energy=upper_candidate.octave_alias_energy,
+        octave_alias_ratio=upper_candidate.octave_alias_ratio,
+        octave_alias_penalty=upper_candidate.octave_alias_penalty,
+        second_harmonic_energy=upper_candidate.second_harmonic_energy,
+        harmonics=upper_candidate.harmonics,
+        subharmonics=upper_candidate.subharmonics,
+    )
+    return upper_candidate, {
+        'replacedPrimaryNote': primary.candidate.note_name,
+        'replacementNote': upper_candidate.candidate.note_name,
+        'reason': 'stale-lower-primary-promoted-to-upper-octave',
+    }
+
 def segment_peaks(
     audio: np.ndarray,
     sample_rate: int,
@@ -997,6 +1092,15 @@ def segment_peaks(
         ranked,
         recent_note_names,
     )
+    primary, stale_upper_promotion_debug = maybe_promote_stale_primary_to_upper_octave(
+        primary,
+        ranked,
+        end_time - start_time,
+        primary_onset_gain,
+        recent_note_names,
+    )
+    if stale_upper_promotion_debug is not None:
+        primary_promotion_debug = stale_upper_promotion_debug
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     promoted_secondary_to_recent_upper_octave = False
@@ -1537,7 +1641,10 @@ def merge_short_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
         contiguous_keys = bool(combined_keys) and (combined_keys[-1] - combined_keys[0] + 1 == len(combined_keys))
         overlap_count = len(current.notes) + len(following.notes) - len(combined_notes)
         merge_pattern_ok = (
-            {len(current.notes), len(following.notes)} == {1, 2}
+            (
+                {len(current.notes), len(following.notes)} == {1, 2}
+                and max(current_duration, following_duration) <= 0.18
+            )
             or (len(current.notes) == 2 and len(following.notes) == 2 and overlap_count == 1)
             or (min(len(current.notes), len(following.notes)) == 1 and max(len(current.notes), len(following.notes)) == 3 and overlap_count >= 1)
         )
@@ -1891,6 +1998,8 @@ def merge_short_chord_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
         is_singleton_plus_dyad = (
             {len(current.notes), len(following.notes)} == {1, 2}
             and not current_names.intersection(following_names)
+            and not current.is_gliss_like
+            and not following.is_gliss_like
             and min(current.end_time - current.start_time, following.end_time - following.start_time) <= CHORD_CLUSTER_MAX_SINGLETON_DURATION
         )
         is_subset_to_triad = (
@@ -2996,7 +3105,4 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
-
-
-
 

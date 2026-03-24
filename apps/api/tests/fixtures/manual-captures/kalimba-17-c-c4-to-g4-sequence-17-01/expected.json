@@ -9,5 +9,5 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "mixed free-performance phrase with plausible expected sequence; current recognizer compresses 17 expected events into 12 and mis-bundles several mid-phrase events, so keep as pending recognition target"
+  "reason": "mixed free-performance phrase with plausible expected sequence; current recognizer now preserves all 17 events, but still simplifies the late G5+E5 dyad to G5 and keeps one C4+E5 rebundling, so keep as pending recognition target"
 }
