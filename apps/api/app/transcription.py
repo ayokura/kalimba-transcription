@@ -42,6 +42,8 @@ ASCENDING_PRIMARY_RUN_MIN_LENGTH = 3
 ASCENDING_PRIMARY_RUN_MAX_DURATION = 0.45
 ASCENDING_PRIMARY_RUN_SECONDARY_SCORE_RATIO = 0.35
 ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN = 8.0
+ADJACENT_SEPARATED_DYAD_MAX_DURATION = 0.45
+ADJACENT_SEPARATED_DYAD_RUN_MIN_FORWARD_SUPPORT = 2
 PRIOR_ONSET_BACKTRACK_SECONDS = 0.55
 HARMONIC_WEIGHTS = [1.0, 0.55, 0.3, 0.15]
 HARMONIC_BAND_CENTS = 40.0
@@ -1596,6 +1598,91 @@ def merge_adjacent_events(raw_events: list[RawEvent]) -> list[RawEvent]:
 
     return merged
 
+
+def split_adjacent_step_dyads_in_ascending_runs(
+    raw_events: list[RawEvent],
+    tuning: InstrumentTuning,
+) -> list[RawEvent]:
+    if len(raw_events) < 3:
+        return raw_events
+
+    note_rank = {note.note_name: index for index, note in enumerate(sorted(tuning.notes, key=lambda item: item.frequency))}
+
+    def event_rank_range(event: RawEvent) -> tuple[int, int] | None:
+        ranks = sorted({note_rank.get(note.note_name, -1) for note in event.notes})
+        if not ranks or ranks[0] < 0:
+            return None
+        return ranks[0], ranks[-1]
+
+    def is_split_candidate(event: RawEvent) -> tuple[int, int] | None:
+        if event.is_gliss_like or len(event.notes) != 2 or (event.end_time - event.start_time) > ADJACENT_SEPARATED_DYAD_MAX_DURATION:
+            return None
+        rank_range = event_rank_range(event)
+        if rank_range is None:
+            return None
+        low_rank, high_rank = rank_range
+        if high_rank != low_rank + 1:
+            return None
+        return low_rank, high_rank
+
+    def forward_support(index: int, current_high_rank: int) -> int:
+        support = 0
+        previous_high_rank = current_high_rank
+        for next_index in range(index + 1, len(raw_events)):
+            next_event = raw_events[next_index]
+            if len(next_event.notes) > 2:
+                break
+            if next_event.is_gliss_like and len(next_event.notes) != 1:
+                break
+            next_range = event_rank_range(next_event)
+            if next_range is None:
+                break
+            next_low_rank, next_high_rank = next_range
+            if next_high_rank <= previous_high_rank or next_low_rank < previous_high_rank:
+                break
+            support += 1
+            previous_high_rank = next_high_rank
+            if support >= ADJACENT_SEPARATED_DYAD_RUN_MIN_FORWARD_SUPPORT:
+                break
+        return support
+
+    split_events: list[RawEvent] = []
+    for index, event in enumerate(raw_events):
+        split_candidate = is_split_candidate(event)
+        if split_candidate is None:
+            split_events.append(event)
+            continue
+
+        low_rank, high_rank = split_candidate
+        if forward_support(index, high_rank) < ADJACENT_SEPARATED_DYAD_RUN_MIN_FORWARD_SUPPORT:
+            split_events.append(event)
+            continue
+
+        ordered_notes = sorted(event.notes, key=lambda note: note.frequency)
+        midpoint = event.start_time + ((event.end_time - event.start_time) * 0.5)
+        split_events.append(
+            RawEvent(
+                start_time=event.start_time,
+                end_time=midpoint,
+                notes=[ordered_notes[0]],
+                is_gliss_like=False,
+                primary_note_name=ordered_notes[0].note_name,
+                primary_score=event.primary_score,
+            )
+        )
+        split_events.append(
+            RawEvent(
+                start_time=midpoint,
+                end_time=event.end_time,
+                notes=[ordered_notes[1]],
+                is_gliss_like=False,
+                primary_note_name=ordered_notes[1].note_name,
+                primary_score=event.primary_score,
+            )
+        )
+
+    return split_events
+
 def merge_short_chord_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 2:
         return raw_events
@@ -2625,6 +2712,7 @@ async def transcribe_audio(
         disabled_passes=disabled_repeated_pattern_passes,
         debug=debug,
     )
+    merged_events = split_adjacent_step_dyads_in_ascending_runs(merged_events, tuning)
     if not merged_events:
         raise HTTPException(status_code=422, detail="No musical notes were detected. Try a clearer recording or a different tuning.")
 
