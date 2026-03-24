@@ -1,0 +1,390 @@
+{
+  "instrumentTuning": {
+    "id": "custom",
+    "name": "17 Key C Major",
+    "keyCount": 17,
+    "notes": [
+      {
+        "key": 1,
+        "noteName": "D6",
+        "frequency": 1174.6590716696303
+      },
+      {
+        "key": 2,
+        "noteName": "B5",
+        "frequency": 987.7666025122483
+      },
+      {
+        "key": 3,
+        "noteName": "G5",
+        "frequency": 783.9908719634985
+      },
+      {
+        "key": 4,
+        "noteName": "E5",
+        "frequency": 659.2551138257398
+      },
+      {
+        "key": 5,
+        "noteName": "C5",
+        "frequency": 523.2511306011972
+      },
+      {
+        "key": 6,
+        "noteName": "A4",
+        "frequency": 440
+      },
+      {
+        "key": 7,
+        "noteName": "F4",
+        "frequency": 349.2282314330039
+      },
+      {
+        "key": 8,
+        "noteName": "D4",
+        "frequency": 293.6647679174076
+      },
+      {
+        "key": 9,
+        "noteName": "C4",
+        "frequency": 261.6255653005986
+      },
+      {
+        "key": 10,
+        "noteName": "E4",
+        "frequency": 329.6275569128699
+      },
+      {
+        "key": 11,
+        "noteName": "G4",
+        "frequency": 391.99543598174927
+      },
+      {
+        "key": 12,
+        "noteName": "B4",
+        "frequency": 493.8833012561241
+      },
+      {
+        "key": 13,
+        "noteName": "D5",
+        "frequency": 587.3295358348151
+      },
+      {
+        "key": 14,
+        "noteName": "F5",
+        "frequency": 698.4564628660078
+      },
+      {
+        "key": 15,
+        "noteName": "A5",
+        "frequency": 880
+      },
+      {
+        "key": 16,
+        "noteName": "C6",
+        "frequency": 1046.5022612023945
+      },
+      {
+        "key": 17,
+        "noteName": "E6",
+        "frequency": 1318.5102276514797
+      }
+    ]
+  },
+  "tempo": 170.45,
+  "events": [
+    {
+      "id": "evt-1",
+      "startBeat": 28.75,
+      "durationBeat": 0.75,
+      "notes": [
+        {
+          "key": 15,
+          "pitchClass": "A",
+          "octave": 5,
+          "labelDoReMi": "ラ.",
+          "labelNumber": "6'",
+          "frequency": 880
+        },
+        {
+          "key": 2,
+          "pitchClass": "B",
+          "octave": 5,
+          "labelDoReMi": "シ.",
+          "labelNumber": "7'",
+          "frequency": 987.767
+        }
+      ],
+      "isGlissLike": false,
+      "gesture": "strict_chord"
+    },
+    {
+      "id": "evt-2",
+      "startBeat": 32.25,
+      "durationBeat": 0.5,
+      "notes": [
+        {
+          "key": 1,
+          "pitchClass": "D",
+          "octave": 6,
+          "labelDoReMi": "レ..",
+          "labelNumber": "2''",
+          "frequency": 1174.659
+        }
+      ],
+      "isGlissLike": false,
+      "gesture": "ambiguous"
+    },
+    {
+      "id": "evt-3",
+      "startBeat": 41.75,
+      "durationBeat": 0.25,
+      "notes": [
+        {
+          "key": 10,
+          "pitchClass": "E",
+          "octave": 4,
+          "labelDoReMi": "ミ",
+          "labelNumber": "3",
+          "frequency": 329.628
+        },
+        {
+          "key": 7,
+          "pitchClass": "F",
+          "octave": 4,
+          "labelDoReMi": "ファ",
+          "labelNumber": "4",
+          "frequency": 349.228
+        }
+      ],
+      "isGlissLike": true,
+      "gesture": "ambiguous"
+    },
+    {
+      "id": "evt-4",
+      "startBeat": 53.5,
+      "durationBeat": 0.25,
+      "notes": [
+        {
+          "key": 3,
+          "pitchClass": "G",
+          "octave": 5,
+          "labelDoReMi": "ソ.",
+          "labelNumber": "5'",
+          "frequency": 783.991
+        },
+        {
+          "key": 16,
+          "pitchClass": "C",
+          "octave": 6,
+          "labelDoReMi": "ド..",
+          "labelNumber": "1''",
+          "frequency": 1046.502
+        }
+      ],
+      "isGlissLike": true,
+      "gesture": "ambiguous"
+    },
+    {
+      "id": "evt-5",
+      "startBeat": 65.5,
+      "durationBeat": 0.5,
+      "notes": [
+        {
+          "key": 12,
+          "pitchClass": "B",
+          "octave": 4,
+          "labelDoReMi": "シ",
+          "labelNumber": "7",
+          "frequency": 493.883
+        },
+        {
+          "key": 5,
+          "pitchClass": "C",
+          "octave": 5,
+          "labelDoReMi": "ド.",
+          "labelNumber": "1'",
+          "frequency": 523.251
+        }
+      ],
+      "isGlissLike": true,
+      "gesture": "ambiguous"
+    },
+    {
+      "id": "evt-6",
+      "startBeat": 66.5,
+      "durationBeat": 0.5,
+      "notes": [
+        {
+          "key": 6,
+          "pitchClass": "A",
+          "octave": 4,
+          "labelDoReMi": "ラ",
+          "labelNumber": "6",
+          "frequency": 440
+        },
+        {
+          "key": 13,
+          "pitchClass": "D",
+          "octave": 5,
+          "labelDoReMi": "レ.",
+          "labelNumber": "2'",
+          "frequency": 587.33
+        }
+      ],
+      "isGlissLike": true,
+      "gesture": "ambiguous"
+    },
+    {
+      "id": "evt-7",
+      "startBeat": 70,
+      "durationBeat": 1,
+      "notes": [
+        {
+          "key": 14,
+          "pitchClass": "F",
+          "octave": 5,
+          "labelDoReMi": "ファ.",
+          "labelNumber": "4'",
+          "frequency": 698.456
+        },
+        {
+          "key": 15,
+          "pitchClass": "A",
+          "octave": 5,
+          "labelDoReMi": "ラ.",
+          "labelNumber": "6'",
+          "frequency": 880
+        }
+      ],
+      "isGlissLike": false,
+      "gesture": "strict_chord"
+    },
+    {
+      "id": "evt-8",
+      "startBeat": 71,
+      "durationBeat": 0.5,
+      "notes": [
+        {
+          "key": 2,
+          "pitchClass": "B",
+          "octave": 5,
+          "labelDoReMi": "シ.",
+          "labelNumber": "7'",
+          "frequency": 987.767
+        }
+      ],
+      "isGlissLike": true,
+      "gesture": "ambiguous"
+    },
+    {
+      "id": "evt-9",
+      "startBeat": 72,
+      "durationBeat": 1,
+      "notes": [
+        {
+          "key": 3,
+          "pitchClass": "G",
+          "octave": 5,
+          "labelDoReMi": "ソ.",
+          "labelNumber": "5'",
+          "frequency": 783.991
+        },
+        {
+          "key": 16,
+          "pitchClass": "C",
+          "octave": 6,
+          "labelDoReMi": "ド..",
+          "labelNumber": "1''",
+          "frequency": 1046.502
+        }
+      ],
+      "isGlissLike": false,
+      "gesture": "strict_chord"
+    },
+    {
+      "id": "evt-10",
+      "startBeat": 73,
+      "durationBeat": 0.5,
+      "notes": [
+        {
+          "key": 1,
+          "pitchClass": "D",
+          "octave": 6,
+          "labelDoReMi": "レ..",
+          "labelNumber": "2''",
+          "frequency": 1174.659
+        }
+      ],
+      "isGlissLike": true,
+      "gesture": "ambiguous"
+    }
+  ],
+  "notationViews": {
+    "western": [
+      "A5 | B5",
+      "D6",
+      "E4 | F4",
+      "G5 | C6",
+      "B4 | C5",
+      "A4 | D5",
+      "F5 | A5",
+      "B5",
+      "G5 | C6",
+      "D6"
+    ],
+    "numbered": [
+      "6' 7'",
+      "2''",
+      "3 4",
+      "5' 1''",
+      "7 1'",
+      "6 2'",
+      "4' 6'",
+      "7'",
+      "5' 1''",
+      "2''"
+    ],
+    "verticalDoReMi": [
+      [
+        "ラ.",
+        "シ."
+      ],
+      [
+        "レ.."
+      ],
+      [
+        "ミ",
+        "ファ"
+      ],
+      [
+        "ソ.",
+        "ド.."
+      ],
+      [
+        "シ",
+        "ド."
+      ],
+      [
+        "ラ",
+        "レ."
+      ],
+      [
+        "ファ.",
+        "ラ."
+      ],
+      [
+        "シ."
+      ],
+      [
+        "ソ.",
+        "ド.."
+      ],
+      [
+        "レ.."
+      ]
+    ]
+  },
+  "warnings": [],
+  "debug": null
+}
