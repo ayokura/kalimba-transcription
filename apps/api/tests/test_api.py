@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, classify_event_gesture, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, classify_event_gesture, collapse_same_start_primary_singletons, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -298,6 +298,22 @@ def test_suppress_resonant_carryover_keeps_true_short_octave_dyad() -> None:
         ["D4"],
         ["D4", "D5"],
     ]
+
+def test_collapse_same_start_primary_singletons_prefers_singleton_over_lower_carryover() -> None:
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.12, notes=[a4, e4], is_gliss_like=False, primary_note_name="A4", primary_score=140.0),
+        RawEvent(start_time=0.0, end_time=0.32, notes=[a4], is_gliss_like=False, primary_note_name="A4", primary_score=180.0),
+    ]
+
+    cleaned = collapse_same_start_primary_singletons(raw_events)
+    assert len(cleaned) == 1
+    assert [note.note_name for note in cleaned[0].notes] == ["A4"]
+    assert cleaned[0].start_time == 0.0
+    assert cleaned[0].end_time == 0.32
+
 
 def test_merge_short_chord_clusters_merges_singleton_and_dyad_into_triad() -> None:
     c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)

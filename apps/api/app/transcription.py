@@ -88,6 +88,7 @@ SPLIT_UPPER_OCTAVE_PAIR_MIN_DURATION = 0.28
 SPLIT_UPPER_OCTAVE_PAIR_MAX_DURATION = 0.7
 SPLIT_UPPER_OCTAVE_PAIR_PRIMARY_SCORE_MAX = 800.0
 SPLIT_UPPER_OCTAVE_PAIR_FRACTION = 0.45
+SAME_START_PRIMARY_SINGLETON_MAX_START_DELTA = 0.02
 
 PITCH_CLASS_TO_DOREMI = {
     "C": "ド",
@@ -1073,6 +1074,69 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
         cleaned.append(updated_event)
 
     return cleaned
+
+def collapse_same_start_primary_singletons(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 2:
+        return raw_events
+
+    cleaned: list[RawEvent] = []
+    index = 0
+    while index < len(raw_events):
+        current = raw_events[index]
+        if index + 1 >= len(raw_events):
+            cleaned.append(current)
+            break
+
+        following = raw_events[index + 1]
+        shared_start = abs(current.start_time - following.start_time) <= SAME_START_PRIMARY_SINGLETON_MAX_START_DELTA
+        shared_primary = current.primary_note_name and current.primary_note_name == following.primary_note_name
+        if not shared_start or not shared_primary:
+            cleaned.append(current)
+            index += 1
+            continue
+
+        current_primary = next((note for note in current.notes if note.note_name == current.primary_note_name), None)
+        following_primary = next((note for note in following.notes if note.note_name == following.primary_note_name), None)
+        if current_primary is None or following_primary is None:
+            cleaned.append(current)
+            index += 1
+            continue
+
+        current_non_primary = [note for note in current.notes if note.note_name != current.primary_note_name]
+        following_non_primary = [note for note in following.notes if note.note_name != following.primary_note_name]
+        current_is_primary_singleton = len(current.notes) == 1
+        following_is_primary_singleton = len(following.notes) == 1
+        prefer_current = (
+            current_is_primary_singleton
+            and following_non_primary
+            and all(note.frequency < current_primary.frequency for note in following_non_primary)
+        )
+        prefer_following = (
+            following_is_primary_singleton
+            and current_non_primary
+            and all(note.frequency < following_primary.frequency for note in current_non_primary)
+        )
+
+        if not prefer_current and not prefer_following:
+            cleaned.append(current)
+            index += 1
+            continue
+
+        preferred = current if prefer_current else following
+        cleaned.append(
+            RawEvent(
+                start_time=min(current.start_time, following.start_time),
+                end_time=max(current.end_time, following.end_time),
+                notes=preferred.notes,
+                is_gliss_like=current.is_gliss_like or following.is_gliss_like,
+                primary_note_name=preferred.primary_note_name,
+                primary_score=max(current.primary_score, following.primary_score),
+            )
+        )
+        index += 2
+
+    return cleaned
+
 
 def suppress_leading_single_transient(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 2:
@@ -2417,6 +2481,7 @@ async def transcribe_audio(
 
     processed_events = suppress_low_confidence_dyad_transients(raw_events)
     processed_events = suppress_resonant_carryover(processed_events)
+    processed_events = collapse_same_start_primary_singletons(processed_events)
     processed_events = simplify_short_secondary_bleed(processed_events)
     processed_events = merge_short_gliss_clusters(processed_events)
     processed_events = simplify_short_gliss_prefix_to_contiguous_singleton(processed_events)
