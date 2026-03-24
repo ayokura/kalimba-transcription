@@ -26,6 +26,11 @@ SEGMENT_OVERLAP_TRIM_MIN_DURATION = 0.18
 TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE = 0.18
 TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE = 0.7
 TERMINAL_ORPHAN_SEGMENT_DURATION = 0.32
+MULTI_ONSET_GAP_MIN_DURATION = 1.0
+MULTI_ONSET_GAP_MIN_EDGE_SPACING = 0.18
+MULTI_ONSET_GAP_MIN_INTERVAL = 0.18
+MULTI_ONSET_GAP_MAX_INTERVAL = 0.42
+MULTI_ONSET_GAP_MIN_SHORT_INTERVALS = 2
 ACTIVE_RANGE_START_CLUSTER_MIN_GAP = 0.45
 ACTIVE_RANGE_START_CLUSTER_MAX_SPAN = 0.09
 ACTIVE_RANGE_START_CLUSTER_MAX_DURATION = 0.35
@@ -365,6 +370,52 @@ def trim_small_overlapping_segments(segments: list[tuple[float, float]]) -> list
     return trimmed
 
 
+def collect_multi_onset_gap_segments(
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+) -> list[tuple[float, float]]:
+    segments: list[tuple[float, float]] = []
+    for index in range(len(active_ranges) - 1):
+        previous_end = active_ranges[index][1]
+        next_start = active_ranges[index + 1][0]
+        gap_duration = next_start - previous_end
+        if gap_duration < MULTI_ONSET_GAP_MIN_DURATION:
+            continue
+
+        gap_onsets = [
+            time
+            for time in onset_times
+            if previous_end + 0.05 < time < next_start - 0.05
+        ]
+        if len(gap_onsets) < 3:
+            continue
+
+        if (
+            gap_onsets[0] - previous_end < MULTI_ONSET_GAP_MIN_EDGE_SPACING
+            or next_start - gap_onsets[-1] < MULTI_ONSET_GAP_MIN_EDGE_SPACING
+        ):
+            continue
+
+        intervals = [gap_onsets[i + 1] - gap_onsets[i] for i in range(len(gap_onsets) - 1)]
+        short_interval_count = sum(
+            1
+            for interval in intervals
+            if MULTI_ONSET_GAP_MIN_INTERVAL <= interval <= MULTI_ONSET_GAP_MAX_INTERVAL
+        )
+        if short_interval_count < MULTI_ONSET_GAP_MIN_SHORT_INTERVALS:
+            continue
+
+        for start_time, end_time in zip(gap_onsets, gap_onsets[1:]):
+            if end_time - start_time >= 0.08:
+                segments.append((start_time, end_time))
+
+        trailing_gap = next_start - gap_onsets[-1]
+        if trailing_gap > PRIOR_ONSET_BACKTRACK_SECONDS and trailing_gap >= 0.08:
+            segments.append((gap_onsets[-1], next_start))
+
+    return segments
+
+
 def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
@@ -395,6 +446,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
 
     gap_injected_segments: list[tuple[float, float]] = []
+    multi_onset_gap_segments = collect_multi_onset_gap_segments(active_ranges, onset_times)
     qualifying_gap_run: list[tuple[float, float]] = []
     for index in range(len(active_ranges) - 1):
         previous_end = active_ranges[index][1]
@@ -476,6 +528,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for start_time, end_time in gap_injected_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
+    for start_time, end_time in multi_onset_gap_segments:
+        if end_time - start_time >= 0.08:
+            segments.append((start_time, end_time))
     for start_time, end_time in terminal_orphan_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
@@ -504,6 +559,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "onsetTimes": onset_times,
         "activeRanges": [[round(start, 4), round(end, 4)] for start, end in active_ranges],
         "gapInjectedSegments": [[round(start, 4), round(end, 4)] for start, end in gap_injected_segments],
+        "multiOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in multi_onset_gap_segments],
         "terminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_orphan_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),

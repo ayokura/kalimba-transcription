@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, classify_event_gesture, collapse_same_start_primary_singletons, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -123,6 +123,15 @@ def test_detect_segments_reports_tempo_debug_metrics() -> None:
     assert debug["tempoAudioDurationSec"] > 0
     assert debug["tempoEstimationMs"] >= 0
 
+
+
+def test_collect_multi_onset_gap_segments_requires_long_regular_gap() -> None:
+    active_ranges = [(0.0, 0.12), (2.5, 2.68)]
+    onset_times = [0.62, 0.94, 1.24, 1.82]
+
+    segments = collect_multi_onset_gap_segments(active_ranges, onset_times)
+
+    assert segments == [(0.62, 0.94), (0.94, 1.24), (1.24, 1.82), (1.82, 2.5)]
 
 
 def test_detect_segments_collapses_redundant_same_start_segments() -> None:
@@ -307,8 +316,15 @@ def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
     ]
+    assert len(payload["events"]) >= 45
+    assert payload["debug"]["multiOnsetGapSegments"] == [
+        [7.7013, 8.0373],
+        [8.0373, 8.3173],
+        [8.3173, 8.8933],
+        [8.8933, 9.4973],
+    ]
     assert "C5+G5" not in note_sets
-    assert note_sets.count("G5") >= 2
+    assert note_sets.count("G5") >= 3
 
 
 def test_transcription_recovers_late_c5_e5_head_in_c4_to_g4_fixture() -> None:
