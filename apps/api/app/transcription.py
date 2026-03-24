@@ -1010,6 +1010,18 @@ def segment_peaks(
                     ):
                         reasons.append("weak-lower-secondary")
             if (
+                reasons == ["score-below-threshold"]
+                and segment_duration >= 0.75
+                and hypothesis.candidate.frequency < primary.candidate.frequency
+                and hypothesis.fundamental_ratio >= 0.95
+                and hypothesis.score >= primary.score * 0.1
+                and not octave_dyad_allowed
+            ):
+                interval_cents = abs(cents_distance(primary.candidate.frequency, hypothesis.candidate.frequency))
+                if 250.0 <= interval_cents <= 550.0:
+                    reasons = []
+
+            if (
                 not reasons
                 and ascending_primary_run_ceiling is not None
                 and segment_duration <= ASCENDING_PRIMARY_RUN_MAX_DURATION
