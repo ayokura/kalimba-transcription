@@ -124,6 +124,23 @@ def test_detect_segments_reports_tempo_debug_metrics() -> None:
     assert debug["tempoEstimationMs"] >= 0
 
 
+
+def test_detect_segments_collapses_redundant_same_start_segments() -> None:
+    sample_rate = 44100
+    gap = np.zeros(int(sample_rate * 0.12), dtype=np.float32)
+    audio = np.concatenate([
+        synthesize_note(261.6255653005986, sample_rate=sample_rate, duration=0.22),
+        gap,
+        synthesize_note(293.6647679174076, sample_rate=sample_rate, duration=0.22),
+        gap,
+        synthesize_note(329.6275569128699, sample_rate=sample_rate, duration=0.22),
+    ]).astype(np.float32)
+
+    segments, _, _ = detect_segments(audio, sample_rate)
+
+    starts = [round(start, 4) for start, _ in segments]
+    assert starts.count(starts[0]) == 1
+    assert len(segments) >= 3
 def test_segment_peaks_keeps_mono_d4_monophonic() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_note(293.665)
@@ -311,6 +328,23 @@ def test_collapse_same_start_primary_singletons_prefers_singleton_over_lower_car
     cleaned = collapse_same_start_primary_singletons(raw_events)
     assert len(cleaned) == 1
     assert [note.note_name for note in cleaned[0].notes] == ["A4"]
+    assert cleaned[0].start_time == 0.0
+    assert cleaned[0].end_time == 0.32
+
+
+def test_collapse_same_start_primary_singletons_prefers_singleton_when_following_primary_is_lower_carryover() -> None:
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.18, notes=[g4], is_gliss_like=False, primary_note_name="G4", primary_score=220.0),
+        RawEvent(start_time=0.0, end_time=0.32, notes=[c4, g4], is_gliss_like=False, primary_note_name="C4", primary_score=80.0),
+    ]
+
+    cleaned = collapse_same_start_primary_singletons(raw_events)
+
+    assert len(cleaned) == 1
+    assert [note.note_name for note in cleaned[0].notes] == ["G4"]
     assert cleaned[0].start_time == 0.0
     assert cleaned[0].end_time == 0.32
 
@@ -880,3 +914,4 @@ def test_transcription_debug_reports_disabled_repeated_pattern_passes() -> None:
     assert payload["debug"]["disabledRepeatedPatternPasses"] == ["normalize_repeated_triad_patterns"]
     triad_trace = next(item for item in payload["debug"]["repeatedPatternPassTrace"] if item["pass"] == "normalize_repeated_triad_patterns")
     assert triad_trace["enabled"] is False
+

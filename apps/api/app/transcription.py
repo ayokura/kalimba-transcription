@@ -19,6 +19,10 @@ from .tunings import build_custom_tuning, parse_note_name
 FRAME_LENGTH = 2048
 HOP_LENGTH = 256
 TEMPO_ESTIMATION_HOP_LENGTH = 1024
+RMS_MEDIAN_THRESHOLD_MAX_PEAK_RATIO = 0.45
+NESTED_SEGMENT_DEDUP_MAX_START_DELTA = 0.02
+SEGMENT_OVERLAP_TRIM_MAX_OVERLAP = 0.18
+SEGMENT_OVERLAP_TRIM_MIN_DURATION = 0.18
 ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
@@ -89,6 +93,9 @@ SPLIT_UPPER_OCTAVE_PAIR_MAX_DURATION = 0.7
 SPLIT_UPPER_OCTAVE_PAIR_PRIMARY_SCORE_MAX = 800.0
 SPLIT_UPPER_OCTAVE_PAIR_FRACTION = 0.45
 SAME_START_PRIMARY_SINGLETON_MAX_START_DELTA = 0.02
+OVERLAPPING_PRIMARY_SINGLETON_MIN_START_DELTA = 0.05
+OVERLAPPING_PRIMARY_SINGLETON_MIN_OVERLAP = 0.08
+OVERLAPPING_PRIMARY_SINGLETON_MAX_DURATION = 0.4
 
 PITCH_CLASS_TO_DOREMI = {
     "C": "ド",
@@ -275,10 +282,54 @@ def merge_time_ranges(ranges: list[tuple[float, float]], gap_tolerance: float = 
 
     return merged
 
+def dedupe_nested_segments(segments: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    if len(segments) < 2:
+        return segments
+
+    deduped: list[tuple[float, float]] = []
+    for start_time, end_time in sorted(segments):
+        if deduped:
+            previous_start, previous_end = deduped[-1]
+            same_start = abs(start_time - previous_start) <= NESTED_SEGMENT_DEDUP_MAX_START_DELTA
+            if same_start:
+                if end_time <= previous_end:
+                    continue
+                deduped[-1] = (previous_start, end_time)
+                continue
+        deduped.append((start_time, end_time))
+
+    return deduped
+
+
+def trim_small_overlapping_segments(segments: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    if len(segments) < 2:
+        return segments
+
+    trimmed: list[tuple[float, float]] = [segments[0]]
+    for start_time, end_time in segments[1:]:
+        previous_start, previous_end = trimmed[-1]
+        overlap = previous_end - start_time
+        duration = end_time - start_time
+        if (
+            overlap > 0
+            and overlap <= SEGMENT_OVERLAP_TRIM_MAX_OVERLAP
+            and duration >= SEGMENT_OVERLAP_TRIM_MIN_DURATION
+        ):
+            adjusted_start = previous_end
+            if end_time - adjusted_start >= 0.08:
+                trimmed.append((adjusted_start, end_time))
+                continue
+        trimmed.append((start_time, end_time))
+
+    return trimmed
+
+
 def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
-    threshold = max(float(np.max(rms)) * 0.18, float(np.median(rms)) * 2.2, 0.01)
+    max_rms = float(np.max(rms))
+    median_rms = float(np.median(rms))
+    threshold = max(max_rms * 0.18, min(median_rms * 2.2, max_rms * RMS_MEDIAN_THRESHOLD_MAX_PEAK_RATIO), 0.01)
     active_frames = rms >= threshold
 
     active_ranges: list[tuple[float, float]] = []
@@ -334,7 +385,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         supplemental_starts = [
             start
             for start, _ in raw_active_ranges
-            if effective_range_start + 0.05 < start < range_end - 0.05
+            if effective_range_start + 0.18 < start < range_end - 0.05
             and all(abs(start - onset) >= 0.24 for onset in range_onsets)
         ]
         boundary_times = sorted([*range_onsets, *supplemental_starts])
@@ -353,7 +404,8 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
 
-    segments = sorted(segments)
+    segments = dedupe_nested_segments(segments)
+    segments = trim_small_overlapping_segments(segments)
 
     if not segments:
         duration = librosa.get_duration(y=audio, sr=sample_rate)
@@ -1089,8 +1141,7 @@ def collapse_same_start_primary_singletons(raw_events: list[RawEvent]) -> list[R
 
         following = raw_events[index + 1]
         shared_start = abs(current.start_time - following.start_time) <= SAME_START_PRIMARY_SINGLETON_MAX_START_DELTA
-        shared_primary = current.primary_note_name and current.primary_note_name == following.primary_note_name
-        if not shared_start or not shared_primary:
+        if not shared_start:
             cleaned.append(current)
             index += 1
             continue
@@ -1106,15 +1157,31 @@ def collapse_same_start_primary_singletons(raw_events: list[RawEvent]) -> list[R
         following_non_primary = [note for note in following.notes if note.note_name != following.primary_note_name]
         current_is_primary_singleton = len(current.notes) == 1
         following_is_primary_singleton = len(following.notes) == 1
+        current_note_names = {note.note_name for note in current.notes}
+        following_note_names = {note.note_name for note in following.notes}
+        shared_primary = current.primary_note_name and current.primary_note_name == following.primary_note_name
+
         prefer_current = (
-            current_is_primary_singleton
+            shared_primary
+            and current_is_primary_singleton
             and following_non_primary
             and all(note.frequency < current_primary.frequency for note in following_non_primary)
+        ) or (
+            current_is_primary_singleton
+            and current.primary_note_name in following_note_names
+            and any(note.note_name != current.primary_note_name for note in following.notes)
+            and all(note.note_name == current.primary_note_name or note.frequency < current_primary.frequency for note in following.notes)
         )
         prefer_following = (
-            following_is_primary_singleton
+            shared_primary
+            and following_is_primary_singleton
             and current_non_primary
             and all(note.frequency < following_primary.frequency for note in current_non_primary)
+        ) or (
+            following_is_primary_singleton
+            and following.primary_note_name in current_note_names
+            and any(note.note_name != following.primary_note_name for note in current.notes)
+            and all(note.note_name == following.primary_note_name or note.frequency < following_primary.frequency for note in current.notes)
         )
 
         if not prefer_current and not prefer_following:
@@ -2562,5 +2629,8 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
+
+
 
 
