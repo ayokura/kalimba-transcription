@@ -2918,69 +2918,78 @@ def normalize_repeated_triad_patterns(raw_events: list[RawEvent]) -> list[RawEve
         for note in event.notes:
             dominant_notes_by_name.setdefault(note.note_name, note)
     dominant_notes = sorted((dominant_notes_by_name[name] for name in dominant_set), key=lambda note: note.frequency)
+    exact_anchor_indices = [index for index, event in enumerate(raw_events) if frozenset(note.note_name for note in event.notes) == dominant_set]
+    if len(exact_anchor_indices) < 2:
+        return raw_events
+
+    def event_set_at(index: int) -> frozenset[str]:
+        return frozenset(note.note_name for note in raw_events[index].notes)
+
+    def is_local_fragment(index: int) -> bool:
+        event_set = event_set_at(index)
+        overlap = len(event_set & dominant_set)
+        if overlap == 0:
+            return False
+        if event_set < dominant_set and len(event_set) <= 2:
+            return True
+        if len(event_set) == 2 and overlap >= 1:
+            return True
+        if len(event_set) == 3 and overlap == 2 and note_set_counts.get(event_set, 0) <= 1:
+            return True
+        return False
+
+    local_actions: dict[int, str] = {}
+
+    def assign_local_action(index: int, *, region: str) -> None:
+        if index in local_actions:
+            return
+        event = raw_events[index]
+        event_set = event_set_at(index)
+        overlap = len(event_set & dominant_set)
+        duration = event.end_time - event.start_time
+        if event_set < dominant_set and len(event_set) <= 2:
+            if region == "head" and len(event_set) == 1 and duration <= 0.18:
+                local_actions[index] = "drop"
+                return
+            local_actions[index] = "rewrite"
+            return
+        if len(event_set) == 3 and overlap == 2 and note_set_counts.get(event_set, 0) <= 1 and event.primary_score <= dominant_score * 0.75:
+            local_actions[index] = "rewrite"
+            return
+        if len(event_set) == 2 and overlap >= 1 and duration <= 0.2:
+            local_actions[index] = "drop"
+
+    for left_anchor_index, right_anchor_index in zip(exact_anchor_indices, exact_anchor_indices[1:]):
+        interior_indices = list(range(left_anchor_index + 1, right_anchor_index))
+        if not interior_indices:
+            continue
+        if all(is_local_fragment(index) for index in interior_indices):
+            for index in interior_indices:
+                assign_local_action(index, region="between")
+
+    first_anchor_index = exact_anchor_indices[0]
+    head_indices = list(range(0, first_anchor_index))
+    if first_anchor_index <= 2 and len(exact_anchor_indices) >= 3 and head_indices and all(is_local_fragment(index) for index in head_indices):
+        for index in head_indices:
+            assign_local_action(index, region="head")
+
+    last_anchor_index = exact_anchor_indices[-1]
+    tail_indices = list(range(last_anchor_index + 1, len(raw_events)))
+    if len(exact_anchor_indices) >= 3 and 0 < len(tail_indices) <= 2 and all(is_local_fragment(index) for index in tail_indices):
+        for index in tail_indices:
+            assign_local_action(index, region="tail")
 
     normalized: list[RawEvent] = []
     for index, event in enumerate(raw_events):
-        event_set = frozenset(note.note_name for note in event.notes)
+        event_set = event_set_at(index)
         if event_set == dominant_set:
             normalized.append(event)
             continue
 
-        previous_set = frozenset(note.note_name for note in raw_events[index - 1].notes) if index > 0 else frozenset()
-        next_set = frozenset(note.note_name for note in raw_events[index + 1].notes) if index + 1 < len(raw_events) else frozenset()
-        previous_gap = event.start_time - raw_events[index - 1].end_time if index > 0 else 1.0
-        next_gap = raw_events[index + 1].start_time - event.end_time if index + 1 < len(raw_events) else 1.0
-        nearby_dominant = any(
-            0 <= offset < len(raw_events) and frozenset(note.note_name for note in raw_events[offset].notes) == dominant_set
-            for offset in (index - 3, index - 2, index - 1, index + 1, index + 2, index + 3)
-        )
-        between_dominant = (
-            index > 0
-            and index + 1 < len(raw_events)
-            and previous_set == dominant_set
-            and next_set == dominant_set
-            and previous_gap <= 0.18
-            and next_gap <= 0.18
-        )
-        duration = event.end_time - event.start_time
-        shared_note_count = len(event_set & dominant_set)
-
-        if (
-            len(event_set) <= 2
-            and duration <= 0.32
-            and event.primary_score <= dominant_score * 0.28
-            and (
-                (shared_note_count >= 1 and (
-                    (previous_set == dominant_set and previous_gap <= CHORD_CLUSTER_MAX_GAP)
-                    or (next_set == dominant_set and next_gap <= CHORD_CLUSTER_MAX_GAP)
-                    or between_dominant
-                ))
-                or (len(event_set) == 1 and nearby_dominant and event.primary_score <= dominant_score * 0.25)
-                or (len(event_set) == 2 and shared_note_count >= 1 and nearby_dominant and duration <= 0.2 and event.primary_score <= dominant_score * 0.12)
-            )
-        ):
+        local_action = local_actions.get(index)
+        if local_action == "drop":
             continue
-
-        if event_set < dominant_set and nearby_dominant:
-            if len(event_set) == 2 or (len(event_set) == 1 and next(iter(event_set), None) in dominant_set):
-                normalized.append(
-                    RawEvent(
-                        start_time=event.start_time,
-                        end_time=event.end_time,
-                        notes=dominant_notes,
-                        is_gliss_like=event.is_gliss_like,
-                        primary_note_name=event.primary_note_name if event.primary_note_name in dominant_set else dominant_notes[0].note_name,
-                        primary_score=event.primary_score,
-                    )
-                )
-                continue
-
-        if (
-            len(event_set) == 3
-            and len(event_set & dominant_set) == 2
-            and note_set_counts.get(event_set, 0) <= 1
-            and nearby_dominant
-        ):
+        if local_action == "rewrite":
             normalized.append(
                 RawEvent(
                     start_time=event.start_time,

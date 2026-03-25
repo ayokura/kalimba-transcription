@@ -771,6 +771,51 @@ def test_normalize_repeated_triad_patterns_rewrites_isolated_outlier_triad() -> 
     ]
 
 
+def test_normalize_repeated_triad_patterns_rewrites_terminal_dyad_with_anchor_run() -> None:
+    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
+    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
+    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.7, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=1000.0),
+        RawEvent(start_time=0.9, end_time=1.5, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="F4", primary_score=980.0),
+        RawEvent(start_time=1.7, end_time=2.3, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="A4", primary_score=1020.0),
+        RawEvent(start_time=2.5, end_time=2.9, notes=[d4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=420.0),
+    ]
+
+    normalized = normalize_repeated_triad_patterns(raw_events)
+    assert [[note.note_name for note in event.notes] for event in normalized] == [
+        ["D4", "F4", "A4"],
+        ["D4", "F4", "A4"],
+        ["D4", "F4", "A4"],
+        ["D4", "F4", "A4"],
+    ]
+
+
+
+def test_normalize_repeated_triad_patterns_does_not_rewrite_without_local_anchor_support() -> None:
+    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
+    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
+    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.6, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=980.0),
+        RawEvent(start_time=0.8, end_time=1.3, notes=[d4], is_gliss_like=False, primary_note_name="D4", primary_score=180.0),
+        RawEvent(start_time=1.5, end_time=2.1, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="F4", primary_score=990.0),
+        RawEvent(start_time=4.0, end_time=4.5, notes=[a4], is_gliss_like=False, primary_note_name="A4", primary_score=160.0),
+        RawEvent(start_time=7.0, end_time=7.6, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=1000.0),
+    ]
+
+    normalized = normalize_repeated_triad_patterns(raw_events)
+    assert [[note.note_name for note in event.notes] for event in normalized] == [
+        ["D4", "F4", "A4"],
+        ["D4", "F4", "A4"],
+        ["D4", "F4", "A4"],
+        ["A4"],
+        ["D4", "F4", "A4"],
+    ]
+
+
 def test_simplify_short_gliss_prefix_to_contiguous_singleton_picks_matching_note() -> None:
     e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
     f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
