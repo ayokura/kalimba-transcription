@@ -2491,167 +2491,80 @@ def merge_short_chord_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
 
 
 def normalize_repeated_four_note_family(raw_events: list[RawEvent]) -> list[RawEvent]:
-    if len(raw_events) < 4:
+    if len(raw_events) < 2:
         return raw_events
-
-    triad_counts: dict[frozenset[str], int] = {}
-    for event in raw_events:
-        note_set = frozenset(note.note_name for note in event.notes)
-        if len(note_set) == 3:
-            triad_counts[note_set] = triad_counts.get(note_set, 0) + 1
-
-    if len(triad_counts) < 2:
-        return raw_events
-
-    best_family: tuple[frozenset[str], frozenset[str], frozenset[str], int] | None = None
-    triad_items = list(triad_counts.items())
-    for index, (first_set, first_count) in enumerate(triad_items):
-        for second_set, second_count in triad_items[index + 1:]:
-            union = first_set | second_set
-            overlap = first_set & second_set
-            score = first_count + second_count
-            dominant_count = max(first_count, second_count)
-            if len(union) != 4 or len(overlap) < 2 or min(first_count, second_count) < 1 or dominant_count != 3:
-                continue
-            candidate = (union, first_set, second_set, score)
-            if best_family is None or candidate[3] > best_family[3]:
-                best_family = candidate
-
-    if best_family is None:
-        return raw_events
-
-    family_set, triad_a, triad_b, _ = best_family
-    family_triads = {triad_a, triad_b}
-    exclusive_family_notes = triad_a ^ triad_b
-    has_supporting_subset = any(
-        0 < len(frozenset(note.note_name for note in event.notes)) < 3
-        and frozenset(note.note_name for note in event.notes) < family_set
-        and bool(frozenset(note.note_name for note in event.notes) & exclusive_family_notes)
-        for event in raw_events
-    )
-    if not has_supporting_subset:
-        return raw_events
-    family_notes_by_name: dict[str, NoteCandidate] = {}
-    family_events = [event for event in raw_events if frozenset(note.note_name for note in event.notes) in family_triads]
-    for event in family_events:
-        for note in event.notes:
-            if note.note_name in family_set:
-                family_notes_by_name.setdefault(note.note_name, note)
-    if len(family_notes_by_name) != 4:
-        return raw_events
-    family_notes = sorted((family_notes_by_name[name] for name in family_set), key=lambda note: note.frequency)
 
     normalized: list[RawEvent] = []
     index = 0
     while index < len(raw_events):
         event = raw_events[index]
         event_set = frozenset(note.note_name for note in event.notes)
-        duration = event.end_time - event.start_time
-        previous_event = raw_events[index - 1] if index > 0 else None
-        next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
-        previous_gap = event.start_time - previous_event.end_time if previous_event is not None else float("inf")
-        next_gap = next_event.start_time - event.end_time if next_event is not None else float("inf")
-        previous_set = frozenset(note.note_name for note in previous_event.notes) if previous_event is not None else frozenset()
-        next_set = frozenset(note.note_name for note in next_event.notes) if next_event is not None else frozenset()
-        previous_local_family = previous_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and previous_set == family_set
-        next_local_family = next_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and next_set == family_set
-        previous_local_triads = previous_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and previous_set in family_triads
-        next_local_triads = next_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and next_set in family_triads
-        previous_local_subset = previous_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and previous_set < family_set
-        next_local_subset = next_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and next_set < family_set
+        if len(event_set) == 3:
+            family_notes_by_name = {note.note_name: note for note in event.notes}
+            family_set = set(event_set)
+            merged_end_time = event.end_time
+            merged_primary_name = event.primary_note_name
+            merged_primary_score = event.primary_score
+            merged_is_gliss_like = event.is_gliss_like
+            consumed = 1
+            added_new_note = False
+            merged_family = False
+            step_index = index + 1
 
-        if event_set in family_triads:
-            if index + 1 < len(raw_events):
-                following = raw_events[index + 1]
+            while step_index < len(raw_events) and consumed < 3:
+                following = raw_events[step_index]
                 following_set = frozenset(note.note_name for note in following.notes)
-                gap = following.start_time - event.end_time
-                if gap <= 0.02 and following_set < family_set and len(following_set) <= 2 and following_set & (family_set - event_set):
+                gap = following.start_time - merged_end_time
+                new_notes = following_set - family_set
+
+                if gap > GLISS_CLUSTER_MAX_GAP or len(following_set) != 1:
+                    break
+                if len(new_notes) != 1 or len(family_set | following_set) != 4:
+                    break
+
+                if new_notes:
+                    following_duration = following.end_time - following.start_time
+                    if following_duration > 0.18 and not following.is_gliss_like:
+                        break
+                    added_new_note = True
+
+                for note in following.notes:
+                    family_notes_by_name.setdefault(note.note_name, note)
+                family_set |= following_set
+                merged_end_time = following.end_time
+                merged_is_gliss_like = merged_is_gliss_like or following.is_gliss_like
+                if merged_primary_name not in family_set and following.primary_note_name in family_set:
+                    merged_primary_name = following.primary_note_name
+                merged_primary_score = max(merged_primary_score, following.primary_score)
+                consumed += 1
+                step_index += 1
+
+                if added_new_note and len(family_set) == 4:
+                    family_notes = sorted(
+                        (family_notes_by_name[name] for name in family_set),
+                        key=lambda note: note.frequency,
+                    )
                     normalized.append(
                         RawEvent(
                             start_time=event.start_time,
-                            end_time=following.end_time,
+                            end_time=merged_end_time,
                             notes=family_notes,
-                            is_gliss_like=event.is_gliss_like or following.is_gliss_like,
-                            primary_note_name=event.primary_note_name if event.primary_note_name in family_set else family_notes[0].note_name,
-                            primary_score=max(event.primary_score, following.primary_score),
+                            is_gliss_like=merged_is_gliss_like,
+                            primary_note_name=merged_primary_name if merged_primary_name in family_set else family_notes[0].note_name,
+                            primary_score=merged_primary_score,
                         )
                     )
-                    index += 2
-                    continue
-            if previous_local_triads or next_local_triads or previous_local_subset or next_local_subset:
-                normalized.append(
-                    RawEvent(
-                        start_time=event.start_time,
-                        end_time=event.end_time,
-                        notes=family_notes,
-                        is_gliss_like=event.is_gliss_like,
-                        primary_note_name=event.primary_note_name if event.primary_note_name in family_set else family_notes[0].note_name,
-                        primary_score=event.primary_score,
-                    )
-                )
-                index += 1
-                continue
+                    index += consumed
+                    merged_family = True
+                    break
 
-        if event_set < family_set:
-            prev_family = len(normalized) > 0 and frozenset(note.note_name for note in normalized[-1].notes) == family_set and previous_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP
-            next_family = next_local_triads or next_local_family
-            if len(event_set) <= 2 and ((prev_family and duration <= 1.0) or (next_family and duration <= 0.24)):
-                normalized.append(
-                    RawEvent(
-                        start_time=event.start_time,
-                        end_time=event.end_time,
-                        notes=family_notes,
-                        is_gliss_like=event.is_gliss_like,
-                        primary_note_name=event.primary_note_name if event.primary_note_name in family_set else family_notes[0].note_name,
-                        primary_score=event.primary_score,
-                    )
-                )
-                index += 1
-                continue
-
-        if len(event_set) == 1 and not (event_set <= family_set) and duration <= 0.24:
-            prev_family = len(normalized) > 0 and frozenset(note.note_name for note in normalized[-1].notes) == family_set and previous_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP
-            next_family = next_local_triads or next_local_family
-            if prev_family or next_family:
-                index += 1
+            if merged_family:
                 continue
 
         normalized.append(event)
         index += 1
 
-    collapsed: list[RawEvent] = []
-    index = 0
-    while index < len(normalized):
-        event = normalized[index]
-        if index + 1 < len(normalized):
-            next_event = normalized[index + 1]
-            event_set = frozenset(note.note_name for note in event.notes)
-            next_set = frozenset(note.note_name for note in next_event.notes)
-            next_gap = next_event.start_time - event.end_time
-            if (
-                len(event_set) == 2
-                and event_set < family_set
-                and next_set == family_set
-                and next_gap <= GLISS_CLUSTER_MAX_GAP
-            ):
-                collapsed.append(
-                    RawEvent(
-                        start_time=event.start_time,
-                        end_time=next_event.end_time,
-                        notes=family_notes,
-                        is_gliss_like=False,
-                        primary_note_name=next_event.primary_note_name if next_event.primary_note_name in family_set else family_notes[0].note_name,
-                        primary_score=max(event.primary_score, next_event.primary_score),
-                    )
-                )
-                index += 2
-                continue
-        collapsed.append(event)
-        index += 1
-
-    return collapsed
-
-
+    return normalized
 
 def normalize_repeated_four_note_gliss_patterns(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 5:
