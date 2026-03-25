@@ -1,13 +1,27 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "completed",
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
+    "minEvents": 6,
+    "maxEvents": 6,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {},
-    "maxEventNoteSetOccurrences": {}
+    "requiredEventNoteSetOccurrences": {
+      "E6": 1,
+      "C4": 1,
+      "D4": 1,
+      "E4": 1,
+      "F4": 1,
+      "G4": 1
+    },
+    "maxEventNoteSetOccurrences": {
+      "E6": 1,
+      "C4": 1,
+      "D4": 1,
+      "E4": 1,
+      "F4": 1,
+      "G4": 1
+    }
   },
-  "reason": "new practical separated-notes coverage fixture awaiting recognizer evaluation"
+  "reason": "restart separated-notes phrase now completes after narrow local carryover cleanup removes stale upper E6 and mirrored D4/E4 overlap without regressing completed practical fixtures"
 }

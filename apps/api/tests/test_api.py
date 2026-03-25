@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -187,6 +187,38 @@ def test_detect_segments_collapses_redundant_same_start_segments() -> None:
     starts = [round(start, 4) for start, _ in segments]
     assert starts.count(starts[0]) == 1
     assert len(segments) >= 3
+
+def test_simplify_short_secondary_bleed_strips_restart_stale_upper_note() -> None:
+    c4 = NoteCandidate(9, "C4", 261.6255653005986, "C", 4)
+    d4 = NoteCandidate(8, "D4", 293.6647679174076, "D", 4)
+    e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
+    events = [
+        RawEvent(0.0, 0.18, [e6], False, "E6", 400.0),
+        RawEvent(0.18, 0.38, [c4, e6], False, "C4", 350.0),
+        RawEvent(0.38, 0.62, [d4], False, "D4", 320.0),
+    ]
+
+    simplified = simplify_short_secondary_bleed(events)
+
+    assert [note.note_name for note in simplified[1].notes] == ["C4"]
+
+
+def test_simplify_short_secondary_bleed_collapses_mirrored_adjacent_run_to_upper_note() -> None:
+    d4 = NoteCandidate(8, "D4", 293.6647679174076, "D", 4)
+    e4 = NoteCandidate(10, "E4", 329.6275569128699, "E", 4)
+    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    events = [
+        RawEvent(0.0, 0.24, [d4], False, "D4", 340.0),
+        RawEvent(0.24, 0.42, [d4, e4], False, "D4", 300.0),
+        RawEvent(0.42, 0.6, [d4, e4], False, "D4", 295.0),
+        RawEvent(0.6, 0.86, [f4], False, "F4", 360.0),
+    ]
+
+    simplified = simplify_short_secondary_bleed(events)
+
+    assert [note.note_name for note in simplified[1].notes] == ["E4"]
+    assert [note.note_name for note in simplified[2].notes] == ["E4"]
+
 def test_segment_peaks_keeps_mono_d4_monophonic() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_note(293.665)
@@ -428,6 +460,26 @@ def test_transcription_drops_low_register_sparse_gap_tail_helpers_in_d4_d5_fixtu
     assert all(candidate.get("droppedBy") == "low_register_sparse_gap_tail" for candidate in sparse_candidates)
 
 
+def test_transcription_regression_for_e6_to_g4_restart_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-g4-sequence-06-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = [
+        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
+        for event in payload["events"]
+    ]
+    assert note_sets == ["E6", "C4", "D4", "E4", "F4", "G4"]
+
+
 def test_transcription_regression_for_repeated_octave_dyad() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_repeated_chord((587.3295, 1174.6591))
@@ -520,6 +572,27 @@ def test_suppress_resonant_carryover_keeps_phrase_reset_ascending_dyad() -> None
         ["C5", "E5"],
         ["E5", "G5"],
         ["G4"],
+    ]
+
+
+def test_suppress_resonant_carryover_keeps_lower_note_when_high_return_is_stale() -> None:
+    e6 = NoteCandidate(key=17, note_name="E6", frequency=1318.5102276514797, pitch_class="E", octave=6)
+    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
+    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.4, notes=[e6], is_gliss_like=False, primary_note_name="E6", primary_score=700.0),
+        RawEvent(start_time=0.4, end_time=0.78, notes=[c4], is_gliss_like=False, primary_note_name="C4", primary_score=380.0),
+        RawEvent(start_time=0.78, end_time=0.98, notes=[c4, e6], is_gliss_like=False, primary_note_name="E6", primary_score=220.0),
+        RawEvent(start_time=0.98, end_time=1.36, notes=[d4], is_gliss_like=False, primary_note_name="D4", primary_score=340.0),
+    ]
+
+    cleaned = suppress_resonant_carryover(raw_events)
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [
+        ["E6"],
+        ["C4"],
+        ["C4"],
+        ["D4"],
     ]
 
 def test_collapse_same_start_primary_singletons_prefers_singleton_over_lower_carryover() -> None:
@@ -1307,6 +1380,8 @@ def test_transcription_debug_reports_disabled_repeated_pattern_passes() -> None:
     assert payload["debug"]["disabledRepeatedPatternPasses"] == ["normalize_repeated_triad_patterns"]
     triad_trace = next(item for item in payload["debug"]["repeatedPatternPassTrace"] if item["pass"] == "normalize_repeated_triad_patterns")
     assert triad_trace["enabled"] is False
+
+
 
 
 

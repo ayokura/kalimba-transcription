@@ -164,7 +164,14 @@ LOW_CONFIDENCE_DYAD_MAX_SCORE = 120.0
 SHORT_SECONDARY_STRIP_MAX_DURATION = 0.28
 SHORT_SECONDARY_STRIP_MIN_SCORE = 60.0
 SHORT_SECONDARY_STRIP_NEXT_SCORE_RATIO = 5.0
+RESTART_STALE_UPPER_STRIP_MIN_INTERVAL_CENTS = 1800.0
+RESTART_STALE_UPPER_STRIP_MAX_DURATION = 0.24
+ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS = 150.0
+ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS = 350.0
 RESONANT_CARRYOVER_PHRASE_RESET_MIN_GAP = 0.45
+RESONANT_CARRYOVER_HIGH_RETURN_MAX_DURATION = 0.24
+RESONANT_CARRYOVER_HIGH_RETURN_MIN_INTERVAL_CENTS = 1800.0
+RESONANT_CARRYOVER_HIGH_RETURN_MAX_NEXT_GAP = 0.12
 LEADING_SINGLE_TRANSIENT_MAX_DURATION = 0.3
 LEADING_SINGLE_TRANSIENT_MAX_SCORE = 150.0
 LEADING_SINGLE_TRANSIENT_NEXT_SCORE_RATIO = 8.0
@@ -1898,10 +1905,31 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
                     and next_event.notes[0].frequency < repeated_notes[0].frequency
                 ):
                     keep_phrase_reset_ascending_dyad = True
+            keep_phrase_reset_lower_repeated = False
+            if len(repeated_notes) == 1 and len(fresh_notes) == 1 and index + 1 < len(raw_events):
+                next_event = raw_events[index + 1]
+                next_gap = next_event.start_time - event.end_time
+                if (
+                    len(next_event.notes) == 1
+                    and duration <= RESONANT_CARRYOVER_HIGH_RETURN_MAX_DURATION
+                    and next_gap <= RESONANT_CARRYOVER_HIGH_RETURN_MAX_NEXT_GAP
+                    and repeated_notes[0].frequency < next_event.notes[0].frequency < fresh_notes[0].frequency
+                    and cents_distance(repeated_notes[0].frequency, fresh_notes[0].frequency) >= RESONANT_CARRYOVER_HIGH_RETURN_MIN_INTERVAL_CENTS
+                ):
+                    keep_phrase_reset_lower_repeated = True
+            if keep_phrase_reset_lower_repeated:
+                updated_event = RawEvent(
+                    start_time=event.start_time,
+                    end_time=event.end_time,
+                    notes=repeated_notes,
+                    is_gliss_like=event.is_gliss_like,
+                    primary_note_name=repeated_notes[0].note_name,
+                    primary_score=event.primary_score,
+                )
             if len(repeated_notes) == 1 and len(fresh_notes) == 1 and (
                 repeated_notes[0].frequency < fresh_notes[0].frequency
                 or duration <= 0.14
-            ) and not keep_short_octave_dyad and not keep_phrase_reset_ascending_dyad:
+            ) and not keep_short_octave_dyad and not keep_phrase_reset_ascending_dyad and not keep_phrase_reset_lower_repeated:
                 updated_event = RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,
@@ -2093,6 +2121,7 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
             primary_note = next((note for note in event.notes if note.note_name == event.primary_note_name), None)
             if primary_note is not None:
                 lower_notes = [note for note in event.notes if note.note_name != primary_note.note_name and note.frequency < primary_note.frequency]
+                upper_notes = [note for note in event.notes if note.note_name != primary_note.note_name and note.frequency > primary_note.frequency]
                 if len(lower_notes) == 1 and index + 1 < len(raw_events):
                     next_event = raw_events[index + 1]
                     if (
@@ -2106,6 +2135,48 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
                             notes=[primary_note],
                             is_gliss_like=event.is_gliss_like,
                             primary_note_name=primary_note.note_name,
+                            primary_score=event.primary_score,
+                        )
+                elif len(upper_notes) == 1:
+                    upper_note = upper_notes[0]
+                    previous_event = raw_events[index - 1] if index > 0 else None
+                    next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
+                    repeated_high_return = (
+                        previous_event is not None
+                        and any(note.note_name == upper_note.note_name for note in previous_event.notes)
+                        and next_event is not None
+                        and len(next_event.notes) == 1
+                        and primary_note.frequency < next_event.notes[0].frequency < upper_note.frequency
+                        and cents_distance(primary_note.frequency, upper_note.frequency) >= RESONANT_CARRYOVER_HIGH_RETURN_MIN_INTERVAL_CENTS
+                    )
+                    mirrored_adjacent_run = False
+                    if previous_event is not None and next_event is not None and index + 2 < len(raw_events):
+                        next_next_event = raw_events[index + 2]
+                        mirrored_adjacent_run = (
+                            len(previous_event.notes) == 1
+                            and previous_event.notes[0].note_name == primary_note.note_name
+                            and len(next_event.notes) == 2
+                            and {note.note_name for note in next_event.notes} == {primary_note.note_name, upper_note.note_name}
+                            and len(next_next_event.notes) == 1
+                            and next_next_event.notes[0].frequency > upper_note.frequency
+                            and cents_distance(primary_note.frequency, upper_note.frequency) <= 250.0
+                        )
+                    repeated_adjacent_tail = (
+                        previous_event is not None
+                        and {note.note_name for note in previous_event.notes} == {primary_note.note_name, upper_note.note_name}
+                        and next_event is not None
+                        and len(next_event.notes) == 1
+                        and next_event.notes[0].frequency > upper_note.frequency
+                        and cents_distance(primary_note.frequency, upper_note.frequency) <= 250.0
+                    )
+                    if repeated_high_return or mirrored_adjacent_run or repeated_adjacent_tail:
+                        kept_note = primary_note if repeated_high_return else upper_note
+                        updated_event = RawEvent(
+                            start_time=event.start_time,
+                            end_time=event.end_time,
+                            notes=[kept_note],
+                            is_gliss_like=event.is_gliss_like,
+                            primary_note_name=kept_note.note_name,
                             primary_score=event.primary_score,
                         )
         cleaned.append(updated_event)
@@ -2452,6 +2523,40 @@ def split_adjacent_step_dyads_in_ascending_runs(
         low_rank, high_rank = split_candidate
         if forward_support(index, high_rank) < ADJACENT_SEPARATED_DYAD_RUN_MIN_FORWARD_SUPPORT:
             split_events.append(event)
+            continue
+
+        previous_same_dyad = False
+        if index > 0:
+            previous_split_candidate = is_split_candidate(raw_events[index - 1])
+            previous_same_dyad = previous_split_candidate == split_candidate
+        previous_step_sequence = False
+        if index > 1 and len(raw_events[index - 1].notes) == 1 and len(raw_events[index - 2].notes) == 1:
+            previous_singleton_ranks = event_rank_range(raw_events[index - 1])
+            older_singleton_ranks = event_rank_range(raw_events[index - 2])
+            previous_step_sequence = (
+                previous_singleton_ranks is not None
+                and older_singleton_ranks is not None
+                and previous_singleton_ranks[0] == previous_singleton_ranks[1] == high_rank
+                and older_singleton_ranks[0] == older_singleton_ranks[1] == low_rank
+            )
+        next_is_higher_singleton = False
+        if index + 1 < len(raw_events):
+            next_range = event_rank_range(raw_events[index + 1])
+            next_is_higher_singleton = next_range is not None and next_range[0] == next_range[1] and next_range[0] > high_rank
+        if previous_step_sequence and next_is_higher_singleton:
+            continue
+        if previous_same_dyad and next_is_higher_singleton:
+            upper_note = max(event.notes, key=lambda note: note.frequency)
+            split_events.append(
+                RawEvent(
+                    start_time=event.start_time,
+                    end_time=event.end_time,
+                    notes=[upper_note],
+                    is_gliss_like=False,
+                    primary_note_name=upper_note.note_name,
+                    primary_score=event.primary_score,
+                )
+            )
             continue
 
         ordered_notes = sorted(event.notes, key=lambda note: note.frequency)
@@ -3562,6 +3667,7 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
 
 
 
