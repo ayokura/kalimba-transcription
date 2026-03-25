@@ -1,9 +1,9 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-24-c4-to-e6-sequence-17-separated-notes-kalimba-17-c
-- expected note: C4 / D4 / E4 / F4 / G4 / A4 / B4 / C5 / D5 / E5 / F5 / G5 / A5 / B5 / C6 / D6 / E6
+- expected note: (C4 / D4 / E4 / F4 / G4 / A4 / B4 / C5 / D5 / E5 / F5 / G5 / A5 / B5 / C6 / D6 / E6) x3
 - capture intent: separated_notes
 - default capture intent: separated_notes
 - source profile: acoustic_real
@@ -11,7 +11,7 @@
 
 ## Expected Performance
 
-- summary: C4 / D4 / E4 / F4 / G4 / A4 / B4 / C5 / D5 / E5 / F5 / G5 / A5 / B5 / C6 / D6 / E6
+- summary: (C4 / D4 / E4 / F4 / G4 / A4 / B4 / C5 / D5 / E5 / F5 / G5 / A5 / B5 / C6 / D6 / E6) x3
 
 ### Events
 
@@ -35,13 +35,8 @@
 
 ## Review
 
-- summary: 一部の note-set または event 数がずれています。
-- reason: 録音意図: 単音列 / 検出傾向: 要確認。認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。
-
-## Recapture Guidance
-
-- 各音をはっきり区切り、次の音まで十分に待つ。
-- 低音残響が長い場合でも、新しい打鍵の間隔を広めに取る。
+- summary: continuous articulation のまま 51 event を回復。repeat-03 は completed へ昇格。
+- reason: gap-head segmentation と sparse-gap-tail の高音オクターブ簡約で、3 cycle 全体の separated-notes を practical fixture として保持できる状態になりました。
 
 ## Memo
 

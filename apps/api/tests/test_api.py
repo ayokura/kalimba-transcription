@@ -348,8 +348,10 @@ def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture
     assert any(13.6053 in onset_set for onset_set in gap_onset_sets)
     assert "C5+G5" not in note_sets
     assert "E5+E6" not in note_sets
-    assert note_sets[31:35] == ["C6", "D6", "E5", "E6"]
+    assert note_sets[17:22] == ["C4", "D4", "E4", "F4", "G4"]
+    assert note_sets[31:34] == ["C6", "D6", "E6"]
     assert note_sets[-2:] == ["D6", "E6"]
+    assert all("+" not in note_set for note_set in note_sets)
 
 
 
