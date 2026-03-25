@@ -443,6 +443,29 @@ def trim_small_overlapping_segments(segments: list[tuple[float, float]]) -> list
     return trimmed
 
 
+def should_suppress_staircase_supplemental_start(
+    start_time: float,
+    raw_starts: list[float],
+    range_onsets: list[float],
+) -> bool:
+    previous_onsets = [time for time in range_onsets if time < start_time]
+    following_onsets = [time for time in range_onsets if time > start_time]
+    if not previous_onsets or not following_onsets:
+        return False
+
+    previous_distance = start_time - previous_onsets[-1]
+    following_distance = following_onsets[0] - start_time
+    if not (0.14 <= previous_distance <= 0.3 and 0.14 <= following_distance <= 0.3):
+        return False
+
+    staircase_cluster = sorted(time for time in raw_starts if abs(time - start_time) <= 0.05)
+    if len(staircase_cluster) < 4:
+        return False
+
+    intervals = [staircase_cluster[index + 1] - staircase_cluster[index] for index in range(len(staircase_cluster) - 1)]
+    return all(interval <= 0.02 for interval in intervals)
+
+
 def collect_multi_onset_gap_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
@@ -890,7 +913,12 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for range_index, (range_start, range_end) in enumerate(active_ranges):
         effective_range_start = range_start
         previous_range_end = active_ranges[range_index - 1][1] if range_index > 0 else None
-        prior_onsets = [time for time in onset_times if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005]
+        prior_onsets = [
+            time
+            for time in onset_times
+            if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005
+            and (previous_range_end is None or time >= previous_range_end + 0.005)
+        ]
         relaxed_head_segment = False
         if prior_onsets:
             effective_range_start = prior_onsets[-1]
@@ -908,11 +936,13 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
                     relaxed_head_segment = True
 
         range_onsets = [time for time in onset_times if effective_range_start + 0.005 < time < range_end - 0.05]
+        raw_range_starts = [start for start, _ in raw_active_ranges]
         supplemental_starts = [
             start
-            for start, _ in raw_active_ranges
+            for start in raw_range_starts
             if effective_range_start + 0.18 < start < range_end - 0.05
             and all(abs(start - onset) >= 0.24 for onset in range_onsets)
+            and not should_suppress_staircase_supplemental_start(start, raw_range_starts, range_onsets)
         ]
         boundary_times = sorted([*range_onsets, *supplemental_starts])
         deduped_onsets: list[float] = []
@@ -4027,4 +4057,5 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
 

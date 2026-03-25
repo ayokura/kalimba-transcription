@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_terminal_residual_cluster, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_terminal_residual_cluster, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -216,6 +216,20 @@ def test_collect_two_onset_gap_segments_requires_tight_mute_restrike_shape() -> 
 
     assert segments == [(12.6667, 12.752)]
 
+def test_should_suppress_staircase_supplemental_start_detects_dense_bridge_cluster() -> None:
+    raw_starts = [4.4013, 4.4120, 4.4200, 4.4307, 4.4413, 4.4493, 4.4600, 4.4707, 4.4787]
+    range_onsets = [4.2373, 4.6800]
+
+    assert should_suppress_staircase_supplemental_start(4.4200, raw_starts, range_onsets) is True
+    assert should_suppress_staircase_supplemental_start(4.4787, raw_starts, range_onsets) is True
+
+
+def test_should_suppress_staircase_supplemental_start_keeps_isolated_restart_helper() -> None:
+    raw_starts = [12.4200, 12.7800, 13.1400]
+    range_onsets = [12.2373, 13.4800]
+
+    assert should_suppress_staircase_supplemental_start(12.7800, raw_starts, range_onsets) is False
+
 def test_collect_terminal_multi_onset_segments_requires_close_orphan_then_regular_run() -> None:
     active_ranges = [(21.692, 21.968)]
     onset_times = [22.112, 23.088, 23.5307, 23.96, 24.3627]
@@ -241,6 +255,36 @@ def test_detect_segments_collapses_redundant_same_start_segments() -> None:
     starts = [round(start, 4) for start, _ in segments]
     assert starts.count(starts[0]) == 1
     assert len(segments) >= 3
+
+
+def test_detect_segments_does_not_backtrack_into_previous_active_range(monkeypatch: pytest.MonkeyPatch) -> None:
+    import app.transcription as transcription
+
+    frame_times = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 0.9, 1.0], dtype=np.float32)
+    rms = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0], dtype=np.float32)
+    onset_times = np.array([0.45, 0.79], dtype=np.float32)
+
+    monkeypatch.setattr(transcription.librosa.feature, "rms", lambda **kwargs: np.array([rms], dtype=np.float32))
+    monkeypatch.setattr(transcription.librosa.onset, "onset_strength", lambda **kwargs: np.zeros_like(rms))
+    monkeypatch.setattr(transcription.librosa.onset, "onset_detect", lambda **kwargs: np.array([0, 1], dtype=np.int64))
+
+    def fake_frames_to_time(frames, **kwargs):
+        frames = np.asarray(frames)
+        if len(frames) == len(rms):
+            return frame_times
+        return onset_times
+
+    monkeypatch.setattr(transcription.librosa, "frames_to_time", fake_frames_to_time)
+    monkeypatch.setattr(transcription.librosa, "get_duration", lambda **kwargs: 1.08)
+    monkeypatch.setattr(transcription.librosa.beat, "beat_track", lambda **kwargs: (np.array([90.0]), np.array([], dtype=np.int64)))
+
+    segments, _, _ = detect_segments(np.zeros(44100, dtype=np.float32), 44100)
+
+    late_segments = [(round(start, 2), round(end, 2)) for start, end in segments if start >= 0.58]
+
+    assert len(late_segments) == 1
+    assert late_segments[0][0] == pytest.approx(0.79)
+    assert late_segments[0][1] == pytest.approx(1.08)
 
 def test_simplify_short_secondary_bleed_strips_restart_stale_upper_note() -> None:
     c4 = NoteCandidate(9, "C4", 261.6255653005986, "C", 4)

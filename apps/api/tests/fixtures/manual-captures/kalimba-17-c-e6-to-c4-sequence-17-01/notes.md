@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-25-e6-to-c4-sequence-17-separated-notes-kalimba-17-c
 - expected note: E6 / D6 / C6 / B5 / A5 / G5 / F5 / E5 / D5 / C5 / B4 / A4 / G4 / F4 / E4 / D4 / C4
 - capture intent: separated_notes
@@ -35,8 +35,8 @@
 
 ## Review
 
-- summary: 一部の note-set または event 数がずれています。
-- reason: 録音意図: 単音列 / 検出傾向: 要確認。認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。
+- summary: descending separated-notes run が current recognizer で一致しました。
+- reason: active-range backtracking が前の active window 内の onset を借りないようにしたことで、A5/G5 境界の staircase overlap が解消しました。
 
 ## Recapture Guidance
 
@@ -46,3 +46,4 @@
 ## Memo
 
 (empty)
+
