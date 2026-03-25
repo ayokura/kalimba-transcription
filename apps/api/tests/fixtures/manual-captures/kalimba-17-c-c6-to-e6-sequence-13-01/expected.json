@@ -1,13 +1,23 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "completed",
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
+    "minEvents": 13,
+    "maxEvents": 13,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {},
-    "maxEventNoteSetOccurrences": {}
+    "requiredEventNoteSetOccurrences": {
+      "C6": 3,
+      "D6": 5,
+      "E6": 4,
+      "C6+E6": 1
+    },
+    "maxEventNoteSetOccurrences": {
+      "C6": 3,
+      "D6": 5,
+      "E6": 4,
+      "C6+E6": 1
+    }
   },
-  "reason": "new practical separated-notes coverage fixture awaiting recognizer evaluation"
+  "reason": "high-register separated-notes phrase and intended strict C6+E6 chord now transcribe correctly without note-specific heuristics"
 }
