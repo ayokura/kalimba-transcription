@@ -438,19 +438,6 @@ def test_simplify_descending_adjacent_dyad_residue_collapses_upper_residue_to_lo
     assert [note.note_name for note in simplified[1].notes] == ["G4"]
 
 
-def test_collapse_late_descending_step_handoffs_keeps_lower_note() -> None:
-    a4 = NoteCandidate(13, "A4", 440.0, "A", 4)
-    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
-    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
-    events = [
-        RawEvent(0.0, 0.22, [a4], False, "A4", 320.0),
-        RawEvent(0.22, 0.34, [g4, a4], False, "G4", 280.0),
-        RawEvent(0.34, 0.58, [f4], False, "F4", 300.0),
-    ]
-
-    cleaned = collapse_late_descending_step_handoffs(events)
-
-    assert [note.note_name for note in cleaned[1].notes] == ["G4"]
 
 
 def test_simplify_short_secondary_bleed_keeps_primary_for_restart_upper_sandwich() -> None:
@@ -466,6 +453,21 @@ def test_simplify_short_secondary_bleed_keeps_primary_for_restart_upper_sandwich
     simplified = simplify_short_secondary_bleed(events)
 
     assert [note.note_name for note in simplified[1].notes] == ["D6"]
+
+
+def test_collapse_late_descending_step_handoffs_keeps_lower_note() -> None:
+    a4 = NoteCandidate(13, "A4", 440.0, "A", 4)
+    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
+    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    events = [
+        RawEvent(0.0, 0.22, [a4], False, "A4", 320.0),
+        RawEvent(0.22, 0.34, [g4, a4], False, "G4", 280.0),
+        RawEvent(0.34, 0.58, [f4], False, "F4", 300.0),
+    ]
+
+    cleaned = collapse_late_descending_step_handoffs(events)
+
+    assert [note.note_name for note in cleaned[1].notes] == ["G4"]
 
 
 def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -> None:
