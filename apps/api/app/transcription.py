@@ -3270,6 +3270,9 @@ def collapse_late_descending_step_handoffs(raw_events: list[RawEvent]) -> list[R
             len(previous_event.notes) == 1
             and len(event.notes) == 2
             and len(next_event.notes) == 1
+            and not previous_event.is_gliss_like
+            and not event.is_gliss_like
+            and not next_event.is_gliss_like
             and duration <= DESCENDING_STEP_HANDOFF_MAX_DURATION
         ):
             lower_note, upper_note = sorted(event.notes, key=lambda note: note.frequency)
@@ -3299,6 +3302,46 @@ def merge_adjacent_events(raw_events: list[RawEvent]) -> list[RawEvent]:
     if not raw_events:
         return []
 
+    merged = [raw_events[0]]
+    for event in raw_events[1:]:
+        previous = merged[-1]
+        gap = event.start_time - previous.end_time
+        same_notes = [note.note_name for note in previous.notes] == [note.note_name for note in event.notes]
+        if same_notes and gap <= 0.12:
+            merged[-1] = RawEvent(
+                start_time=previous.start_time,
+                end_time=event.end_time,
+                notes=previous.notes,
+                is_gliss_like=previous.is_gliss_like or event.is_gliss_like,
+                primary_note_name=previous.primary_note_name,
+                primary_score=max(previous.primary_score, event.primary_score),
+            )
+            continue
+        merged.append(event)
+
+    return merged
+
+
+def split_adjacent_step_dyads_in_ascending_runs(
+    raw_events: list[RawEvent],
+    tuning: InstrumentTuning,
+) -> list[RawEvent]:
+    if len(raw_events) < 3:
+        return raw_events
+
+    note_rank = {note.note_name: index for index, note in enumerate(sorted(tuning.notes, key=lambda item: item.frequency))}
+
+    def event_rank_range(event: RawEvent) -> tuple[int, int] | None:
+        ranks = sorted({note_rank.get(note.note_name, -1) for note in event.notes})
+        if not ranks or ranks[0] < 0:
+            return None
+        return ranks[0], ranks[-1]
+
+    def is_split_candidate(event: RawEvent) -> tuple[int, int] | None:
+        if event.is_gliss_like or len(event.notes) != 2 or (event.end_time - event.start_time) > ADJACENT_SEPARATED_DYAD_MAX_DURATION:
+            return None
+        rank_range = event_rank_range(event)
+        if rank_range is None:
             return None
         low_rank, high_rank = rank_range
         if high_rank != low_rank + 1:
@@ -4461,7 +4504,6 @@ async def transcribe_audio(
     processed_events = suppress_descending_terminal_residual_cluster(processed_events, tuning)
     processed_events = suppress_descending_restart_residual_cluster(processed_events, tuning)
     processed_events = collapse_late_descending_step_handoffs(processed_events)
-    processed_events = collapse_late_descending_step_handoffs(processed_events)
     merged_events = merge_adjacent_events(processed_events)
     merged_events = merge_short_chord_clusters(merged_events)
     merged_events = merge_adjacent_events(merged_events)
@@ -4515,6 +4557,7 @@ async def transcribe_audio(
                 {
                     "startTime": round(event.start_time, 4),
                     "endTime": round(event.end_time, 4),
+                    "notes": [candidate.note_name for candidate in event.notes],
                     "gesture": classify_event_gesture(event, index, raw_events, merged_events),
                 }
                 for index, event in enumerate(merged_events)
