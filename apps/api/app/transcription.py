@@ -132,6 +132,10 @@ GLISS_TERTIARY_MIN_SCORE = 20.0
 GLISS_TERTIARY_STRONG_ONSET_GAIN = 5.0
 GLISS_TERTIARY_WEAK_ONSET_GAIN = 2.0
 GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.9
+FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_DURATION = 0.55
+FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_SCORE_RATIO = 0.08
+FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_FUNDAMENTAL_RATIO = 0.9
+FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_MARGIN_RATIO = 1.15
 FOUR_NOTE_GLISS_EXTENSION_MAX_DURATION = 1.0
 FOUR_NOTE_GLISS_EXTENSION_SCORE_RATIO = 0.02
 FOUR_NOTE_GLISS_EXTENSION_MIN_SCORE = 18.0
@@ -1444,6 +1448,34 @@ def maybe_promote_stale_primary_to_upper_octave(
         'reason': 'stale-lower-primary-promoted-to-upper-octave',
     }
 
+
+def select_contiguous_four_note_cluster(
+    primary: NoteHypothesis,
+    ranked: list[NoteHypothesis],
+    segment_duration: float,
+) -> list[NoteCandidate] | None:
+    if segment_duration < FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_DURATION:
+        return None
+    if len(ranked) < 4:
+        return None
+
+    top_four = ranked[:4]
+    top_four_keys = sorted(hypothesis.candidate.key for hypothesis in top_four)
+    if len(set(top_four_keys)) != 4 or top_four_keys[-1] - top_four_keys[0] != 3:
+        return None
+    if primary.candidate.key not in top_four_keys:
+        return None
+    if any(hypothesis.fundamental_ratio < FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_FUNDAMENTAL_RATIO for hypothesis in top_four):
+        return None
+
+    fourth = top_four[-1]
+    if fourth.score < primary.score * FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_SCORE_RATIO:
+        return None
+    if len(ranked) >= 5 and fourth.score < ranked[4].score * FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_MARGIN_RATIO:
+        return None
+
+    return sorted((hypothesis.candidate for hypothesis in top_four), key=lambda candidate: candidate.frequency)
+
 def segment_peaks(
     audio: np.ndarray,
     sample_rate: int,
@@ -1505,12 +1537,30 @@ def segment_peaks(
     residual_ranked: list[NoteHypothesis] = []
     promoted_secondary_to_recent_upper_octave = False
     secondary_decision_trail: list[dict[str, Any]] = []
+    contiguous_four_note_cluster = select_contiguous_four_note_cluster(primary, ranked, end_time - start_time)
+    if contiguous_four_note_cluster is not None:
+        selected = contiguous_four_note_cluster
+        for candidate in selected:
+            if candidate.note_name == primary.candidate.note_name:
+                continue
+            matching = next(hypothesis for hypothesis in ranked[:4] if hypothesis.candidate.note_name == candidate.note_name)
+            secondary_decision_trail.append(
+                {
+                    "noteName": matching.candidate.note_name,
+                    "score": round(matching.score, 6),
+                    "fundamentalRatio": round(matching.fundamental_ratio, 6),
+                    "onsetGain": None,
+                    "accepted": True,
+                    "reasons": ["contiguous-four-note-cluster"],
+                    "octaveDyadAllowed": False,
+                }
+            )
     secondary_score_ratio = SECONDARY_SCORE_RATIO
     if end_time - start_time <= 0.14:
         secondary_score_ratio = SHORT_SEGMENT_SECONDARY_SCORE_RATIO
     secondary_min_fundamental_ratio = SECONDARY_MIN_FUNDAMENTAL_RATIO
 
-    if MAX_POLYPHONY > 1:
+    if MAX_POLYPHONY > 1 and contiguous_four_note_cluster is None:
         residual_spectrum = suppress_harmonics(spectrum, frequencies, primary.candidate.frequency)
         residual_ranked = rank_tuning_candidates(frequencies, residual_spectrum, tuning, debug=debug)
         for hypothesis in residual_ranked[:8]:

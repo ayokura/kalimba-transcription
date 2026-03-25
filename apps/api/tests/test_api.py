@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -122,6 +122,34 @@ def test_detect_segments_reports_tempo_debug_metrics() -> None:
     assert debug["tempoHopLength"] == 1024
     assert debug["tempoAudioDurationSec"] > 0
     assert debug["tempoEstimationMs"] >= 0
+
+
+def test_select_contiguous_four_note_cluster_promotes_dense_local_family() -> None:
+    ranked = [
+        NoteHypothesis(NoteCandidate(13, 'D5', 587.33, 'D', 5), 1000.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(12, 'B4', 493.88, 'B', 4), 800.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(11, 'G4', 391.99, 'G', 4), 600.0, 0.0, 0.0, 0.97, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(10, 'E4', 329.63, 'E', 4), 180.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(9, 'D4', 293.66, 'D', 4), 100.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0),
+    ]
+
+    selected = select_contiguous_four_note_cluster(ranked[0], ranked, 0.7)
+
+    assert selected is not None
+    assert [candidate.note_name for candidate in selected] == ['E4', 'G4', 'B4', 'D5']
+
+
+def test_select_contiguous_four_note_cluster_rejects_short_or_ambiguous_window() -> None:
+    ranked = [
+        NoteHypothesis(NoteCandidate(13, 'D5', 587.33, 'D', 5), 1000.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(12, 'B4', 493.88, 'B', 4), 800.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(11, 'G4', 391.99, 'G', 4), 600.0, 0.0, 0.0, 0.97, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(10, 'E4', 329.63, 'E', 4), 120.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(9, 'D4', 293.66, 'D', 4), 110.0, 0.0, 0.0, 0.92, 0.0, 0.0, 0.0, 0.0),
+    ]
+
+    assert select_contiguous_four_note_cluster(ranked[0], ranked, 0.4) is None
+    assert select_contiguous_four_note_cluster(ranked[0], ranked, 0.7) is None
 
 
 
@@ -1303,4 +1331,5 @@ def test_transcription_debug_reports_disabled_repeated_pattern_passes() -> None:
     assert payload["debug"]["disabledRepeatedPatternPasses"] == ["normalize_repeated_triad_patterns"]
     triad_trace = next(item for item in payload["debug"]["repeatedPatternPassTrace"] if item["pass"] == "normalize_repeated_triad_patterns")
     assert triad_trace["enabled"] is False
+
 
