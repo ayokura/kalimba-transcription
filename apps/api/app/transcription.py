@@ -1585,6 +1585,28 @@ def select_contiguous_four_note_cluster(
 
     return sorted((hypothesis.candidate for hypothesis in top_four), key=lambda candidate: candidate.frequency)
 
+def is_slide_playable_contiguous_cluster(notes: list[NoteCandidate], tuning: InstrumentTuning) -> bool:
+    if len(notes) != 3:
+        return False
+
+    sorted_keys = sorted(note.key for note in notes)
+    if sorted_keys[-1] - sorted_keys[0] != 2 or len(set(sorted_keys)) != 3:
+        return False
+
+    rank_by_name = {
+        note.note_name: index for index, note in enumerate(sorted(tuning.notes, key=lambda item: item.frequency))
+    }
+    ranks: list[int] = []
+    for note in sorted(notes, key=lambda item: item.frequency):
+        rank = rank_by_name.get(note.note_name)
+        if rank is None:
+            return False
+        ranks.append(rank)
+
+    lower_gap = ranks[1] - ranks[0]
+    upper_gap = ranks[2] - ranks[1]
+    return lower_gap == upper_gap and lower_gap >= 2
+
 def segment_peaks(
     audio: np.ndarray,
     sample_rate: int,
@@ -1970,18 +1992,32 @@ def segment_peaks(
 
             if chosen_extension is not None:
                 hypothesis, onset_gain = chosen_extension
-                selected.append(hypothesis.candidate)
-                secondary_decision_trail.append(
-                    {
-                        "noteName": hypothesis.candidate.note_name,
-                        "score": round(hypothesis.score, 6),
-                        "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
-                        "onsetGain": round(onset_gain, 6),
-                        "accepted": True,
-                        "reasons": ["contiguous-tertiary-extension"],
-                        "octaveDyadAllowed": False,
-                    }
-                )
+                extended_cluster = [*selected, hypothesis.candidate]
+                if is_slide_playable_contiguous_cluster(extended_cluster, tuning):
+                    selected.append(hypothesis.candidate)
+                    secondary_decision_trail.append(
+                        {
+                            "noteName": hypothesis.candidate.note_name,
+                            "score": round(hypothesis.score, 6),
+                            "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
+                            "onsetGain": round(onset_gain, 6),
+                            "accepted": True,
+                            "reasons": ["contiguous-tertiary-extension"],
+                            "octaveDyadAllowed": False,
+                        }
+                    )
+                else:
+                    secondary_decision_trail.append(
+                        {
+                            "noteName": hypothesis.candidate.note_name,
+                            "score": round(hypothesis.score, 6),
+                            "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
+                            "onsetGain": round(onset_gain, 6),
+                            "accepted": False,
+                            "reasons": ["non-slide-playable-contiguous-cluster"],
+                            "octaveDyadAllowed": False,
+                        }
+                    )
 
     debug_payload = None
     if debug:
@@ -2678,6 +2714,48 @@ def suppress_short_residual_tails(raw_events: list[RawEvent]) -> list[RawEvent]:
 
     cleaned.append(raw_events[-1])
     return cleaned
+
+def suppress_descending_terminal_residual_cluster(raw_events: list[RawEvent], tuning: InstrumentTuning) -> list[RawEvent]:
+    if len(raw_events) < 5:
+        return raw_events
+
+    trailing = raw_events[-1]
+    previous = raw_events[-2]
+    if trailing.is_gliss_like or previous.is_gliss_like or len(trailing.notes) < 2 or len(trailing.notes) > 3:
+        return raw_events
+    if len(previous.notes) != 1 or (trailing.end_time - trailing.start_time) > 0.28:
+        return raw_events
+
+    rank_by_name = {
+        note.note_name: index for index, note in enumerate(sorted(tuning.notes, key=lambda item: item.frequency))
+    }
+    previous_rank = rank_by_name.get(previous.notes[0].note_name)
+    primary_rank = rank_by_name.get(trailing.primary_note_name)
+    if previous_rank is None or primary_rank is None or primary_rank != previous_rank + 1:
+        return raw_events
+
+    suffix_names: set[str] = {previous.notes[0].note_name}
+    expected_rank = previous_rank + 1
+    for event in reversed(raw_events[:-2]):
+        if len(event.notes) != 1 or event.is_gliss_like:
+            break
+        note_name = event.notes[0].note_name
+        note_rank = rank_by_name.get(note_name)
+        if note_rank != expected_rank:
+            break
+        suffix_names.add(note_name)
+        expected_rank += 1
+        if len(suffix_names) >= 4:
+            break
+
+    trailing_names = {note.note_name for note in trailing.notes}
+    if len(suffix_names) < 3 or not trailing_names.issubset(suffix_names):
+        return raw_events
+    if not any(rank_by_name.get(name, -1) > primary_rank for name in trailing_names):
+        return raw_events
+
+    return raw_events[:-1]
+
 
 def merge_adjacent_events(raw_events: list[RawEvent]) -> list[RawEvent]:
     if not raw_events:
@@ -3878,6 +3956,7 @@ async def transcribe_audio(
     processed_events = split_ambiguous_upper_octave_pairs(processed_events)
     processed_events = suppress_bridging_octave_pairs(processed_events)
     processed_events = suppress_short_residual_tails(processed_events)
+    processed_events = suppress_descending_terminal_residual_cluster(processed_events, tuning)
     merged_events = merge_adjacent_events(processed_events)
     merged_events = merge_short_chord_clusters(merged_events)
     merged_events = merge_adjacent_events(merged_events)
@@ -3948,10 +4027,4 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
-
-
-
-
-
-
 

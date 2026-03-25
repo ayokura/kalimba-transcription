@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_terminal_residual_cluster, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -103,6 +103,52 @@ def test_segment_peaks_allows_true_octave_dyad() -> None:
         item["noteName"] in {"D5", "D6"} and (item.get("accepted") or item.get("octaveDyadAllowed"))
         for item in debug["secondaryDecisionTrail"]
     )
+
+def test_is_slide_playable_contiguous_cluster_accepts_center_triads() -> None:
+    tuning = get_default_tunings()[0]
+    notes = [next(note for note in tuning.notes if note.note_name == name) for name in ["C4", "E4", "G4"]]
+
+    assert is_slide_playable_contiguous_cluster(notes, tuning) is True
+
+
+def test_is_slide_playable_contiguous_cluster_rejects_non_slide_center_crossing_cluster() -> None:
+    tuning = get_default_tunings()[0]
+    notes = [next(note for note in tuning.notes if note.note_name == name) for name in ["C4", "D4", "F4"]]
+
+    assert is_slide_playable_contiguous_cluster(notes, tuning) is False
+
+
+def test_suppress_descending_terminal_residual_cluster_drops_rebound_tail() -> None:
+    tuning = get_default_tunings()[0]
+    note_by_name = {note.note_name: note for note in tuning.notes}
+    raw_events = [
+        RawEvent(0.0, 0.2, [note_by_name["F4"]], False, "F4", 100.0),
+        RawEvent(0.2, 0.4, [note_by_name["E4"]], False, "E4", 100.0),
+        RawEvent(0.4, 0.6, [note_by_name["D4"]], False, "D4", 100.0),
+        RawEvent(0.6, 0.8, [note_by_name["C4"]], False, "C4", 100.0),
+        RawEvent(0.8, 1.0, [note_by_name["D4"], note_by_name["F4"]], False, "D4", 100.0),
+    ]
+
+    cleaned = suppress_descending_terminal_residual_cluster(raw_events, tuning)
+
+    assert cleaned == raw_events[:-1]
+
+
+def test_suppress_descending_terminal_residual_cluster_keeps_non_rebound_tail() -> None:
+    tuning = get_default_tunings()[0]
+    note_by_name = {note.note_name: note for note in tuning.notes}
+    raw_events = [
+        RawEvent(0.0, 0.2, [note_by_name["F4"]], False, "F4", 100.0),
+        RawEvent(0.2, 0.4, [note_by_name["E4"]], False, "E4", 100.0),
+        RawEvent(0.4, 0.6, [note_by_name["D4"]], False, "D4", 100.0),
+        RawEvent(0.6, 0.8, [note_by_name["C4"]], False, "C4", 100.0),
+        RawEvent(0.8, 1.0, [note_by_name["C4"], note_by_name["E4"], note_by_name["G4"]], True, "C4", 100.0),
+    ]
+
+    cleaned = suppress_descending_terminal_residual_cluster(raw_events, tuning)
+
+    assert cleaned == raw_events
+
 
 def test_detect_segments_reports_tempo_debug_metrics() -> None:
     sample_rate = 44100
@@ -1594,11 +1640,4 @@ def test_transcription_recovers_terminal_descending_onset_run_in_51_note_fixture
     assert payload["events"][-1]["notes"][0]["pitchClass"] == "C"
     assert payload["events"][-1]["notes"][0]["octave"] == 4
     assert len(payload["events"]) >= 50
-
-
-
-
-
-
-
 
