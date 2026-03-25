@@ -1045,6 +1045,45 @@ def test_transcription_regression_for_e6_to_g4_restart_fixture() -> None:
     assert note_sets == ["E6", "C4", "D4", "E4", "F4", "G4"]
 
 
+
+def test_transcription_regression_for_d6_to_e6_sequence_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-d6-to-e6-sequence-10-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = [
+        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
+        for event in payload["events"]
+    ]
+    assert note_sets == ["D6", "E6", "D6", "E6", "D6", "E6", "D6", "E6", "D6", "E6"]
+
+
+def test_transcription_regression_for_e6_to_c6_sequence_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c6-sequence-15-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = [
+        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
+        for event in payload["events"]
+    ]
+    assert note_sets == ["E6", "D6", "C6", "E6", "D6", "C6", "E6", "D6", "C6", "E6", "D6", "C6", "E6", "D6", "C6"]
 def test_transcription_regression_for_repeated_octave_dyad() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_repeated_chord((587.3295, 1174.6591))
@@ -2087,5 +2126,6 @@ def test_transcription_recovers_third_cycle_prefix_in_51_note_fixture() -> None:
     note_sets = ["+".join("{}{}".format(note["pitchClass"], note["octave"]) for note in event["notes"]) for event in payload["events"]]
     assert note_sets[33:37] == ["C4", "E6", "D6", "C6"]
     assert [round(start, 4) for start, _ in payload["debug"]["shortBridgeActiveRanges"]] == [20.6013]
+
 
 

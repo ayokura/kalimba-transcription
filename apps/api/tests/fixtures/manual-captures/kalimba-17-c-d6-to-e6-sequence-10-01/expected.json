@@ -1,13 +1,25 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "completed",
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
+    "minEvents": 10,
+    "maxEvents": 10,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {},
-    "maxEventNoteSetOccurrences": {}
+    "maxEventNoteSetOccurrences": {},
+    "expectedEventNoteSetsOrdered": [
+      "D6",
+      "E6",
+      "D6",
+      "E6",
+      "D6",
+      "E6",
+      "D6",
+      "E6",
+      "D6",
+      "E6"
+    ]
   },
-  "reason": "new practical separated-notes coverage fixture awaiting recognizer evaluation"
+  "reason": "high-register practical alternating separated-notes fixture now matches expected note-set order"
 }

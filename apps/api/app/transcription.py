@@ -1845,6 +1845,55 @@ def simplify_descending_adjacent_dyad_residue(raw_events: list[RawEvent]) -> lis
 
 
 
+
+def collapse_high_register_adjacent_bridge_dyads(
+    raw_events: list[RawEvent],
+    tuning: InstrumentTuning,
+) -> list[RawEvent]:
+    if len(raw_events) < 4:
+        return raw_events
+
+    cleaned = list(raw_events)
+    for index in range(1, len(cleaned) - 2):
+        previous_event = cleaned[index - 1]
+        event = cleaned[index]
+        next_event = cleaned[index + 1]
+        next_next_event = cleaned[index + 2]
+        duration = event.end_time - event.start_time
+        if (
+            len(previous_event.notes) != 1
+            or len(event.notes) != 2
+            or len(next_event.notes) != 1
+            or len(next_next_event.notes) != 1
+            or previous_event.is_gliss_like
+            or next_event.is_gliss_like
+            or next_next_event.is_gliss_like
+            or duration > ADJACENT_SEPARATED_DYAD_MAX_DURATION
+        ):
+            continue
+
+        lower_note, upper_note = sorted(event.notes, key=lambda note: note.frequency)
+        if (
+            lower_note.octave < 6
+            or upper_note.octave < 6
+            or previous_event.notes[0].note_name != upper_note.note_name
+            or next_event.notes[0].note_name != upper_note.note_name
+            or next_next_event.notes[0].note_name != lower_note.note_name
+            or event.primary_note_name != lower_note.note_name
+            or not is_adjacent_tuning_step(lower_note, upper_note, tuning)
+        ):
+            continue
+
+        cleaned[index] = RawEvent(
+            start_time=event.start_time,
+            end_time=event.end_time,
+            notes=[lower_note],
+            is_gliss_like=event.is_gliss_like,
+            primary_note_name=lower_note.note_name,
+            primary_score=event.primary_score,
+        )
+
+    return cleaned
 def suppress_descending_upper_singleton_spikes(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 3:
         return raw_events
@@ -1894,6 +1943,51 @@ def suppress_descending_upper_singleton_spikes(raw_events: list[RawEvent]) -> li
     return cleaned
 
 
+
+def suppress_short_descending_return_singletons(
+    raw_events: list[RawEvent],
+    tuning: InstrumentTuning,
+) -> list[RawEvent]:
+    if len(raw_events) < 3:
+        return raw_events
+
+    cleaned: list[RawEvent] = []
+    for index, event in enumerate(raw_events):
+        if index == 0 or index + 1 >= len(raw_events):
+            cleaned.append(event)
+            continue
+
+        previous_event = raw_events[index - 1]
+        next_event = raw_events[index + 1]
+        duration = event.end_time - event.start_time
+        gap_before = event.start_time - previous_event.end_time
+        gap_after = next_event.start_time - event.end_time
+        if (
+            len(previous_event.notes) == 1
+            and len(event.notes) == 1
+            and len(next_event.notes) == 1
+            and not previous_event.is_gliss_like
+            and not next_event.is_gliss_like
+            and duration <= 0.14
+            and gap_before <= 0.02
+            and gap_after >= 0.18
+        ):
+            previous_note = previous_event.notes[0]
+            current_note = event.notes[0]
+            next_note = next_event.notes[0]
+            if (
+                previous_note.octave >= 6
+                and current_note.octave >= 6
+                and next_note.octave >= 6
+                and previous_note.frequency < current_note.frequency < next_note.frequency
+                and is_adjacent_tuning_step(previous_note, current_note, tuning)
+                and is_adjacent_tuning_step(current_note, next_note, tuning)
+            ):
+                continue
+
+        cleaned.append(event)
+
+    return cleaned
 def suppress_descending_upper_return_overlap(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 4:
         return raw_events
@@ -2489,7 +2583,7 @@ def split_ambiguous_upper_octave_pairs(raw_events: list[RawEvent]) -> list[RawEv
 
     return split_events
 
-def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
+def suppress_resonant_carryover(raw_events: list[RawEvent], tuning: InstrumentTuning | None = None) -> list[RawEvent]:
     if not raw_events:
         return []
 
@@ -2554,7 +2648,35 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
                     <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
                 ):
                     keep_descending_lower_repeated = True
-            if keep_phrase_reset_lower_repeated or keep_descending_lower_repeated:
+            keep_high_register_repeated_lower_restart = False
+            if (
+                tuning is not None
+                and len(repeated_notes) == 1
+                and len(fresh_notes) == 1
+                and index > 1
+                and index + 1 < len(raw_events)
+            ):
+                previous_event = cleaned[-1]
+                previous_previous_event = cleaned[-2]
+                next_event = raw_events[index + 1]
+                repeated_note = repeated_notes[0]
+                fresh_note = fresh_notes[0]
+                if (
+                    len(previous_event.notes) == 1
+                    and len(previous_previous_event.notes) == 1
+                    and len(next_event.notes) == 1
+                    and previous_event.notes[0].note_name == repeated_note.note_name
+                    and previous_previous_event.notes[0].note_name == fresh_note.note_name
+                    and repeated_note.octave >= 6
+                    and fresh_note.octave >= 6
+                    and next_event.notes[0].octave >= 6
+                    and repeated_note.frequency < fresh_note.frequency < next_event.notes[0].frequency
+                    and is_adjacent_tuning_step(repeated_note, fresh_note, tuning)
+                    and is_adjacent_tuning_step(fresh_note, next_event.notes[0], tuning)
+                    and (event.end_time - event.start_time) <= DESCENDING_STEP_HANDOFF_MAX_DURATION
+                ):
+                    keep_high_register_repeated_lower_restart = True
+            if keep_phrase_reset_lower_repeated or keep_descending_lower_repeated or keep_high_register_repeated_lower_restart:
                 updated_event = RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,
@@ -2566,7 +2688,7 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
             if len(repeated_notes) == 1 and len(fresh_notes) == 1 and (
                 repeated_notes[0].frequency < fresh_notes[0].frequency
                 or duration <= 0.14
-            ) and not keep_short_octave_dyad and not keep_phrase_reset_ascending_dyad and not keep_phrase_reset_lower_repeated and not keep_descending_lower_repeated:
+            ) and not keep_short_octave_dyad and not keep_phrase_reset_ascending_dyad and not keep_phrase_reset_lower_repeated and not keep_descending_lower_repeated and not keep_high_register_repeated_lower_restart:
                 updated_event = RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,
@@ -4623,13 +4745,15 @@ async def transcribe_audio(
             segment_candidates_debug.append(candidate_debug)
 
     processed_events = suppress_low_confidence_dyad_transients(raw_events)
-    processed_events = suppress_resonant_carryover(processed_events)
+    processed_events = suppress_resonant_carryover(processed_events, tuning)
     processed_events = collapse_same_start_primary_singletons(processed_events)
     processed_events = simplify_short_secondary_bleed(processed_events)
     processed_events = suppress_post_tail_gap_bridge_dyads(processed_events)
     processed_events = suppress_leading_descending_overlap(processed_events, tuning)
     processed_events = simplify_descending_adjacent_dyad_residue(processed_events)
+    processed_events = collapse_high_register_adjacent_bridge_dyads(processed_events, tuning)
     processed_events = suppress_descending_upper_singleton_spikes(processed_events)
+    processed_events = suppress_short_descending_return_singletons(processed_events, tuning)
     processed_events = suppress_descending_upper_return_overlap(processed_events)
     processed_events = merge_short_gliss_clusters(processed_events)
     processed_events = simplify_short_gliss_prefix_to_contiguous_singleton(processed_events)
@@ -4715,6 +4839,7 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
 
 
 

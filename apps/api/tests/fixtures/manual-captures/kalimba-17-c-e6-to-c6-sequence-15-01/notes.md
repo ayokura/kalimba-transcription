@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: review_needed
+- verdict: completed
 - scenario: 2026-03-25-e6-to-c6-sequence-15-separated-notes-kalimba-17-c
 - expected note: E6 x 5 / D6 x 5 / C6 x 5
 - capture intent: separated_notes
@@ -33,14 +33,9 @@
 
 ## Review
 
-- summary: event の分割または束ね方に大きな差があります。
-- reason: 単音列 の想定に対して差が大きく、検出側は 要確認 優勢でした。録音意図と diff を確認してから fixture status を決めてください。
+- summary: descending high-register separated-notes sequence now matches expected note-set order.
+- reason: Recognizer now suppresses the former short D6 return artifacts after C6 without losing the intended descending pattern.
 
-## Recapture Guidance
-
-- 各音をはっきり区切り、次の音まで十分に待つ。
-- 低音残響が長い場合でも、新しい打鍵の間隔を広めに取る。
-- 再録音前に expected と detected の差分を見て、演奏意図自体が正しいか確認する。
 
 ## Memo
 
