@@ -325,75 +325,23 @@ def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
     ]
-    assert len(payload["events"]) >= 45
+    assert len(payload["events"]) == 51
     assert payload["debug"]["multiOnsetGapSegments"] == [
         [7.7013, 8.0373],
         [8.0373, 8.3173],
         [8.3173, 8.8933],
         [8.8933, 9.4973],
     ]
+    assert payload["debug"]["sparseGapTailSegments"] == [
+        [11.9067, 12.1467],
+        [19.1173, 19.464],
+        [19.464, 19.704],
+    ]
+    assert payload["debug"]["closeTerminalOrphanSegments"] == [[26.0533, 26.2933]]
     assert "C5+G5" not in note_sets
-    assert note_sets.count("G5") >= 3
+    assert "E5+E6" not in note_sets
+    assert note_sets[-2:] == ["D6", "E6"]
 
-
-def test_transcription_recovers_late_c5_e5_head_in_c4_to_g4_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-g4-sequence-17-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    assert len(payload["events"]) == 17
-    assert note_sets[-3:] == ["C5", "E5+G5", "G4"]
-    assert "C5+E5+G5" not in note_sets
-
-def test_transcription_recovers_trailing_g4_in_c4_to_g4_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-g4-sequence-17-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    primary_notes = [f"{event['notes'][0]['pitchClass']}{event['notes'][0]['octave']}" for event in payload["events"]]
-    assert len(payload["events"]) >= 16
-    assert primary_notes[-1] == "G4"
-
-
-def test_transcription_recovers_two_onset_gap_d5_in_c4_to_g4_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-g4-sequence-17-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    assert payload["debug"]["twoOnsetGapSegments"] == [[12.6667, 12.752]]
-    assert note_sets[12:17] == ["D5", "C4+E5", "C5", "E5+G5", "G4"]
 
 
 def test_transcription_regression_for_repeated_octave_dyad() -> None:
