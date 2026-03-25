@@ -1,0 +1,676 @@
+{
+  "capturedAt": "2026-03-25T11:45:26.760Z",
+  "scenario": "2026-03-25-e6-to-c4-sequence-51-separated-notes-kalimba-17-c",
+  "expectedNote": "E6 x 3 / D6 x 3 / C6 x 3 / B5 x 3 / A5 x 3 / G5 x 3 / F5 x 3 / E5 x 3 / D5 x 3 / C5 x 3 / B4 x 3 / A4 x 3 / G4 x 3 / F4 x 3 / E4 x 3 / D4 x 3 / C4 x 3",
+  "expectedPerformance": {
+    "source": "clickable-kalimba-ui",
+    "version": 1,
+    "summary": "E6 x 3 / D6 x 3 / C6 x 3 / B5 x 3 / A5 x 3 / G5 x 3 / F5 x 3 / E5 x 3 / D5 x 3 / C5 x 3 / B4 x 3 / A4 x 3 / G4 x 3 / F4 x 3 / E4 x 3 / D4 x 3 / C4 x 3",
+    "defaultCaptureIntent": "separated_notes",
+    "events": [
+      {
+        "index": 1,
+        "keys": [
+          {
+            "key": 17,
+            "noteName": "E6"
+          }
+        ],
+        "display": "E6",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 2,
+        "keys": [
+          {
+            "key": 1,
+            "noteName": "D6"
+          }
+        ],
+        "display": "D6",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 3,
+        "keys": [
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "C6",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 4,
+        "keys": [
+          {
+            "key": 2,
+            "noteName": "B5"
+          }
+        ],
+        "display": "B5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 5,
+        "keys": [
+          {
+            "key": 15,
+            "noteName": "A5"
+          }
+        ],
+        "display": "A5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 6,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 7,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 8,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 9,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 10,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 11,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 12,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          }
+        ],
+        "display": "A4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 13,
+        "keys": [
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "G4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 14,
+        "keys": [
+          {
+            "key": 7,
+            "noteName": "F4"
+          }
+        ],
+        "display": "F4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 15,
+        "keys": [
+          {
+            "key": 10,
+            "noteName": "E4"
+          }
+        ],
+        "display": "E4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 16,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          }
+        ],
+        "display": "D4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 17,
+        "keys": [
+          {
+            "key": 9,
+            "noteName": "C4"
+          }
+        ],
+        "display": "C4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 18,
+        "keys": [
+          {
+            "key": 17,
+            "noteName": "E6"
+          }
+        ],
+        "display": "E6",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 19,
+        "keys": [
+          {
+            "key": 1,
+            "noteName": "D6"
+          }
+        ],
+        "display": "D6",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 20,
+        "keys": [
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "C6",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 21,
+        "keys": [
+          {
+            "key": 2,
+            "noteName": "B5"
+          }
+        ],
+        "display": "B5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 22,
+        "keys": [
+          {
+            "key": 15,
+            "noteName": "A5"
+          }
+        ],
+        "display": "A5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 23,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 24,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 25,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 26,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 27,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 28,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 29,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          }
+        ],
+        "display": "A4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 30,
+        "keys": [
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "G4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 31,
+        "keys": [
+          {
+            "key": 7,
+            "noteName": "F4"
+          }
+        ],
+        "display": "F4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 32,
+        "keys": [
+          {
+            "key": 10,
+            "noteName": "E4"
+          }
+        ],
+        "display": "E4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 33,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          }
+        ],
+        "display": "D4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 34,
+        "keys": [
+          {
+            "key": 9,
+            "noteName": "C4"
+          }
+        ],
+        "display": "C4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 35,
+        "keys": [
+          {
+            "key": 17,
+            "noteName": "E6"
+          }
+        ],
+        "display": "E6",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 36,
+        "keys": [
+          {
+            "key": 1,
+            "noteName": "D6"
+          }
+        ],
+        "display": "D6",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 37,
+        "keys": [
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "C6",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 38,
+        "keys": [
+          {
+            "key": 2,
+            "noteName": "B5"
+          }
+        ],
+        "display": "B5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 39,
+        "keys": [
+          {
+            "key": 15,
+            "noteName": "A5"
+          }
+        ],
+        "display": "A5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 40,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 41,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 42,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 43,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 44,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 45,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 46,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          }
+        ],
+        "display": "A4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 47,
+        "keys": [
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "G4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 48,
+        "keys": [
+          {
+            "key": 7,
+            "noteName": "F4"
+          }
+        ],
+        "display": "F4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 49,
+        "keys": [
+          {
+            "key": 10,
+            "noteName": "E4"
+          }
+        ],
+        "display": "E4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 50,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          }
+        ],
+        "display": "D4",
+        "intent": "separated_notes"
+      },
+      {
+        "index": 51,
+        "keys": [
+          {
+            "key": 9,
+            "noteName": "C4"
+          }
+        ],
+        "display": "C4",
+        "intent": "separated_notes"
+      }
+    ]
+  },
+  "memo": null,
+  "captureIntent": "separated_notes",
+  "sourceProfile": "acoustic_real",
+  "tuning": {
+    "id": "kalimba-17-c",
+    "name": "17 Key C Major",
+    "keyCount": 17,
+    "notes": [
+      {
+        "key": 1,
+        "noteName": "D6",
+        "frequency": 1174.6590716696303
+      },
+      {
+        "key": 2,
+        "noteName": "B5",
+        "frequency": 987.7666025122483
+      },
+      {
+        "key": 3,
+        "noteName": "G5",
+        "frequency": 783.9908719634985
+      },
+      {
+        "key": 4,
+        "noteName": "E5",
+        "frequency": 659.2551138257398
+      },
+      {
+        "key": 5,
+        "noteName": "C5",
+        "frequency": 523.2511306011972
+      },
+      {
+        "key": 6,
+        "noteName": "A4",
+        "frequency": 440
+      },
+      {
+        "key": 7,
+        "noteName": "F4",
+        "frequency": 349.2282314330039
+      },
+      {
+        "key": 8,
+        "noteName": "D4",
+        "frequency": 293.6647679174076
+      },
+      {
+        "key": 9,
+        "noteName": "C4",
+        "frequency": 261.6255653005986
+      },
+      {
+        "key": 10,
+        "noteName": "E4",
+        "frequency": 329.6275569128699
+      },
+      {
+        "key": 11,
+        "noteName": "G4",
+        "frequency": 391.99543598174927
+      },
+      {
+        "key": 12,
+        "noteName": "B4",
+        "frequency": 493.8833012561241
+      },
+      {
+        "key": 13,
+        "noteName": "D5",
+        "frequency": 587.3295358348151
+      },
+      {
+        "key": 14,
+        "noteName": "F5",
+        "frequency": 698.4564628660078
+      },
+      {
+        "key": 15,
+        "noteName": "A5",
+        "frequency": 880
+      },
+      {
+        "key": 16,
+        "noteName": "C6",
+        "frequency": 1046.5022612023945
+      },
+      {
+        "key": 17,
+        "noteName": "E6",
+        "frequency": 1318.5102276514797
+      }
+    ]
+  },
+  "audio": {
+    "sampleRate": 96000,
+    "channels": 1,
+    "durationSec": 34.2,
+    "mimeType": "audio/wav",
+    "sizeBytes": 6566444
+  }
+}
