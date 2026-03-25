@@ -181,23 +181,23 @@ OVERLAPPING_PRIMARY_SINGLETON_MIN_OVERLAP = 0.08
 OVERLAPPING_PRIMARY_SINGLETON_MAX_DURATION = 0.4
 
 PITCH_CLASS_TO_DOREMI = {
-    "C": "ド",
-    "C#": "ド#",
-    "Db": "レb",
-    "D": "レ",
-    "D#": "レ#",
-    "Eb": "ミb",
-    "E": "ミ",
-    "F": "ファ",
-    "F#": "ファ#",
-    "Gb": "ソb",
-    "G": "ソ",
-    "G#": "ソ#",
-    "Ab": "ラb",
-    "A": "ラ",
-    "A#": "ラ#",
-    "Bb": "シb",
-    "B": "シ",
+    "C": "\u30c9",
+    "C#": "\u30c9#",
+    "Db": "\u30ecb",
+    "D": "\u30ec",
+    "D#": "\u30ec#",
+    "Eb": "\u30dfb",
+    "E": "\u30df",
+    "F": "\u30d5\u30a1",
+    "F#": "\u30d5\u30a1#",
+    "Gb": "\u30bdb",
+    "G": "\u30bd",
+    "G#": "\u30bd#",
+    "Ab": "\u30e9b",
+    "A": "\u30e9",
+    "A#": "\u30e9#",
+    "Bb": "\u30b7b",
+    "B": "\u30b7",
 }
 
 PITCH_CLASS_TO_NUMBER = {
@@ -2699,37 +2699,146 @@ def normalize_repeated_four_note_gliss_patterns(raw_events: list[RawEvent]) -> l
         normalized.append(event)
 
     return normalized
+
+
+def collect_local_four_note_family_runs(raw_events: list[RawEvent]) -> list[dict[str, Any]]:
+    exact_family_events: dict[frozenset[str], list[tuple[int, RawEvent]]] = {}
+    for index, event in enumerate(raw_events):
+        event_set = frozenset(note.note_name for note in event.notes)
+        if len(event_set) == 4:
+            exact_family_events.setdefault(event_set, []).append((index, event))
+
+    candidate_runs: list[dict[str, Any]] = []
+    for family_set, anchors in exact_family_events.items():
+        if len(anchors) < 2:
+            continue
+
+        family_notes_by_name: dict[str, NoteCandidate] = {}
+        for _, anchor in anchors:
+            for note in anchor.notes:
+                family_notes_by_name.setdefault(note.note_name, note)
+        if len(family_notes_by_name) != 4:
+            continue
+
+        family_notes = sorted((family_notes_by_name[name] for name in family_set), key=lambda note: note.frequency)
+        anchor_indices = [index for index, _ in anchors]
+        dominant_score = float(np.median([anchor.primary_score for _, anchor in anchors]))
+        runs_for_family: list[dict[str, Any]] = []
+
+        for anchor_index in anchor_indices:
+            start_index = anchor_index
+            while start_index > 0:
+                previous_event = raw_events[start_index - 1]
+                gap = raw_events[start_index].start_time - previous_event.end_time
+                previous_set = frozenset(note.note_name for note in previous_event.notes)
+                previous_duration = previous_event.end_time - previous_event.start_time
+                if previous_set <= family_set and previous_duration <= 1.25:
+                    start_index -= 1
+                    continue
+                if (
+                    previous_set
+                    and not previous_set <= family_set
+                    and len(previous_event.notes) <= 2
+                    and previous_duration <= 0.18
+                    and gap <= 0.12
+                ):
+                    start_index -= 1
+                    continue
+                break
+
+            end_index = anchor_index
+            while end_index + 1 < len(raw_events):
+                next_event = raw_events[end_index + 1]
+                gap = next_event.start_time - raw_events[end_index].end_time
+                next_set = frozenset(note.note_name for note in next_event.notes)
+                next_duration = next_event.end_time - next_event.start_time
+                if next_set <= family_set and next_duration <= 1.25:
+                    end_index += 1
+                    continue
+                if (
+                    next_set
+                    and not next_set <= family_set
+                    and len(next_event.notes) <= 2
+                    and next_duration <= 0.18
+                    and gap <= 0.12
+                ):
+                    end_index += 1
+                    continue
+                break
+
+            if runs_for_family and start_index <= runs_for_family[-1]["end_index"] + 1:
+                runs_for_family[-1]["end_index"] = max(runs_for_family[-1]["end_index"], end_index)
+            else:
+                runs_for_family.append(
+                    {
+                        "family_set": family_set,
+                        "family_notes": family_notes,
+                        "dominant_score": dominant_score,
+                        "start_index": start_index,
+                        "end_index": end_index,
+                    }
+                )
+
+        for run in runs_for_family:
+            run_anchor_indices = [
+                index for index in anchor_indices if run["start_index"] <= index <= run["end_index"]
+            ]
+            if len(run_anchor_indices) < 2:
+                continue
+            run["anchor_indices"] = run_anchor_indices
+            candidate_runs.append(run)
+
+    claimed_indices: dict[int, frozenset[str]] = {}
+    ambiguous_indices: set[int] = set()
+    for run in candidate_runs:
+        for index in range(run["start_index"], run["end_index"] + 1):
+            existing_family = claimed_indices.get(index)
+            if existing_family is None:
+                claimed_indices[index] = run["family_set"]
+            elif existing_family != run["family_set"]:
+                ambiguous_indices.add(index)
+
+    resolved_runs: list[dict[str, Any]] = []
+    for run in candidate_runs:
+        if any(index in ambiguous_indices for index in range(run["start_index"], run["end_index"] + 1)):
+            continue
+        resolved_runs.append(run)
+
+    return resolved_runs
+
+
+def find_local_four_note_family_run(
+    index: int,
+    family_runs: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    for run in family_runs:
+        if run["start_index"] <= index <= run["end_index"]:
+            return run
+    return None
+
+
 def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -> list[RawEvent]:
-    if len(raw_events) < 5:
+    if len(raw_events) < 2:
         return raw_events
 
-    note_set_counts: dict[frozenset[str], int] = {}
-    for event in raw_events:
-        note_set = frozenset(note.note_name for note in event.notes)
-        if len(note_set) == 4:
-            note_set_counts[note_set] = note_set_counts.get(note_set, 0) + 1
-
-    if not note_set_counts:
+    family_runs = collect_local_four_note_family_runs(raw_events)
+    if not family_runs:
         return raw_events
-
-    dominant_set, dominant_count = max(note_set_counts.items(), key=lambda item: item[1])
-    if dominant_count < 2:
-        return raw_events
-
-    dominant_events = [event for event in raw_events if frozenset(note.note_name for note in event.notes) == dominant_set]
-    dominant_score = float(np.median([event.primary_score for event in dominant_events])) if dominant_events else 0.0
-    dominant_notes_by_name: dict[str, NoteCandidate] = {}
-    for event in dominant_events:
-        for note in event.notes:
-            dominant_notes_by_name.setdefault(note.note_name, note)
-    if len(dominant_notes_by_name) != 4:
-        return raw_events
-    dominant_notes = sorted((dominant_notes_by_name[name] for name in dominant_set), key=lambda note: note.frequency)
 
     normalized: list[RawEvent] = []
     index = 0
     while index < len(raw_events):
         event = raw_events[index]
+        run = find_local_four_note_family_run(index, family_runs)
+        if run is None:
+            normalized.append(event)
+            index += 1
+            continue
+
+        dominant_set = run["family_set"]
+        dominant_notes = run["family_notes"]
+        dominant_score = run["dominant_score"]
+        anchor_indices = run["anchor_indices"]
         event_set = frozenset(note.note_name for note in event.notes)
         duration = event.end_time - event.start_time
 
@@ -2743,18 +2852,14 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
         next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
         next_set = frozenset(note.note_name for note in next_event.notes) if next_event is not None else frozenset()
         next_gap = next_event.start_time - event.end_time if next_event is not None else 1.0
-        nearby_dominant = any(
-            0 <= offset < len(raw_events) and frozenset(note.note_name for note in raw_events[offset].notes) == dominant_set
-            for offset in (index - 3, index - 2, index - 1, index + 1, index + 2, index + 3)
-        )
-        future_dominant = any(
-            0 <= offset < len(raw_events) and frozenset(note.note_name for note in raw_events[offset].notes) == dominant_set
-            for offset in (index + 1, index + 2, index + 3)
-        )
+        nearby_dominant = any(abs(anchor_index - index) <= 3 and anchor_index != index for anchor_index in anchor_indices)
+        future_dominant = any(0 < anchor_index - index <= 3 for anchor_index in anchor_indices)
+        past_dominant = any(0 < index - anchor_index <= 3 for anchor_index in anchor_indices)
         shared_note_count = len(event_set & dominant_set)
 
         if (
             next_event is not None
+            and find_local_four_note_family_run(index + 1, family_runs) == run
             and event_set
             and next_set
             and event_set < dominant_set
@@ -2798,6 +2903,7 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
 
             if (
                 len(event_set) == 1
+                and event.primary_note_name == dominant_notes[0].note_name
                 and duration <= 0.12
                 and nearby_dominant
                 and event.primary_score <= dominant_score * 0.35
@@ -2820,7 +2926,7 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
             and event_set < dominant_set
             and shared_note_count == 2
             and duration <= 1.25
-            and nearby_dominant
+            and past_dominant
             and future_dominant
             and not event.is_gliss_like
         ):
@@ -2841,7 +2947,7 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
             len(event_set) == 3
             and shared_note_count >= 2
             and duration <= 1.0
-            and nearby_dominant
+            and (past_dominant or future_dominant)
         ):
             normalized.append(
                 RawEvent(
@@ -3166,7 +3272,6 @@ def _debug_event_payload_from_signature(signature: tuple[float, float, tuple[str
 
 def repeated_pattern_passes() -> tuple[RepeatedPatternPass, ...]:
     return (
-        RepeatedPatternPass("normalize_repeated_four_note_gliss_patterns", normalize_repeated_four_note_gliss_patterns, merge_after=True),
         RepeatedPatternPass("normalize_repeated_explicit_four_note_patterns", normalize_repeated_explicit_four_note_patterns, merge_after=True),
         RepeatedPatternPass("normalize_repeated_triad_patterns", normalize_repeated_triad_patterns, merge_after=True),
         RepeatedPatternPass("normalize_strict_four_note_subsets", normalize_strict_four_note_subsets, merge_after=True),
@@ -3568,4 +3673,5 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
 
