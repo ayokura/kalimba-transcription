@@ -2879,44 +2879,30 @@ def normalize_repeated_triad_patterns(raw_events: list[RawEvent]) -> list[RawEve
         return raw_events
 
     note_set_counts: dict[frozenset[str], int] = {}
-    for event in raw_events:
-        note_set = frozenset(note.note_name for note in event.notes)
-        if len(note_set) == 3:
-            note_set_counts[note_set] = note_set_counts.get(note_set, 0) + 1
-
-    if not note_set_counts:
-        return raw_events
-
-    dominant_set, dominant_count = max(note_set_counts.items(), key=lambda item: item[1])
-    if dominant_count < 3:
-        return raw_events
-
-    dominant_events = [event for event in raw_events if frozenset(note.note_name for note in event.notes) == dominant_set]
-    competing_four_note_family = any(
-        other_set != dominant_set and len(other_set & dominant_set) >= 2 and len(other_set | dominant_set) == 4
-        for other_set in note_set_counts
-    )
-    if dominant_count < 4 and competing_four_note_family:
-        return raw_events
-    dominant_score = float(np.median([event.primary_score for event in dominant_events])) if dominant_events else 0.0
-    dominant_notes_by_name: dict[str, NoteCandidate] = {}
-    for event in dominant_events:
+    anchor_indices_by_set: dict[frozenset[str], list[int]] = {}
+    anchor_notes_by_set: dict[frozenset[str], dict[str, NoteCandidate]] = {}
+    for index, event in enumerate(raw_events):
+        event_set = frozenset(note.note_name for note in event.notes)
+        note_set_counts[event_set] = note_set_counts.get(event_set, 0) + 1
+        if len(event_set) != 3:
+            continue
+        anchor_indices_by_set.setdefault(event_set, []).append(index)
+        notes_by_name = anchor_notes_by_set.setdefault(event_set, {})
         for note in event.notes:
-            dominant_notes_by_name.setdefault(note.note_name, note)
-    dominant_notes = sorted((dominant_notes_by_name[name] for name in dominant_set), key=lambda note: note.frequency)
-    exact_anchor_indices = [index for index, event in enumerate(raw_events) if frozenset(note.note_name for note in event.notes) == dominant_set]
-    if len(exact_anchor_indices) < 2:
+            notes_by_name.setdefault(note.note_name, note)
+
+    if not anchor_indices_by_set:
         return raw_events
 
     def event_set_at(index: int) -> frozenset[str]:
         return frozenset(note.note_name for note in raw_events[index].notes)
 
-    def is_local_fragment(index: int) -> bool:
+    def is_local_fragment(index: int, anchor_set: frozenset[str]) -> bool:
         event_set = event_set_at(index)
-        overlap = len(event_set & dominant_set)
+        overlap = len(event_set & anchor_set)
         if overlap == 0:
             return False
-        if event_set < dominant_set and len(event_set) <= 2:
+        if event_set < anchor_set and len(event_set) <= 2:
             return True
         if len(event_set) == 2 and overlap >= 1:
             return True
@@ -2924,66 +2910,92 @@ def normalize_repeated_triad_patterns(raw_events: list[RawEvent]) -> list[RawEve
             return True
         return False
 
-    local_actions: dict[int, str] = {}
+    local_actions: dict[int, tuple[str, frozenset[str]]] = {}
+    conflicting_indices: set[int] = set()
 
-    def assign_local_action(index: int, *, region: str) -> None:
-        if index in local_actions:
+    def assign_local_action(index: int, action: str, anchor_set: frozenset[str]) -> None:
+        existing = local_actions.get(index)
+        if existing is None:
+            local_actions[index] = (action, anchor_set)
             return
-        event = raw_events[index]
-        event_set = event_set_at(index)
-        overlap = len(event_set & dominant_set)
-        duration = event.end_time - event.start_time
-        if event_set < dominant_set and len(event_set) <= 2:
-            if region == "head" and len(event_set) == 1 and duration <= 0.18:
-                local_actions[index] = "drop"
-                return
-            local_actions[index] = "rewrite"
+        if existing != (action, anchor_set):
+            conflicting_indices.add(index)
+
+    def schedule_region(indices: list[int], anchor_set: frozenset[str], *, region: str, anchor_count: int) -> None:
+        if not indices:
             return
-        if len(event_set) == 3 and overlap == 2 and note_set_counts.get(event_set, 0) <= 1:
-            if region == "head" or event.primary_score <= dominant_score * 0.75:
-                local_actions[index] = "rewrite"
-                return
-        if len(event_set) == 2 and overlap >= 1 and duration <= 0.2:
-            local_actions[index] = "drop"
+        if region in {'head', 'tail'} and anchor_count < 3:
+            return
+        if not all(is_local_fragment(index, anchor_set) for index in indices):
+            return
+        for index in indices:
+            event = raw_events[index]
+            event_set = event_set_at(index)
+            overlap = len(event_set & anchor_set)
+            duration = event.end_time - event.start_time
+            if event_set < anchor_set and len(event_set) <= 2:
+                if region == 'head' and len(event_set) == 1 and duration <= 0.18:
+                    assign_local_action(index, 'drop', anchor_set)
+                else:
+                    assign_local_action(index, 'rewrite', anchor_set)
+                continue
+            if len(event_set) == 3 and overlap == 2 and note_set_counts.get(event_set, 0) <= 1:
+                assign_local_action(index, 'rewrite', anchor_set)
+                continue
+            if len(event_set) == 2 and overlap >= 1 and duration <= 0.2:
+                assign_local_action(index, 'drop', anchor_set)
 
-    for left_anchor_index, right_anchor_index in zip(exact_anchor_indices, exact_anchor_indices[1:]):
-        interior_indices = list(range(left_anchor_index + 1, right_anchor_index))
-        if not interior_indices:
-            continue
-        if all(is_local_fragment(index) for index in interior_indices):
-            for index in interior_indices:
-                assign_local_action(index, region="between")
+    candidate_sets = sorted(
+        (
+            (anchor_set, indices)
+            for anchor_set, indices in anchor_indices_by_set.items()
+            if len(indices) >= 2 and len(anchor_notes_by_set.get(anchor_set, {})) == 3
+        ),
+        key=lambda item: (-len(item[1]), item[1][0]),
+    )
 
-    first_anchor_index = exact_anchor_indices[0]
-    head_indices = list(range(0, first_anchor_index))
-    if first_anchor_index <= 2 and len(exact_anchor_indices) >= 3 and head_indices and all(is_local_fragment(index) for index in head_indices):
-        for index in head_indices:
-            assign_local_action(index, region="head")
+    for anchor_set, anchor_indices in candidate_sets:
+        for left_anchor_index, right_anchor_index in zip(anchor_indices, anchor_indices[1:]):
+            interior_indices = list(range(left_anchor_index + 1, right_anchor_index))
+            schedule_region(interior_indices, anchor_set, region='between', anchor_count=len(anchor_indices))
 
-    last_anchor_index = exact_anchor_indices[-1]
-    tail_indices = list(range(last_anchor_index + 1, len(raw_events)))
-    if len(exact_anchor_indices) >= 3 and 0 < len(tail_indices) <= 2 and all(is_local_fragment(index) for index in tail_indices):
-        for index in tail_indices:
-            assign_local_action(index, region="tail")
+        first_anchor_index = anchor_indices[0]
+        head_indices = list(range(0, first_anchor_index))
+        if first_anchor_index <= 2:
+            schedule_region(head_indices, anchor_set, region='head', anchor_count=len(anchor_indices))
+
+        last_anchor_index = anchor_indices[-1]
+        tail_indices = list(range(last_anchor_index + 1, len(raw_events)))
+        if 0 < len(tail_indices) <= 2:
+            schedule_region(tail_indices, anchor_set, region='tail', anchor_count=len(anchor_indices))
 
     normalized: list[RawEvent] = []
     for index, event in enumerate(raw_events):
-        event_set = event_set_at(index)
-        if event_set == dominant_set:
+        if index in conflicting_indices:
             normalized.append(event)
             continue
 
         local_action = local_actions.get(index)
-        if local_action == "drop":
+        if not local_action:
+            normalized.append(event)
             continue
-        if local_action == "rewrite":
+
+        action, anchor_set = local_action
+        if action == 'drop':
+            continue
+        if action == 'rewrite':
+            anchor_notes = anchor_notes_by_set.get(anchor_set)
+            if anchor_notes is None or len(anchor_notes) != 3:
+                normalized.append(event)
+                continue
+            dominant_notes = sorted((anchor_notes[name] for name in anchor_set), key=lambda note: note.frequency)
             normalized.append(
                 RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,
                     notes=dominant_notes,
                     is_gliss_like=event.is_gliss_like,
-                    primary_note_name=event.primary_note_name if event.primary_note_name in dominant_set else dominant_notes[0].note_name,
+                    primary_note_name=event.primary_note_name if event.primary_note_name in anchor_set else dominant_notes[0].note_name,
                     primary_score=event.primary_score,
                 )
             )
