@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_keep_dense_trailing_onset, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_terminal_residual_cluster, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -356,6 +356,56 @@ def test_simplify_short_secondary_bleed_promotes_descending_lower_step() -> None
     assert [note.note_name for note in simplified[1].notes] == ["B4"]
 
 
+def test_simplify_short_secondary_bleed_collapses_descending_upper_residue_to_primary() -> None:
+    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
+    b4 = NoteCandidate(12, "B4", 493.8833012561241, "B", 4)
+    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    events = [
+        RawEvent(0.0, 0.18, [g4], False, "G4", 320.0),
+        RawEvent(0.18, 0.29, [g4, b4], False, "G4", 300.0),
+        RawEvent(0.29, 0.5, [f4], False, "F4", 290.0),
+    ]
+
+    simplified = simplify_short_secondary_bleed(events)
+
+    assert [note.note_name for note in simplified[1].notes] == ["G4"]
+
+
+def test_simplify_short_secondary_bleed_collapses_repeated_descending_handoff_to_primary() -> None:
+    c5 = NoteCandidate(14, "C5", 523.2511306011972, "C", 5)
+    b4 = NoteCandidate(12, "B4", 493.8833012561241, "B", 4)
+    a4 = NoteCandidate(10, "A4", 440.0, "A", 4)
+    events = [
+        RawEvent(0.0, 0.18, [c5], False, "C5", 320.0),
+        RawEvent(0.18, 0.31, [b4, c5], False, "B4", 300.0),
+        RawEvent(0.31, 0.43, [b4, c5], False, "B4", 290.0),
+        RawEvent(0.43, 0.62, [a4], False, "A4", 280.0),
+    ]
+
+    simplified = simplify_short_secondary_bleed(events)
+
+    assert [note.note_name for note in simplified[1].notes] == ["B4"]
+    assert [note.note_name for note in simplified[2].notes] == ["B4"]
+
+
+def test_suppress_descending_restart_residual_cluster_drops_repeated_low_register_residue() -> None:
+    tuning = get_default_tunings()[0]
+    c4 = NoteCandidate(0, "C4", 261.6255653005986, "C", 4)
+    d4 = NoteCandidate(1, "D4", 293.6647679174076, "D", 4)
+    e4 = NoteCandidate(2, "E4", 329.6275569128699, "E", 4)
+    e6 = NoteCandidate(16, "E6", 1318.5102276514797, "E", 6)
+    events = [
+        RawEvent(0.0, 0.22, [c4], False, "C4", 320.0),
+        RawEvent(0.22, 0.34, [d4, e4], False, "D4", 260.0),
+        RawEvent(0.62, 0.84, [d4, e4], False, "D4", 240.0),
+        RawEvent(1.12, 1.44, [e6], False, "E6", 300.0),
+    ]
+
+    cleaned = suppress_descending_restart_residual_cluster(events, tuning)
+
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [["C4"], ["E6"]]
+
+
 def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -> None:
     c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
     b5 = NoteCandidate(2, "B5", 987.7666025122483, "B", 5)
@@ -533,6 +583,72 @@ def test_segment_peaks_suppresses_weak_lower_secondary_without_recent_context() 
     assert any(
         item["noteName"] == "E4" and not item.get("accepted")
         for item in debug["secondaryDecisionTrail"]
+    )
+
+
+def test_should_block_descending_repeated_primary_tertiary_extension_requires_descending_suffix_context() -> None:
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    assert should_block_descending_repeated_primary_tertiary_extension(
+        selected=[g4, b4],
+        extension=d5,
+        segment_duration=0.116,
+        previous_primary_was_singleton=True,
+        descending_primary_suffix_floor=g4.frequency,
+        descending_primary_suffix_ceiling=440.0,
+        descending_primary_suffix_note_names={"G4", "A4"},
+    ) is True
+
+    assert should_block_descending_repeated_primary_tertiary_extension(
+        selected=[g4, b4],
+        extension=d5,
+        segment_duration=0.116,
+        previous_primary_was_singleton=False,
+        descending_primary_suffix_floor=g4.frequency,
+        descending_primary_suffix_ceiling=440.0,
+        descending_primary_suffix_note_names={"G4", "A4"},
+    ) is False
+
+    assert should_block_descending_repeated_primary_tertiary_extension(
+        selected=[g4, b4],
+        extension=d5,
+        segment_duration=0.116,
+        previous_primary_was_singleton=True,
+        descending_primary_suffix_floor=None,
+        descending_primary_suffix_ceiling=440.0,
+        descending_primary_suffix_note_names={"G4", "A4"},
+    ) is False
+
+
+def test_transcription_blocks_descending_repeated_primary_tertiary_extension_in_51_note_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={
+            "tuning": json.dumps(request_payload["tuning"]),
+            "debug": "true",
+        },
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    target_segment = next(
+        segment
+        for segment in payload["debug"]["segmentCandidates"]
+        if abs(segment["startTime"] - 7.308) < 0.02 and abs(segment["endTime"] - 7.424) < 0.02
+    )
+    assert target_segment["selectedNotes"] == ["G4", "B4"]
+    assert any(
+        decision["noteName"] == "D5"
+        and decision["accepted"] is False
+        and "descending-repeated-primary-tertiary-blocked" in decision["reasons"]
+        for decision in target_segment["secondaryDecisionTrail"]
     )
 
 
