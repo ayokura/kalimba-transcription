@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: completed
+- verdict: pending
 - scenario: 2026-03-22-e4-plus-g4-plus-b4-plus-d5-repeat-05-kalimba-17-c
 - expected note: E4 + G4 + B4 + D5 x 5
 - capture intent: slide_chord
@@ -21,8 +21,8 @@
 
 ## Review
 
-- summary: 先頭5回は slide_chord として十分安定しています。
-- reason: 最後の別 take は評価範囲から外し、先頭5回だけを regression 対象にしました。
+- summary: 4回目の in-scope take に extra trailing note があり、slide_chord の正本としては扱わない。
+- reason: 4回目 take と最後の別 take を評価範囲から外したうえで、この録音は実演奏に近い practical sample として pending 維持に変更した。
 
 ## Recapture Guidance
 
@@ -37,9 +37,10 @@
 ## Fixture Import Notes
 
 - imported as slide_chord target on 2026-03-23
+- evaluation scope excludes the fourth in-scope take via ignoredRanges: 17.3s-19.0s
 - evaluation scope excludes the final separated fragment via ignoredRanges: 24.5s-34.14s
-- first 5 takes reconstruct as full 4-note slide_chord events and are now treated as regression material
+- practical slide_chord sample retained as pending; do not distort recognizer behavior to force the excluded fourth take into a rolled/slide interpretation
 
-## Independent Audit (2026-03-23)
+## Independent Audit
 
-- Independent audit found monotonic slide_chord attacks across takes; E4/G4 are weaker than upper notes, but the first five takes are stable enough to serve as a completed slide_chord regression once the final separated take is excluded.
+- 2026-03-23: Independent audit found monotonic slide_chord attacks across takes, but later regression review showed that the fourth in-scope take contains an extra trailing note and should not be treated as a valid rolled/slide target.

@@ -1,5 +1,5 @@
 {
-  "pending": false,
+  "pending": true,
   "assertions": {
     "minEvents": 5,
     "maxEvents": 5,
@@ -17,10 +17,14 @@
       "B4+D5+E4+G4"
     ]
   },
-  "status": "completed",
-  "reason": "first five slide_chord takes are stable and are isolated via ignoredRanges; the final separated fragment is excluded from regression scope",
-  "auditVerdict": "slide-chord-intent-first-five-takes-clean",
+  "status": "pending",
+  "reason": "The fourth in-scope take contains an extra trailing note and is no longer treated as a valid slide_chord target. The fixture remains useful as a practical pending sample, with the fourth take and final separated fragment excluded from scoped evaluation.",
+  "auditVerdict": "practical-slide-chord-sample-with-invalid-fourth-take",
   "ignoredRanges": [
+    {
+      "startSec": 17.3,
+      "endSec": 19.0
+    },
     {
       "startSec": 24.5,
       "endSec": 34.14
