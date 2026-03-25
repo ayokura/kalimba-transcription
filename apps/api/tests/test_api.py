@@ -634,6 +634,28 @@ def test_normalize_repeated_four_note_family_stays_within_local_context_gap() ->
         ["G4", "B4", "D5"],
     ]
 
+def test_normalize_repeated_explicit_four_note_patterns_requires_explicit_four_note_anchor() -> None:
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.26, notes=[e4, d5], is_gliss_like=False, primary_note_name="E4", primary_score=720.0),
+        RawEvent(start_time=0.28, end_time=0.72, notes=[e4, g4, b4], is_gliss_like=False, primary_note_name="E4", primary_score=810.0),
+        RawEvent(start_time=1.0, end_time=1.44, notes=[e4, d5], is_gliss_like=False, primary_note_name="E4", primary_score=700.0),
+        RawEvent(start_time=1.46, end_time=1.9, notes=[e4, g4, b4], is_gliss_like=False, primary_note_name="E4", primary_score=790.0),
+    ]
+
+    normalized = normalize_repeated_explicit_four_note_patterns(raw_events)
+    assert [[note.note_name for note in event.notes] for event in normalized] == [
+        ["E4", "D5"],
+        ["E4", "G4", "B4"],
+        ["E4", "D5"],
+        ["E4", "G4", "B4"],
+    ]
+
+
 def test_normalize_repeated_explicit_four_note_patterns_drops_terminal_subset_tail() -> None:
     e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
     g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)

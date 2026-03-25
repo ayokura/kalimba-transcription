@@ -2663,29 +2663,7 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
         return raw_events
 
     dominant_set, dominant_count = max(note_set_counts.items(), key=lambda item: item[1])
-    subset_support_events = [
-        event
-        for event in raw_events
-        if 1 < len(frozenset(note.note_name for note in event.notes)) < 4
-        and frozenset(note.note_name for note in event.notes) < dominant_set
-        and not event.is_gliss_like
-    ]
-    has_mergeable_strict_pair = any(
-        1 < len(frozenset(note.note_name for note in raw_events[index].notes)) < 4
-        and 1 < len(frozenset(note.note_name for note in raw_events[index + 1].notes)) < 4
-        and not raw_events[index].is_gliss_like
-        and not raw_events[index + 1].is_gliss_like
-        and frozenset(note.note_name for note in raw_events[index].notes) < dominant_set
-        and frozenset(note.note_name for note in raw_events[index + 1].notes) < dominant_set
-        and (frozenset(note.note_name for note in raw_events[index].notes) | frozenset(note.note_name for note in raw_events[index + 1].notes)) == dominant_set
-        and raw_events[index + 1].start_time - raw_events[index].end_time <= GLISS_CLUSTER_MAX_GAP
-        for index in range(len(raw_events) - 1)
-    )
-    if dominant_count < 4 and not (
-        dominant_count >= 2
-        and dominant_count + len(subset_support_events) >= 5
-        and has_mergeable_strict_pair
-    ):
+    if dominant_count < 2:
         return raw_events
 
     dominant_events = [event for event in raw_events if frozenset(note.note_name for note in event.notes) == dominant_set]
