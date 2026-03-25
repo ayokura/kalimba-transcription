@@ -1,0 +1,505 @@
+{
+  "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-single-01",
+  "eventCount": 16,
+  "primaryNotes": [
+    "C4",
+    "D4",
+    "E4",
+    "F4",
+    "C4",
+    "G4",
+    "D4",
+    "E4",
+    "F4",
+    "G4",
+    "D5",
+    "A4",
+    "F5",
+    "D5",
+    "A5",
+    "C6"
+  ],
+  "eventNoteSets": [
+    "C4",
+    "D4",
+    "E4",
+    "F4",
+    "C4+F4",
+    "G4",
+    "D4+G4",
+    "A4+E4",
+    "B4+F4",
+    "C5+G4",
+    "D5",
+    "A4+E5",
+    "F5",
+    "D5+G5",
+    "A5+B5",
+    "C6"
+  ],
+  "assertionFailures": [],
+  "assertionFailureDetails": [],
+  "reasonCodes": [],
+  "status": "pending",
+  "reason": "Continuous ascending separated-notes phrase across the full 17-key range; useful for segmentation under sustained resonance.",
+  "auditVerdict": null,
+  "sourceProfile": "acoustic_real",
+  "captureIntent": "separated_notes",
+  "defaultCaptureIntent": "separated_notes",
+  "eventIntents": [
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes",
+    "separated_notes"
+  ],
+  "expectedEvents": [
+    {
+      "index": 1,
+      "display": "C4",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 2,
+      "display": "D4",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 3,
+      "display": "E4",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 4,
+      "display": "F4",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 5,
+      "display": "G4",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 6,
+      "display": "A4",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 7,
+      "display": "B4",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 8,
+      "display": "C5",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 9,
+      "display": "D5",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 10,
+      "display": "E5",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 11,
+      "display": "F5",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 12,
+      "display": "G5",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 13,
+      "display": "A5",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 14,
+      "display": "B5",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 15,
+      "display": "C6",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 16,
+      "display": "D6",
+      "intent": "separated_notes"
+    },
+    {
+      "index": 17,
+      "display": "E6",
+      "intent": "separated_notes"
+    }
+  ],
+  "scenario": "2026-03-24-c4-to-e6-sequence-17-separated-notes-kalimba-17-c",
+  "expectedSummary": "C4 / D4 / E4 / F4 / G4 / A4 / B4 / C5 / D5 / E5 / F5 / G5 / A5 / B5 / C6 / D6 / E6",
+  "evaluationWindows": [],
+  "ignoredRanges": [],
+  "recommendedRecapture": [],
+  "evaluationMode": "full_audio",
+  "sourceDurationSec": 11.46,
+  "evaluationDurationSec": 11.46,
+  "fullEventCount": 16,
+  "eventCoverage": [
+    {
+      "startTime": 1.5893,
+      "endTime": 2.0347,
+      "noteSet": "C4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 2.0347,
+      "endTime": 2.4187,
+      "noteSet": "D4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 2.4187,
+      "endTime": 2.7147,
+      "noteSet": "E4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 2.8787,
+      "endTime": 3.0427,
+      "noteSet": "F4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 2.8787,
+      "endTime": 3.1467,
+      "noteSet": "C4+F4",
+      "gesture": "slide_chord",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 3.1467,
+      "endTime": 3.2987,
+      "noteSet": "G4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 3.1467,
+      "endTime": 3.512,
+      "noteSet": "D4+G4",
+      "gesture": "slide_chord",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 3.512,
+      "endTime": 3.6267,
+      "noteSet": "A4+E4",
+      "gesture": "slide_chord",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 3.832,
+      "endTime": 4.0933,
+      "noteSet": "B4+F4",
+      "gesture": "slide_chord",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 4.1787,
+      "endTime": 4.432,
+      "noteSet": "C5+G4",
+      "gesture": "strict_chord",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 4.432,
+      "endTime": 4.736,
+      "noteSet": "D5",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 4.9133,
+      "endTime": 5.016,
+      "noteSet": "A4+E5",
+      "gesture": "slide_chord",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 5.192,
+      "endTime": 5.5387,
+      "noteSet": "F5",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 5.5387,
+      "endTime": 5.648,
+      "noteSet": "D5+G5",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 6.3427,
+      "endTime": 6.4453,
+      "noteSet": "A5+B5",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 6.6133,
+      "endTime": 6.72,
+      "noteSet": "C6",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    }
+  ],
+  "eventCompression": {
+    "expected": 17,
+    "detected": 16,
+    "compressionRatio": 0.941
+  },
+  "dominantGestureMix": {
+    "ambiguous": 10,
+    "slide_chord": 5,
+    "strict_chord": 1
+  },
+  "isolatedSingletonCount": 3,
+  "phraseBreakGuess": [
+    14
+  ],
+  "normalizationSummary": {
+    "segmentCount": 22,
+    "rawEventCount": 22,
+    "mergedEventCount": 16,
+    "segmentToRawDelta": 0,
+    "rawToMergedDelta": 6,
+    "mergedToDetectedDelta": 0
+  },
+  "normalizationDecisions": [
+    {
+      "rawIndex": 1,
+      "startTime": 1.5893,
+      "endTime": 1.6933,
+      "noteSet": "C4",
+      "rule": "merged_duplicate",
+      "targetMergedIndices": [
+        1
+      ]
+    },
+    {
+      "rawIndex": 3,
+      "startTime": 2.0347,
+      "endTime": 2.28,
+      "noteSet": "D4",
+      "rule": "merged_duplicate",
+      "targetMergedIndices": [
+        2
+      ]
+    },
+    {
+      "rawIndex": 4,
+      "startTime": 2.1107,
+      "endTime": 2.4187,
+      "noteSet": "D4",
+      "rule": "merged_duplicate",
+      "targetMergedIndices": [
+        2
+      ]
+    },
+    {
+      "rawIndex": 6,
+      "startTime": 2.8787,
+      "endTime": 3.0427,
+      "noteSet": "F4",
+      "rule": "split_across_merged",
+      "targetMergedIndices": [
+        4,
+        5
+      ]
+    },
+    {
+      "rawIndex": 7,
+      "startTime": 2.8787,
+      "endTime": 3.1467,
+      "noteSet": "C4+F4",
+      "rule": "split_across_merged",
+      "targetMergedIndices": [
+        4,
+        5
+      ]
+    },
+    {
+      "rawIndex": 8,
+      "startTime": 3.1467,
+      "endTime": 3.2987,
+      "noteSet": "G4",
+      "rule": "split_across_merged",
+      "targetMergedIndices": [
+        6,
+        7
+      ]
+    },
+    {
+      "rawIndex": 9,
+      "startTime": 3.1467,
+      "endTime": 3.512,
+      "noteSet": "D4+G4",
+      "rule": "split_across_merged",
+      "targetMergedIndices": [
+        6,
+        7
+      ]
+    },
+    {
+      "rawIndex": 11,
+      "startTime": 3.512,
+      "endTime": 3.832,
+      "noteSet": "A4",
+      "rule": "merged_subset_into",
+      "targetMergedIndices": [
+        8
+      ]
+    },
+    {
+      "rawIndex": 13,
+      "startTime": 3.9107,
+      "endTime": 4.1787,
+      "noteSet": "B4",
+      "rule": "merged_subset_into",
+      "targetMergedIndices": [
+        9
+      ]
+    },
+    {
+      "rawIndex": 15,
+      "startTime": 4.432,
+      "endTime": 4.736,
+      "noteSet": "C5+D5",
+      "rule": "simplified_to_subset",
+      "targetMergedIndices": [
+        11
+      ]
+    },
+    {
+      "rawIndex": 17,
+      "startTime": 4.9133,
+      "endTime": 5.192,
+      "noteSet": "E5",
+      "rule": "merged_subset_into",
+      "targetMergedIndices": [
+        12
+      ]
+    },
+    {
+      "rawIndex": 18,
+      "startTime": 5.192,
+      "endTime": 5.296,
+      "noteSet": "F5",
+      "rule": "merged_duplicate",
+      "targetMergedIndices": [
+        13
+      ]
+    }
+  ],
+  "normalizationReasonCounts": {
+    "merged_duplicate": 4,
+    "split_across_merged": 4,
+    "merged_subset_into": 3,
+    "simplified_to_subset": 1
+  },
+  "disabledRepeatedPatternPasses": [],
+  "repeatedPatternPassTrace": [
+    {
+      "pass": "normalize_repeated_four_note_family",
+      "enabled": true,
+      "mergeAfter": true,
+      "beforeEventCount": 16,
+      "afterEventCount": 16,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "normalize_repeated_four_note_gliss_patterns",
+      "enabled": true,
+      "mergeAfter": true,
+      "beforeEventCount": 16,
+      "afterEventCount": 16,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "normalize_repeated_explicit_four_note_patterns",
+      "enabled": true,
+      "mergeAfter": true,
+      "beforeEventCount": 16,
+      "afterEventCount": 16,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "normalize_repeated_triad_patterns",
+      "enabled": true,
+      "mergeAfter": true,
+      "beforeEventCount": 16,
+      "afterEventCount": 16,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "normalize_strict_four_note_subsets",
+      "enabled": true,
+      "mergeAfter": true,
+      "beforeEventCount": 16,
+      "afterEventCount": 16,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "suppress_repeated_triad_blips",
+      "enabled": true,
+      "mergeAfter": false,
+      "beforeEventCount": 16,
+      "afterEventCount": 16,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "suppress_isolated_triad_extensions",
+      "enabled": true,
+      "mergeAfter": false,
+      "beforeEventCount": 16,
+      "afterEventCount": 16,
+      "changed": false,
+      "removed": [],
+      "added": []
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01": {
+    "baseline": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": []
+    },
+    "disable_gliss_patterns": {
+      "eventCount": 6,
+      "assertionFailureCount": 3,
+      "reasonCodes": [
+        "event_count_too_high",
+        "note_set_missing",
+        "event_order_mismatch"
+      ]
+    },
+    "disable_strict_subsets": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": []
+    },
+    "disable_gliss_and_strict": {
+      "eventCount": 6,
+      "assertionFailureCount": 3,
+      "reasonCodes": [
+        "event_count_too_high",
+        "note_set_missing",
+        "event_order_mismatch"
+      ]
+    }
+  },
+  "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03": {
+    "baseline": {
+      "eventCount": 6,
+      "assertionFailureCount": 0,
+      "reasonCodes": []
+    },
+    "disable_gliss_patterns": {
+      "eventCount": 6,
+      "assertionFailureCount": 0,
+      "reasonCodes": []
+    },
+    "disable_strict_subsets": {
+      "eventCount": 7,
+      "assertionFailureCount": 1,
+      "reasonCodes": [
+        "event_count_too_high"
+      ]
+    },
+    "disable_gliss_and_strict": {
+      "eventCount": 7,
+      "assertionFailureCount": 1,
+      "reasonCodes": [
+        "event_count_too_high"
+      ]
+    }
+  },
+  "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01": {
+    "baseline": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": []
+    },
+    "disable_gliss_patterns": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": []
+    },
+    "disable_strict_subsets": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": []
+    },
+    "disable_gliss_and_strict": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": []
+    }
+  }
+}

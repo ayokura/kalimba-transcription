@@ -37,11 +37,18 @@ export type ManualCaptureExpectedKey = {
   noteName: string;
 };
 
+export type ManualCaptureExpectedPart = {
+  keys: ManualCaptureExpectedKey[];
+  display?: string;
+  intent?: CaptureIntent | null;
+};
+
 export type ManualCaptureExpectedEvent = {
   index: number;
   keys: ManualCaptureExpectedKey[];
   display: string;
   intent?: CaptureIntent | null;
+  parts?: ManualCaptureExpectedPart[] | null;
 };
 
 export type ManualCaptureExpectedPerformance = {

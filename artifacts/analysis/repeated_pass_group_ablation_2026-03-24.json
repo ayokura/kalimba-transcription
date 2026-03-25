@@ -1,0 +1,546 @@
+{
+  "four_note_cluster": {
+    "disabledPasses": [
+      "normalize_repeated_four_note_family",
+      "normalize_repeated_explicit_four_note_patterns",
+      "normalize_repeated_four_note_gliss_patterns",
+      "normalize_strict_four_note_subsets"
+    ],
+    "fixtures": {
+      "kalimba-17-c-a4-d4-f4-triad-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": [
+          "normalize_repeated_triad_patterns",
+          "suppress_repeated_triad_blips"
+        ]
+      },
+      "kalimba-17-c-a4-d4-f4-triad-repeat-02": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": [
+          "normalize_repeated_triad_patterns"
+        ]
+      },
+      "kalimba-17-c-b4-d5-double-notes-01": {
+        "status": "completed",
+        "baselineEventCount": 7,
+        "disabledEventCount": 7,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": [
+          "suppress_isolated_triad_extensions"
+        ]
+      },
+      "kalimba-17-c-b4-d5-double-notes-02": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-c4-c5-octave-dyad-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-c4-e4-g4-triad-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": [
+          "normalize_repeated_triad_patterns"
+        ]
+      },
+      "kalimba-17-c-c4-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-c4-to-g4-sequence-17-01": {
+        "status": "pending",
+        "baselineEventCount": 15,
+        "disabledEventCount": 15,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-d4-d5-octave-dyad-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-d4-d5-sequence-01": {
+        "status": "completed",
+        "baselineEventCount": 6,
+        "disabledEventCount": 6,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-d4-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-d5-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 6,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 3,
+        "reasonCodes": [
+          "event_count_too_high",
+          "note_set_missing",
+          "event_order_mismatch"
+        ],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01": {
+        "status": "reference_only",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": [
+          "normalize_repeated_triad_patterns"
+        ]
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02": {
+        "status": "rerecord",
+        "baselineEventCount": 13,
+        "disabledEventCount": 13,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 6,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 3,
+        "reasonCodes": [
+          "event_count_too_high",
+          "note_set_missing",
+          "event_order_mismatch"
+        ],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02": {
+        "status": "reference_only",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03": {
+        "status": "completed",
+        "baselineEventCount": 6,
+        "disabledEventCount": 7,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 2,
+        "reasonCodes": [
+          "event_count_too_high",
+          "note_set_missing"
+        ],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-04": {
+        "status": "reference_only",
+        "baselineEventCount": 8,
+        "disabledEventCount": 8,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-triad-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": [
+          "normalize_repeated_triad_patterns"
+        ]
+      },
+      "kalimba-17-c-mixed-sequence-01": {
+        "status": "completed",
+        "baselineEventCount": 6,
+        "disabledEventCount": 6,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-triple-glissando-ascending-01": {
+        "status": "completed",
+        "baselineEventCount": 8,
+        "disabledEventCount": 8,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      }
+    },
+    "summary": {
+      "completedRegressions": [
+        {
+          "fixture": "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01",
+          "eventCountDelta": 1,
+          "assertionFailureCount": 3,
+          "reasonCodes": [
+            "event_count_too_high",
+            "note_set_missing",
+            "event_order_mismatch"
+          ]
+        },
+        {
+          "fixture": "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01",
+          "eventCountDelta": 1,
+          "assertionFailureCount": 3,
+          "reasonCodes": [
+            "event_count_too_high",
+            "note_set_missing",
+            "event_order_mismatch"
+          ]
+        },
+        {
+          "fixture": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
+          "eventCountDelta": 1,
+          "assertionFailureCount": 2,
+          "reasonCodes": [
+            "event_count_too_high",
+            "note_set_missing"
+          ]
+        }
+      ],
+      "pendingChanges": [],
+      "rerecordChanges": [],
+      "referenceChanges": []
+    }
+  },
+  "triad_stack": {
+    "disabledPasses": [
+      "normalize_repeated_triad_patterns",
+      "suppress_repeated_triad_blips"
+    ],
+    "fixtures": {
+      "kalimba-17-c-a4-d4-f4-triad-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 8,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 2,
+        "reasonCodes": [
+          "event_count_too_high",
+          "note_set_missing"
+        ],
+        "changedTrace": []
+      },
+      "kalimba-17-c-a4-d4-f4-triad-repeat-02": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 1,
+        "reasonCodes": [
+          "note_set_missing"
+        ],
+        "changedTrace": []
+      },
+      "kalimba-17-c-b4-d5-double-notes-01": {
+        "status": "completed",
+        "baselineEventCount": 7,
+        "disabledEventCount": 7,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": [
+          "suppress_isolated_triad_extensions"
+        ]
+      },
+      "kalimba-17-c-b4-d5-double-notes-02": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-c4-c5-octave-dyad-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-c4-e4-g4-triad-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 9,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 2,
+        "reasonCodes": [
+          "event_count_too_high",
+          "note_set_missing"
+        ],
+        "changedTrace": []
+      },
+      "kalimba-17-c-c4-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-c4-to-g4-sequence-17-01": {
+        "status": "pending",
+        "baselineEventCount": 15,
+        "disabledEventCount": 15,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-d4-d5-octave-dyad-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-d4-d5-sequence-01": {
+        "status": "completed",
+        "baselineEventCount": 6,
+        "disabledEventCount": 6,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-d4-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-d5-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": [
+          "normalize_repeated_four_note_gliss_patterns"
+        ]
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01": {
+        "status": "reference_only",
+        "baselineEventCount": 5,
+        "disabledEventCount": 6,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02": {
+        "status": "rerecord",
+        "baselineEventCount": 13,
+        "disabledEventCount": 13,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": [
+          "normalize_repeated_four_note_family",
+          "normalize_repeated_explicit_four_note_patterns"
+        ]
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02": {
+        "status": "reference_only",
+        "baselineEventCount": 5,
+        "disabledEventCount": 5,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03": {
+        "status": "completed",
+        "baselineEventCount": 6,
+        "disabledEventCount": 6,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": [
+          "normalize_repeated_explicit_four_note_patterns",
+          "normalize_strict_four_note_subsets"
+        ]
+      },
+      "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-04": {
+        "status": "reference_only",
+        "baselineEventCount": 8,
+        "disabledEventCount": 8,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-e4-g4-b4-triad-repeat-01": {
+        "status": "completed",
+        "baselineEventCount": 5,
+        "disabledEventCount": 7,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 2,
+        "reasonCodes": [
+          "event_count_too_high",
+          "note_set_missing"
+        ],
+        "changedTrace": []
+      },
+      "kalimba-17-c-mixed-sequence-01": {
+        "status": "completed",
+        "baselineEventCount": 6,
+        "disabledEventCount": 6,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      },
+      "kalimba-17-c-triple-glissando-ascending-01": {
+        "status": "completed",
+        "baselineEventCount": 8,
+        "disabledEventCount": 8,
+        "baselineAssertionFailures": 0,
+        "disabledAssertionFailures": 0,
+        "reasonCodes": [],
+        "changedTrace": []
+      }
+    },
+    "summary": {
+      "completedRegressions": [
+        {
+          "fixture": "kalimba-17-c-a4-d4-f4-triad-repeat-01",
+          "eventCountDelta": 3,
+          "assertionFailureCount": 2,
+          "reasonCodes": [
+            "event_count_too_high",
+            "note_set_missing"
+          ]
+        },
+        {
+          "fixture": "kalimba-17-c-a4-d4-f4-triad-repeat-02",
+          "eventCountDelta": 0,
+          "assertionFailureCount": 1,
+          "reasonCodes": [
+            "note_set_missing"
+          ]
+        },
+        {
+          "fixture": "kalimba-17-c-c4-e4-g4-triad-repeat-01",
+          "eventCountDelta": 4,
+          "assertionFailureCount": 2,
+          "reasonCodes": [
+            "event_count_too_high",
+            "note_set_missing"
+          ]
+        },
+        {
+          "fixture": "kalimba-17-c-e4-g4-b4-triad-repeat-01",
+          "eventCountDelta": 2,
+          "assertionFailureCount": 2,
+          "reasonCodes": [
+            "event_count_too_high",
+            "note_set_missing"
+          ]
+        }
+      ],
+      "pendingChanges": [],
+      "rerecordChanges": [],
+      "referenceChanges": [
+        {
+          "fixture": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01",
+          "eventCountDelta": 1,
+          "assertionFailureDelta": 0,
+          "reasonCodes": []
+        }
+      ]
+    }
+  }
+}

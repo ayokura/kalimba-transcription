@@ -1,0 +1,3235 @@
+{
+  "passes": {
+    "normalize_repeated_four_note_family": {
+      "statusCounts": {
+        "completed": 19,
+        "pending": 1,
+        "reference_only": 3,
+        "rerecord": 1
+      },
+      "taxonomyCounts": {
+        "free_performance": 2,
+        "mixed_phrase": 1,
+        "no_expected_events": 1,
+        "single_event_repeat": 17,
+        "small_repeated_phrase": 3
+      },
+      "fixtures": [
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 7,
+          "ablatedEventCount": 7,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-c5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-e4-g4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+          "status": "pending",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 51,
+          "ablatedEventCount": 51,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-single-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-g4-sequence-17-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-sequence-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d5-repeat-01",
+          "status": "completed",
+          "taxonomy": "no_expected_events",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02",
+          "status": "rerecord",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 13,
+          "ablatedEventCount": 13,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 1,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "maxEvents expected <= 5, got 6",
+            "requiredEventNoteSetOccurrences[B4+D5+E4+G4] expected >= 5, got 0",
+            "expectedEventNoteSetsOrdered mismatch"
+          ],
+          "newFailureCodes": [
+            "event_count_too_high",
+            "event_order_mismatch",
+            "note_set_missing"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 2,
+            "rawToMergedDelta": -2
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-04",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-mixed-sequence-01",
+          "status": "completed",
+          "taxonomy": "mixed_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-triple-glissando-ascending-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        }
+      ]
+    },
+    "normalize_repeated_four_note_gliss_patterns": {
+      "statusCounts": {
+        "completed": 19,
+        "pending": 1,
+        "reference_only": 3,
+        "rerecord": 1
+      },
+      "taxonomyCounts": {
+        "free_performance": 2,
+        "mixed_phrase": 1,
+        "no_expected_events": 1,
+        "single_event_repeat": 17,
+        "small_repeated_phrase": 3
+      },
+      "fixtures": [
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 7,
+          "ablatedEventCount": 7,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-c5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-e4-g4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+          "status": "pending",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 51,
+          "ablatedEventCount": 51,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-single-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-g4-sequence-17-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-sequence-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d5-repeat-01",
+          "status": "completed",
+          "taxonomy": "no_expected_events",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 1,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "maxEvents expected <= 5, got 6",
+            "requiredEventNoteSetOccurrences[B4+D5+E4+G4] expected >= 5, got 2",
+            "expectedEventNoteSetsOrdered mismatch"
+          ],
+          "newFailureCodes": [
+            "event_count_too_high",
+            "event_order_mismatch",
+            "note_set_missing"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 1,
+            "rawToMergedDelta": -1
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02",
+          "status": "rerecord",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 13,
+          "ablatedEventCount": 13,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-04",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-mixed-sequence-01",
+          "status": "completed",
+          "taxonomy": "mixed_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-triple-glissando-ascending-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        }
+      ]
+    },
+    "normalize_repeated_explicit_four_note_patterns": {
+      "statusCounts": {
+        "completed": 19,
+        "pending": 1,
+        "reference_only": 3,
+        "rerecord": 1
+      },
+      "taxonomyCounts": {
+        "free_performance": 2,
+        "mixed_phrase": 1,
+        "no_expected_events": 1,
+        "single_event_repeat": 17,
+        "small_repeated_phrase": 3
+      },
+      "fixtures": [
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 7,
+          "ablatedEventCount": 7,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-c5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-e4-g4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+          "status": "pending",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 51,
+          "ablatedEventCount": 51,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-single-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-g4-sequence-17-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-sequence-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d5-repeat-01",
+          "status": "completed",
+          "taxonomy": "no_expected_events",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02",
+          "status": "rerecord",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 13,
+          "ablatedEventCount": 13,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "requiredEventNoteSetOccurrences[B4+D5+E4+G4] expected >= 5, got 4",
+            "expectedEventNoteSetsOrdered mismatch"
+          ],
+          "newFailureCodes": [
+            "event_order_mismatch",
+            "note_set_missing"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 1,
+            "rawToMergedDelta": -1
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 7,
+          "eventCountDelta": 1,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "maxEvents expected <= 6, got 7",
+            "requiredEventNoteSetOccurrences[B4+D5+E4+G4] expected >= 6, got 2"
+          ],
+          "newFailureCodes": [
+            "event_count_too_high",
+            "note_set_missing"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 1,
+            "rawToMergedDelta": -1
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-04",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-mixed-sequence-01",
+          "status": "completed",
+          "taxonomy": "mixed_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-triple-glissando-ascending-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        }
+      ]
+    },
+    "normalize_repeated_triad_patterns": {
+      "statusCounts": {
+        "completed": 19,
+        "pending": 1,
+        "reference_only": 3,
+        "rerecord": 1
+      },
+      "taxonomyCounts": {
+        "free_performance": 2,
+        "mixed_phrase": 1,
+        "no_expected_events": 1,
+        "single_event_repeat": 17,
+        "small_repeated_phrase": 3
+      },
+      "fixtures": [
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 3,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "maxEvents expected <= 5, got 8",
+            "requiredEventNoteSetOccurrences[A4+D4+F4] expected >= 5, got 3"
+          ],
+          "newFailureCodes": [
+            "event_count_too_high",
+            "note_set_missing"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 3,
+            "rawToMergedDelta": -3
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "requiredEventNoteSetOccurrences[A4+D4+F4] expected >= 5, got 3"
+          ],
+          "newFailureCodes": [
+            "note_set_missing"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 7,
+          "ablatedEventCount": 7,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-c5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-e4-g4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 9,
+          "eventCountDelta": 4,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "maxEvents expected <= 5, got 9",
+            "requiredEventNoteSetOccurrences[C4+E4+G4] expected >= 5, got 4"
+          ],
+          "newFailureCodes": [
+            "event_count_too_high",
+            "note_set_missing"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 4,
+            "rawToMergedDelta": -4
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+          "status": "pending",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 51,
+          "ablatedEventCount": 51,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-single-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-g4-sequence-17-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-sequence-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d5-repeat-01",
+          "status": "completed",
+          "taxonomy": "no_expected_events",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 1,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 1,
+            "rawToMergedDelta": -1
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02",
+          "status": "rerecord",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 13,
+          "ablatedEventCount": 13,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-04",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 7,
+          "eventCountDelta": 2,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "maxEvents expected <= 5, got 7",
+            "requiredEventNoteSetOccurrences[B4+E4+G4] expected >= 5, got 4"
+          ],
+          "newFailureCodes": [
+            "event_count_too_high",
+            "note_set_missing"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 2,
+            "rawToMergedDelta": -2
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-mixed-sequence-01",
+          "status": "completed",
+          "taxonomy": "mixed_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-triple-glissando-ascending-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        }
+      ]
+    },
+    "normalize_strict_four_note_subsets": {
+      "statusCounts": {
+        "completed": 19,
+        "pending": 1,
+        "reference_only": 3,
+        "rerecord": 1
+      },
+      "taxonomyCounts": {
+        "free_performance": 2,
+        "mixed_phrase": 1,
+        "no_expected_events": 1,
+        "single_event_repeat": 17,
+        "small_repeated_phrase": 3
+      },
+      "fixtures": [
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 7,
+          "ablatedEventCount": 7,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-c5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-e4-g4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+          "status": "pending",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 51,
+          "ablatedEventCount": 51,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-single-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-g4-sequence-17-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-sequence-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d5-repeat-01",
+          "status": "completed",
+          "taxonomy": "no_expected_events",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02",
+          "status": "rerecord",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 13,
+          "ablatedEventCount": 13,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 7,
+          "eventCountDelta": 1,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "maxEvents expected <= 6, got 7"
+          ],
+          "newFailureCodes": [
+            "event_count_too_high"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 1,
+            "rawToMergedDelta": -1
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-04",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-mixed-sequence-01",
+          "status": "completed",
+          "taxonomy": "mixed_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-triple-glissando-ascending-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        }
+      ]
+    },
+    "suppress_repeated_triad_blips": {
+      "statusCounts": {
+        "completed": 19,
+        "pending": 1,
+        "reference_only": 3,
+        "rerecord": 1
+      },
+      "taxonomyCounts": {
+        "free_performance": 2,
+        "mixed_phrase": 1,
+        "no_expected_events": 1,
+        "single_event_repeat": 17,
+        "small_repeated_phrase": 3
+      },
+      "fixtures": [
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 1,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "maxEvents expected <= 5, got 6"
+          ],
+          "newFailureCodes": [
+            "event_count_too_high"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 1,
+            "rawToMergedDelta": -1
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 7,
+          "ablatedEventCount": 7,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-c5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-e4-g4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+          "status": "pending",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 51,
+          "ablatedEventCount": 51,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-single-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-g4-sequence-17-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-sequence-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d5-repeat-01",
+          "status": "completed",
+          "taxonomy": "no_expected_events",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02",
+          "status": "rerecord",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 13,
+          "ablatedEventCount": 13,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-04",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-mixed-sequence-01",
+          "status": "completed",
+          "taxonomy": "mixed_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-triple-glissando-ascending-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        }
+      ]
+    },
+    "suppress_isolated_triad_extensions": {
+      "statusCounts": {
+        "completed": 19,
+        "pending": 1,
+        "reference_only": 3,
+        "rerecord": 1
+      },
+      "taxonomyCounts": {
+        "free_performance": 2,
+        "mixed_phrase": 1,
+        "no_expected_events": 1,
+        "single_event_repeat": 17,
+        "small_repeated_phrase": 3
+      },
+      "fixtures": [
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-a4-d4-f4-triad-repeat-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 7,
+          "ablatedEventCount": 7,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [
+            "requiredEventNoteSetOccurrences[B4+D5] expected >= 5, got 4"
+          ],
+          "newFailureCodes": [
+            "note_set_missing"
+          ],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-b4-d5-double-notes-02",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-c5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-e4-g4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+          "status": "pending",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 51,
+          "ablatedEventCount": 51,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-e6-sequence-17-single-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-c4-to-g4-sequence-17-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 17,
+          "ablatedEventCount": 17,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-octave-dyad-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-d5-sequence-01",
+          "status": "completed",
+          "taxonomy": "small_repeated_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d4-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-d5-repeat-01",
+          "status": "completed",
+          "taxonomy": "no_expected_events",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02",
+          "status": "rerecord",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 13,
+          "ablatedEventCount": 13,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-04",
+          "status": "reference_only",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-e4-g4-b4-triad-repeat-01",
+          "status": "completed",
+          "taxonomy": "single_event_repeat",
+          "baselineEventCount": 5,
+          "ablatedEventCount": 5,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-mixed-sequence-01",
+          "status": "completed",
+          "taxonomy": "mixed_phrase",
+          "baselineEventCount": 6,
+          "ablatedEventCount": 6,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        },
+        {
+          "fixtureId": "kalimba-17-c-triple-glissando-ascending-01",
+          "status": "completed",
+          "taxonomy": "free_performance",
+          "baselineEventCount": 8,
+          "ablatedEventCount": 8,
+          "eventCountDelta": 0,
+          "baselineFailures": [],
+          "ablatedFailures": [],
+          "newFailureCodes": [],
+          "resolvedFailureCodes": [],
+          "normalizationDelta": {
+            "segmentCount": 0,
+            "rawEventCount": 0,
+            "mergedEventCount": 0,
+            "rawToMergedDelta": 0
+          }
+        }
+      ]
+    }
+  },
+  "fixtures": [
+    "kalimba-17-c-a4-d4-f4-triad-repeat-01",
+    "kalimba-17-c-a4-d4-f4-triad-repeat-02",
+    "kalimba-17-c-b4-d5-double-notes-01",
+    "kalimba-17-c-b4-d5-double-notes-02",
+    "kalimba-17-c-c4-c5-octave-dyad-01",
+    "kalimba-17-c-c4-e4-g4-triad-repeat-01",
+    "kalimba-17-c-c4-repeat-01",
+    "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+    "kalimba-17-c-c4-to-e6-sequence-17-single-01",
+    "kalimba-17-c-c4-to-g4-sequence-17-01",
+    "kalimba-17-c-d4-d5-octave-dyad-01",
+    "kalimba-17-c-d4-d5-sequence-01",
+    "kalimba-17-c-d4-repeat-01",
+    "kalimba-17-c-d5-repeat-01",
+    "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01",
+    "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01",
+    "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02",
+    "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01",
+    "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-02",
+    "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
+    "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-04",
+    "kalimba-17-c-e4-g4-b4-triad-repeat-01",
+    "kalimba-17-c-mixed-sequence-01",
+    "kalimba-17-c-triple-glissando-ascending-01"
+  ]
+}

@@ -1,0 +1,413 @@
+{
+  "fixtureId": "kalimba-17-c-c4-to-g4-sequence-17-01",
+  "eventCount": 15,
+  "primaryNotes": [
+    "C4",
+    "G4",
+    "E5",
+    "C4",
+    "G4",
+    "C5",
+    "C4",
+    "G4",
+    "C5",
+    "C4",
+    "G4",
+    "C5",
+    "C4",
+    "D5",
+    "E4"
+  ],
+  "eventNoteSets": [
+    "C4",
+    "G4",
+    "E5",
+    "C4",
+    "G4",
+    "C5+E5",
+    "C4",
+    "G4",
+    "C5+E5",
+    "C4",
+    "G4",
+    "C5",
+    "C4+E5",
+    "D5",
+    "E4+G5"
+  ],
+  "assertionFailures": [],
+  "assertionFailureDetails": [],
+  "reasonCodes": [],
+  "status": "pending",
+  "reason": "mixed free-performance phrase with plausible expected sequence; current recognizer compresses 17 expected events into 12 and mis-bundles several mid-phrase events, so keep as pending recognition target",
+  "auditVerdict": null,
+  "sourceProfile": "acoustic_real",
+  "captureIntent": "unknown",
+  "defaultCaptureIntent": "unknown",
+  "eventIntents": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "expectedEvents": [
+    {
+      "index": 1,
+      "display": "C4",
+      "intent": null
+    },
+    {
+      "index": 2,
+      "display": "G4",
+      "intent": null
+    },
+    {
+      "index": 3,
+      "display": "E5 + C5",
+      "intent": null
+    },
+    {
+      "index": 4,
+      "display": "C4",
+      "intent": null
+    },
+    {
+      "index": 5,
+      "display": "G4",
+      "intent": null
+    },
+    {
+      "index": 6,
+      "display": "E5 + C5",
+      "intent": null
+    },
+    {
+      "index": 7,
+      "display": "C4",
+      "intent": null
+    },
+    {
+      "index": 8,
+      "display": "G4",
+      "intent": null
+    },
+    {
+      "index": 9,
+      "display": "E5 + C5",
+      "intent": null
+    },
+    {
+      "index": 10,
+      "display": "C4",
+      "intent": null
+    },
+    {
+      "index": 11,
+      "display": "G4",
+      "intent": null
+    },
+    {
+      "index": 12,
+      "display": "C5",
+      "intent": null
+    },
+    {
+      "index": 13,
+      "display": "D5",
+      "intent": null
+    },
+    {
+      "index": 14,
+      "display": "E5 + C4",
+      "intent": null
+    },
+    {
+      "index": 15,
+      "display": "C5",
+      "intent": null
+    },
+    {
+      "index": 16,
+      "display": "G5 + E5",
+      "intent": null
+    },
+    {
+      "index": 17,
+      "display": "G4",
+      "intent": null
+    }
+  ],
+  "scenario": "2026-03-23-c4-to-g4-sequence-17-kalimba-17-c",
+  "expectedSummary": "C4 x 4 / G4 x 5 / E5 + C5 x 3 / C5 x 2 / D5 / E5 + C4 / G5 + E5",
+  "evaluationWindows": [],
+  "ignoredRanges": [],
+  "recommendedRecapture": [],
+  "evaluationMode": "full_audio",
+  "sourceDurationSec": 21.96,
+  "evaluationDurationSec": 21.96,
+  "fullEventCount": 15,
+  "eventCoverage": [
+    {
+      "startTime": 2.048,
+      "endTime": 2.9653,
+      "noteSet": "C4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 3.08,
+      "endTime": 3.6587,
+      "noteSet": "G4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 4.0107,
+      "endTime": 4.8987,
+      "noteSet": "E5",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 4.8987,
+      "endTime": 5.1627,
+      "noteSet": "C4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 5.8133,
+      "endTime": 6.652,
+      "noteSet": "G4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 6.656,
+      "endTime": 7.584,
+      "noteSet": "C5+E5",
+      "gesture": "strict_chord",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 7.584,
+      "endTime": 7.952,
+      "noteSet": "C4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 8.5307,
+      "endTime": 9.3933,
+      "noteSet": "G4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 9.4,
+      "endTime": 10.304,
+      "noteSet": "C5+E5",
+      "gesture": "strict_chord",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 10.304,
+      "endTime": 10.6773,
+      "noteSet": "C4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 11.2587,
+      "endTime": 12.2173,
+      "noteSet": "G4",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 12.2267,
+      "endTime": 12.5707,
+      "noteSet": "C5",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 13.1227,
+      "endTime": 13.448,
+      "noteSet": "C4+E5",
+      "gesture": "strict_chord",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 13.448,
+      "endTime": 13.544,
+      "noteSet": "D5",
+      "gesture": "ambiguous",
+      "scope": "in_scope"
+    },
+    {
+      "startTime": 14.1813,
+      "endTime": 14.3213,
+      "noteSet": "E4+G5",
+      "gesture": "slide_chord",
+      "scope": "in_scope"
+    }
+  ],
+  "eventCompression": {
+    "expected": 17,
+    "detected": 15,
+    "compressionRatio": 0.882
+  },
+  "dominantGestureMix": {
+    "ambiguous": 11,
+    "strict_chord": 3,
+    "slide_chord": 1
+  },
+  "isolatedSingletonCount": 1,
+  "phraseBreakGuess": [
+    4,
+    7,
+    10,
+    12,
+    14
+  ],
+  "normalizationSummary": {
+    "segmentCount": 17,
+    "rawEventCount": 17,
+    "mergedEventCount": 15,
+    "segmentToRawDelta": 0,
+    "rawToMergedDelta": 2,
+    "mergedToDetectedDelta": 0
+  },
+  "normalizationDecisions": [
+    {
+      "rawIndex": 2,
+      "startTime": 3.08,
+      "endTime": 3.524,
+      "noteSet": "G4",
+      "rule": "merged_duplicate",
+      "targetMergedIndices": [
+        2
+      ]
+    },
+    {
+      "rawIndex": 3,
+      "startTime": 3.524,
+      "endTime": 3.6587,
+      "noteSet": "G4",
+      "rule": "merged_duplicate",
+      "targetMergedIndices": [
+        2
+      ]
+    },
+    {
+      "rawIndex": 15,
+      "startTime": 13.448,
+      "endTime": 13.544,
+      "noteSet": "D5+E5",
+      "rule": "simplified_to_subset",
+      "targetMergedIndices": [
+        14
+      ]
+    },
+    {
+      "rawIndex": 17,
+      "startTime": 14.3213,
+      "endTime": 14.432,
+      "noteSet": "G5",
+      "rule": "dropped_after_raw",
+      "targetMergedIndices": []
+    }
+  ],
+  "normalizationReasonCounts": {
+    "merged_duplicate": 2,
+    "dropped_after_raw": 1,
+    "simplified_to_subset": 1
+  },
+  "disabledRepeatedPatternPasses": [],
+  "repeatedPatternPassTrace": [
+    {
+      "pass": "normalize_repeated_four_note_family",
+      "enabled": true,
+      "mergeAfter": true,
+      "beforeEventCount": 15,
+      "afterEventCount": 15,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "normalize_repeated_four_note_gliss_patterns",
+      "enabled": true,
+      "mergeAfter": true,
+      "beforeEventCount": 15,
+      "afterEventCount": 15,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "normalize_repeated_explicit_four_note_patterns",
+      "enabled": true,
+      "mergeAfter": true,
+      "beforeEventCount": 15,
+      "afterEventCount": 15,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "normalize_repeated_triad_patterns",
+      "enabled": true,
+      "mergeAfter": true,
+      "beforeEventCount": 15,
+      "afterEventCount": 15,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "normalize_strict_four_note_subsets",
+      "enabled": true,
+      "mergeAfter": true,
+      "beforeEventCount": 15,
+      "afterEventCount": 15,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "suppress_repeated_triad_blips",
+      "enabled": true,
+      "mergeAfter": false,
+      "beforeEventCount": 15,
+      "afterEventCount": 15,
+      "changed": false,
+      "removed": [],
+      "added": []
+    },
+    {
+      "pass": "suppress_isolated_triad_extensions",
+      "enabled": true,
+      "mergeAfter": false,
+      "beforeEventCount": 15,
+      "afterEventCount": 15,
+      "changed": false,
+      "removed": [],
+      "added": []
+    }
+  ]
+}

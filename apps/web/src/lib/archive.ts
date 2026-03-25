@@ -117,7 +117,14 @@ function buildExpectedPerformanceMarkdown(expectedPerformance: ManualCaptureExpe
   for (const event of expectedPerformance.events) {
     const keys = event.keys.map((key) => `${key.noteName} (#${key.key})`).join(", ");
     const intentSuffix = event.intent ? ` [intent: ${event.intent}]` : "";
-    lines.push(`- ${event.index}. ${event.display}${intentSuffix} :: ${keys}`);
+    const partSuffix = event.parts && event.parts.length > 0
+      ? ` [parts: ${event.parts.map((part) => {
+        const partKeys = part.keys.map((key) => key.noteName).join(" + ");
+        const partLabel = part.display?.trim() || partKeys;
+        return part.intent ? `${part.intent}(${partLabel})` : partLabel;
+      }).join("; ")}]`
+      : "";
+    lines.push(`- ${event.index}. ${event.display}${intentSuffix}${partSuffix} :: ${keys}`);
   }
   return lines.join("\n");
 }

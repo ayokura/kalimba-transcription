@@ -70,6 +70,29 @@ Use the clickable kalimba key UI in the workflow panel.
 
 This avoids typing note names by hand and records both physical key numbers and note names in `request.json`. The selected capture intent is stored both as a recording-level field and, for new captures, on each expected event. Browser-recorded captures currently default to `sourceProfile = acoustic_real`.
 
+String import also supports:
+
+- simple sequences like `C4 / D4 / E4`
+- per-event intent prefixes like `slide_chord:E4 + G4 + B4 + D5 x 4`
+- JSON for mixed or compound events when one event combines multiple gesture parts
+
+Example JSON import:
+
+```json
+{
+  "defaultCaptureIntent": "separated_notes",
+  "events": [
+    { "notes": ["C4"] },
+    {
+      "parts": [
+        { "intent": "slide_chord", "notes": ["C5", "D5"] },
+        { "intent": "strict_chord", "notes": ["F4"] }
+      ]
+    }
+  ]
+}
+```
+
 Recommended case naming:
 
 - The debug capture UI now auto-generates a case ID when the field is left blank.

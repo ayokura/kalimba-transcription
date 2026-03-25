@@ -1,0 +1,261 @@
+{
+  "kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01": {
+    "baseline": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 10,
+        "dropped_after_raw": 3,
+        "overlap_rebundled": 1
+      }
+    },
+    "disable_family": {
+      "eventCount": 6,
+      "assertionFailureCount": 3,
+      "reasonCodes": [
+        "event_count_too_high",
+        "note_set_missing",
+        "event_order_mismatch"
+      ],
+      "normalizationReasonCounts": {
+        "merged_duplicate": 6,
+        "merged_subset_into": 4,
+        "dropped_after_raw": 2,
+        "simplified_to_subset": 1
+      }
+    },
+    "disable_explicit": {
+      "eventCount": 5,
+      "assertionFailureCount": 2,
+      "reasonCodes": [
+        "note_set_missing",
+        "event_order_mismatch"
+      ],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 10,
+        "dropped_after_raw": 2,
+        "merged_duplicate": 1
+      }
+    },
+    "disable_family_and_explicit": {
+      "eventCount": 6,
+      "assertionFailureCount": 3,
+      "reasonCodes": [
+        "event_count_too_high",
+        "note_set_missing",
+        "event_order_mismatch"
+      ],
+      "normalizationReasonCounts": {
+        "merged_duplicate": 6,
+        "merged_subset_into": 4,
+        "dropped_after_raw": 2,
+        "simplified_to_subset": 1
+      }
+    }
+  },
+  "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03": {
+    "baseline": {
+      "eventCount": 6,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 9,
+        "dropped_after_raw": 2
+      }
+    },
+    "disable_family": {
+      "eventCount": 6,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 9,
+        "dropped_after_raw": 2
+      }
+    },
+    "disable_explicit": {
+      "eventCount": 7,
+      "assertionFailureCount": 2,
+      "reasonCodes": [
+        "event_count_too_high",
+        "note_set_missing"
+      ],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 4,
+        "dropped_after_raw": 2
+      }
+    },
+    "disable_family_and_explicit": {
+      "eventCount": 7,
+      "assertionFailureCount": 2,
+      "reasonCodes": [
+        "event_count_too_high",
+        "note_set_missing"
+      ],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 4,
+        "dropped_after_raw": 2
+      }
+    }
+  },
+  "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01": {
+    "baseline": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 10,
+        "dropped_after_raw": 5
+      }
+    },
+    "disable_family": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 10,
+        "dropped_after_raw": 5
+      }
+    },
+    "disable_explicit": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 10,
+        "dropped_after_raw": 5
+      }
+    },
+    "disable_family_and_explicit": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 10,
+        "dropped_after_raw": 5
+      }
+    }
+  },
+  "kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01": {
+    "baseline": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 5,
+        "dropped_after_raw": 2,
+        "merged_duplicate": 1
+      }
+    },
+    "disable_family": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 5,
+        "dropped_after_raw": 2,
+        "merged_duplicate": 1
+      }
+    },
+    "disable_explicit": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 5,
+        "dropped_after_raw": 2,
+        "merged_duplicate": 1
+      }
+    },
+    "disable_family_and_explicit": {
+      "eventCount": 5,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_subset_into": 5,
+        "dropped_after_raw": 2,
+        "merged_duplicate": 1
+      }
+    }
+  },
+  "kalimba-17-c-mixed-sequence-01": {
+    "baseline": {
+      "eventCount": 6,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "dropped_after_raw": 1,
+        "simplified_to_subset": 1
+      }
+    },
+    "disable_family": {
+      "eventCount": 6,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "dropped_after_raw": 1,
+        "simplified_to_subset": 1
+      }
+    },
+    "disable_explicit": {
+      "eventCount": 6,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "dropped_after_raw": 1,
+        "simplified_to_subset": 1
+      }
+    },
+    "disable_family_and_explicit": {
+      "eventCount": 6,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "dropped_after_raw": 1,
+        "simplified_to_subset": 1
+      }
+    }
+  },
+  "kalimba-17-c-c4-to-g4-sequence-17-01": {
+    "baseline": {
+      "eventCount": 15,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_duplicate": 2,
+        "dropped_after_raw": 1,
+        "simplified_to_subset": 1
+      }
+    },
+    "disable_family": {
+      "eventCount": 15,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_duplicate": 2,
+        "dropped_after_raw": 1,
+        "simplified_to_subset": 1
+      }
+    },
+    "disable_explicit": {
+      "eventCount": 15,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_duplicate": 2,
+        "dropped_after_raw": 1,
+        "simplified_to_subset": 1
+      }
+    },
+    "disable_family_and_explicit": {
+      "eventCount": 15,
+      "assertionFailureCount": 0,
+      "reasonCodes": [],
+      "normalizationReasonCounts": {
+        "merged_duplicate": 2,
+        "dropped_after_raw": 1,
+        "simplified_to_subset": 1
+      }
+    }
+  }
+}

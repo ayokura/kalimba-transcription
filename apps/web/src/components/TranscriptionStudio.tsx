@@ -11,6 +11,7 @@ import {
   CaptureAssessmentDetails,
   CaptureIntent,
   ManualCaptureExpectedEvent,
+  ManualCaptureExpectedPart,
   ManualCaptureExpectedPerformance,
   TranscriptionCapture,
   createTranscriptionWithCapture,
@@ -131,6 +132,204 @@ function buildExpectedDisplay(notes: TuningNote[]): string {
   return notes.map((note) => note.noteName).join(" + ");
 }
 
+function buildExpectedDisplayFromKeys(notes: Array<{ noteName: string }>): string {
+  return notes.map((note) => note.noteName).join(" + ");
+}
+
+function parseCaptureIntentValue(value: unknown): CaptureIntent | null | "invalid" {
+  if (value == null) {
+    return null;
+  }
+  if (typeof value !== "string") {
+    return "invalid";
+  }
+  const normalized = normalizeCaptureIntentFamily(value.trim());
+  return normalized === "ambiguous" ? "invalid" : normalized;
+}
+
+function buildPartBreakdown(event: ManualCaptureExpectedEvent): string | null {
+  if (!event.parts || event.parts.length === 0) {
+    return null;
+  }
+  return event.parts.map((part) => {
+    const label = part.display?.trim() || buildExpectedDisplayFromKeys(part.keys);
+    return part.intent ? `${buildIntentLabel(part.intent)}(${label})` : label;
+  }).join(" / ");
+}
+
+function resolveExpectedNotes(
+  rawValues: unknown,
+  tuning: InstrumentTuning,
+  noteByName: Map<string, TuningNote>,
+): { notes: TuningNote[]; error: string | null } {
+  if (!Array.isArray(rawValues) || rawValues.length === 0) {
+    return { notes: [], error: "音配列が空です。" };
+  }
+
+  const noteByKey = new Map(tuning.notes.map((note) => [note.key, note]));
+  const resolvedNotes: TuningNote[] = [];
+  for (const rawValue of rawValues) {
+    let resolved: TuningNote | undefined;
+    if (typeof rawValue === "string") {
+      resolved = noteByName.get(rawValue.trim().toUpperCase());
+      if (!resolved) {
+        return { notes: [], error: `調律に存在しない音名です: ${rawValue}` };
+      }
+    } else if (typeof rawValue === "number" && Number.isInteger(rawValue)) {
+      resolved = noteByKey.get(rawValue);
+      if (!resolved) {
+        return { notes: [], error: `調律に存在しないキー番号です: ${rawValue}` };
+      }
+    } else {
+      return { notes: [], error: `音配列の値を解釈できませんでした: ${String(rawValue)}` };
+    }
+
+    if (!resolvedNotes.some((note) => note.key === resolved.key)) {
+      resolvedNotes.push(resolved);
+    }
+  }
+
+  resolvedNotes.sort((left, right) => left.key - right.key);
+  return { notes: resolvedNotes, error: null };
+}
+
+function parseJsonExpectedPerformanceText(
+  value: string,
+  tuning: InstrumentTuning,
+  fallbackIntent: CaptureIntent,
+): { events: ManualCaptureExpectedEvent[]; error: string | null; suggestedCaptureIntent?: CaptureIntent } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return { events: [], error: "JSON として解釈できませんでした。" };
+  }
+
+  let rawEvents: unknown;
+  let suggestedCaptureIntent: CaptureIntent | undefined;
+  if (Array.isArray(parsed)) {
+    rawEvents = parsed;
+  } else if (parsed && typeof parsed === "object" && Array.isArray((parsed as { events?: unknown }).events)) {
+    rawEvents = (parsed as { events: unknown[] }).events;
+    const defaultCaptureIntent = parseCaptureIntentValue((parsed as { defaultCaptureIntent?: unknown }).defaultCaptureIntent);
+    if (defaultCaptureIntent === "invalid") {
+      return { events: [], error: "defaultCaptureIntent が不正です。" };
+    }
+    if (defaultCaptureIntent) {
+      suggestedCaptureIntent = defaultCaptureIntent;
+    }
+  } else {
+    return { events: [], error: "JSON は expectedPerformance オブジェクトか event 配列で指定してください。" };
+  }
+
+  const noteByName = new Map(
+    tuning.notes.map((note) => [note.noteName.trim().toUpperCase(), note]),
+  );
+  const events: ManualCaptureExpectedEvent[] = [];
+
+  for (const [eventIndex, rawEvent] of (rawEvents as unknown[]).entries()) {
+    if (!rawEvent || typeof rawEvent !== "object") {
+      return { events: [], error: `events[${eventIndex + 1}] を解釈できませんでした。` };
+    }
+
+    const rawEventRecord = rawEvent as {
+      notes?: unknown;
+      keys?: unknown;
+      display?: unknown;
+      intent?: unknown;
+      repeat?: unknown;
+      parts?: unknown;
+    };
+
+    const eventIntent = parseCaptureIntentValue(rawEventRecord.intent);
+    if (eventIntent === "invalid") {
+      return { events: [], error: `events[${eventIndex + 1}].intent が不正です。` };
+    }
+
+    const repeatCount = Math.max(1, Number.parseInt(String(rawEventRecord.repeat ?? "1"), 10) || 1);
+    const directNoteSource = rawEventRecord.notes ?? rawEventRecord.keys ?? null;
+    if (directNoteSource && rawEventRecord.parts) {
+      return { events: [], error: `events[${eventIndex + 1}] は notes/keys と parts を同時に指定できません。` };
+    }
+
+    let eventNotes: TuningNote[] = [];
+    let eventParts: ManualCaptureExpectedPart[] | null = null;
+
+    if (rawEventRecord.parts != null) {
+      if (!Array.isArray(rawEventRecord.parts) || rawEventRecord.parts.length === 0) {
+        return { events: [], error: `events[${eventIndex + 1}].parts が空です。` };
+      }
+
+      const mergedNotes = new Map<number, TuningNote>();
+      eventParts = [];
+      for (const [partIndex, rawPart] of rawEventRecord.parts.entries()) {
+        if (!rawPart || typeof rawPart !== "object") {
+          return { events: [], error: `events[${eventIndex + 1}].parts[${partIndex + 1}] を解釈できませんでした。` };
+        }
+        const rawPartRecord = rawPart as { notes?: unknown; keys?: unknown; display?: unknown; intent?: unknown };
+        const resolvedPart = resolveExpectedNotes(rawPartRecord.notes ?? rawPartRecord.keys, tuning, noteByName);
+        if (resolvedPart.error) {
+          return { events: [], error: `events[${eventIndex + 1}].parts[${partIndex + 1}]: ${resolvedPart.error}` };
+        }
+        const partIntent = parseCaptureIntentValue(rawPartRecord.intent);
+        if (partIntent === "invalid") {
+          return { events: [], error: `events[${eventIndex + 1}].parts[${partIndex + 1}].intent が不正です。` };
+        }
+
+        for (const note of resolvedPart.notes) {
+          mergedNotes.set(note.key, note);
+        }
+        eventParts.push({
+          keys: resolvedPart.notes.map((note) => ({ key: note.key, noteName: note.noteName })),
+          display: typeof rawPartRecord.display === "string" && rawPartRecord.display.trim().length > 0
+            ? rawPartRecord.display.trim()
+            : buildExpectedDisplay(resolvedPart.notes),
+          intent: partIntent,
+        });
+      }
+
+      eventNotes = Array.from(mergedNotes.values()).sort((left, right) => left.key - right.key);
+    } else {
+      const resolvedEvent = resolveExpectedNotes(directNoteSource, tuning, noteByName);
+      if (resolvedEvent.error) {
+        return { events: [], error: `events[${eventIndex + 1}]: ${resolvedEvent.error}` };
+      }
+      eventNotes = resolvedEvent.notes;
+    }
+
+    if (eventNotes.length === 0) {
+      return { events: [], error: `events[${eventIndex + 1}] の音が空です。` };
+    }
+
+    const partIntents = [...new Set((eventParts ?? []).map((part) => part.intent).filter((intent): intent is CaptureIntent => Boolean(intent)))];
+    const resolvedEventIntent = eventIntent ?? (partIntents.length === 1 ? partIntents[0] : null);
+    const display = typeof rawEventRecord.display === "string" && rawEventRecord.display.trim().length > 0
+      ? rawEventRecord.display.trim()
+      : buildExpectedDisplay(eventNotes);
+
+    for (let repeatIndex = 0; repeatIndex < repeatCount; repeatIndex += 1) {
+      events.push({
+        index: events.length + 1,
+        keys: eventNotes.map((note) => ({ key: note.key, noteName: note.noteName })),
+        display,
+        intent: resolvedEventIntent ?? (fallbackIntent !== "unknown" ? fallbackIntent : null),
+        parts: eventParts,
+      });
+    }
+  }
+
+  if (!suggestedCaptureIntent) {
+    const explicitIntents = [...new Set(events.map((event) => event.intent).filter((intent): intent is CaptureIntent => Boolean(intent)))];
+    if (explicitIntents.length === 1) {
+      suggestedCaptureIntent = explicitIntents[0];
+    } else if (explicitIntents.length > 1) {
+      suggestedCaptureIntent = "unknown";
+    }
+  }
+
+  return { events, error: null, suggestedCaptureIntent };
+}
+
 function buildExpectedSummary(events: ManualCaptureExpectedEvent[]): string {
   if (events.length === 0) {
     return "";
@@ -150,7 +349,12 @@ function parseExpectedPerformanceText(
   value: string,
   tuning: InstrumentTuning,
   fallbackIntent: CaptureIntent,
-): { events: ManualCaptureExpectedEvent[]; error: string | null } {
+): { events: ManualCaptureExpectedEvent[]; error: string | null; suggestedCaptureIntent?: CaptureIntent } {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    return parseJsonExpectedPerformanceText(trimmed, tuning, fallbackIntent);
+  }
+
   const normalized = value
     .replace(/\r\n/g, "\n")
     .replace(/→/g, "/")
@@ -174,8 +378,11 @@ function parseExpectedPerformanceText(
 
   for (const rawToken of rawTokens) {
     const repeatMatch = rawToken.match(/^(.*?)(?:\s*[x×]\s*(\d+))$/i);
-    const eventBody = repeatMatch?.[1]?.trim() || rawToken;
+    const tokenWithoutRepeat = repeatMatch?.[1]?.trim() || rawToken;
     const repeatCount = Math.max(1, Number.parseInt(repeatMatch?.[2] ?? "1", 10) || 1);
+    const intentMatch = tokenWithoutRepeat.match(/^(strict_chord|slide_chord|arpeggio|separated_notes|unknown)\s*:\s*(.+)$/i);
+    const eventIntent = intentMatch ? normalizeCaptureIntentFamily(intentMatch[1]) : null;
+    const eventBody = intentMatch?.[2]?.trim() || tokenWithoutRepeat;
 
     const noteTokens = eventBody
       .split("+")
@@ -204,12 +411,16 @@ function parseExpectedPerformanceText(
         index: events.length + 1,
         keys: resolvedNotes.map((note) => ({ key: note.key, noteName: note.noteName })),
         display,
-        intent: fallbackIntent !== "unknown" ? fallbackIntent : null,
+        intent: eventIntent && eventIntent !== "ambiguous"
+          ? eventIntent
+          : fallbackIntent !== "unknown"
+            ? fallbackIntent
+            : null,
       });
     }
   }
 
-  return { events, error: null };
+  return { events, error: null, suggestedCaptureIntent: fallbackIntent !== "unknown" ? fallbackIntent : undefined };
 }
 
 function buildExpectedPerformance(events: ManualCaptureExpectedEvent[], fallbackIntent: CaptureIntent): ManualCaptureExpectedPerformance | null {
@@ -555,6 +766,9 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     }
 
     setExpectedEvents(parsed.events);
+    if (parsed.suggestedCaptureIntent) {
+      setCaptureIntent(parsed.suggestedCaptureIntent);
+    }
     setPendingExpectedKeys([]);
     setExpectedRepeatCount("1");
     setExpectedImportError(null);
@@ -693,7 +907,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
             <div className="panel-header compact">
               <div>
                 <strong>文字列からインポート</strong>
-                <p className="muted">例: `C4 / D4 / E4` または `C4 + E4 + G4 x 5`</p>
+                <p className="muted">例: `C4 / slide_chord:E4 + G4 + B4 + D5 x 4`。複合イベントは JSON でも指定できます。</p>
               </div>
               <button type="button" className="ghost" onClick={handleImportExpectedPerformance} disabled={!selectedTuning || expectedImportText.trim().length === 0}>
                 文字列を反映
@@ -708,7 +922,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
                   setExpectedImportError(null);
                 }
               }}
-              placeholder={"C4 / D4 / E4 / F4\nE4 + G4 + B4 + D5 x 4"}
+              placeholder={"C4 / D4 / E4\nslide_chord:E4 + G4 + B4 + D5 x 4\n\n{\"events\":[{\"parts\":[{\"intent\":\"slide_chord\",\"notes\":[\"C5\",\"D5\"]},{\"intent\":\"strict_chord\",\"notes\":[\"F4\"]}]}]}"}
             />
             {expectedImportError ? <p className="error-text">{expectedImportError}</p> : null}
           </div>
@@ -742,6 +956,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
                       <strong>{event.display}</strong>
                       <span className="muted">{event.keys.map((key) => `${key.noteName} (#${key.key})`).join(" / ")}</span>
                       {event.intent ? <span className="muted">intent: {buildIntentLabel(event.intent)}</span> : null}
+                      {buildPartBreakdown(event) ? <span className="muted">parts: {buildPartBreakdown(event)}</span> : null}
                     </div>
                   </div>
                 ))}
