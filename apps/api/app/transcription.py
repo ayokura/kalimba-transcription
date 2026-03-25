@@ -3124,7 +3124,6 @@ def _debug_event_payload_from_signature(signature: tuple[float, float, tuple[str
 
 def repeated_pattern_passes() -> tuple[RepeatedPatternPass, ...]:
     return (
-        RepeatedPatternPass("normalize_repeated_four_note_family", normalize_repeated_four_note_family, merge_after=True),
         RepeatedPatternPass("normalize_repeated_four_note_gliss_patterns", normalize_repeated_four_note_gliss_patterns, merge_after=True),
         RepeatedPatternPass("normalize_repeated_explicit_four_note_patterns", normalize_repeated_explicit_four_note_patterns, merge_after=True),
         RepeatedPatternPass("normalize_repeated_triad_patterns", normalize_repeated_triad_patterns, merge_after=True),
