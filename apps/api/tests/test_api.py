@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_terminal_residual_cluster, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_terminal_residual_cluster, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -363,6 +363,22 @@ def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -
     simplified = simplify_short_secondary_bleed(events)
 
     assert [note.note_name for note in simplified[1].notes] == ["B5"]
+
+
+def test_suppress_leading_descending_overlap_collapses_first_bridge() -> None:
+    tuning = get_default_tunings()[0]
+    e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
+    d6 = NoteCandidate(1, "D6", 1174.6590716696303, "D", 6)
+    c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
+    events = [
+        RawEvent(0.0, 0.12, [c6, e6], False, "E6", 400.0),
+        RawEvent(0.12, 0.36, [d6], False, "D6", 320.0),
+        RawEvent(0.36, 0.58, [c6], False, "C6", 300.0),
+    ]
+
+    simplified = suppress_leading_descending_overlap(events, tuning)
+
+    assert [note.note_name for note in simplified[0].notes] == ["E6"]
 
 
 def test_segment_peaks_keeps_mono_d4_monophonic() -> None:

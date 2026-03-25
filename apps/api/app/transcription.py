@@ -1637,6 +1637,59 @@ def is_slide_playable_contiguous_cluster(notes: list[NoteCandidate], tuning: Ins
     upper_gap = ranks[2] - ranks[1]
     return lower_gap == upper_gap and lower_gap >= 2
 
+def is_adjacent_tuning_step(note_a: NoteCandidate, note_b: NoteCandidate, tuning: InstrumentTuning) -> bool:
+    rank_by_name = {
+        note.note_name: index for index, note in enumerate(sorted(tuning.notes, key=lambda item: item.frequency))
+    }
+    rank_a = rank_by_name.get(note_a.note_name)
+    rank_b = rank_by_name.get(note_b.note_name)
+    if rank_a is None or rank_b is None:
+        return False
+    return abs(rank_a - rank_b) == 1
+
+
+def suppress_leading_descending_overlap(raw_events: list[RawEvent], tuning: InstrumentTuning) -> list[RawEvent]:
+    if len(raw_events) < 3:
+        return raw_events
+
+    first_event = raw_events[0]
+    second_event = raw_events[1]
+    third_event = raw_events[2]
+    first_duration = first_event.end_time - first_event.start_time
+    if (
+        len(first_event.notes) != 2
+        or len(second_event.notes) != 1
+        or len(third_event.notes) != 1
+        or first_duration > 0.16
+    ):
+        return raw_events
+
+    sorted_notes = sorted(first_event.notes, key=lambda note: note.frequency)
+    lower_note = sorted_notes[0]
+    upper_note = sorted_notes[1]
+    middle_note = second_event.notes[0]
+    tail_note = third_event.notes[0]
+    if (
+        tail_note.note_name != lower_note.note_name
+        or middle_note.frequency >= upper_note.frequency
+        or middle_note.frequency <= lower_note.frequency
+        or not is_adjacent_tuning_step(upper_note, middle_note, tuning)
+        or not is_adjacent_tuning_step(middle_note, lower_note, tuning)
+        or first_event.primary_note_name != upper_note.note_name
+    ):
+        return raw_events
+
+    updated_first = RawEvent(
+        start_time=first_event.start_time,
+        end_time=first_event.end_time,
+        notes=[upper_note],
+        is_gliss_like=first_event.is_gliss_like,
+        primary_note_name=upper_note.note_name,
+        primary_score=first_event.primary_score,
+    )
+    return [updated_first, *raw_events[1:]]
+
+
 def segment_peaks(
     audio: np.ndarray,
     sample_rate: int,
@@ -4013,6 +4066,7 @@ async def transcribe_audio(
     processed_events = suppress_resonant_carryover(processed_events)
     processed_events = collapse_same_start_primary_singletons(processed_events)
     processed_events = simplify_short_secondary_bleed(processed_events)
+    processed_events = suppress_leading_descending_overlap(processed_events, tuning)
     processed_events = merge_short_gliss_clusters(processed_events)
     processed_events = simplify_short_gliss_prefix_to_contiguous_singleton(processed_events)
     processed_events = merge_four_note_gliss_clusters(processed_events)
