@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_descending_primary_band, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -169,6 +169,14 @@ def test_collect_two_onset_gap_segments_requires_tight_mute_restrike_shape() -> 
     segments = collect_two_onset_gap_segments(active_ranges, onset_times)
 
     assert segments == [(12.6667, 12.752)]
+
+def test_collect_terminal_multi_onset_segments_requires_close_orphan_then_regular_run() -> None:
+    active_ranges = [(21.692, 21.968)]
+    onset_times = [22.112, 23.088, 23.5307, 23.96, 24.3627]
+
+    segments = collect_terminal_multi_onset_segments(active_ranges, onset_times, 24.9)
+
+    assert segments == [(23.088, 23.5307), (23.5307, 23.96), (23.96, 24.3627), (24.3627, 24.6827)]
 
 
 def test_detect_segments_collapses_redundant_same_start_segments() -> None:
@@ -366,8 +374,6 @@ def test_build_recent_ascending_primary_run_ceiling_uses_latest_suffix() -> None
     assert build_recent_ascending_primary_run_ceiling(raw_events) == g4.frequency
 
 
-
-
 def test_segment_peaks_suppresses_weak_lower_secondary_without_recent_context() -> None:
     tuning = get_default_tunings()[0]
     total_duration = 1.0
@@ -453,6 +459,106 @@ def test_segment_peaks_suppresses_descending_stale_upper_adjacent_carryover(monk
         and "descending-adjacent-upper-carryover" in item.get("reasons", [])
         for item in debug["secondaryDecisionTrail"]
     )
+
+
+def test_segment_peaks_replaces_descending_repeated_stale_primary(monkeypatch: pytest.MonkeyPatch) -> None:
+    import app.transcription as transcription
+
+    tuning = get_default_tunings()[0]
+    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+
+    def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
+        return [
+            NoteHypothesis(f4, 100.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+            NoteHypothesis(e4, 60.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    def fake_onset_energy_gain(_audio, _sample_rate, _start_time, _end_time, frequency):
+        if abs(frequency - f4.frequency) < 1e-6:
+            return 0.9
+        if abs(frequency - e4.frequency) < 1e-6:
+            return 10.0
+        return 0.0
+
+    monkeypatch.setattr(transcription, "rank_tuning_candidates", fake_rank_tuning_candidates)
+    monkeypatch.setattr(transcription, "onset_energy_gain", fake_onset_energy_gain)
+
+    candidates, debug, primary = segment_peaks(
+        synthesize_note(f4.frequency, duration=0.3),
+        44100,
+        0.0,
+        0.3,
+        tuning,
+        debug=True,
+        recent_note_names={"F4"},
+        previous_primary_note_name="F4",
+        previous_primary_frequency=f4.frequency,
+        previous_primary_was_singleton=True,
+    )
+
+    assert primary is not None
+    assert primary.candidate.note_name == "E4"
+    assert [candidate.note_name for candidate in candidates] == ["E4"]
+    assert debug is not None
+    assert debug["primaryPromotion"]["reason"] == "descending-repeated-primary"
+
+
+def test_segment_peaks_suppresses_descending_restart_upper_carryover(monkeypatch: pytest.MonkeyPatch) -> None:
+    import app.transcription as transcription
+
+    tuning = get_default_tunings()[0]
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
+
+    ranked_calls = 0
+
+    def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
+        nonlocal ranked_calls
+        ranked_calls += 1
+        if ranked_calls == 1:
+            return [
+                NoteHypothesis(g4, 100.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(e5, 15.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+            ]
+        return [
+            NoteHypothesis(e5, 15.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    def fake_onset_energy_gain(_audio, _sample_rate, _start_time, _end_time, frequency):
+        if abs(frequency - g4.frequency) < 1e-6:
+            return 60.0
+        if abs(frequency - e5.frequency) < 1e-6:
+            return 0.8
+        return 0.0
+
+    monkeypatch.setattr(transcription, "rank_tuning_candidates", fake_rank_tuning_candidates)
+    monkeypatch.setattr(transcription, "suppress_harmonics", lambda spectrum, frequencies, _frequency: spectrum)
+    monkeypatch.setattr(transcription, "onset_energy_gain", fake_onset_energy_gain)
+
+    candidates, debug, primary = segment_peaks(
+        synthesize_note(g4.frequency, duration=0.24),
+        44100,
+        0.0,
+        0.24,
+        tuning,
+        debug=True,
+        previous_primary_note_name="A4",
+        previous_primary_frequency=440.0,
+        previous_primary_was_singleton=True,
+    )
+
+    assert primary is not None
+    assert primary.candidate.note_name == "G4"
+    assert [candidate.note_name for candidate in candidates] == ["G4"]
+    assert debug is not None
+    assert any(
+        item["noteName"] == "E5"
+        and not item.get("accepted")
+        and "descending-restart-upper-carryover" in item.get("reasons", [])
+        for item in debug["secondaryDecisionTrail"]
+    )
+
 
 def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture() -> None:
     fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01"
@@ -1466,6 +1572,29 @@ def test_transcription_debug_reports_disabled_repeated_pattern_passes() -> None:
     assert payload["debug"]["disabledRepeatedPatternPasses"] == ["normalize_repeated_triad_patterns"]
     triad_trace = next(item for item in payload["debug"]["repeatedPatternPassTrace"] if item["pass"] == "normalize_repeated_triad_patterns")
     assert triad_trace["enabled"] is False
+
+
+def test_transcription_recovers_terminal_descending_onset_run_in_51_note_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={
+            "tuning": json.dumps(request_payload["tuning"]),
+            "debug": "true",
+        },
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["debug"]["terminalMultiOnsetSegments"]
+    assert payload["events"][-1]["notes"][0]["pitchClass"] == "C"
+    assert payload["events"][-1]["notes"][0]["octave"] == 4
+    assert len(payload["events"]) >= 50
+
 
 
 

@@ -63,6 +63,10 @@ SINGLE_ONSET_GAP_HEAD_SEGMENT_DURATION = 0.24
 CLOSE_TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE = 0.05
 CLOSE_TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE = 0.18
 CLOSE_TERMINAL_ORPHAN_SEGMENT_DURATION = 0.24
+TERMINAL_MULTI_ONSET_MIN_COUNT = 4
+TERMINAL_MULTI_ONSET_MIN_INTERVAL = 0.18
+TERMINAL_MULTI_ONSET_MAX_INTERVAL = 0.55
+TERMINAL_MULTI_ONSET_TAIL_DURATION = 0.32
 ACTIVE_RANGE_START_CLUSTER_MIN_GAP = 0.45
 ACTIVE_RANGE_START_CLUSTER_MAX_SPAN = 0.09
 ACTIVE_RANGE_START_CLUSTER_MAX_DURATION = 0.35
@@ -77,6 +81,14 @@ RECENT_PRIMARY_REPLACEMENT_RELAXED_FUNDAMENTAL_RATIO = 0.45
 RECENT_PRIMARY_REPLACEMENT_STRONG_ONSET_GAIN = 100.0
 RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_GAIN = 20.0
 RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_RATIO = 8.0
+DESCENDING_REPEATED_PRIMARY_MAX_DURATION = 0.45
+DESCENDING_REPEATED_PRIMARY_MAX_PRIMARY_ONSET_GAIN = 2.5
+DESCENDING_REPEATED_PRIMARY_MIN_REPLACEMENT_ONSET_GAIN = 5.0
+DESCENDING_REPEATED_PRIMARY_MIN_REPLACEMENT_ONSET_RATIO = 4.0
+DESCENDING_REPEATED_PRIMARY_MIN_SCORE_RATIO = 0.35
+DESCENDING_REPEATED_PRIMARY_MIN_FUNDAMENTAL_RATIO = 0.9
+DESCENDING_REPEATED_PRIMARY_MIN_INTERVAL_CENTS = 80.0
+DESCENDING_REPEATED_PRIMARY_MAX_INTERVAL_CENTS = 220.0
 RECENT_UPPER_SECONDARY_MIN_DURATION = 0.22
 RECENT_UPPER_SECONDARY_PRIMARY_ONSET_GAIN = 20.0
 UPPER_SECONDARY_WEAK_ONSET_MIN_DURATION = 0.4
@@ -113,6 +125,10 @@ ASCENDING_PRIMARY_RUN_MIN_LENGTH = 3
 ASCENDING_PRIMARY_RUN_MAX_DURATION = 0.45
 ASCENDING_PRIMARY_RUN_SECONDARY_SCORE_RATIO = 0.35
 ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN = 8.0
+DESCENDING_PRIMARY_SUFFIX_MIN_LENGTH = 2
+DESCENDING_PRIMARY_SUFFIX_MAX_DURATION = 0.5
+DESCENDING_PRIMARY_SUFFIX_PRIMARY_ONSET_GAIN = 20.0
+DESCENDING_PRIMARY_SUFFIX_UPPER_SCORE_RATIO = 0.35
 ADJACENT_SEPARATED_DYAD_MAX_DURATION = 0.6
 ADJACENT_SEPARATED_DYAD_RUN_MIN_FORWARD_SUPPORT = 2
 PRIOR_ONSET_BACKTRACK_SECONDS = 0.55
@@ -172,6 +188,13 @@ DESCENDING_STEP_HANDOFF_MAX_DURATION = 0.46
 DESCENDING_ADJACENT_UPPER_CARRYOVER_MAX_DURATION = 0.24
 DESCENDING_ADJACENT_UPPER_PRIMARY_ONSET_GAIN = 5.0
 DESCENDING_ADJACENT_UPPER_SCORE_RATIO = 1.5
+DESCENDING_RESTART_UPPER_CARRYOVER_MAX_DURATION = 0.45
+DESCENDING_RESTART_UPPER_PRIMARY_ONSET_GAIN = 20.0
+DESCENDING_RESTART_UPPER_SCORE_RATIO = 0.2
+DESCENDING_PRIMARY_BAND_MIN_LENGTH = 4
+DESCENDING_PRIMARY_SUFFIX_UPPER_CARRYOVER_MAX_DURATION = 0.45
+DESCENDING_PRIMARY_BAND_PRIMARY_ONSET_GAIN = 5.0
+DESCENDING_PRIMARY_SUFFIX_UPPER_SCORE_RATIO = 0.75
 RESONANT_CARRYOVER_PHRASE_RESET_MIN_GAP = 0.45
 RESONANT_CARRYOVER_HIGH_RETURN_MAX_DURATION = 0.24
 RESONANT_CARRYOVER_HIGH_RETURN_MIN_INTERVAL_CENTS = 1800.0
@@ -726,6 +749,48 @@ def collect_close_terminal_orphan_segments(
     return [(orphan_start, orphan_end)]
 
 
+def collect_terminal_multi_onset_segments(
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+    audio_duration: float,
+) -> list[tuple[float, float]]:
+    if not active_ranges:
+        return []
+
+    last_range_end = active_ranges[-1][1]
+    trailing_onsets = [
+        onset_time
+        for onset_time in onset_times
+        if onset_time >= last_range_end + CLOSE_TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE
+        and onset_time <= audio_duration - 0.08
+    ]
+    if len(trailing_onsets) < TERMINAL_MULTI_ONSET_MIN_COUNT:
+        return []
+    if trailing_onsets[0] > last_range_end + CLOSE_TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE:
+        return []
+
+    run_onsets = trailing_onsets[1:]
+    if len(run_onsets) < 3:
+        return []
+
+    intervals = [run_onsets[i + 1] - run_onsets[i] for i in range(len(run_onsets) - 1)]
+    if not intervals:
+        return []
+    if not all(TERMINAL_MULTI_ONSET_MIN_INTERVAL <= interval <= TERMINAL_MULTI_ONSET_MAX_INTERVAL for interval in intervals):
+        return []
+
+    segments: list[tuple[float, float]] = []
+    for start_time, end_time in zip(run_onsets, run_onsets[1:]):
+        if end_time - start_time >= 0.08:
+            segments.append((start_time, end_time))
+
+    tail_start = run_onsets[-1]
+    tail_end = min(tail_start + TERMINAL_MULTI_ONSET_TAIL_DURATION, audio_duration)
+    if tail_end - tail_start >= 0.08:
+        segments.append((tail_start, tail_end))
+    return segments
+
+
 def simplify_sparse_gap_tail_high_octave_dyad(candidates: list[NoteCandidate]) -> list[NoteCandidate]:
     if len(candidates) != 2:
         return candidates
@@ -800,6 +865,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
 
     terminal_orphan_segments: list[tuple[float, float]] = []
     close_terminal_orphan_segments: list[tuple[float, float]] = []
+    terminal_multi_onset_segments: list[tuple[float, float]] = []
     if active_ranges:
         audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
         last_range_end = active_ranges[-1][1]
@@ -816,6 +882,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
             if orphan_end - orphan_start >= 0.08:
                 terminal_orphan_segments.append((orphan_start, orphan_end))
         close_terminal_orphan_segments = collect_close_terminal_orphan_segments(active_ranges, onset_times, audio_duration)
+        terminal_multi_onset_segments = collect_terminal_multi_onset_segments(active_ranges, onset_times, audio_duration)
 
     segments: list[tuple[float, float]] = []
     for range_index, (range_start, range_end) in enumerate(active_ranges):
@@ -885,6 +952,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for start_time, end_time in close_terminal_orphan_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
+    for start_time, end_time in terminal_multi_onset_segments:
+        if end_time - start_time >= 0.08:
+            segments.append((start_time, end_time))
 
     segments = dedupe_nested_segments(segments)
     segments = trim_small_overlapping_segments(segments)
@@ -919,6 +989,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "sparseGapTailSegments": [[round(start, 4), round(end, 4)] for start, end in sparse_gap_tail_segments],
         "terminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_orphan_segments],
         "closeTerminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in close_terminal_orphan_segments],
+        "terminalMultiOnsetSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_multi_onset_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),
         "tempoRaw": round(tempo, 4),
@@ -1294,6 +1365,9 @@ def maybe_replace_stale_recent_primary(
     primary: NoteHypothesis,
     ranked: list[NoteHypothesis],
     recent_note_names: set[str] | None,
+    previous_primary_note_name: str | None = None,
+    previous_primary_frequency: float | None = None,
+    previous_primary_was_singleton: bool = False,
 ) -> tuple[NoteHypothesis, float | None, dict[str, Any] | None]:
     if not recent_note_names or primary.candidate.note_name not in recent_note_names:
         return primary, None, None
@@ -1318,22 +1392,44 @@ def maybe_replace_stale_recent_primary(
             hypothesis.fundamental_ratio >= RECENT_PRIMARY_REPLACEMENT_RELAXED_FUNDAMENTAL_RATIO
             and onset_gain >= RECENT_PRIMARY_REPLACEMENT_STRONG_ONSET_GAIN
         )
-        if hypothesis.fundamental_ratio < RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO and not relaxed_recent_primary:
+        descending_repeated_primary = (
+            previous_primary_was_singleton
+            and previous_primary_note_name == primary.candidate.note_name
+            and previous_primary_frequency is not None
+            and duration <= DESCENDING_REPEATED_PRIMARY_MAX_DURATION
+            and primary_onset_gain <= DESCENDING_REPEATED_PRIMARY_MAX_PRIMARY_ONSET_GAIN
+            and hypothesis.candidate.frequency < primary.candidate.frequency
+            and hypothesis.candidate.frequency < previous_primary_frequency
+            and DESCENDING_REPEATED_PRIMARY_MIN_INTERVAL_CENTS
+            <= abs(cents_distance(hypothesis.candidate.frequency, primary.candidate.frequency))
+            <= DESCENDING_REPEATED_PRIMARY_MAX_INTERVAL_CENTS
+            and onset_gain >= DESCENDING_REPEATED_PRIMARY_MIN_REPLACEMENT_ONSET_GAIN
+            and onset_gain >= max(primary_onset_gain, 1e-6) * DESCENDING_REPEATED_PRIMARY_MIN_REPLACEMENT_ONSET_RATIO
+            and hypothesis.score >= primary.score * DESCENDING_REPEATED_PRIMARY_MIN_SCORE_RATIO
+            and hypothesis.fundamental_ratio >= DESCENDING_REPEATED_PRIMARY_MIN_FUNDAMENTAL_RATIO
+        )
+        if hypothesis.fundamental_ratio < RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO and not relaxed_recent_primary and not descending_repeated_primary:
             continue
 
         if (
-            onset_gain >= RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_GAIN
-            and onset_gain >= max(primary_onset_gain, 1e-6) * RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_RATIO
+            (
+                onset_gain >= RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_GAIN
+                and onset_gain >= max(primary_onset_gain, 1e-6) * RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_RATIO
+            )
+            or descending_repeated_primary
         ):
+            replacement_debug = {
+                "replacedPrimaryNote": primary.candidate.note_name,
+                "replacementNote": hypothesis.candidate.note_name,
+                "replacedPrimaryOnsetGain": round(primary_onset_gain, 6),
+                "replacementOnsetGain": round(onset_gain, 6),
+            }
+            if descending_repeated_primary:
+                replacement_debug["reason"] = "descending-repeated-primary"
             return (
                 hypothesis,
                 onset_gain,
-                {
-                    "replacedPrimaryNote": primary.candidate.note_name,
-                    "replacementNote": hypothesis.candidate.note_name,
-                    "replacedPrimaryOnsetGain": round(primary_onset_gain, 6),
-                    "replacementOnsetGain": round(onset_gain, 6),
-                },
+                replacement_debug,
             )
 
     return primary, primary_onset_gain, None
@@ -1496,10 +1592,17 @@ def segment_peaks(
     *,
     debug: bool = False,
     recent_note_names: set[str] | None = None,
+    descending_primary_band_floor: float | None = None,
+    descending_primary_band_ceiling: float | None = None,
+    descending_primary_band_note_names: set[str] | None = None,
     ascending_primary_run_ceiling: float | None = None,
     ascending_singleton_suffix_ceiling: float | None = None,
     ascending_singleton_suffix_note_names: set[str] | None = None,
+    descending_primary_suffix_floor: float | None = None,
+    descending_primary_suffix_ceiling: float | None = None,
+    descending_primary_suffix_note_names: set[str] | None = None,
     previous_primary_note_name: str | None = None,
+    previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
 ) -> tuple[list[NoteCandidate], dict[str, Any] | None, NoteHypothesis | None]:
     start = int(start_time * sample_rate)
@@ -1534,6 +1637,9 @@ def segment_peaks(
         primary,
         ranked,
         recent_note_names,
+        previous_primary_note_name=previous_primary_note_name,
+        previous_primary_frequency=previous_primary_frequency,
+        previous_primary_was_singleton=previous_primary_was_singleton,
     )
     primary, stale_upper_promotion_debug = maybe_promote_stale_primary_to_upper_octave(
         primary,
@@ -1633,6 +1739,71 @@ def segment_peaks(
                     and hypothesis.score < primary.score * DESCENDING_ADJACENT_UPPER_SCORE_RATIO
                 ):
                     reasons.append("descending-adjacent-upper-carryover")
+            if (
+                not reasons
+                and previous_primary_was_singleton
+                and previous_primary_frequency is not None
+                and hypothesis.candidate.frequency > primary.candidate.frequency
+                and primary.candidate.frequency < previous_primary_frequency
+                and hypothesis.candidate.frequency >= previous_primary_frequency
+                and segment_duration <= DESCENDING_RESTART_UPPER_CARRYOVER_MAX_DURATION
+                and not octave_dyad_allowed
+            ):
+                if primary_onset_gain is None:
+                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                if onset_gain is None:
+                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                if (
+                    primary_onset_gain >= DESCENDING_RESTART_UPPER_PRIMARY_ONSET_GAIN
+                    and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
+                    and hypothesis.score < primary.score * DESCENDING_RESTART_UPPER_SCORE_RATIO
+                ):
+                    reasons.append("descending-restart-upper-carryover")
+            if (
+                not reasons
+                and hypothesis.candidate.frequency > primary.candidate.frequency
+                and descending_primary_band_floor is not None
+                and descending_primary_band_ceiling is not None
+                and descending_primary_band_note_names
+                and primary.candidate.frequency <= descending_primary_band_floor
+                and segment_duration <= DESCENDING_PRIMARY_SUFFIX_UPPER_CARRYOVER_MAX_DURATION
+                and not octave_dyad_allowed
+                and hypothesis.candidate.note_name in descending_primary_band_note_names
+            ):
+                if primary_onset_gain is None:
+                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                if onset_gain is None:
+                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                if (
+                    primary_onset_gain >= DESCENDING_PRIMARY_BAND_PRIMARY_ONSET_GAIN
+                    and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
+                    and hypothesis.score < primary.score * DESCENDING_PRIMARY_SUFFIX_UPPER_SCORE_RATIO
+                ):
+                    reasons.append("descending-primary-band-upper-carryover")
+            if (
+                not reasons
+                and hypothesis.candidate.frequency > primary.candidate.frequency
+                and descending_primary_suffix_floor is not None
+                and descending_primary_suffix_ceiling is not None
+                and descending_primary_suffix_note_names
+                and primary.candidate.frequency <= descending_primary_suffix_floor
+                and segment_duration <= DESCENDING_PRIMARY_SUFFIX_MAX_DURATION
+                and not octave_dyad_allowed
+                and (
+                    hypothesis.candidate.note_name in descending_primary_suffix_note_names
+                    or hypothesis.candidate.frequency > descending_primary_suffix_ceiling
+                )
+            ):
+                if primary_onset_gain is None:
+                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                if onset_gain is None:
+                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                if (
+                    primary_onset_gain >= DESCENDING_PRIMARY_SUFFIX_PRIMARY_ONSET_GAIN
+                    and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
+                    and hypothesis.score < primary.score * DESCENDING_PRIMARY_SUFFIX_UPPER_SCORE_RATIO
+                ):
+                    reasons.append("descending-primary-suffix-upper-carryover")
             if (
                 not reasons
                 and hypothesis.candidate.frequency > primary.candidate.frequency
@@ -3540,6 +3711,36 @@ def build_recent_ascending_primary_run_ceiling(raw_events: list[RawEvent]) -> fl
 
 
 
+def build_recent_descending_primary_band(raw_events: list[RawEvent]) -> tuple[float | None, float | None, set[str]]:
+    if not raw_events:
+        return None, None, set()
+
+    recent_primary_notes: list[NoteCandidate] = []
+    for recent_event in reversed(raw_events):
+        if recent_event.is_gliss_like or recent_event.primary_note_name is None:
+            break
+        primary_note = next((note for note in recent_event.notes if note.note_name == recent_event.primary_note_name), None)
+        if primary_note is None:
+            break
+        if recent_primary_notes and primary_note.frequency < recent_primary_notes[-1].frequency:
+            break
+        recent_primary_notes.append(primary_note)
+        if len(recent_primary_notes) >= 8:
+            break
+
+    if len(recent_primary_notes) < DESCENDING_PRIMARY_BAND_MIN_LENGTH:
+        return None, None, set()
+
+    recent_primary_notes.reverse()
+    recent_primary_frequencies = [note.frequency for note in recent_primary_notes]
+    if any(current > previous for previous, current in zip(recent_primary_frequencies, recent_primary_frequencies[1:])):
+        return None, None, set()
+    if recent_primary_frequencies[-1] >= recent_primary_frequencies[0]:
+        return None, None, set()
+
+    return recent_primary_frequencies[-1], recent_primary_frequencies[0], {note.note_name for note in recent_primary_notes}
+
+
 def build_recent_ascending_singleton_suffix(raw_events: list[RawEvent]) -> tuple[float | None, set[str]]:
     if not raw_events:
         return None, set()
@@ -3569,6 +3770,41 @@ def build_recent_ascending_singleton_suffix(raw_events: list[RawEvent]) -> tuple
 
     return recent_primary_frequencies[-1], {note.note_name for note in recent_primary_notes}
 
+
+def build_recent_descending_primary_suffix(raw_events: list[RawEvent]) -> tuple[float | None, float | None, set[str]]:
+    if not raw_events:
+        return None, None, set()
+
+    recent_primary_notes: list[NoteCandidate] = []
+    for recent_event in reversed(raw_events):
+        if recent_event.is_gliss_like or len(recent_event.notes) > 2 or recent_event.primary_note_name is None:
+            break
+        primary_note = next((note for note in recent_event.notes if note.note_name == recent_event.primary_note_name), None)
+        if primary_note is None:
+            break
+        if recent_primary_notes and primary_note.frequency < recent_primary_notes[-1].frequency:
+            break
+        recent_primary_notes.append(primary_note)
+        if len(recent_primary_notes) >= 4:
+            break
+
+    if len(recent_primary_notes) < DESCENDING_PRIMARY_SUFFIX_MIN_LENGTH:
+        return None, None, set()
+
+    recent_primary_notes.reverse()
+    recent_primary_frequencies = [note.frequency for note in recent_primary_notes]
+    if any(current > previous for previous, current in zip(recent_primary_frequencies, recent_primary_frequencies[1:])):
+        return None, None, set()
+    if recent_primary_frequencies[-1] >= recent_primary_frequencies[0]:
+        return None, None, set()
+
+    return (
+        recent_primary_frequencies[-1],
+        recent_primary_frequencies[0],
+        {note.note_name for note in recent_primary_notes},
+    )
+
+
 async def transcribe_audio(
     upload: UploadFile,
     tuning: InstrumentTuning,
@@ -3594,9 +3830,15 @@ async def transcribe_audio(
     for start_time, end_time in segments:
         duration = max(end_time - start_time, 0.08)
         recent_note_names = build_recent_note_names(raw_events)
+        descending_primary_band_floor, descending_primary_band_ceiling, descending_primary_band_note_names = build_recent_descending_primary_band(raw_events)
         ascending_primary_run_ceiling = build_recent_ascending_primary_run_ceiling(raw_events)
         ascending_singleton_suffix_ceiling, ascending_singleton_suffix_note_names = build_recent_ascending_singleton_suffix(raw_events)
+        descending_primary_suffix_floor, descending_primary_suffix_ceiling, descending_primary_suffix_note_names = build_recent_descending_primary_suffix(raw_events)
         previous_primary_note_name = raw_events[-1].primary_note_name if raw_events else None
+        previous_primary_frequency = None
+        if raw_events and raw_events[-1].primary_note_name is not None:
+            previous_primary = next((note for note in raw_events[-1].notes if note.note_name == raw_events[-1].primary_note_name), None)
+            previous_primary_frequency = previous_primary.frequency if previous_primary is not None else None
         previous_primary_was_singleton = bool(raw_events and len(raw_events[-1].notes) == 1)
         candidates, candidate_debug, primary = segment_peaks(
             normalized,
@@ -3606,10 +3848,17 @@ async def transcribe_audio(
             tuning,
             debug=debug,
             recent_note_names=recent_note_names,
+            descending_primary_band_floor=descending_primary_band_floor,
+            descending_primary_band_ceiling=descending_primary_band_ceiling,
+            descending_primary_band_note_names=descending_primary_band_note_names,
             ascending_primary_run_ceiling=ascending_primary_run_ceiling,
             ascending_singleton_suffix_ceiling=ascending_singleton_suffix_ceiling,
             ascending_singleton_suffix_note_names=ascending_singleton_suffix_note_names,
+            descending_primary_suffix_floor=descending_primary_suffix_floor,
+            descending_primary_suffix_ceiling=descending_primary_suffix_ceiling,
+            descending_primary_suffix_note_names=descending_primary_suffix_note_names,
             previous_primary_note_name=previous_primary_note_name,
+            previous_primary_frequency=previous_primary_frequency,
             previous_primary_was_singleton=previous_primary_was_singleton,
         )
         if not candidates or primary is None:
@@ -3732,6 +3981,7 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
 
 
 
