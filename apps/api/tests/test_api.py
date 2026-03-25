@@ -219,6 +219,37 @@ def test_simplify_short_secondary_bleed_collapses_mirrored_adjacent_run_to_upper
     assert [note.note_name for note in simplified[1].notes] == ["E4"]
     assert [note.note_name for note in simplified[2].notes] == ["E4"]
 
+
+
+def test_simplify_short_secondary_bleed_strips_descending_stale_upper_step() -> None:
+    g5 = NoteCandidate(3, "G5", 783.9908719634985, "G", 5)
+    f5 = NoteCandidate(14, "F5", 698.4564628660078, "F", 5)
+    e5 = NoteCandidate(4, "E5", 659.2551138257398, "E", 5)
+    events = [
+        RawEvent(0.0, 0.22, [g5], False, "G5", 340.0),
+        RawEvent(0.22, 0.4, [f5, g5], False, "F5", 300.0),
+        RawEvent(0.4, 0.62, [e5], False, "E5", 320.0),
+    ]
+
+    simplified = simplify_short_secondary_bleed(events)
+
+    assert [note.note_name for note in simplified[1].notes] == ["F5"]
+
+
+def test_simplify_short_secondary_bleed_promotes_descending_lower_step() -> None:
+    c5 = NoteCandidate(5, "C5", 523.2511306011972, "C", 5)
+    b4 = NoteCandidate(12, "B4", 493.8833012561241, "B", 4)
+    a4 = NoteCandidate(6, "A4", 440.0, "A", 4)
+    events = [
+        RawEvent(0.0, 0.22, [c5], False, "C5", 340.0),
+        RawEvent(0.22, 0.4, [b4, c5], False, "C5", 300.0),
+        RawEvent(0.4, 0.62, [a4], False, "A4", 320.0),
+    ]
+
+    simplified = simplify_short_secondary_bleed(events)
+
+    assert [note.note_name for note in simplified[1].notes] == ["B4"]
+
 def test_segment_peaks_keeps_mono_d4_monophonic() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_note(293.665)

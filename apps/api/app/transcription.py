@@ -166,8 +166,9 @@ SHORT_SECONDARY_STRIP_MIN_SCORE = 60.0
 SHORT_SECONDARY_STRIP_NEXT_SCORE_RATIO = 5.0
 RESTART_STALE_UPPER_STRIP_MIN_INTERVAL_CENTS = 1800.0
 RESTART_STALE_UPPER_STRIP_MAX_DURATION = 0.24
-ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS = 150.0
+ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS = 80.0
 ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS = 350.0
+DESCENDING_STEP_HANDOFF_MAX_DURATION = 0.46
 RESONANT_CARRYOVER_PHRASE_RESET_MIN_GAP = 0.45
 RESONANT_CARRYOVER_HIGH_RETURN_MAX_DURATION = 0.24
 RESONANT_CARRYOVER_HIGH_RETURN_MIN_INTERVAL_CENTS = 1800.0
@@ -2115,11 +2116,13 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
         duration = event.end_time - event.start_time
         if (
             len(event.notes) == 2
-            and duration <= SHORT_SECONDARY_STRIP_MAX_DURATION
+            and duration <= DESCENDING_STEP_HANDOFF_MAX_DURATION
             and event.primary_score >= SHORT_SECONDARY_STRIP_MIN_SCORE
         ):
             primary_note = next((note for note in event.notes if note.note_name == event.primary_note_name), None)
             if primary_note is not None:
+                previous_event = raw_events[index - 1] if index > 0 else None
+                next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
                 lower_notes = [note for note in event.notes if note.note_name != primary_note.note_name and note.frequency < primary_note.frequency]
                 upper_notes = [note for note in event.notes if note.note_name != primary_note.note_name and note.frequency > primary_note.frequency]
                 if len(lower_notes) == 1 and index + 1 < len(raw_events):
@@ -2137,20 +2140,56 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
                             primary_note_name=primary_note.note_name,
                             primary_score=event.primary_score,
                         )
+                    elif previous_event is not None:
+                        lower_note = lower_notes[0]
+                        descending_step_handoff = (
+                            len(previous_event.notes) == 1
+                            and previous_event.notes[0].note_name == primary_note.note_name
+                            and len(next_event.notes) == 1
+                            and next_event.notes[0].frequency < lower_note.frequency
+                            and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                            <= abs(cents_distance(lower_note.frequency, primary_note.frequency))
+                            <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                            and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                            <= abs(cents_distance(next_event.notes[0].frequency, lower_note.frequency))
+                            <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                        )
+                        if descending_step_handoff and duration <= DESCENDING_STEP_HANDOFF_MAX_DURATION:
+                            updated_event = RawEvent(
+                                start_time=event.start_time,
+                                end_time=event.end_time,
+                                notes=[lower_note],
+                                is_gliss_like=event.is_gliss_like,
+                                primary_note_name=lower_note.note_name,
+                                primary_score=event.primary_score,
+                            )
                 elif len(upper_notes) == 1:
                     upper_note = upper_notes[0]
-                    previous_event = raw_events[index - 1] if index > 0 else None
-                    next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
                     repeated_high_return = (
-                        previous_event is not None
+                        duration <= SHORT_SECONDARY_STRIP_MAX_DURATION
+                        and previous_event is not None
                         and any(note.note_name == upper_note.note_name for note in previous_event.notes)
                         and next_event is not None
                         and len(next_event.notes) == 1
                         and primary_note.frequency < next_event.notes[0].frequency < upper_note.frequency
                         and cents_distance(primary_note.frequency, upper_note.frequency) >= RESONANT_CARRYOVER_HIGH_RETURN_MIN_INTERVAL_CENTS
                     )
+                    descending_step_handoff = (
+                        previous_event is not None
+                        and len(previous_event.notes) == 1
+                        and previous_event.notes[0].note_name == upper_note.note_name
+                        and next_event is not None
+                        and len(next_event.notes) == 1
+                        and next_event.notes[0].frequency < primary_note.frequency
+                        and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                        <= cents_distance(primary_note.frequency, upper_note.frequency)
+                        <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                        and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                        <= abs(cents_distance(next_event.notes[0].frequency, primary_note.frequency))
+                        <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                    )
                     mirrored_adjacent_run = False
-                    if previous_event is not None and next_event is not None and index + 2 < len(raw_events):
+                    if duration <= SHORT_SECONDARY_STRIP_MAX_DURATION and previous_event is not None and next_event is not None and index + 2 < len(raw_events):
                         next_next_event = raw_events[index + 2]
                         mirrored_adjacent_run = (
                             len(previous_event.notes) == 1
@@ -2162,15 +2201,18 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
                             and cents_distance(primary_note.frequency, upper_note.frequency) <= 250.0
                         )
                     repeated_adjacent_tail = (
-                        previous_event is not None
+                        duration <= SHORT_SECONDARY_STRIP_MAX_DURATION
+                        and previous_event is not None
                         and {note.note_name for note in previous_event.notes} == {primary_note.note_name, upper_note.note_name}
                         and next_event is not None
                         and len(next_event.notes) == 1
                         and next_event.notes[0].frequency > upper_note.frequency
                         and cents_distance(primary_note.frequency, upper_note.frequency) <= 250.0
                     )
-                    if repeated_high_return or mirrored_adjacent_run or repeated_adjacent_tail:
+                    if repeated_high_return or (descending_step_handoff and duration <= DESCENDING_STEP_HANDOFF_MAX_DURATION) or mirrored_adjacent_run or repeated_adjacent_tail:
                         kept_note = primary_note if repeated_high_return else upper_note
+                        if descending_step_handoff and duration <= DESCENDING_STEP_HANDOFF_MAX_DURATION:
+                            kept_note = primary_note
                         updated_event = RawEvent(
                             start_time=event.start_time,
                             end_time=event.end_time,
