@@ -339,6 +339,9 @@ def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture
         [19.464, 19.704],
     ]
     assert payload["debug"]["closeTerminalOrphanSegments"] == [[26.0533, 26.2933]]
+    gap_onset_sets = [item["gapOnsets"] for item in payload["debug"]["gapIoiDiagnostics"]]
+    assert [3.3147] in gap_onset_sets
+    assert any(13.6053 in onset_set for onset_set in gap_onset_sets)
     assert "C5+G5" not in note_sets
     assert "E5+E6" not in note_sets
     assert note_sets[30:34] == ["C6", "D6", "E5", "E6"]
@@ -591,6 +594,32 @@ def test_normalize_repeated_four_note_family_promotes_complementary_triads() -> 
         ["E4", "G4", "B4", "D5"],
         ["E4", "G4", "B4", "D5"],
         ["E4", "G4", "B4", "D5"],
+    ]
+
+
+def test_normalize_repeated_four_note_family_stays_within_local_context_gap() -> None:
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.9, notes=[g4, b4, d5], is_gliss_like=False, primary_note_name="D5", primary_score=900.0),
+        RawEvent(start_time=1.0, end_time=1.2, notes=[e4, g4, b4], is_gliss_like=False, primary_note_name="E4", primary_score=700.0),
+        RawEvent(start_time=1.2, end_time=1.8, notes=[d5], is_gliss_like=False, primary_note_name="D5", primary_score=300.0),
+        RawEvent(start_time=4.0, end_time=4.8, notes=[g4, b4, d5], is_gliss_like=False, primary_note_name="G4", primary_score=950.0),
+        RawEvent(start_time=5.0, end_time=5.3, notes=[d5], is_gliss_like=False, primary_note_name="D5", primary_score=320.0),
+        RawEvent(start_time=9.0, end_time=9.3, notes=[d5], is_gliss_like=False, primary_note_name="D5", primary_score=330.0),
+        RawEvent(start_time=12.0, end_time=12.8, notes=[g4, b4, d5], is_gliss_like=False, primary_note_name="B4", primary_score=980.0),
+    ]
+
+    normalized = normalize_repeated_four_note_family(raw_events)
+    assert [[note.note_name for note in event.notes] for event in normalized] == [
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+        ["D5"],
+        ["G4", "B4", "D5"],
     ]
 
 

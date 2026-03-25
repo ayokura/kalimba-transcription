@@ -126,6 +126,7 @@ FOUR_NOTE_GLISS_EXTENSION_MIN_FUNDAMENTAL_RATIO = 0.82
 CHORD_CLUSTER_MAX_GAP = 0.08
 CHORD_CLUSTER_MAX_SINGLETON_DURATION = 0.22
 CHORD_CLUSTER_MAX_TOTAL_DURATION = 1.6
+REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP = 0.35
 MAX_HARMONIC_MULTIPLE = 4
 SECONDARY_SCORE_RATIO = 0.12
 SECONDARY_MIN_FUNDAMENTAL_RATIO = 0.18
@@ -544,6 +545,43 @@ def collect_sparse_gap_tail_segments(
     return segments
 
 
+def build_gap_ioi_diagnostics(
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+) -> list[dict[str, Any]]:
+    diagnostics: list[dict[str, Any]] = []
+    for index in range(len(active_ranges) - 1):
+        previous_end = active_ranges[index][1]
+        next_start, next_end = active_ranges[index + 1]
+        gap_onsets = [
+            onset_time
+            for onset_time in onset_times
+            if previous_end + 0.05 < onset_time < next_start - 0.05
+        ]
+        if not gap_onsets:
+            continue
+
+        previous_context = [onset_time for onset_time in onset_times if onset_time < gap_onsets[0]]
+        next_context = [onset_time for onset_time in onset_times if onset_time > gap_onsets[-1]]
+        previous_interval = gap_onsets[0] - previous_context[-1] if previous_context else None
+        next_interval = next_context[0] - gap_onsets[-1] if next_context else None
+        diagnostics.append(
+            {
+                "previousEnd": round(previous_end, 4),
+                "nextStart": round(next_start, 4),
+                "nextEnd": round(next_end, 4),
+                "gapDuration": round(next_start - previous_end, 4),
+                "nextRangeDuration": round(next_end - next_start, 4),
+                "gapOnsets": [round(onset_time, 4) for onset_time in gap_onsets],
+                "previousInterval": None if previous_interval is None else round(previous_interval, 4),
+                "nextInterval": None if next_interval is None else round(next_interval, 4),
+                "previousEdgeDistance": round(gap_onsets[0] - previous_end, 4),
+                "nextEdgeDistance": round(next_start - gap_onsets[-1], 4),
+            }
+        )
+    return diagnostics
+
+
 def collect_close_terminal_orphan_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
@@ -598,6 +636,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=HOP_LENGTH)
     onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sample_rate, hop_length=HOP_LENGTH, backtrack=True)
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
+    gap_ioi_diagnostics = build_gap_ioi_diagnostics(active_ranges, onset_times)
 
     leading_orphan_segments = collect_leading_orphan_segments(active_ranges, onset_times)
     gap_injected_segments: list[tuple[float, float]] = []
@@ -728,6 +767,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
 
     debug_info = {
         "onsetTimes": onset_times,
+        "gapIoiDiagnostics": gap_ioi_diagnostics,
         "activeRanges": [[round(start, 4), round(end, 4)] for start, end in active_ranges],
         "gapInjectedSegments": [[round(start, 4), round(end, 4)] for start, end in gap_injected_segments],
         "leadingOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in leading_orphan_segments],
@@ -2379,6 +2419,18 @@ def normalize_repeated_four_note_family(raw_events: list[RawEvent]) -> list[RawE
         event = raw_events[index]
         event_set = frozenset(note.note_name for note in event.notes)
         duration = event.end_time - event.start_time
+        previous_event = raw_events[index - 1] if index > 0 else None
+        next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
+        previous_gap = event.start_time - previous_event.end_time if previous_event is not None else float("inf")
+        next_gap = next_event.start_time - event.end_time if next_event is not None else float("inf")
+        previous_set = frozenset(note.note_name for note in previous_event.notes) if previous_event is not None else frozenset()
+        next_set = frozenset(note.note_name for note in next_event.notes) if next_event is not None else frozenset()
+        previous_local_family = previous_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and previous_set == family_set
+        next_local_family = next_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and next_set == family_set
+        previous_local_triads = previous_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and previous_set in family_triads
+        next_local_triads = next_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and next_set in family_triads
+        previous_local_subset = previous_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and previous_set < family_set
+        next_local_subset = next_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP and next_set < family_set
 
         if event_set in family_triads:
             if index + 1 < len(raw_events):
@@ -2398,22 +2450,23 @@ def normalize_repeated_four_note_family(raw_events: list[RawEvent]) -> list[RawE
                     )
                     index += 2
                     continue
-            normalized.append(
-                RawEvent(
-                    start_time=event.start_time,
-                    end_time=event.end_time,
-                    notes=family_notes,
-                    is_gliss_like=event.is_gliss_like,
-                    primary_note_name=event.primary_note_name if event.primary_note_name in family_set else family_notes[0].note_name,
-                    primary_score=event.primary_score,
+            if previous_local_triads or next_local_triads or previous_local_subset or next_local_subset:
+                normalized.append(
+                    RawEvent(
+                        start_time=event.start_time,
+                        end_time=event.end_time,
+                        notes=family_notes,
+                        is_gliss_like=event.is_gliss_like,
+                        primary_note_name=event.primary_note_name if event.primary_note_name in family_set else family_notes[0].note_name,
+                        primary_score=event.primary_score,
+                    )
                 )
-            )
-            index += 1
-            continue
+                index += 1
+                continue
 
         if event_set < family_set:
-            prev_family = len(normalized) > 0 and frozenset(note.note_name for note in normalized[-1].notes) == family_set
-            next_family = index + 1 < len(raw_events) and frozenset(note.note_name for note in raw_events[index + 1].notes) in family_triads
+            prev_family = len(normalized) > 0 and frozenset(note.note_name for note in normalized[-1].notes) == family_set and previous_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP
+            next_family = next_local_triads or next_local_family
             if len(event_set) <= 2 and ((prev_family and duration <= 1.0) or (next_family and duration <= 0.24)):
                 normalized.append(
                     RawEvent(
@@ -2429,8 +2482,8 @@ def normalize_repeated_four_note_family(raw_events: list[RawEvent]) -> list[RawE
                 continue
 
         if len(event_set) == 1 and not (event_set <= family_set) and duration <= 0.24:
-            prev_family = len(normalized) > 0 and frozenset(note.note_name for note in normalized[-1].notes) == family_set
-            next_family = index + 1 < len(raw_events) and frozenset(note.note_name for note in raw_events[index + 1].notes) in family_triads
+            prev_family = len(normalized) > 0 and frozenset(note.note_name for note in normalized[-1].notes) == family_set and previous_gap <= REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP
+            next_family = next_local_triads or next_local_family
             if prev_family or next_family:
                 index += 1
                 continue
