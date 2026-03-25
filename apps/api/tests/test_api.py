@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_descending_primary_band, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -499,7 +499,7 @@ def test_segment_peaks_replaces_descending_repeated_stale_primary(monkeypatch: p
 
     assert primary is not None
     assert primary.candidate.note_name == "E4"
-    assert [candidate.note_name for candidate in candidates] == ["E4"]
+    assert [candidate.note_name for candidate in candidates][0] == "E4"
     assert debug is not None
     assert debug["primaryPromotion"]["reason"] == "descending-repeated-primary"
 

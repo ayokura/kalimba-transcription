@@ -1592,9 +1592,6 @@ def segment_peaks(
     *,
     debug: bool = False,
     recent_note_names: set[str] | None = None,
-    descending_primary_band_floor: float | None = None,
-    descending_primary_band_ceiling: float | None = None,
-    descending_primary_band_note_names: set[str] | None = None,
     ascending_primary_run_ceiling: float | None = None,
     ascending_singleton_suffix_ceiling: float | None = None,
     ascending_singleton_suffix_note_names: set[str] | None = None,
@@ -1759,27 +1756,6 @@ def segment_peaks(
                     and hypothesis.score < primary.score * DESCENDING_RESTART_UPPER_SCORE_RATIO
                 ):
                     reasons.append("descending-restart-upper-carryover")
-            if (
-                not reasons
-                and hypothesis.candidate.frequency > primary.candidate.frequency
-                and descending_primary_band_floor is not None
-                and descending_primary_band_ceiling is not None
-                and descending_primary_band_note_names
-                and primary.candidate.frequency <= descending_primary_band_floor
-                and segment_duration <= DESCENDING_PRIMARY_SUFFIX_UPPER_CARRYOVER_MAX_DURATION
-                and not octave_dyad_allowed
-                and hypothesis.candidate.note_name in descending_primary_band_note_names
-            ):
-                if primary_onset_gain is None:
-                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
-                if onset_gain is None:
-                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
-                if (
-                    primary_onset_gain >= DESCENDING_PRIMARY_BAND_PRIMARY_ONSET_GAIN
-                    and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
-                    and hypothesis.score < primary.score * DESCENDING_PRIMARY_SUFFIX_UPPER_SCORE_RATIO
-                ):
-                    reasons.append("descending-primary-band-upper-carryover")
             if (
                 not reasons
                 and hypothesis.candidate.frequency > primary.candidate.frequency
@@ -3711,36 +3687,6 @@ def build_recent_ascending_primary_run_ceiling(raw_events: list[RawEvent]) -> fl
 
 
 
-def build_recent_descending_primary_band(raw_events: list[RawEvent]) -> tuple[float | None, float | None, set[str]]:
-    if not raw_events:
-        return None, None, set()
-
-    recent_primary_notes: list[NoteCandidate] = []
-    for recent_event in reversed(raw_events):
-        if recent_event.is_gliss_like or recent_event.primary_note_name is None:
-            break
-        primary_note = next((note for note in recent_event.notes if note.note_name == recent_event.primary_note_name), None)
-        if primary_note is None:
-            break
-        if recent_primary_notes and primary_note.frequency < recent_primary_notes[-1].frequency:
-            break
-        recent_primary_notes.append(primary_note)
-        if len(recent_primary_notes) >= 8:
-            break
-
-    if len(recent_primary_notes) < DESCENDING_PRIMARY_BAND_MIN_LENGTH:
-        return None, None, set()
-
-    recent_primary_notes.reverse()
-    recent_primary_frequencies = [note.frequency for note in recent_primary_notes]
-    if any(current > previous for previous, current in zip(recent_primary_frequencies, recent_primary_frequencies[1:])):
-        return None, None, set()
-    if recent_primary_frequencies[-1] >= recent_primary_frequencies[0]:
-        return None, None, set()
-
-    return recent_primary_frequencies[-1], recent_primary_frequencies[0], {note.note_name for note in recent_primary_notes}
-
-
 def build_recent_ascending_singleton_suffix(raw_events: list[RawEvent]) -> tuple[float | None, set[str]]:
     if not raw_events:
         return None, set()
@@ -3830,7 +3776,6 @@ async def transcribe_audio(
     for start_time, end_time in segments:
         duration = max(end_time - start_time, 0.08)
         recent_note_names = build_recent_note_names(raw_events)
-        descending_primary_band_floor, descending_primary_band_ceiling, descending_primary_band_note_names = build_recent_descending_primary_band(raw_events)
         ascending_primary_run_ceiling = build_recent_ascending_primary_run_ceiling(raw_events)
         ascending_singleton_suffix_ceiling, ascending_singleton_suffix_note_names = build_recent_ascending_singleton_suffix(raw_events)
         descending_primary_suffix_floor, descending_primary_suffix_ceiling, descending_primary_suffix_note_names = build_recent_descending_primary_suffix(raw_events)
@@ -3848,9 +3793,6 @@ async def transcribe_audio(
             tuning,
             debug=debug,
             recent_note_names=recent_note_names,
-            descending_primary_band_floor=descending_primary_band_floor,
-            descending_primary_band_ceiling=descending_primary_band_ceiling,
-            descending_primary_band_note_names=descending_primary_band_note_names,
             ascending_primary_run_ceiling=ascending_primary_run_ceiling,
             ascending_singleton_suffix_ceiling=ascending_singleton_suffix_ceiling,
             ascending_singleton_suffix_note_names=ascending_singleton_suffix_note_names,
