@@ -2390,7 +2390,22 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
                     and cents_distance(repeated_notes[0].frequency, fresh_notes[0].frequency) >= RESONANT_CARRYOVER_HIGH_RETURN_MIN_INTERVAL_CENTS
                 ):
                     keep_phrase_reset_lower_repeated = True
-            if keep_phrase_reset_lower_repeated:
+            keep_descending_lower_repeated = False
+            if len(repeated_notes) == 1 and len(fresh_notes) == 1 and index + 1 < len(raw_events):
+                next_event = raw_events[index + 1]
+                if (
+                    len(next_event.notes) == 1
+                    and repeated_notes[0].frequency < fresh_notes[0].frequency
+                    and next_event.notes[0].frequency < repeated_notes[0].frequency
+                    and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                    <= cents_distance(repeated_notes[0].frequency, fresh_notes[0].frequency)
+                    <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                    and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                    <= abs(cents_distance(next_event.notes[0].frequency, repeated_notes[0].frequency))
+                    <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                ):
+                    keep_descending_lower_repeated = True
+            if keep_phrase_reset_lower_repeated or keep_descending_lower_repeated:
                 updated_event = RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,
@@ -2402,7 +2417,7 @@ def suppress_resonant_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
             if len(repeated_notes) == 1 and len(fresh_notes) == 1 and (
                 repeated_notes[0].frequency < fresh_notes[0].frequency
                 or duration <= 0.14
-            ) and not keep_short_octave_dyad and not keep_phrase_reset_ascending_dyad and not keep_phrase_reset_lower_repeated:
+            ) and not keep_short_octave_dyad and not keep_phrase_reset_ascending_dyad and not keep_phrase_reset_lower_repeated and not keep_descending_lower_repeated:
                 updated_event = RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,

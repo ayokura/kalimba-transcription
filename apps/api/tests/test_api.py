@@ -501,6 +501,21 @@ def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -
     assert [note.note_name for note in simplified[1].notes] == ["B5"]
 
 
+def test_suppress_resonant_carryover_keeps_lower_note_in_descending_adjacent_chain() -> None:
+    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
+    e4 = NoteCandidate(2, "E4", 329.6275569128699, "E", 4)
+    events = [
+        RawEvent(0.0, 0.18, [f4], False, "F4", 320.0),
+        RawEvent(0.18, 0.29, [f4, g4], False, "F4", 300.0),
+        RawEvent(0.29, 0.5, [e4], False, "E4", 290.0),
+    ]
+
+    cleaned = suppress_resonant_carryover(events)
+
+    assert [note.note_name for note in cleaned[1].notes] == ["F4"]
+
+
 def test_suppress_leading_descending_overlap_collapses_first_bridge() -> None:
     tuning = get_default_tunings()[0]
     e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
@@ -1959,6 +1974,26 @@ def test_transcription_eliminates_second_cycle_g4_a4_merged_dyad_in_51_note_fixt
     payload = response.json()
     merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
     assert "G4+A4" not in merged_note_sets
+
+
+def test_transcription_eliminates_first_cycle_f4_g4_merged_dyad_in_51_note_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={
+            "tuning": json.dumps(request_payload["tuning"]),
+            "debug": "true",
+        },
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
+    assert "F4+G4" not in merged_note_sets
 
 
 
