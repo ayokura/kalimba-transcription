@@ -443,6 +443,30 @@ def trim_small_overlapping_segments(segments: list[tuple[float, float]]) -> list
     return trimmed
 
 
+def should_keep_dense_trailing_onset(
+    boundary_times: list[float],
+    index: int,
+    range_start: float,
+    range_end: float,
+) -> bool:
+    if index <= 0 or index >= len(boundary_times) - 1:
+        return False
+
+    previous_time = boundary_times[index - 1]
+    current_time = boundary_times[index]
+    next_time = boundary_times[index + 1]
+    return (
+        len(boundary_times) >= 4
+        and range_end - range_start >= 2.5
+        and current_time - previous_time >= 0.1
+        and current_time - previous_time < 0.18
+        and next_time - current_time >= 0.28
+        and current_time - range_start >= 1.5
+        and range_end - current_time <= 1.0
+        and range_end - current_time >= 0.18
+    )
+
+
 def should_suppress_staircase_supplemental_start(
     start_time: float,
     raw_starts: list[float],
@@ -946,8 +970,8 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         ]
         boundary_times = sorted([*range_onsets, *supplemental_starts])
         deduped_onsets: list[float] = []
-        for time in boundary_times:
-            if not deduped_onsets or time - deduped_onsets[-1] >= 0.18:
+        for boundary_index, time in enumerate(boundary_times):
+            if not deduped_onsets or time - deduped_onsets[-1] >= 0.18 or should_keep_dense_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end):
                 deduped_onsets.append(time)
 
         starts = [effective_range_start, *deduped_onsets]
