@@ -2617,89 +2617,9 @@ def normalize_repeated_four_note_family(raw_events: list[RawEvent]) -> list[RawE
     return normalized
 
 def normalize_repeated_four_note_gliss_patterns(raw_events: list[RawEvent]) -> list[RawEvent]:
-    if len(raw_events) < 5:
-        return raw_events
-
-    note_set_counts: dict[frozenset[str], int] = {}
-    for event in raw_events:
-        note_set = frozenset(note.note_name for note in event.notes)
-        if len(note_set) == 4:
-            note_set_counts[note_set] = note_set_counts.get(note_set, 0) + 1
-
-    if not note_set_counts:
-        return raw_events
-
-    dominant_set, dominant_count = max(note_set_counts.items(), key=lambda item: item[1])
-    if dominant_count < 2 or dominant_count >= 4:
-        return raw_events
-
-    dominant_events = [event for event in raw_events if frozenset(note.note_name for note in event.notes) == dominant_set]
-    dominant_notes_by_name: dict[str, NoteCandidate] = {}
-    for event in dominant_events:
-        for note in event.notes:
-            dominant_notes_by_name.setdefault(note.note_name, note)
-    if len(dominant_notes_by_name) != 4:
-        return raw_events
-
-    dominant_notes = sorted((dominant_notes_by_name[name] for name in dominant_set), key=lambda note: note.frequency)
-    dominant_keys = sorted(note.key for note in dominant_notes)
-    if dominant_keys[-1] - dominant_keys[0] + 1 != len(dominant_keys):
-        return raw_events
-
-    family_subset_events = [event for event in raw_events if frozenset(note.note_name for note in event.notes) < dominant_set]
-    singleton_family_events = [event for event in family_subset_events if len(event.notes) == 1]
-    off_family_noise_events = [
-        event
-        for event in raw_events
-        if frozenset(note.note_name for note in event.notes) and not frozenset(note.note_name for note in event.notes) <= dominant_set and (event.end_time - event.start_time) <= 0.18
-    ]
-    if len(family_subset_events) < 2 or not singleton_family_events or not off_family_noise_events:
-        return raw_events
-
-    normalized: list[RawEvent] = []
-    for index, event in enumerate(raw_events):
-        event_set = frozenset(note.note_name for note in event.notes)
-        duration = event.end_time - event.start_time
-        previous_event = raw_events[index - 1] if index > 0 else None
-        next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
-        previous_gap = event.start_time - previous_event.end_time if previous_event is not None else 1.0
-        next_gap = next_event.start_time - event.end_time if next_event is not None else 1.0
-        nearby_dominant = any(
-            0 <= offset < len(raw_events) and frozenset(note.note_name for note in raw_events[offset].notes) == dominant_set
-            for offset in (index - 3, index - 2, index - 1, index + 1, index + 2, index + 3)
-        )
-
-        if event_set == dominant_set:
-            normalized.append(event)
-            continue
-
-        if event_set and event_set < dominant_set and nearby_dominant and duration <= 1.4:
-            normalized.append(
-                RawEvent(
-                    start_time=event.start_time,
-                    end_time=event.end_time,
-                    notes=dominant_notes,
-                    is_gliss_like=True,
-                    primary_note_name=event.primary_note_name if event.primary_note_name in dominant_set else dominant_notes[0].note_name,
-                    primary_score=event.primary_score,
-                )
-            )
-            continue
-
-        if (
-            event_set
-            and not event_set <= dominant_set
-            and len(event.notes) <= 2
-            and duration <= 0.18
-            and ((previous_event is not None and frozenset(note.note_name for note in previous_event.notes) <= dominant_set and previous_gap <= 0.12)
-                 or (next_event is not None and frozenset(note.note_name for note in next_event.notes) <= dominant_set and next_gap <= 0.12))
-        ):
-            continue
-
-        normalized.append(event)
-
-    return normalized
-
+    # Legacy no-op. Practical gliss behavior is now recovered by earlier local
+    # front-end logic and by the anchor-bounded explicit four-note pass below.
+    return raw_events
 
 def collect_local_four_note_family_runs(raw_events: list[RawEvent]) -> list[dict[str, Any]]:
     exact_family_events: dict[frozenset[str], list[tuple[int, RawEvent]]] = {}
@@ -2954,7 +2874,7 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
     return normalized
 
 
-def normalize_strict_four_note_subsets'(raw_events: list[RawEvent]) -> list[RawEvent]:
+def normalize_strict_four_note_subsets(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 2:
         return raw_events
 
@@ -3642,6 +3562,8 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
+
 
 
 

@@ -684,7 +684,7 @@ def test_normalize_repeated_explicit_four_note_patterns_requires_explicit_four_n
     ]
 
 
-def test_normalize_repeated_explicit_four_note_patterns_drops_terminal_subset_tail() -> None:
+def test_normalize_repeated_explicit_four_note_patterns_keeps_terminal_subset_tail_without_future_anchor() -> None:
     e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
     g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
     b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
@@ -704,8 +704,8 @@ def test_normalize_repeated_explicit_four_note_patterns_drops_terminal_subset_ta
         ["E4", "G4", "B4", "D5"],
         ["E4", "G4", "B4", "D5"],
         ["E4", "G4", "B4", "D5"],
+        ["G4", "D5"],
     ]
-
 
 def test_normalize_repeated_explicit_four_note_patterns_keeps_off_family_gliss_tail_outside_local_run() -> None:
     e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
@@ -1307,6 +1307,8 @@ def test_transcription_debug_reports_disabled_repeated_pattern_passes() -> None:
     assert payload["debug"]["disabledRepeatedPatternPasses"] == ["normalize_repeated_triad_patterns"]
     triad_trace = next(item for item in payload["debug"]["repeatedPatternPassTrace"] if item["pass"] == "normalize_repeated_triad_patterns")
     assert triad_trace["enabled"] is False
+
+
 
 
 
