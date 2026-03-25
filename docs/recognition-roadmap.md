@@ -93,7 +93,46 @@ When collection resumes, prefer paired samples for the same pitch set:
 This will make family boundaries testable without changing pitch content.
 
 Longer term, intent should move from recording-level metadata to event-level metadata. The current one-intent-per-capture model is acceptable only because fixtures are deliberately collected as one-gesture-per-take.
+## Next Recording Priorities
 
+The current acoustic recognizer no longer has a strong repeated-pattern redesign blocker. The next useful data is directional and register-sensitive practical material.
+
+### Priority 1: Descending separated-note runs
+
+Purpose:
+- validate whether ascending-only local carryover cleanup generalizes
+- measure whether descending runs need their own logic or only more data
+
+Suggested captures:
+- E6 -> D6 -> C6 -> B5 -> A5 -> G5 -> F5 -> E5 -> D5 -> C5 -> B4 -> A4 -> G4 -> F4 -> E4 -> D4 -> C4
+- single pass
+- same phrase repeated 3 times without intentional silence between notes
+
+### Priority 2: High-register short-tine coverage
+
+Purpose:
+- measure whether D6/E6 need note-specific handling or only better fixture support
+- capture the shorter sustain / different timbre the user identified near the top of the instrument
+
+Suggested captures:
+- alternating D6 / E6 single notes, 5 cycles
+- C6 / D6 / E6 ascending and descending, each 5 cycles
+- short phrase endings such as A5 / B5 / C6 / D6 / E6
+
+### Priority 3: High-register mixed phrase endings
+
+Purpose:
+- test whether phrase tails near D6/E6 are still robust when they follow denser mid-register material
+
+Suggested captures:
+- C4 -> ... -> B5 -> C6 -> D6 -> E6
+- E6 -> C4 restart after a brief gap
+- one or two realistic phrase endings rather than isolated unit patterns only
+
+Collection rule:
+- prefer real-device fixtures
+- keep articulation natural unless the goal specifically requires silence between notes
+- when a phrase mixes techniques, add intent notes in the memo even if the current schema is still recording-level
 ## Future Input Source Profiles
 
 For a detailed comparison between the current acoustic recognizer and the local app/synth reference audio, see [app-synth-audio-gap-analysis.md](C:/src/calimba-score/docs/app-synth-audio-gap-analysis.md).
@@ -185,3 +224,4 @@ For the current strict four-note rerecord:
 - repetitions: `5`
 - spacing: about `1s` silence between takes
 - success criteria: `5 events`, each `E4+G4+B4+D5`
+
