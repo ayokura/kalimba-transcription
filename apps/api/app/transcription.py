@@ -474,6 +474,31 @@ def should_keep_dense_trailing_onset(
     )
 
 
+
+
+def should_keep_short_range_trailing_onset(
+    boundary_times: list[float],
+    index: int,
+    range_start: float,
+    range_end: float,
+) -> bool:
+    if index < 1 or index != len(boundary_times) - 1:
+        return False
+
+    previous_time = boundary_times[index - 1]
+    current_time = boundary_times[index]
+    previous_previous_time = range_start if index == 1 else boundary_times[index - 2]
+    range_duration = range_end - range_start
+    return (
+        0.9 <= range_duration <= 1.5
+        and current_time - previous_time >= 0.1
+        and current_time - previous_time <= 0.16
+        and previous_time - previous_previous_time >= 0.25
+        and previous_time - previous_previous_time <= 0.45
+        and range_end - current_time >= 0.28
+        and range_end - current_time <= 0.45
+    )
+
 def should_suppress_staircase_supplemental_start(
     start_time: float,
     raw_starts: list[float],
@@ -1065,7 +1090,12 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         boundary_times = sorted([*range_onsets, *supplemental_starts])
         deduped_onsets: list[float] = []
         for boundary_index, time in enumerate(boundary_times):
-            if not deduped_onsets or time - deduped_onsets[-1] >= 0.18 or should_keep_dense_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end):
+            if (
+                not deduped_onsets
+                or time - deduped_onsets[-1] >= 0.18
+                or should_keep_dense_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end)
+                or should_keep_short_range_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end)
+            ):
                 deduped_onsets.append(time)
 
         starts = [effective_range_start, *deduped_onsets]
@@ -1844,6 +1874,55 @@ def simplify_descending_adjacent_dyad_residue(raw_events: list[RawEvent]) -> lis
     return cleaned
 
 
+
+
+def collapse_ascending_restart_lower_residue_singletons(
+    raw_events: list[RawEvent],
+    tuning: InstrumentTuning,
+) -> list[RawEvent]:
+    if len(raw_events) < 3:
+        return raw_events
+
+    cleaned = list(raw_events)
+    for index in range(1, len(cleaned) - 1):
+        previous_event = cleaned[index - 1]
+        event = cleaned[index]
+        next_event = cleaned[index + 1]
+        duration = event.end_time - event.start_time
+        if (
+            len(previous_event.notes) != 1
+            or len(event.notes) != 1
+            or len(next_event.notes) != 1
+            or previous_event.is_gliss_like
+            or next_event.is_gliss_like
+            or duration > SHORT_SECONDARY_STRIP_MAX_DURATION
+        ):
+            continue
+
+        previous_note = previous_event.notes[0]
+        residue_note = event.notes[0]
+        next_note = next_event.notes[0]
+        if (
+            previous_note.frequency >= next_note.frequency
+            or not is_adjacent_tuning_step(previous_note, next_note, tuning)
+            or residue_note.frequency >= previous_note.frequency
+            or is_adjacent_tuning_step(residue_note, previous_note, tuning)
+            or is_adjacent_tuning_step(residue_note, next_note, tuning)
+            or abs(cents_distance(residue_note.frequency, previous_note.frequency)) < 250.0
+            or abs(cents_distance(residue_note.frequency, previous_note.frequency)) > 550.0
+        ):
+            continue
+
+        cleaned[index] = RawEvent(
+            start_time=event.start_time,
+            end_time=event.end_time,
+            notes=[previous_note],
+            is_gliss_like=event.is_gliss_like,
+            primary_note_name=previous_note.note_name,
+            primary_score=event.primary_score,
+        )
+
+    return cleaned
 
 
 def collapse_high_register_adjacent_bridge_dyads(
@@ -2920,10 +2999,11 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
                     )
                     cleaned.append(updated_event)
                     continue
-                if len(lower_notes) == 1 and index + 1 < len(raw_events):
-                    next_event = raw_events[index + 1]
+                if len(lower_notes) == 1:
+                    next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
                     if (
-                        len(next_event.notes) == 1
+                        next_event is not None
+                        and len(next_event.notes) == 1
                         and next_event.notes[0].note_name == primary_note.note_name
                         and next_event.primary_score >= event.primary_score * SHORT_SECONDARY_STRIP_NEXT_SCORE_RATIO
                     ):
@@ -2935,7 +3015,9 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
                             primary_note_name=primary_note.note_name,
                             primary_score=event.primary_score,
                         )
-                    elif previous_event is not None:
+                    if previous_event is not None and next_event is not None and updated_event is event:
+                        lower_note = lower_notes[0]
+                    if previous_event is not None and next_event is not None and updated_event is event:
                         lower_note = lower_notes[0]
                         descending_restart_primary_repeat = (
                             len(previous_event.notes) == 1
@@ -4771,6 +4853,8 @@ async def transcribe_audio(
     merged_events = merge_adjacent_events(processed_events)
     merged_events = collapse_late_descending_step_handoffs(merged_events)
     merged_events = merge_short_chord_clusters(merged_events)
+    merged_events = merge_adjacent_events(merged_events)
+    merged_events = collapse_ascending_restart_lower_residue_singletons(merged_events, tuning)
     merged_events = merge_adjacent_events(merged_events)
     merged_events, repeated_pattern_pass_trace = apply_repeated_pattern_passes(
         merged_events,

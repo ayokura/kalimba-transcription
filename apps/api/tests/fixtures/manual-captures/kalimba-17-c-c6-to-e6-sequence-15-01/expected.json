@@ -1,6 +1,6 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "completed",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -9,5 +9,5 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "new practical separated-notes coverage fixture awaiting recognizer evaluation"
+  "reason": "completed after recovering the short second-cycle E6 split and collapsing the transient lower-residue singleton between D6 and E6"
 }
