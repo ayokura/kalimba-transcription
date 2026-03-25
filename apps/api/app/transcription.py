@@ -127,8 +127,10 @@ ASCENDING_PRIMARY_RUN_SECONDARY_SCORE_RATIO = 0.35
 ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN = 8.0
 DESCENDING_PRIMARY_SUFFIX_MIN_LENGTH = 2
 DESCENDING_PRIMARY_SUFFIX_MAX_DURATION = 0.5
-DESCENDING_PRIMARY_SUFFIX_PRIMARY_ONSET_GAIN = 20.0
-DESCENDING_PRIMARY_SUFFIX_UPPER_SCORE_RATIO = 0.35
+DESCENDING_PRIMARY_SUFFIX_PRIMARY_ONSET_GAIN = 10.0
+DESCENDING_PRIMARY_SUFFIX_UPPER_SCORE_RATIO = 0.6
+DESCENDING_REPEATED_PRIMARY_STALE_UPPER_MAX_ONSET_GAIN = 1.5
+DESCENDING_REPEATED_PRIMARY_STALE_UPPER_SCORE_RATIO = 0.95
 ADJACENT_SEPARATED_DYAD_MAX_DURATION = 0.6
 ADJACENT_SEPARATED_DYAD_RUN_MIN_FORWARD_SUPPORT = 2
 PRIOR_ONSET_BACKTRACK_SECONDS = 0.55
@@ -1782,6 +1784,28 @@ def segment_peaks(
                     reasons.append("descending-primary-suffix-upper-carryover")
             if (
                 not reasons
+                and primary_promotion_debug is not None
+                and primary_promotion_debug.get("reason") == "descending-repeated-primary"
+                and hypothesis.candidate.frequency > primary.candidate.frequency
+                and not octave_dyad_allowed
+            ):
+                replaced_primary_note = primary_promotion_debug.get("replacedPrimaryNote")
+                if onset_gain is None:
+                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                if (
+                    onset_gain < DESCENDING_REPEATED_PRIMARY_STALE_UPPER_MAX_ONSET_GAIN
+                    and hypothesis.score < primary.score * DESCENDING_REPEATED_PRIMARY_STALE_UPPER_SCORE_RATIO
+                    and (
+                        hypothesis.candidate.note_name == replaced_primary_note
+                        or (
+                            descending_primary_suffix_ceiling is not None
+                            and hypothesis.candidate.frequency > descending_primary_suffix_ceiling
+                        )
+                    )
+                ):
+                    reasons.append("descending-repeated-primary-stale-upper")
+            if (
+                not reasons
                 and hypothesis.candidate.frequency > primary.candidate.frequency
                 and segment_duration >= UPPER_SECONDARY_WEAK_ONSET_MIN_DURATION
             ):
@@ -2394,6 +2418,7 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
         cleaned.append(updated_event)
 
     return cleaned
+
 
 def merge_short_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 2:
