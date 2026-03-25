@@ -1,0 +1,2733 @@
+{
+  "capturedAt": "2026-03-25T13:49:01.459Z",
+  "scenario": "2026-03-25-BWV147-sequence-163-kalimba-17-c",
+  "expectedNote": "C4 / C5 x 14 / D5 x 21 / [E5,C4] x 3 / G5 x 18 / F5 x 10 / [F5,A4] x 4 / A5 x 6 / [G5,E4] x 4 / C6 x 5 / B5 x 4 / [C6,A4] x 2 / E5 x 19 / <C5,A4> x 3 / [F5,D4] x 2 / [D5,F4] / <B4,G4> / [G4,D4] x 4 / B4 x 9 / <E5,C5> x 3 / [C5,G4] / <A4,F4> x 2 / [E5,G4] x 2 / [C5,<G4,E4,C4>] x 2 / [G5,B4] / A4 x 2 / [G5,G4] / <D5,B4,G4> / G4 x 2 / <F5,D5,B4,G4> x 2 / [E5,<G4,E4,C4>] x 2 / [E5,C5] / [F5,<A4,F4>] x 2 / [G5,<G4,E4>] x 3 / [C6,<E5,D4>] / [F5,<F5,D4>] / [D5,<A4,F4>] / [<B4,G4>,D4] / [C6,<C5,A4>]",
+  "expectedPerformance": {
+    "source": "clickable-kalimba-ui",
+    "version": 1,
+    "summary": "C4 / C5 x 14 / D5 x 21 / [E5,C4] x 3 / G5 x 18 / F5 x 10 / [F5,A4] x 4 / A5 x 6 / [G5,E4] x 4 / C6 x 5 / B5 x 4 / [C6,A4] x 2 / E5 x 19 / <C5,A4> x 3 / [F5,D4] x 2 / [D5,F4] / <B4,G4> / [G4,D4] x 4 / B4 x 9 / <E5,C5> x 3 / [C5,G4] / <A4,F4> x 2 / [E5,G4] x 2 / [C5,<G4,E4,C4>] x 2 / [G5,B4] / A4 x 2 / [G5,G4] / <D5,B4,G4> / G4 x 2 / <F5,D5,B4,G4> x 2 / [E5,<G4,E4,C4>] x 2 / [E5,C5] / [F5,<A4,F4>] x 2 / [G5,<G4,E4>] x 3 / [C6,<E5,D4>] / [F5,<F5,D4>] / [D5,<A4,F4>] / [<B4,G4>,D4] / [C6,<C5,A4>]",
+    "defaultCaptureIntent": "unknown",
+    "events": [
+      {
+        "index": 1,
+        "keys": [
+          {
+            "key": 9,
+            "noteName": "C4"
+          }
+        ],
+        "display": "C4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 2,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 3,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 4,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 9,
+            "noteName": "C4"
+          }
+        ],
+        "display": "[E5,C4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 5,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 6,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 7,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "[F5,A4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 8,
+        "keys": [
+          {
+            "key": 15,
+            "noteName": "A5"
+          }
+        ],
+        "display": "A5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 9,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 10,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          }
+        ],
+        "display": "[G5,E4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 11,
+        "keys": [
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "C6",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 12,
+        "keys": [
+          {
+            "key": 2,
+            "noteName": "B5"
+          }
+        ],
+        "display": "B5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 13,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "[C6,A4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 14,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 15,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 16,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          },
+          {
+            "key": 6,
+            "noteName": "A4"
+          }
+        ],
+        "display": "<C5,A4>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 17,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 18,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 19,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "[F5,D4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 20,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 21,
+        "keys": [
+          {
+            "key": 15,
+            "noteName": "A5"
+          }
+        ],
+        "display": "A5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 22,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          }
+        ],
+        "display": "[G5,E4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 23,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 24,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 25,
+        "keys": [
+          {
+            "key": 7,
+            "noteName": "F4"
+          },
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "[D5,F4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 26,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 27,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 28,
+        "keys": [
+          {
+            "key": 11,
+            "noteName": "G4"
+          },
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "<B4,G4>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 29,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 30,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 31,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[G4,D4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 32,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 33,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 34,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 35,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 36,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 37,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 9,
+            "noteName": "C4"
+          }
+        ],
+        "display": "[E5,C4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 38,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 39,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 40,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "<E5,C5>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 41,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 42,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 43,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "[F5,A4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 44,
+        "keys": [
+          {
+            "key": 15,
+            "noteName": "A5"
+          }
+        ],
+        "display": "A5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 45,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 46,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          }
+        ],
+        "display": "[G5,E4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 47,
+        "keys": [
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "C6",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 48,
+        "keys": [
+          {
+            "key": 2,
+            "noteName": "B5"
+          }
+        ],
+        "display": "B5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 49,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "[C6,A4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 50,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 51,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 52,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[C5,G4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 53,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 54,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 55,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 7,
+            "noteName": "F4"
+          }
+        ],
+        "display": "<A4,F4>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 56,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 57,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 58,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[E5,G4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 59,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 60,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 61,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[G4,D4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 62,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 63,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 64,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          },
+          {
+            "key": 9,
+            "noteName": "C4"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[C5,<G4,E4,C4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 5,
+                "noteName": "C5"
+              }
+            ],
+            "display": "C5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 9,
+                "noteName": "C4"
+              },
+              {
+                "key": 10,
+                "noteName": "E4"
+              },
+              {
+                "key": 11,
+                "noteName": "G4"
+              }
+            ],
+            "display": "<G4,E4,C4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 65,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 66,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 67,
+        "keys": [
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "C6",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 68,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 69,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 70,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 71,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 72,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          }
+        ],
+        "display": "[G5,E4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 73,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 9,
+            "noteName": "C4"
+          }
+        ],
+        "display": "[E5,C4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 74,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 75,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "[F5,A4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 76,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          },
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "[G5,B4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 77,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          }
+        ],
+        "display": "A4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 78,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[G5,G4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 79,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "[F5,A4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 80,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 81,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "<E5,C5>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 82,
+        "keys": [
+          {
+            "key": 11,
+            "noteName": "G4"
+          },
+          {
+            "key": 12,
+            "noteName": "B4"
+          },
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "<D5,B4,G4>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 83,
+        "keys": [
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "G4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 84,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          }
+        ],
+        "display": "A4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 85,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 86,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 87,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 88,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 89,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 90,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 91,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "[F5,D4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 92,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 93,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 94,
+        "keys": [
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "G4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 95,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 96,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 97,
+        "keys": [
+          {
+            "key": 11,
+            "noteName": "G4"
+          },
+          {
+            "key": 12,
+            "noteName": "B4"
+          },
+          {
+            "key": 13,
+            "noteName": "D5"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "<F5,D5,B4,G4>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 98,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 99,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 100,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 9,
+            "noteName": "C4"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[E5,<G4,E4,C4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 4,
+                "noteName": "E5"
+              }
+            ],
+            "display": "E5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 9,
+                "noteName": "C4"
+              },
+              {
+                "key": 10,
+                "noteName": "E4"
+              },
+              {
+                "key": 11,
+                "noteName": "G4"
+              }
+            ],
+            "display": "<G4,E4,C4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 101,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 102,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 103,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "[E5,C5]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 104,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 105,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 106,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 7,
+            "noteName": "F4"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "[F5,<A4,F4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 14,
+                "noteName": "F5"
+              }
+            ],
+            "display": "F5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 6,
+                "noteName": "A4"
+              },
+              {
+                "key": 7,
+                "noteName": "F4"
+              }
+            ],
+            "display": "<A4,F4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 107,
+        "keys": [
+          {
+            "key": 15,
+            "noteName": "A5"
+          }
+        ],
+        "display": "A5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 108,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 109,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[G5,<G4,E4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 3,
+                "noteName": "G5"
+              }
+            ],
+            "display": "G5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 10,
+                "noteName": "E4"
+              },
+              {
+                "key": 11,
+                "noteName": "G4"
+              }
+            ],
+            "display": "<G4,E4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 110,
+        "keys": [
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "C6",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 111,
+        "keys": [
+          {
+            "key": 2,
+            "noteName": "B5"
+          }
+        ],
+        "display": "B5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 112,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 8,
+            "noteName": "D4"
+          },
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "[C6,<E5,D4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 16,
+                "noteName": "C6"
+              }
+            ],
+            "display": "C6",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 4,
+                "noteName": "E5"
+              },
+              {
+                "key": 8,
+                "noteName": "D4"
+              }
+            ],
+            "display": "<E5,D4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 113,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 114,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 115,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          },
+          {
+            "key": 6,
+            "noteName": "A4"
+          }
+        ],
+        "display": "<C5,A4>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 116,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 117,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 118,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "[F5,<F5,D4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 14,
+                "noteName": "F5"
+              }
+            ],
+            "display": "F5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 8,
+                "noteName": "D4"
+              },
+              {
+                "key": 14,
+                "noteName": "F5"
+              }
+            ],
+            "display": "<F5,D4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 119,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 120,
+        "keys": [
+          {
+            "key": 15,
+            "noteName": "A5"
+          }
+        ],
+        "display": "A5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 121,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[G5,<G4,E4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 3,
+                "noteName": "G5"
+              }
+            ],
+            "display": "G5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 10,
+                "noteName": "E4"
+              },
+              {
+                "key": 11,
+                "noteName": "G4"
+              }
+            ],
+            "display": "<G4,E4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 122,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 123,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 124,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 7,
+            "noteName": "F4"
+          },
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "[D5,<A4,F4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 13,
+                "noteName": "D5"
+              }
+            ],
+            "display": "D5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 6,
+                "noteName": "A4"
+              },
+              {
+                "key": 7,
+                "noteName": "F4"
+              }
+            ],
+            "display": "<A4,F4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 125,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 126,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 127,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          },
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "[<B4,G4>,D4]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 11,
+                "noteName": "G4"
+              },
+              {
+                "key": 12,
+                "noteName": "B4"
+              }
+            ],
+            "display": "<B4,G4>",
+            "intent": "slide_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 8,
+                "noteName": "D4"
+              }
+            ],
+            "display": "D4",
+            "intent": "strict_chord"
+          }
+        ]
+      },
+      {
+        "index": 128,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 129,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 130,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[G4,D4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 131,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 132,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 133,
+        "keys": [
+          {
+            "key": 11,
+            "noteName": "G4"
+          },
+          {
+            "key": 12,
+            "noteName": "B4"
+          },
+          {
+            "key": 13,
+            "noteName": "D5"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "<F5,D5,B4,G4>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 134,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 135,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 136,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 9,
+            "noteName": "C4"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[E5,<G4,E4,C4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 4,
+                "noteName": "E5"
+              }
+            ],
+            "display": "E5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 9,
+                "noteName": "C4"
+              },
+              {
+                "key": 10,
+                "noteName": "E4"
+              },
+              {
+                "key": 11,
+                "noteName": "G4"
+              }
+            ],
+            "display": "<G4,E4,C4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 137,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 138,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 139,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "<E5,C5>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 140,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 141,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 142,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 7,
+            "noteName": "F4"
+          },
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "[F5,<A4,F4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 14,
+                "noteName": "F5"
+              }
+            ],
+            "display": "F5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 6,
+                "noteName": "A4"
+              },
+              {
+                "key": 7,
+                "noteName": "F4"
+              }
+            ],
+            "display": "<A4,F4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 143,
+        "keys": [
+          {
+            "key": 15,
+            "noteName": "A5"
+          }
+        ],
+        "display": "A5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 144,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 145,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[G5,<G4,E4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 3,
+                "noteName": "G5"
+              }
+            ],
+            "display": "G5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 10,
+                "noteName": "E4"
+              },
+              {
+                "key": 11,
+                "noteName": "G4"
+              }
+            ],
+            "display": "<G4,E4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 146,
+        "keys": [
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "C6",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 147,
+        "keys": [
+          {
+            "key": 2,
+            "noteName": "B5"
+          }
+        ],
+        "display": "B5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 148,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          },
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 16,
+            "noteName": "C6"
+          }
+        ],
+        "display": "[C6,<C5,A4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 16,
+                "noteName": "C6"
+              }
+            ],
+            "display": "C6",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 5,
+                "noteName": "C5"
+              },
+              {
+                "key": 6,
+                "noteName": "A4"
+              }
+            ],
+            "display": "<C5,A4>",
+            "intent": "slide_chord"
+          }
+        ]
+      },
+      {
+        "index": 149,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 150,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 151,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          },
+          {
+            "key": 6,
+            "noteName": "A4"
+          }
+        ],
+        "display": "<C5,A4>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 152,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 153,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          }
+        ],
+        "display": "E5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 154,
+        "keys": [
+          {
+            "key": 6,
+            "noteName": "A4"
+          },
+          {
+            "key": 7,
+            "noteName": "F4"
+          }
+        ],
+        "display": "<A4,F4>",
+        "intent": "slide_chord",
+        "parts": null
+      },
+      {
+        "index": 155,
+        "keys": [
+          {
+            "key": 3,
+            "noteName": "G5"
+          }
+        ],
+        "display": "G5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 156,
+        "keys": [
+          {
+            "key": 14,
+            "noteName": "F5"
+          }
+        ],
+        "display": "F5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 157,
+        "keys": [
+          {
+            "key": 4,
+            "noteName": "E5"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[E5,G4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 158,
+        "keys": [
+          {
+            "key": 13,
+            "noteName": "D5"
+          }
+        ],
+        "display": "D5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 159,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 160,
+        "keys": [
+          {
+            "key": 8,
+            "noteName": "D4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[G4,D4]",
+        "intent": "strict_chord",
+        "parts": null
+      },
+      {
+        "index": 161,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          }
+        ],
+        "display": "C5",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 162,
+        "keys": [
+          {
+            "key": 12,
+            "noteName": "B4"
+          }
+        ],
+        "display": "B4",
+        "intent": null,
+        "parts": null
+      },
+      {
+        "index": 163,
+        "keys": [
+          {
+            "key": 5,
+            "noteName": "C5"
+          },
+          {
+            "key": 9,
+            "noteName": "C4"
+          },
+          {
+            "key": 10,
+            "noteName": "E4"
+          },
+          {
+            "key": 11,
+            "noteName": "G4"
+          }
+        ],
+        "display": "[C5,<G4,E4,C4>]",
+        "intent": null,
+        "parts": [
+          {
+            "keys": [
+              {
+                "key": 5,
+                "noteName": "C5"
+              }
+            ],
+            "display": "C5",
+            "intent": "strict_chord"
+          },
+          {
+            "keys": [
+              {
+                "key": 9,
+                "noteName": "C4"
+              },
+              {
+                "key": 10,
+                "noteName": "E4"
+              },
+              {
+                "key": 11,
+                "noteName": "G4"
+              }
+            ],
+            "display": "<G4,E4,C4>",
+            "intent": "slide_chord"
+          }
+        ]
+      }
+    ]
+  },
+  "memo": "116音目前後に演奏ミスがあり、C5D5E5と弾くべきところをC5E5と弾いてから、改めて正しく弾き直している部分があるのでその部分をignoreするかExpected performanceの編集の必要があり",
+  "captureIntent": "unknown",
+  "sourceProfile": "acoustic_real",
+  "tuning": {
+    "id": "kalimba-17-c",
+    "name": "17 Key C Major",
+    "keyCount": 17,
+    "notes": [
+      {
+        "key": 1,
+        "noteName": "D6",
+        "frequency": 1174.6590716696303
+      },
+      {
+        "key": 2,
+        "noteName": "B5",
+        "frequency": 987.7666025122483
+      },
+      {
+        "key": 3,
+        "noteName": "G5",
+        "frequency": 783.9908719634985
+      },
+      {
+        "key": 4,
+        "noteName": "E5",
+        "frequency": 659.2551138257398
+      },
+      {
+        "key": 5,
+        "noteName": "C5",
+        "frequency": 523.2511306011972
+      },
+      {
+        "key": 6,
+        "noteName": "A4",
+        "frequency": 440
+      },
+      {
+        "key": 7,
+        "noteName": "F4",
+        "frequency": 349.2282314330039
+      },
+      {
+        "key": 8,
+        "noteName": "D4",
+        "frequency": 293.6647679174076
+      },
+      {
+        "key": 9,
+        "noteName": "C4",
+        "frequency": 261.6255653005986
+      },
+      {
+        "key": 10,
+        "noteName": "E4",
+        "frequency": 329.6275569128699
+      },
+      {
+        "key": 11,
+        "noteName": "G4",
+        "frequency": 391.99543598174927
+      },
+      {
+        "key": 12,
+        "noteName": "B4",
+        "frequency": 493.8833012561241
+      },
+      {
+        "key": 13,
+        "noteName": "D5",
+        "frequency": 587.3295358348151
+      },
+      {
+        "key": 14,
+        "noteName": "F5",
+        "frequency": 698.4564628660078
+      },
+      {
+        "key": 15,
+        "noteName": "A5",
+        "frequency": 880
+      },
+      {
+        "key": 16,
+        "noteName": "C6",
+        "frequency": 1046.5022612023945
+      },
+      {
+        "key": 17,
+        "noteName": "E6",
+        "frequency": 1318.5102276514797
+      }
+    ]
+  },
+  "audio": {
+    "sampleRate": 96000,
+    "channels": 1,
+    "durationSec": 289.74,
+    "mimeType": "audio/wav",
+    "sizeBytes": 55630124
+  }
+}

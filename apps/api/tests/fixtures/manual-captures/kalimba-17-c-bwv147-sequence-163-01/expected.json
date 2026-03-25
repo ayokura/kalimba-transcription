@@ -1,0 +1,13 @@
+{
+  "pending": true,
+  "status": "pending",
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "reason": "large practical free-performance phrase awaiting recognizer evaluation"
+}
