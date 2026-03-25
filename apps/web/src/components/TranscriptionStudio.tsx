@@ -146,6 +146,72 @@ function buildExpectedSummary(events: ManualCaptureExpectedEvent[]): string {
     .join(" / ");
 }
 
+function parseExpectedPerformanceText(
+  value: string,
+  tuning: InstrumentTuning,
+  fallbackIntent: CaptureIntent,
+): { events: ManualCaptureExpectedEvent[]; error: string | null } {
+  const normalized = value
+    .replace(/\r\n/g, "\n")
+    .replace(/→/g, "/")
+    .replace(/->/g, "/")
+    .replace(/／/g, "/");
+
+  const rawTokens = normalized
+    .split(/(?:\n|\/)+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (rawTokens.length === 0) {
+    return { events: [], error: "インポートする expected performance が空です。" };
+  }
+
+  const noteByName = new Map(
+    tuning.notes.map((note) => [note.noteName.trim().toUpperCase(), note]),
+  );
+
+  const events: ManualCaptureExpectedEvent[] = [];
+
+  for (const rawToken of rawTokens) {
+    const repeatMatch = rawToken.match(/^(.*?)(?:\s*[x×]\s*(\d+))$/i);
+    const eventBody = repeatMatch?.[1]?.trim() || rawToken;
+    const repeatCount = Math.max(1, Number.parseInt(repeatMatch?.[2] ?? "1", 10) || 1);
+
+    const noteTokens = eventBody
+      .split("+")
+      .map((token) => token.trim())
+      .filter((token) => token.length > 0);
+
+    if (noteTokens.length === 0) {
+      return { events: [], error: `event を解釈できませんでした: ${rawToken}` };
+    }
+
+    const resolvedNotes: TuningNote[] = [];
+    for (const noteToken of noteTokens) {
+      const resolved = noteByName.get(noteToken.toUpperCase());
+      if (!resolved) {
+        return { events: [], error: `調律に存在しない音名です: ${noteToken}` };
+      }
+      if (!resolvedNotes.some((note) => note.key === resolved.key)) {
+        resolvedNotes.push(resolved);
+      }
+    }
+
+    resolvedNotes.sort((left, right) => left.key - right.key);
+    const display = buildExpectedDisplay(resolvedNotes);
+    for (let index = 0; index < repeatCount; index += 1) {
+      events.push({
+        index: events.length + 1,
+        keys: resolvedNotes.map((note) => ({ key: note.key, noteName: note.noteName })),
+        display,
+        intent: fallbackIntent !== "unknown" ? fallbackIntent : null,
+      });
+    }
+  }
+
+  return { events, error: null };
+}
+
 function buildExpectedPerformance(events: ManualCaptureExpectedEvent[], fallbackIntent: CaptureIntent): ManualCaptureExpectedPerformance | null {
   if (events.length === 0) {
     return null;
@@ -382,6 +448,8 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const [pendingExpectedKeys, setPendingExpectedKeys] = useState<number[]>([]);
   const [expectedRepeatCount, setExpectedRepeatCount] = useState("1");
   const [expectedEvents, setExpectedEvents] = useState<ManualCaptureExpectedEvent[]>([]);
+  const [expectedImportText, setExpectedImportText] = useState("");
+  const [expectedImportError, setExpectedImportError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTunings()
@@ -411,6 +479,8 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setPendingExpectedKeys([]);
     setExpectedEvents([]);
     setExpectedRepeatCount("1");
+    setExpectedImportText("");
+    setExpectedImportError(null);
   }, [tuningSignature]);
 
   const expectedPerformance = useMemo(() => buildExpectedPerformance(expectedEvents, captureIntent), [captureIntent, expectedEvents]);
@@ -470,6 +540,24 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setPendingExpectedKeys([]);
     setExpectedEvents([]);
     setExpectedRepeatCount("1");
+    setExpectedImportError(null);
+  }
+
+  function handleImportExpectedPerformance() {
+    if (!selectedTuning) {
+      return;
+    }
+
+    const parsed = parseExpectedPerformanceText(expectedImportText, selectedTuning, captureIntent);
+    if (parsed.error) {
+      setExpectedImportError(parsed.error);
+      return;
+    }
+
+    setExpectedEvents(parsed.events);
+    setPendingExpectedKeys([]);
+    setExpectedRepeatCount("1");
+    setExpectedImportError(null);
   }
 
   async function handleAnalyze() {
@@ -600,6 +688,30 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
             onCommitSelection={handleCommitExpectedSelection}
             onClearSelection={() => setPendingExpectedKeys([])}
           />
+
+          <div className="stack gap-sm">
+            <div className="panel-header compact">
+              <div>
+                <strong>文字列からインポート</strong>
+                <p className="muted">例: `C4 / D4 / E4` または `C4 + E4 + G4 x 5`</p>
+              </div>
+              <button type="button" className="ghost" onClick={handleImportExpectedPerformance} disabled={!selectedTuning || expectedImportText.trim().length === 0}>
+                文字列を反映
+              </button>
+            </div>
+            <textarea
+              rows={3}
+              value={expectedImportText}
+              onChange={(event) => {
+                setExpectedImportText(event.target.value);
+                if (expectedImportError) {
+                  setExpectedImportError(null);
+                }
+              }}
+              placeholder={"C4 / D4 / E4 / F4\nE4 + G4 + B4 + D5 x 4"}
+            />
+            {expectedImportError ? <p className="error-text">{expectedImportError}</p> : null}
+          </div>
 
           <div className="expected-performance-panel">
             <div className="panel-header compact">
