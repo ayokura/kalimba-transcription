@@ -191,3 +191,9 @@
 ## Memo
 
 116音目前後に演奏ミスがあり、C5D5E5と弾くべきところをC5E5と弾いてから、改めて正しく弾き直している部分があるのでその部分をignoreするかExpected performanceの編集の必要があり
+
+## Known Local Issue
+
+- expected event 116 付近に既知の演奏ミスあり
+- 現時点では parent fixture 全体は pending のまま保持し、ignoredRanges はまだ入れていない
+- まず provenance を整理し、必要なら child fixture または ignoredRanges で切り分ける
