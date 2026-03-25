@@ -169,6 +169,9 @@ RESTART_STALE_UPPER_STRIP_MAX_DURATION = 0.24
 ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS = 80.0
 ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS = 350.0
 DESCENDING_STEP_HANDOFF_MAX_DURATION = 0.46
+DESCENDING_ADJACENT_UPPER_CARRYOVER_MAX_DURATION = 0.24
+DESCENDING_ADJACENT_UPPER_PRIMARY_ONSET_GAIN = 5.0
+DESCENDING_ADJACENT_UPPER_SCORE_RATIO = 1.5
 RESONANT_CARRYOVER_PHRASE_RESET_MIN_GAP = 0.45
 RESONANT_CARRYOVER_HIGH_RETURN_MAX_DURATION = 0.24
 RESONANT_CARRYOVER_HIGH_RETURN_MIN_INTERVAL_CENTS = 1800.0
@@ -1610,6 +1613,26 @@ def segment_peaks(
                         and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
                     ):
                         reasons.append("recent-carryover-candidate")
+            if (
+                not reasons
+                and previous_primary_was_singleton
+                and previous_primary_note_name == hypothesis.candidate.note_name
+                and hypothesis.candidate.frequency > primary.candidate.frequency
+                and segment_duration <= DESCENDING_ADJACENT_UPPER_CARRYOVER_MAX_DURATION
+                and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                <= cents_distance(primary.candidate.frequency, hypothesis.candidate.frequency)
+                <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+            ):
+                if primary_onset_gain is None:
+                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                if onset_gain is None:
+                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                if (
+                    primary_onset_gain >= DESCENDING_ADJACENT_UPPER_PRIMARY_ONSET_GAIN
+                    and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
+                    and hypothesis.score < primary.score * DESCENDING_ADJACENT_UPPER_SCORE_RATIO
+                ):
+                    reasons.append("descending-adjacent-upper-carryover")
             if (
                 not reasons
                 and hypothesis.candidate.frequency > primary.candidate.frequency

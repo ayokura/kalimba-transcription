@@ -399,6 +399,61 @@ def test_segment_peaks_suppresses_weak_lower_secondary_without_recent_context() 
         for item in debug["secondaryDecisionTrail"]
     )
 
+
+def test_segment_peaks_suppresses_descending_stale_upper_adjacent_carryover(monkeypatch: pytest.MonkeyPatch) -> None:
+    import app.transcription as transcription
+
+    tuning = get_default_tunings()[0]
+    a5 = NoteCandidate(key=16, note_name="A5", frequency=880.0, pitch_class="A", octave=5)
+    b5 = NoteCandidate(key=15, note_name="B5", frequency=987.7666025122483, pitch_class="B", octave=5)
+
+    ranked_calls = 0
+
+    def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
+        nonlocal ranked_calls
+        ranked_calls += 1
+        if ranked_calls == 1:
+            return [
+                NoteHypothesis(a5, 100.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(b5, 40.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+            ]
+        return [
+            NoteHypothesis(b5, 40.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    def fake_onset_energy_gain(_audio, _sample_rate, _start_time, _end_time, frequency):
+        if abs(frequency - a5.frequency) < 1e-6:
+            return 6.0
+        if abs(frequency - b5.frequency) < 1e-6:
+            return 0.5
+        return 0.0
+
+    monkeypatch.setattr(transcription, "rank_tuning_candidates", fake_rank_tuning_candidates)
+    monkeypatch.setattr(transcription, "suppress_harmonics", lambda spectrum, frequencies, _frequency: spectrum)
+    monkeypatch.setattr(transcription, "onset_energy_gain", fake_onset_energy_gain)
+
+    candidates, debug, primary = segment_peaks(
+        synthesize_note(880.0, duration=0.2),
+        44100,
+        0.0,
+        0.2,
+        tuning,
+        debug=True,
+        previous_primary_note_name="B5",
+        previous_primary_was_singleton=True,
+    )
+
+    assert primary is not None
+    assert primary.candidate.note_name == "A5"
+    assert [candidate.note_name for candidate in candidates] == ["A5"]
+    assert debug is not None
+    assert any(
+        item["noteName"] == "B5"
+        and not item.get("accepted")
+        and "descending-adjacent-upper-carryover" in item.get("reasons", [])
+        for item in debug["secondaryDecisionTrail"]
+    )
+
 def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture() -> None:
     fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01"
     request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
