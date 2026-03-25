@@ -2953,9 +2953,10 @@ def normalize_repeated_triad_patterns(raw_events: list[RawEvent]) -> list[RawEve
                 return
             local_actions[index] = "rewrite"
             return
-        if len(event_set) == 3 and overlap == 2 and note_set_counts.get(event_set, 0) <= 1 and event.primary_score <= dominant_score * 0.75:
-            local_actions[index] = "rewrite"
-            return
+        if len(event_set) == 3 and overlap == 2 and note_set_counts.get(event_set, 0) <= 1:
+            if region == "head" or event.primary_score <= dominant_score * 0.75:
+                local_actions[index] = "rewrite"
+                return
         if len(event_set) == 2 and overlap >= 1 and duration <= 0.2:
             local_actions[index] = "drop"
 
@@ -3047,44 +3048,60 @@ def suppress_isolated_triad_extensions(raw_events: list[RawEvent]) -> list[RawEv
     if len(raw_events) < 3:
         return raw_events
 
-    note_set_counts: dict[frozenset[str], int] = {}
-    for event in raw_events:
-        note_set = frozenset(note.note_name for note in event.notes)
-        note_set_counts[note_set] = note_set_counts.get(note_set, 0) + 1
-
     cleaned: list[RawEvent] = []
     for index, event in enumerate(raw_events):
+        if event.is_gliss_like:
+            cleaned.append(event)
+            continue
         event_note_set = frozenset(note.note_name for note in event.notes)
-        if len(event.notes) == 3 and note_set_counts.get(event_note_set, 0) == 1:
+        if len(event.notes) == 3:
             candidate_subsets = [
-                frozenset(subset)
-                for subset in (
-                    event_note_set - {note.note_name}
-                    for note in event.notes
-                )
-                if len(subset) == 2 and note_set_counts.get(frozenset(subset), 0) >= 3
+                frozenset(event_note_set - {note.note_name})
+                for note in event.notes
+                if len(event_note_set - {note.note_name}) == 2
             ]
-            if candidate_subsets:
-                nearby_sets = [
-                    frozenset(note.note_name for note in raw_events[offset].notes)
-                    for offset in range(max(0, index - 2), min(len(raw_events), index + 3))
-                    if offset != index
-                ]
-                matching_subsets = [subset for subset in candidate_subsets if subset in nearby_sets]
-                if matching_subsets:
-                    target_subset = max(matching_subsets, key=lambda subset: note_set_counts[subset])
-                    target_notes = [note for note in event.notes if note.note_name in target_subset]
-                    cleaned.append(
-                        RawEvent(
-                            start_time=event.start_time,
-                            end_time=event.end_time,
-                            notes=sorted(target_notes, key=lambda note: note.frequency),
-                            is_gliss_like=event.is_gliss_like,
-                            primary_note_name=event.primary_note_name if event.primary_note_name in target_subset else target_notes[0].note_name,
-                            primary_score=event.primary_score,
-                        )
-                    )
+            best_subset: frozenset[str] | None = None
+            best_support: tuple[int, float] | None = None
+            for subset in candidate_subsets:
+                if event.primary_note_name not in subset:
                     continue
+                previous_support: tuple[int, float] | None = None
+                for offset in range(max(0, index - 2), index):
+                    previous_event = raw_events[offset]
+                    previous_set = frozenset(note.note_name for note in previous_event.notes)
+                    if previous_event.is_gliss_like or previous_set != subset:
+                        continue
+                    previous_support = (index - offset, event.start_time - previous_event.end_time)
+                next_support: tuple[int, float] | None = None
+                for offset in range(index + 1, min(len(raw_events), index + 3)):
+                    next_event = raw_events[offset]
+                    next_set = frozenset(note.note_name for note in next_event.notes)
+                    if next_event.is_gliss_like or next_set != subset:
+                        continue
+                    next_support = (offset - index, next_event.start_time - event.end_time)
+                    break
+                if previous_support is None or next_support is None:
+                    continue
+                support_score = (
+                    previous_support[0] + next_support[0],
+                    previous_support[1] + next_support[1],
+                )
+                if best_support is None or support_score < best_support:
+                    best_support = support_score
+                    best_subset = subset
+            if best_subset is not None:
+                target_notes = [note for note in event.notes if note.note_name in best_subset]
+                cleaned.append(
+                    RawEvent(
+                        start_time=event.start_time,
+                        end_time=event.end_time,
+                        notes=sorted(target_notes, key=lambda note: note.frequency),
+                        is_gliss_like=False,
+                        primary_note_name=event.primary_note_name if event.primary_note_name in best_subset else target_notes[0].note_name,
+                        primary_score=event.primary_score,
+                    )
+                )
+                continue
         cleaned.append(event)
 
     return cleaned
