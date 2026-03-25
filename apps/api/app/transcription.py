@@ -1714,6 +1714,55 @@ def suppress_leading_descending_overlap(raw_events: list[RawEvent], tuning: Inst
     return [updated_first, *raw_events[1:]]
 
 
+def suppress_descending_upper_singleton_spikes(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 3:
+        return raw_events
+
+    cleaned: list[RawEvent] = []
+    index = 0
+    while index < len(raw_events):
+        if index == 0 or index + 1 >= len(raw_events):
+            cleaned.append(raw_events[index])
+            index += 1
+            continue
+
+        previous_event = raw_events[index - 1]
+        event = raw_events[index]
+        next_event = raw_events[index + 1]
+
+        if (
+            len(previous_event.notes) == 2
+            and len(event.notes) == 1
+            and len(next_event.notes) == 1
+            and (event.end_time - event.start_time) <= DESCENDING_STEP_HANDOFF_MAX_DURATION
+        ):
+            previous_sorted = sorted(previous_event.notes, key=lambda note: note.frequency)
+            lower_note = previous_sorted[0]
+            upper_note = previous_sorted[1]
+            current_note = event.notes[0]
+            next_note = next_event.notes[0]
+            is_descending_upper_spike = (
+                current_note.frequency > upper_note.frequency > lower_note.frequency > next_note.frequency
+                and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                <= abs(cents_distance(current_note.frequency, upper_note.frequency))
+                <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                <= abs(cents_distance(upper_note.frequency, lower_note.frequency))
+                <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                <= abs(cents_distance(lower_note.frequency, next_note.frequency))
+                <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+            )
+            if is_descending_upper_spike:
+                index += 1
+                continue
+
+        cleaned.append(event)
+        index += 1
+
+    return cleaned
+
+
 def should_block_descending_repeated_primary_tertiary_extension(
     *,
     selected: list[NoteCandidate],
@@ -2601,6 +2650,20 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
                             )
                 elif len(upper_notes) == 1:
                     upper_note = upper_notes[0]
+                    descending_restart_bridge = (
+                        previous_event is not None
+                        and len(previous_event.notes) == 1
+                        and previous_event.notes[0].frequency < primary_note.frequency
+                        and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                        <= abs(cents_distance(previous_event.notes[0].frequency, primary_note.frequency))
+                        <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                        and next_event is not None
+                        and len(next_event.notes) == 1
+                        and next_event.notes[0].frequency > upper_note.frequency
+                        and cents_distance(upper_note.frequency, next_event.notes[0].frequency) >= 1200.0
+                    )
+                    if descending_restart_bridge:
+                        continue
                     repeated_high_return = (
                         duration <= SHORT_SECONDARY_STRIP_MAX_DURATION
                         and previous_event is not None
@@ -2707,6 +2770,44 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
                             primary_score=event.primary_score,
                         )
         cleaned.append(updated_event)
+
+    return cleaned
+
+
+def suppress_post_tail_gap_bridge_dyads(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 3:
+        return raw_events
+
+    cleaned: list[RawEvent] = []
+    for index, event in enumerate(raw_events):
+        previous_event = raw_events[index - 1] if index > 0 else None
+        next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
+        if (
+            previous_event is not None
+            and next_event is not None
+            and len(event.notes) == 2
+            and len(previous_event.notes) == 1
+            and len(next_event.notes) == 2
+            and {note.note_name for note in next_event.notes} == {note.note_name for note in event.notes}
+        ):
+            duration = event.end_time - event.start_time
+            gap_after = next_event.start_time - event.end_time
+            primary_note = next((note for note in event.notes if note.note_name == event.primary_note_name), None)
+            if primary_note is not None:
+                upper_note = next((note for note in event.notes if note.note_name != primary_note.note_name and note.frequency > primary_note.frequency), None)
+                if upper_note is not None and (
+                    duration <= DESCENDING_STEP_HANDOFF_MAX_DURATION
+                    and gap_after >= 0.35
+                    and previous_event.notes[0].frequency < primary_note.frequency
+                    and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                    <= abs(cents_distance(previous_event.notes[0].frequency, primary_note.frequency))
+                    <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                    and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                    <= abs(cents_distance(primary_note.frequency, upper_note.frequency))
+                    <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                ):
+                    continue
+        cleaned.append(event)
 
     return cleaned
 
@@ -3046,12 +3147,16 @@ def suppress_descending_restart_residual_cluster(raw_events: list[RawEvent], tun
                 if run_end + 1 < len(raw_events):
                     restart_event = raw_events[run_end + 1]
                     restart_rank = rank_by_name.get(restart_event.primary_note_name)
+                    restart_gap = restart_event.start_time - raw_events[run_end].end_time
+                    restart_gap_limit = 0.8
+                    if restart_rank is not None and restart_rank >= event_ranks[1] + 10:
+                        restart_gap_limit = 1.5
                     if (
                         len(restart_event.notes) == 1
                         and not restart_event.is_gliss_like
                         and restart_rank is not None
                         and restart_rank >= event_ranks[1] + 6
-                        and (restart_event.start_time - raw_events[run_end].end_time) <= 0.8
+                        and restart_gap <= restart_gap_limit
                     ):
                         index = run_end + 1
                         continue
@@ -4250,7 +4355,9 @@ async def transcribe_audio(
     processed_events = suppress_resonant_carryover(processed_events)
     processed_events = collapse_same_start_primary_singletons(processed_events)
     processed_events = simplify_short_secondary_bleed(processed_events)
+    processed_events = suppress_post_tail_gap_bridge_dyads(processed_events)
     processed_events = suppress_leading_descending_overlap(processed_events, tuning)
+    processed_events = suppress_descending_upper_singleton_spikes(processed_events)
     processed_events = merge_short_gliss_clusters(processed_events)
     processed_events = simplify_short_gliss_prefix_to_contiguous_singleton(processed_events)
     processed_events = merge_four_note_gliss_clusters(processed_events)
@@ -4333,5 +4440,9 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
+
+
+
 
 

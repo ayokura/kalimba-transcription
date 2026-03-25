@@ -406,6 +406,23 @@ def test_suppress_descending_restart_residual_cluster_drops_repeated_low_registe
     assert [[note.note_name for note in event.notes] for event in cleaned] == [["C4"], ["E6"]]
 
 
+def test_suppress_descending_restart_residual_cluster_drops_repeated_low_register_residue_before_large_restart_gap() -> None:
+    tuning = get_default_tunings()[0]
+    c4 = NoteCandidate(0, "C4", 261.6255653005986, "C", 4)
+    d4 = NoteCandidate(1, "D4", 293.6647679174076, "D", 4)
+    e4 = NoteCandidate(2, "E4", 329.6275569128699, "E", 4)
+    e6 = NoteCandidate(16, "E6", 1318.5102276514797, "E", 6)
+    events = [
+        RawEvent(0.0, 0.22, [c4], False, "C4", 320.0),
+        RawEvent(0.22, 0.32, [d4, e4], False, "D4", 260.0),
+        RawEvent(0.74, 0.84, [d4, e4], False, "D4", 240.0),
+        RawEvent(1.55, 1.88, [e6], False, "E6", 300.0),
+    ]
+
+    cleaned = suppress_descending_restart_residual_cluster(events, tuning)
+
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [["C4"], ["E6"]]
+
 def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -> None:
     c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
     b5 = NoteCandidate(2, "B5", 987.7666025122483, "B", 5)
@@ -1840,4 +1857,26 @@ def test_transcription_recovers_terminal_descending_onset_run_in_51_note_fixture
     assert payload["events"][-1]["notes"][0]["pitchClass"] == "C"
     assert payload["events"][-1]["notes"][0]["octave"] == 4
     assert len(payload["events"]) >= 50
+
+
+def test_transcription_drops_descending_restart_bridge_in_51_note_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={
+            "tuning": json.dumps(request_payload["tuning"]),
+            "debug": "true",
+        },
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = {"+".join(note["pitchClass"] + str(note["octave"]) for note in event["notes"]) for event in payload["events"]}
+    assert "D4+E4" not in note_sets
+
+
 
