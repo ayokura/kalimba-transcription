@@ -726,6 +726,28 @@ def test_suppress_repeated_triad_blips_drops_short_middle_burst() -> None:
     ]
 
 
+def test_suppress_repeated_triad_blips_keeps_non_identical_anchor_context() -> None:
+    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
+    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
+    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.9, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=1200.0),
+        RawEvent(start_time=1.0, end_time=1.2, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="A4", primary_score=500.0),
+        RawEvent(start_time=1.4, end_time=2.2, notes=[c4, e4, g4], is_gliss_like=False, primary_note_name="C4", primary_score=1300.0),
+    ]
+
+    cleaned = suppress_repeated_triad_blips(raw_events)
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [
+        ["D4", "F4", "A4"],
+        ["D4", "F4", "A4"],
+        ["C4", "E4", "G4"],
+    ]
+
+
 def test_suppress_isolated_triad_extensions_rewrites_local_extension_between_dyad_anchors() -> None:
     b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
     d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)

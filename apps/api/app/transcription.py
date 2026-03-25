@@ -3012,32 +3012,22 @@ def suppress_repeated_triad_blips(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 3:
         return raw_events
 
-    note_set_counts: dict[frozenset[str], int] = {}
-    for event in raw_events:
-        note_set = frozenset(note.note_name for note in event.notes)
-        if len(note_set) == 3:
-            note_set_counts[note_set] = note_set_counts.get(note_set, 0) + 1
-    if not note_set_counts:
-        return raw_events
-
-    dominant_set, dominant_count = max(note_set_counts.items(), key=lambda item: item[1])
-    if dominant_count < 4:
-        return raw_events
-    dominant_events = [event for event in raw_events if frozenset(note.note_name for note in event.notes) == dominant_set]
-    dominant_score = float(np.median([event.primary_score for event in dominant_events])) if dominant_events else 0.0
-
     cleaned: list[RawEvent] = []
     for index, event in enumerate(raw_events):
         event_set = frozenset(note.note_name for note in event.notes)
-        if event_set == dominant_set:
-            previous_set = frozenset(note.note_name for note in raw_events[index - 1].notes) if index > 0 else frozenset()
-            next_set = frozenset(note.note_name for note in raw_events[index + 1].notes) if index + 1 < len(raw_events) else frozenset()
+        if len(event_set) == 3 and 0 < index < len(raw_events) - 1:
+            previous_event = raw_events[index - 1]
+            next_event = raw_events[index + 1]
+            previous_set = frozenset(note.note_name for note in previous_event.notes)
+            next_set = frozenset(note.note_name for note in next_event.notes)
             duration = event.end_time - event.start_time
+            previous_duration = previous_event.end_time - previous_event.start_time
+            next_duration = next_event.end_time - next_event.start_time
             if (
-                duration <= 0.35
-                and event.primary_score <= dominant_score * 0.6
-                and previous_set == dominant_set
-                and next_set == dominant_set
+                previous_set == event_set
+                and next_set == event_set
+                and duration <= 0.35
+                and duration <= min(previous_duration, next_duration) * 0.45
             ):
                 continue
         cleaned.append(event)
