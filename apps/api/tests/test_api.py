@@ -348,6 +348,23 @@ def test_simplify_short_secondary_bleed_promotes_descending_lower_step() -> None
 
     assert [note.note_name for note in simplified[1].notes] == ["B4"]
 
+
+def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -> None:
+    c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
+    b5 = NoteCandidate(2, "B5", 987.7666025122483, "B", 5)
+    a5 = NoteCandidate(13, "A5", 880.0, "A", 5)
+    g5 = NoteCandidate(3, "G5", 783.9908719634985, "G", 5)
+    events = [
+        RawEvent(0.0, 0.22, [c6], False, "C6", 340.0),
+        RawEvent(0.22, 0.4, [b5, g5], False, "B5", 300.0),
+        RawEvent(0.4, 0.62, [a5], False, "A5", 320.0),
+    ]
+
+    simplified = simplify_short_secondary_bleed(events)
+
+    assert [note.note_name for note in simplified[1].notes] == ["B5"]
+
+
 def test_segment_peaks_keeps_mono_d4_monophonic() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_note(293.665)

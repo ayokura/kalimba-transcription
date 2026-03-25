@@ -2385,6 +2385,43 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
                 next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
                 lower_notes = [note for note in event.notes if note.note_name != primary_note.note_name and note.frequency < primary_note.frequency]
                 upper_notes = [note for note in event.notes if note.note_name != primary_note.note_name and note.frequency > primary_note.frequency]
+                sorted_notes = sorted(event.notes, key=lambda note: note.frequency)
+                descending_bridge_to_upper = False
+                upper_bridge_note: NoteCandidate | None = None
+                if (
+                    len(sorted_notes) == 2
+                    and previous_event is not None
+                    and len(previous_event.notes) == 1
+                    and next_event is not None
+                    and len(next_event.notes) == 1
+                ):
+                    lower_bridge_note = sorted_notes[0]
+                    upper_bridge_note = sorted_notes[1]
+                    previous_note = previous_event.notes[0]
+                    next_note = next_event.notes[0]
+                    descending_bridge_to_upper = (
+                        previous_note.frequency > upper_bridge_note.frequency > next_note.frequency > lower_bridge_note.frequency
+                        and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                        <= abs(cents_distance(previous_note.frequency, upper_bridge_note.frequency))
+                        <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                        and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                        <= abs(cents_distance(upper_bridge_note.frequency, next_note.frequency))
+                        <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                        and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                        <= abs(cents_distance(next_note.frequency, lower_bridge_note.frequency))
+                        <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                    )
+                if descending_bridge_to_upper and upper_bridge_note is not None:
+                    updated_event = RawEvent(
+                        start_time=event.start_time,
+                        end_time=event.end_time,
+                        notes=[upper_bridge_note],
+                        is_gliss_like=event.is_gliss_like,
+                        primary_note_name=upper_bridge_note.note_name,
+                        primary_score=event.primary_score,
+                    )
+                    cleaned.append(updated_event)
+                    continue
                 if len(lower_notes) == 1 and index + 1 < len(raw_events):
                     next_event = raw_events[index + 1]
                     if (
