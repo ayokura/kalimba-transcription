@@ -31,6 +31,13 @@ MULTI_ONSET_GAP_MIN_EDGE_SPACING = 0.18
 MULTI_ONSET_GAP_MIN_INTERVAL = 0.18
 MULTI_ONSET_GAP_MAX_INTERVAL = 0.42
 MULTI_ONSET_GAP_MIN_SHORT_INTERVALS = 2
+TWO_ONSET_GAP_MIN_DURATION = 0.45
+TWO_ONSET_GAP_MAX_DURATION = 0.8
+TWO_ONSET_GAP_MIN_FIRST_EDGE = 0.08
+TWO_ONSET_GAP_MAX_FIRST_EDGE = 0.16
+TWO_ONSET_GAP_MIN_INTERVAL = 0.05
+TWO_ONSET_GAP_MAX_INTERVAL = 0.12
+TWO_ONSET_GAP_MIN_TRAILING_EDGE = 0.3
 ACTIVE_RANGE_START_CLUSTER_MIN_GAP = 0.45
 ACTIVE_RANGE_START_CLUSTER_MAX_SPAN = 0.09
 ACTIVE_RANGE_START_CLUSTER_MAX_DURATION = 0.35
@@ -416,6 +423,42 @@ def collect_multi_onset_gap_segments(
     return segments
 
 
+def collect_two_onset_gap_segments(
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+) -> list[tuple[float, float]]:
+    segments: list[tuple[float, float]] = []
+    for index in range(len(active_ranges) - 1):
+        previous_end = active_ranges[index][1]
+        next_start = active_ranges[index + 1][0]
+        gap_duration = next_start - previous_end
+        if not (TWO_ONSET_GAP_MIN_DURATION <= gap_duration <= TWO_ONSET_GAP_MAX_DURATION):
+            continue
+
+        gap_onsets = [
+            time
+            for time in onset_times
+            if previous_end + 0.05 < time < next_start - 0.05
+        ]
+        if len(gap_onsets) != 2:
+            continue
+
+        first_edge = gap_onsets[0] - previous_end
+        onset_interval = gap_onsets[1] - gap_onsets[0]
+        trailing_edge = next_start - gap_onsets[1]
+        if not (TWO_ONSET_GAP_MIN_FIRST_EDGE <= first_edge <= TWO_ONSET_GAP_MAX_FIRST_EDGE):
+            continue
+        if not (TWO_ONSET_GAP_MIN_INTERVAL <= onset_interval <= TWO_ONSET_GAP_MAX_INTERVAL):
+            continue
+        if trailing_edge < TWO_ONSET_GAP_MIN_TRAILING_EDGE:
+            continue
+
+        if gap_onsets[1] - gap_onsets[0] >= 0.08:
+            segments.append((gap_onsets[0], gap_onsets[1]))
+
+    return segments
+
+
 def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
@@ -447,6 +490,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
 
     gap_injected_segments: list[tuple[float, float]] = []
     multi_onset_gap_segments = collect_multi_onset_gap_segments(active_ranges, onset_times)
+    two_onset_gap_segments = collect_two_onset_gap_segments(active_ranges, onset_times)
     qualifying_gap_run: list[tuple[float, float]] = []
     for index in range(len(active_ranges) - 1):
         previous_end = active_ranges[index][1]
@@ -531,6 +575,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for start_time, end_time in multi_onset_gap_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
+    for start_time, end_time in two_onset_gap_segments:
+        if end_time - start_time >= 0.08:
+            segments.append((start_time, end_time))
     for start_time, end_time in terminal_orphan_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
@@ -560,6 +607,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "activeRanges": [[round(start, 4), round(end, 4)] for start, end in active_ranges],
         "gapInjectedSegments": [[round(start, 4), round(end, 4)] for start, end in gap_injected_segments],
         "multiOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in multi_onset_gap_segments],
+        "twoOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in two_onset_gap_segments],
         "terminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_orphan_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),

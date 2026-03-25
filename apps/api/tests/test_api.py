@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_two_onset_gap_segments, detect_segments, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_four_note_gliss_patterns, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, simplify_short_gliss_prefix_to_contiguous_singleton, suppress_isolated_triad_extensions, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -132,6 +132,15 @@ def test_collect_multi_onset_gap_segments_requires_long_regular_gap() -> None:
     segments = collect_multi_onset_gap_segments(active_ranges, onset_times)
 
     assert segments == [(0.62, 0.94), (0.94, 1.24), (1.24, 1.82), (1.82, 2.5)]
+
+
+def test_collect_two_onset_gap_segments_requires_tight_mute_restrike_shape() -> None:
+    active_ranges = [(12.2267, 12.5707), (13.1293, 13.448)]
+    onset_times = [12.2267, 12.6667, 12.7520, 13.1227, 13.448]
+
+    segments = collect_two_onset_gap_segments(active_ranges, onset_times)
+
+    assert segments == [(12.6667, 12.752)]
 
 
 def test_detect_segments_collapses_redundant_same_start_segments() -> None:
@@ -364,6 +373,27 @@ def test_transcription_recovers_trailing_g4_in_c4_to_g4_fixture() -> None:
     primary_notes = [f"{event['notes'][0]['pitchClass']}{event['notes'][0]['octave']}" for event in payload["events"]]
     assert len(payload["events"]) >= 16
     assert primary_notes[-1] == "G4"
+
+
+def test_transcription_recovers_two_onset_gap_d5_in_c4_to_g4_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-g4-sequence-17-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = [
+        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
+        for event in payload["events"]
+    ]
+    assert payload["debug"]["twoOnsetGapSegments"] == [[12.6667, 12.752]]
+    assert note_sets[12:17] == ["D5", "C4+E5", "C5", "E5+G5", "G4"]
 
 
 def test_transcription_regression_for_repeated_octave_dyad() -> None:

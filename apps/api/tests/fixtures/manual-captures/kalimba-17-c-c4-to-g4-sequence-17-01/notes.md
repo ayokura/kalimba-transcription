@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-23-c4-to-g4-sequence-17-kalimba-17-c
 - expected note: C4 x 4 / G4 x 5 / E5 + C5 x 3 / C5 x 2 / D5 / E5 + C4 / G5 + E5
 - capture intent: unknown
@@ -35,8 +35,8 @@
 
 ## Review
 
-- summary: 一部の note-set または event 数がずれています。
-- reason: 録音意図: 未指定 / 検出傾向: 要確認。認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。
+- summary: expected note-set と event 数が揃いました。
+- reason: `12.6667-12.7520` の two-onset gap を局所 segment 化することで、`C5` のミュート/再打鍵付近の `D5` を独立 event として復元できました。
 
 ## Recapture Guidance
 
