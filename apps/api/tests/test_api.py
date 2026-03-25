@@ -333,6 +333,8 @@ def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture
         [8.8933, 9.4973],
     ]
     assert payload["debug"]["leadingOrphanSegments"] == [[1.9893, 2.2293]]
+    assert payload["debug"]["singleOnsetGapHeadSegments"] == [[3.3147, 3.5547]]
+    assert note_sets[:5] == ["C4", "D4", "E4", "F4", "G4"]
     assert payload["debug"]["sparseGapTailSegments"] == [
         [11.9067, 12.1467],
         [19.1173, 19.464],

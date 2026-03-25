@@ -47,6 +47,12 @@ SPARSE_GAP_TAIL_MIN_TRAILING_EDGE = 0.6
 SPARSE_GAP_TAIL_MIN_INTERVAL = 0.08
 SPARSE_GAP_TAIL_MAX_INTERVAL = 0.45
 SPARSE_GAP_TAIL_SEGMENT_DURATION = 0.24
+SINGLE_ONSET_GAP_HEAD_MIN_DURATION = 0.85
+SINGLE_ONSET_GAP_HEAD_MAX_DURATION = 1.0
+SINGLE_ONSET_GAP_HEAD_MIN_PREVIOUS_EDGE = 0.3
+SINGLE_ONSET_GAP_HEAD_MIN_TRAILING_EDGE = 0.55
+SINGLE_ONSET_GAP_HEAD_MAX_NEXT_RANGE_DURATION = 0.35
+SINGLE_ONSET_GAP_HEAD_SEGMENT_DURATION = 0.24
 CLOSE_TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE = 0.05
 CLOSE_TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE = 0.18
 CLOSE_TERMINAL_ORPHAN_SEGMENT_DURATION = 0.24
@@ -545,6 +551,42 @@ def collect_sparse_gap_tail_segments(
     return segments
 
 
+def collect_single_onset_gap_head_segments(
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+) -> list[tuple[float, float]]:
+    segments: list[tuple[float, float]] = []
+    for index in range(len(active_ranges) - 1):
+        previous_end = active_ranges[index][1]
+        next_start, next_end = active_ranges[index + 1]
+        gap_duration = next_start - previous_end
+        if not (SINGLE_ONSET_GAP_HEAD_MIN_DURATION <= gap_duration < SINGLE_ONSET_GAP_HEAD_MAX_DURATION):
+            continue
+
+        gap_onsets = [
+            onset_time
+            for onset_time in onset_times
+            if previous_end + 0.05 < onset_time < next_start - 0.05
+        ]
+        if len(gap_onsets) != 1:
+            continue
+
+        gap_onset = gap_onsets[0]
+        if gap_onset - previous_end < SINGLE_ONSET_GAP_HEAD_MIN_PREVIOUS_EDGE:
+            continue
+        if next_start - gap_onset < SINGLE_ONSET_GAP_HEAD_MIN_TRAILING_EDGE:
+            continue
+        if next_end - next_start > SINGLE_ONSET_GAP_HEAD_MAX_NEXT_RANGE_DURATION:
+            continue
+
+        segment_start = gap_onset
+        segment_end = min(segment_start + SINGLE_ONSET_GAP_HEAD_SEGMENT_DURATION, next_start - 0.08)
+        if segment_end - segment_start >= 0.08:
+            segments.append((segment_start, segment_end))
+
+    return segments
+
+
 def build_gap_ioi_diagnostics(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
@@ -642,6 +684,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     gap_injected_segments: list[tuple[float, float]] = []
     multi_onset_gap_segments = collect_multi_onset_gap_segments(active_ranges, onset_times)
     two_onset_gap_segments = collect_two_onset_gap_segments(active_ranges, onset_times)
+    single_onset_gap_head_segments = collect_single_onset_gap_head_segments(active_ranges, onset_times)
     sparse_gap_tail_segments = collect_sparse_gap_tail_segments(active_ranges, onset_times)
     qualifying_gap_run: list[tuple[float, float]] = []
     for index in range(len(active_ranges) - 1):
@@ -735,6 +778,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for start_time, end_time in two_onset_gap_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
+    for start_time, end_time in single_onset_gap_head_segments:
+        if end_time - start_time >= 0.08:
+            segments.append((start_time, end_time))
     for start_time, end_time in sparse_gap_tail_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
@@ -773,6 +819,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "leadingOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in leading_orphan_segments],
         "multiOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in multi_onset_gap_segments],
         "twoOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in two_onset_gap_segments],
+        "singleOnsetGapHeadSegments": [[round(start, 4), round(end, 4)] for start, end in single_onset_gap_head_segments],
         "sparseGapTailSegments": [[round(start, 4), round(end, 4)] for start, end in sparse_gap_tail_segments],
         "terminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_orphan_segments],
         "closeTerminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in close_terminal_orphan_segments],
@@ -3329,6 +3376,10 @@ async def transcribe_audio(
         (round(start_time, 4), round(end_time, 4))
         for start_time, end_time in segment_debug.get("sparseGapTailSegments", [])
     }
+    single_onset_gap_head_segment_keys = {
+        (round(start_time, 4), round(end_time, 4))
+        for start_time, end_time in segment_debug.get("singleOnsetGapHeadSegments", [])
+    }
 
     for start_time, end_time in segments:
         duration = max(end_time - start_time, 0.08)
@@ -3357,7 +3408,9 @@ async def transcribe_audio(
         segment_key = (round(start_time, 4), round(end_time, 4))
         if debug and candidate_debug:
             candidate_debug["segmentSource"] = (
-                "sparse_gap_tail" if segment_key in sparse_gap_tail_segment_keys else "active_or_gap"
+                "single_onset_gap_head" if segment_key in single_onset_gap_head_segment_keys
+                else "sparse_gap_tail" if segment_key in sparse_gap_tail_segment_keys
+                else "active_or_gap"
             )
         if segment_key in sparse_gap_tail_segment_keys and max(note.octave for note in candidates) < 6:
             if debug and candidate_debug:
