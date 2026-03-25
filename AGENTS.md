@@ -1,0 +1,74 @@
+# AGENTS
+
+## Scope
+
+- This file captures repo-specific collaboration rules for Codex/agents working in `C:\src\calimba-score`.
+- Keep `main` runnable. Do not leave `main` in a knowingly broken state.
+
+## Python / Test Environment
+
+- Primary API test environment:
+  - `C:\src\calimba-score\.venv313`
+- API test command:
+  - `$env:PYTHONPATH='C:\src\calimba-score\apps\api'; .\.venv313\Scripts\python -m pytest apps/api/tests -q`
+- Expect `.pytest_cache` access-denied warnings on this Windows setup. They are non-blocking unless the test itself fails.
+
+## Fixture Policy
+
+- Prefer practical musical fixtures over synthetic microbenchmarks when the two conflict.
+- If a change improves a practical fixture and regresses only synthetic or single-event-repeat fixtures, the practical fixture may take precedence.
+- If a change improves one practical fixture but regresses another practical fixture, do not merge it directly. Keep it as a spike until the tradeoff is resolved.
+- If a fixture contains a locally invalid take or fragment, prefer `ignoredRanges` or fixture reclassification over distorting recognizer logic to force a pass.
+- Use statuses deliberately:
+  - `completed`: stable regression target
+  - `pending`: valuable target, recognizer still needs work
+  - `rerecord`: data quality or capture intent is not good enough
+  - `review_needed`: metadata or interpretation still unclear
+  - `reference_only`: retain for reference, not active regression
+
+## Spike / Rollback Policy
+
+- For promising but not-yet-mergeable recognizer changes, use a dedicated `codex/...` branch.
+- Do not keep speculative or knowingly regressive spikes on `main`.
+- Preserve reusable failed experiments only when all of the following are true:
+  - the target practical fixture clearly improves
+  - the approach may be useful later
+  - the regression risk is understandable and documented
+- Discard low-value experiments that only add noise.
+
+## How To Record Spike History
+
+- Put the detailed rationale in the commit body.
+- Add a short issue comment as an index, not as the full writeup.
+- Use the following tags in the issue comment so spike history can be filtered:
+  - `[spike-archive]`
+  - `[fixture: <fixture-id>]`
+  - `[regressed: <fixture-id-or-none>]`
+  - `[branch: <branch-name>]`
+  - `[commit: <sha>]`
+- The issue comment should say only:
+  - what improved
+  - what regressed
+  - why it was not merged
+  - that the detailed explanation is in the commit body
+
+## Subagent Coordination
+
+- When asking subagents to inspect an issue, do not pass only an issue number.
+- Always include either:
+  - the issue title and summary, or
+  - the relevant local problem statement directly
+- Close subagents after their result is integrated.
+- Use subagents aggressively for parallel analysis, but keep write scopes explicit when delegating implementation.
+
+## Recognizer Strategy Notes
+
+- Treat repeated-pattern normalizers as suspicious until proven necessary. Favor local/causal explanations over corpus-wide dominant-pattern rewrites.
+- Before large recognizer redesigns, add ablation controls and provenance first.
+- Enter `xhigh` reasoning only when starting actual large-scale redesign, not for preparatory audits or narrow local fixes.
+
+## Windows / Tooling Notes
+
+- `apply_patch` may fail intermittently on this Windows sandbox. If it fails, use the smallest possible fallback edit and note that the failure was tool-side.
+- `gh` auth is expected to come from `.codex-gh/gh.env` in this workspace.
+- `.codex-*` paths are local-only and must remain ignored.
