@@ -455,6 +455,23 @@ def test_simplify_short_secondary_bleed_keeps_primary_for_restart_upper_sandwich
     assert [note.note_name for note in simplified[1].notes] == ["D6"]
 
 
+def test_simplify_short_secondary_bleed_keeps_primary_for_restart_followed_by_upper_extension() -> None:
+    b5 = NoteCandidate(2, "B5", 987.7666025122483, "B", 5)
+    d6 = NoteCandidate(1, "D6", 1174.6590716696303, "D", 6)
+    e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
+    c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
+    events = [
+        RawEvent(0.0, 0.18, [e6], False, "E6", 320.0),
+        RawEvent(0.18, 0.3, [b5, d6], False, "D6", 300.0),
+        RawEvent(0.3, 0.52, [d6, e6], False, "D6", 310.0),
+        RawEvent(0.52, 0.74, [c6], False, "C6", 290.0),
+    ]
+
+    simplified = simplify_short_secondary_bleed(events)
+
+    assert [note.note_name for note in simplified[1].notes] == ["D6"]
+
+
 def test_collapse_late_descending_step_handoffs_keeps_lower_note() -> None:
     a4 = NoteCandidate(13, "A4", 440.0, "A", 4)
     g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
@@ -1994,6 +2011,26 @@ def test_transcription_eliminates_first_cycle_f4_g4_merged_dyad_in_51_note_fixtu
     payload = response.json()
     merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
     assert "F4+G4" not in merged_note_sets
+
+
+def test_transcription_eliminates_b5_d6_restart_residue_in_51_note_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={
+            "tuning": json.dumps(request_payload["tuning"]),
+            "debug": "true",
+        },
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
+    assert "B5+D6" not in merged_note_sets
 
 
 

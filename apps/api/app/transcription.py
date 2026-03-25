@@ -49,6 +49,7 @@ TWO_ONSET_GAP_MIN_INTERVAL = 0.05
 TWO_ONSET_GAP_MAX_INTERVAL = 0.12
 TWO_ONSET_GAP_MIN_TRAILING_EDGE = 0.3
 SPARSE_GAP_TAIL_MIN_DURATION = 1.0
+SPARSE_GAP_TAIL_MIN_PREVIOUS_EDGE = 0.04
 SPARSE_GAP_TAIL_MAX_ONSET_OFFSET = 0.45
 SPARSE_GAP_TAIL_MIN_TRAILING_EDGE = 0.6
 SPARSE_GAP_TAIL_MIN_INTERVAL = 0.08
@@ -553,7 +554,7 @@ def collect_post_tail_gap_head_segments(
         gap_onsets = [
             onset_time
             for onset_time in onset_times
-            if previous_end + 0.05 < onset_time < next_start - 0.05
+            if previous_end + SPARSE_GAP_TAIL_MIN_PREVIOUS_EDGE < onset_time < next_start - 0.05
         ]
         if len(gap_onsets) < 4:
             continue
@@ -2666,6 +2667,13 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
                         )
                     elif previous_event is not None:
                         lower_note = lower_notes[0]
+                        descending_restart_primary_repeat = (
+                            len(previous_event.notes) == 1
+                            and previous_event.notes[0].frequency > primary_note.frequency
+                            and next_event.primary_note_name == primary_note.note_name
+                            and any(note.note_name == primary_note.note_name for note in next_event.notes)
+                            and all(note.note_name == primary_note.note_name or note.frequency > primary_note.frequency for note in next_event.notes)
+                        )
                         descending_step_handoff = (
                             len(previous_event.notes) == 1
                             and previous_event.notes[0].note_name == primary_note.note_name
@@ -2702,9 +2710,9 @@ def simplify_short_secondary_bleed(raw_events: list[RawEvent]) -> list[RawEvent]
                             <= abs(cents_distance(previous_event.notes[0].frequency, primary_note.frequency))
                             <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
                         )
-                        if (descending_step_handoff or descending_upper_residue or descending_restart_upper_sandwich) and duration <= DESCENDING_STEP_HANDOFF_MAX_DURATION:
+                        if (descending_step_handoff or descending_upper_residue or descending_restart_upper_sandwich or descending_restart_primary_repeat) and duration <= DESCENDING_STEP_HANDOFF_MAX_DURATION:
                             kept_note = lower_note
-                            if descending_restart_upper_sandwich:
+                            if descending_restart_upper_sandwich or descending_restart_primary_repeat:
                                 kept_note = primary_note
                             updated_event = RawEvent(
                                 start_time=event.start_time,
