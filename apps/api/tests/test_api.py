@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_same_start_primary_singletons, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_late_descending_step_handoffs, collapse_same_start_primary_singletons, simplify_descending_adjacent_dyad_residue, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -422,6 +422,51 @@ def test_suppress_descending_restart_residual_cluster_drops_repeated_low_registe
     cleaned = suppress_descending_restart_residual_cluster(events, tuning)
 
     assert [[note.note_name for note in event.notes] for event in cleaned] == [["C4"], ["E6"]]
+
+def test_simplify_descending_adjacent_dyad_residue_collapses_upper_residue_to_lower() -> None:
+    a4 = NoteCandidate(10, "A4", 440.0, "A", 4)
+    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
+    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    events = [
+        RawEvent(0.0, 0.18, [a4], False, "A4", 320.0),
+        RawEvent(0.18, 0.31, [g4, a4], False, "G4", 300.0),
+        RawEvent(0.31, 0.5, [f4], False, "F4", 290.0),
+    ]
+
+    simplified = simplify_descending_adjacent_dyad_residue(events)
+
+    assert [note.note_name for note in simplified[1].notes] == ["G4"]
+
+
+def test_collapse_late_descending_step_handoffs_keeps_lower_note() -> None:
+    a4 = NoteCandidate(13, "A4", 440.0, "A", 4)
+    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
+    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    events = [
+        RawEvent(0.0, 0.22, [a4], False, "A4", 320.0),
+        RawEvent(0.22, 0.34, [g4, a4], False, "G4", 280.0),
+        RawEvent(0.34, 0.58, [f4], False, "F4", 300.0),
+    ]
+
+    cleaned = collapse_late_descending_step_handoffs(events)
+
+    assert [note.note_name for note in cleaned[1].notes] == ["G4"]
+
+
+def test_simplify_short_secondary_bleed_keeps_primary_for_restart_upper_sandwich() -> None:
+    b5 = NoteCandidate(2, "B5", 987.7666025122483, "B", 5)
+    d6 = NoteCandidate(1, "D6", 1174.6590716696303, "D", 6)
+    e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
+    events = [
+        RawEvent(0.0, 0.18, [e6], False, "E6", 320.0),
+        RawEvent(0.18, 0.3, [b5, d6], False, "D6", 300.0),
+        RawEvent(0.3, 0.54, [e6], False, "E6", 310.0),
+    ]
+
+    simplified = simplify_short_secondary_bleed(events)
+
+    assert [note.note_name for note in simplified[1].notes] == ["D6"]
+
 
 def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -> None:
     c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
