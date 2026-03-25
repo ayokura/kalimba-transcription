@@ -332,6 +332,7 @@ def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture
         [8.3173, 8.8933],
         [8.8933, 9.4973],
     ]
+    assert payload["debug"]["leadingOrphanSegments"] == [[1.9893, 2.2293]]
     assert payload["debug"]["sparseGapTailSegments"] == [
         [11.9067, 12.1467],
         [19.1173, 19.464],
@@ -340,8 +341,35 @@ def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture
     assert payload["debug"]["closeTerminalOrphanSegments"] == [[26.0533, 26.2933]]
     assert "C5+G5" not in note_sets
     assert "E5+E6" not in note_sets
+    assert note_sets[30:34] == ["C6", "D6", "E5", "E6"]
     assert note_sets[-2:] == ["D6", "E6"]
 
+
+def test_transcription_drops_low_register_sparse_gap_tail_helpers_in_d4_d5_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-d4-d5-sequence-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = [
+        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
+        for event in payload["events"]
+    ]
+    assert note_sets == ["D4", "D5", "D4", "D5", "D4", "D5"]
+    assert payload["debug"]["sparseGapTailSegments"] == [[1.28, 1.52], [5.6827, 5.9227]]
+    sparse_candidates = [
+        candidate for candidate in payload["debug"]["segmentCandidates"]
+        if candidate.get("segmentSource") == "sparse_gap_tail"
+    ]
+    assert len(sparse_candidates) == 2
+    assert all(candidate.get("droppedBy") == "low_register_sparse_gap_tail" for candidate in sparse_candidates)
 
 
 def test_transcription_regression_for_repeated_octave_dyad() -> None:
