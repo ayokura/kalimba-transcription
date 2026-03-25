@@ -470,6 +470,21 @@ def test_collapse_late_descending_step_handoffs_keeps_lower_note() -> None:
     assert [note.note_name for note in cleaned[1].notes] == ["G4"]
 
 
+def test_collapse_late_descending_step_handoffs_keeps_lower_note_when_middle_is_short_gliss_like() -> None:
+    a4 = NoteCandidate(13, "A4", 440.0, "A", 4)
+    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
+    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    events = [
+        RawEvent(0.0, 0.22, [a4], False, "A4", 320.0),
+        RawEvent(0.22, 0.34, [g4, a4], True, "G4", 280.0),
+        RawEvent(0.34, 0.58, [f4], False, "F4", 300.0),
+    ]
+
+    cleaned = collapse_late_descending_step_handoffs(events)
+
+    assert [note.note_name for note in cleaned[1].notes] == ["G4"]
+
+
 def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -> None:
     c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
     b5 = NoteCandidate(2, "B5", 987.7666025122483, "B", 5)
@@ -1924,6 +1939,26 @@ def test_transcription_drops_descending_restart_bridge_in_51_note_fixture() -> N
     payload = response.json()
     note_sets = {"+".join(note["pitchClass"] + str(note["octave"]) for note in event["notes"]) for event in payload["events"]}
     assert "D4+E4" not in note_sets
+
+
+def test_transcription_eliminates_second_cycle_g4_a4_merged_dyad_in_51_note_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={
+            "tuning": json.dumps(request_payload["tuning"]),
+            "debug": "true",
+        },
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
+    assert "G4+A4" not in merged_note_sets
 
 
 
