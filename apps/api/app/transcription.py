@@ -2833,28 +2833,6 @@ def normalize_strict_four_note_subsets(raw_events: list[RawEvent]) -> list[RawEv
     if len(raw_events) < 2:
         return raw_events
 
-    note_set_counts: dict[frozenset[str], int] = {}
-    for event in raw_events:
-        note_set = frozenset(note.note_name for note in event.notes)
-        if len(note_set) == 4:
-            note_set_counts[note_set] = note_set_counts.get(note_set, 0) + 1
-    if not note_set_counts:
-        return raw_events
-
-    dominant_set, dominant_count = max(note_set_counts.items(), key=lambda item: item[1])
-    if dominant_count < 4:
-        return raw_events
-
-    dominant_notes_by_name: dict[str, NoteCandidate] = {}
-    for event in raw_events:
-        if frozenset(note.note_name for note in event.notes) != dominant_set:
-            continue
-        for note in event.notes:
-            dominant_notes_by_name.setdefault(note.note_name, note)
-    if len(dominant_notes_by_name) != 4:
-        return raw_events
-    dominant_notes = sorted((dominant_notes_by_name[name] for name in dominant_set), key=lambda note: note.frequency)
-
     normalized: list[RawEvent] = []
     index = 0
     while index < len(raw_events):
@@ -2864,19 +2842,27 @@ def normalize_strict_four_note_subsets(raw_events: list[RawEvent]) -> list[RawEv
             next_event = raw_events[index + 1]
             next_set = frozenset(note.note_name for note in next_event.notes)
             next_gap = next_event.start_time - event.end_time
+            previous_set = frozenset(note.note_name for note in normalized[-1].notes) if normalized else frozenset()
+            future_support = any(
+                frozenset(note.note_name for note in raw_events[future_index].notes) == next_set
+                for future_index in range(index + 2, min(len(raw_events), index + 4))
+            )
             if (
                 len(event_set) == 2
-                and event_set < dominant_set
-                and next_set == dominant_set
+                and len(next_set) == 4
+                and event_set < next_set
                 and next_gap <= GLISS_CLUSTER_MAX_GAP
+                and not event.is_gliss_like
+                and not next_event.is_gliss_like
+                and (previous_set == next_set or future_support)
             ):
                 normalized.append(
                     RawEvent(
                         start_time=event.start_time,
                         end_time=next_event.end_time,
-                        notes=dominant_notes,
+                        notes=next_event.notes,
                         is_gliss_like=event.is_gliss_like or next_event.is_gliss_like,
-                        primary_note_name=next_event.primary_note_name if next_event.primary_note_name in dominant_set else dominant_notes[0].note_name,
+                        primary_note_name=next_event.primary_note_name if next_event.primary_note_name in next_set else next_event.notes[0].note_name,
                         primary_score=max(event.primary_score, next_event.primary_score),
                     )
                 )

@@ -1189,6 +1189,26 @@ def test_normalize_strict_four_note_subsets_merges_leading_dyad_into_following_d
     assert normalized[0].end_time == pytest.approx(0.84)
 
 
+def test_normalize_strict_four_note_subsets_keeps_one_off_prefix_without_local_support() -> None:
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.42, notes=[e4, d5], is_gliss_like=False, primary_note_name="E4", primary_score=640.0),
+        RawEvent(start_time=0.42, end_time=0.84, notes=[e4, g4, b4, d5], is_gliss_like=False, primary_note_name="E4", primary_score=910.0),
+        RawEvent(start_time=1.2, end_time=1.75, notes=[e4, g4, b4], is_gliss_like=False, primary_note_name="B4", primary_score=900.0),
+    ]
+
+    normalized = normalize_strict_four_note_subsets(raw_events)
+    assert [[note.note_name for note in event.notes] for event in normalized] == [
+        ["E4", "D5"],
+        ["E4", "G4", "B4", "D5"],
+        ["E4", "G4", "B4"],
+    ]
+
+
 def test_normalize_repeated_four_note_gliss_patterns_promotes_subsets_and_drops_short_noise() -> None:
     e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
     f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
