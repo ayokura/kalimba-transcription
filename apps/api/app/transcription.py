@@ -2837,63 +2837,43 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
 
         dominant_set = run["family_set"]
         dominant_notes = run["family_notes"]
-        dominant_score = run["dominant_score"]
         anchor_indices = run["anchor_indices"]
         event_set = frozenset(note.note_name for note in event.notes)
         duration = event.end_time - event.start_time
+        lower_anchor_name = dominant_notes[0].note_name
 
         if event_set == dominant_set:
             normalized.append(event)
             index += 1
             continue
 
-        previous_set = frozenset(note.note_name for note in raw_events[index - 1].notes) if index > 0 else frozenset()
-        previous_gap = event.start_time - raw_events[index - 1].end_time if index > 0 else 1.0
+        previous_exact_distance = min((index - anchor_index for anchor_index in anchor_indices if anchor_index < index), default=999)
+        next_exact_distance = min((anchor_index - index for anchor_index in anchor_indices if anchor_index > index), default=999)
+        exact_support_before = previous_exact_distance <= 2
+        exact_support_after = next_exact_distance <= 2
+
         next_event = raw_events[index + 1] if index + 1 < len(raw_events) else None
         next_set = frozenset(note.note_name for note in next_event.notes) if next_event is not None else frozenset()
         next_gap = next_event.start_time - event.end_time if next_event is not None else 1.0
-        nearby_dominant = any(abs(anchor_index - index) <= 3 and anchor_index != index for anchor_index in anchor_indices)
-        future_dominant = any(0 < anchor_index - index <= 3 for anchor_index in anchor_indices)
-        past_dominant = any(0 < index - anchor_index <= 3 for anchor_index in anchor_indices)
-        shared_note_count = len(event_set & dominant_set)
 
-        if (
-            next_event is not None
-            and find_local_four_note_family_run(index + 1, family_runs) == run
-            and event_set
-            and next_set
-            and event_set < dominant_set
-            and next_set < dominant_set
-            and len(event_set) >= 2
-            and len(next_set) >= 2
-            and (event_set | next_set) == dominant_set
-            and next_gap <= GLISS_CLUSTER_MAX_GAP
-            and max(duration, next_event.end_time - next_event.start_time) <= 1.25
-            and nearby_dominant
-            and not event.is_gliss_like
-            and not next_event.is_gliss_like
-        ):
-            normalized.append(
-                RawEvent(
-                    start_time=event.start_time,
-                    end_time=next_event.end_time,
-                    notes=dominant_notes,
-                    is_gliss_like=False,
-                    primary_note_name=next_event.primary_note_name if next_event.primary_note_name in dominant_set else dominant_notes[0].note_name,
-                    primary_score=max(event.primary_score, next_event.primary_score),
-                )
-            )
-            index += 2
-            continue
-
-        if next_event is not None and next_set == dominant_set and next_gap <= GLISS_CLUSTER_MAX_GAP:
-            if len(event_set) >= 2 and event_set < dominant_set and shared_note_count >= 2 and duration <= 1.25:
+        if next_event is not None and find_local_four_note_family_run(index + 1, family_runs) == run:
+            next_exact_after = min((anchor_index - (index + 1) for anchor_index in anchor_indices if anchor_index > index + 1), default=999) <= 2
+            if (
+                next_set == dominant_set
+                and next_gap <= GLISS_CLUSTER_MAX_GAP
+                and event_set < dominant_set
+                and len(event_set) == 1
+                and event.primary_note_name == lower_anchor_name
+                and duration <= 0.12
+                and event.is_gliss_like
+                and (exact_support_before or next_exact_after)
+            ):
                 normalized.append(
                     RawEvent(
                         start_time=event.start_time,
                         end_time=next_event.end_time,
                         notes=dominant_notes,
-                        is_gliss_like=event.is_gliss_like or next_event.is_gliss_like,
+                        is_gliss_like=True,
                         primary_note_name=next_event.primary_note_name if next_event.primary_note_name in dominant_set else dominant_notes[0].note_name,
                         primary_score=max(event.primary_score, next_event.primary_score),
                     )
@@ -2902,18 +2882,45 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
                 continue
 
             if (
-                len(event_set) == 1
-                and event.primary_note_name == dominant_notes[0].note_name
-                and duration <= 0.12
-                and nearby_dominant
-                and event.primary_score <= dominant_score * 0.35
+                next_set == dominant_set
+                and next_gap <= GLISS_CLUSTER_MAX_GAP
+                and event_set < dominant_set
+                and len(event_set) == 3
+                and duration <= 1.25
+                and event.is_gliss_like
+                and (exact_support_before or next_exact_after)
             ):
                 normalized.append(
                     RawEvent(
                         start_time=event.start_time,
                         end_time=next_event.end_time,
                         notes=dominant_notes,
-                        is_gliss_like=event.is_gliss_like or next_event.is_gliss_like,
+                        is_gliss_like=True,
+                        primary_note_name=next_event.primary_note_name if next_event.primary_note_name in dominant_set else dominant_notes[0].note_name,
+                        primary_score=max(event.primary_score, next_event.primary_score),
+                    )
+                )
+                index += 2
+                continue
+
+            if (
+                next_set < dominant_set
+                and len(event_set) >= 2
+                and len(next_set) >= 2
+                and event_set < dominant_set
+                and (event_set | next_set) == dominant_set
+                and next_gap <= GLISS_CLUSTER_MAX_GAP
+                and max(duration, next_event.end_time - next_event.start_time) <= 1.25
+                and not event.is_gliss_like
+                and not next_event.is_gliss_like
+                and next_exact_after
+            ):
+                normalized.append(
+                    RawEvent(
+                        start_time=event.start_time,
+                        end_time=next_event.end_time,
+                        notes=dominant_notes,
+                        is_gliss_like=False,
                         primary_note_name=next_event.primary_note_name if next_event.primary_note_name in dominant_set else dominant_notes[0].note_name,
                         primary_score=max(event.primary_score, next_event.primary_score),
                     )
@@ -2922,32 +2929,11 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
                 continue
 
         if (
-            len(event_set) == 2
-            and event_set < dominant_set
-            and shared_note_count == 2
+            event_set < dominant_set
+            and len(event_set) in {2, 3}
             and duration <= 1.25
-            and past_dominant
-            and future_dominant
-            and not event.is_gliss_like
-        ):
-            normalized.append(
-                RawEvent(
-                    start_time=event.start_time,
-                    end_time=event.end_time,
-                    notes=dominant_notes,
-                    is_gliss_like=False,
-                    primary_note_name=event.primary_note_name if event.primary_note_name in dominant_set else dominant_notes[0].note_name,
-                    primary_score=event.primary_score,
-                )
-            )
-            index += 1
-            continue
-
-        if (
-            len(event_set) == 3
-            and shared_note_count >= 2
-            and duration <= 1.0
-            and (past_dominant or future_dominant)
+            and exact_support_before
+            and exact_support_after
         ):
             normalized.append(
                 RawEvent(
@@ -2962,30 +2948,13 @@ def normalize_repeated_explicit_four_note_patterns(raw_events: list[RawEvent]) -
             index += 1
             continue
 
-        if len(event_set) <= 2 and event_set < dominant_set and nearby_dominant and duration <= 0.45:
-            if previous_set == dominant_set and previous_gap <= 0.02:
-                index += 1
-                continue
-            if index == len(raw_events) - 1 and previous_set == dominant_set and previous_gap <= 0.35:
-                index += 1
-                continue
-            if (
-                event.primary_score <= dominant_score * 0.8
-                and (
-                    (previous_set == dominant_set and previous_gap <= 0.35)
-                    or (next_set == dominant_set and next_gap <= 0.35)
-                    or (index > 0 and previous_gap <= 0.02)
-                )
-            ):
-                index += 1
-                continue
-
         normalized.append(event)
         index += 1
 
     return normalized
 
-def normalize_strict_four_note_subsets(raw_events: list[RawEvent]) -> list[RawEvent]:
+
+def normalize_strict_four_note_subsets'(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 2:
         return raw_events
 
@@ -3673,5 +3642,6 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
 
 
