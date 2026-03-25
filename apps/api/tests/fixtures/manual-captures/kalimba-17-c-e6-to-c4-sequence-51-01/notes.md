@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-25-e6-to-c4-sequence-51-separated-notes-kalimba-17-c
 - expected note: E6 x 3 / D6 x 3 / C6 x 3 / B5 x 3 / A5 x 3 / G5 x 3 / F5 x 3 / E5 x 3 / D5 x 3 / C5 x 3 / B4 x 3 / A4 x 3 / G4 x 3 / F4 x 3 / E4 x 3 / D4 x 3 / C4 x 3
 - capture intent: separated_notes
@@ -69,13 +69,12 @@
 
 ## Review
 
-- summary: 一部の note-set または event 数がずれています。
-- reason: 録音意図: 単音列 / 検出傾向: 要確認。認識改善の対象です。必要なら expected と detected の差分を見て、演奏意図の再確認も行ってください。
+- summary: expected どおりの 51 event を安定して回収しています。
+- reason: practical な下降 separated-notes run として completed 化。third-cycle の bridge overlap と sparse-gap-tail の C4 欠落は recognizer 側で回収済み。
 
 ## Recapture Guidance
 
-- 各音をはっきり区切り、次の音まで十分に待つ。
-- 低音残響が長い場合でも、新しい打鍵の間隔を広めに取る。
+- なし。現時点では再録音不要。
 
 ## Memo
 

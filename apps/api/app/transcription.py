@@ -61,6 +61,12 @@ SINGLE_ONSET_GAP_HEAD_MIN_PREVIOUS_EDGE = 0.3
 SINGLE_ONSET_GAP_HEAD_MIN_TRAILING_EDGE = 0.55
 SINGLE_ONSET_GAP_HEAD_MAX_NEXT_RANGE_DURATION = 0.35
 SINGLE_ONSET_GAP_HEAD_SEGMENT_DURATION = 0.24
+SHORT_BRIDGE_ACTIVE_RANGE_MAX_DURATION = 0.16
+SHORT_BRIDGE_ACTIVE_RANGE_MAX_ONSET_OFFSET = 0.03
+SHORT_BRIDGE_ACTIVE_RANGE_MIN_NEXT_ONSET_GAP = 0.1
+SHORT_BRIDGE_ACTIVE_RANGE_MAX_NEXT_ONSET_GAP = 0.3
+SHORT_BRIDGE_ACTIVE_RANGE_MIN_NEXT_EDGE_GAP = 0.08
+SHORT_BRIDGE_ACTIVE_RANGE_MAX_NEXT_EDGE_GAP = 0.2
 CLOSE_TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE = 0.05
 CLOSE_TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE = 0.18
 CLOSE_TERMINAL_ORPHAN_SEGMENT_DURATION = 0.24
@@ -667,7 +673,7 @@ def collect_sparse_gap_tail_segments(
         gap_onsets = [
             onset_time
             for onset_time in onset_times
-            if previous_end + 0.05 < onset_time < next_start - 0.05
+            if previous_end + SPARSE_GAP_TAIL_MIN_PREVIOUS_EDGE < onset_time < next_start - 0.05
         ]
         early_gap_onsets = [
             onset_time
@@ -856,6 +862,92 @@ def simplify_sparse_gap_tail_high_octave_dyad(candidates: list[NoteCandidate]) -
     return [upper]
 
 
+def suppress_short_bridge_active_ranges(
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+    if len(active_ranges) < 3:
+        return active_ranges, []
+
+    filtered_ranges: list[tuple[float, float]] = []
+    suppressed_ranges: list[tuple[float, float]] = []
+
+    for index, current_range in enumerate(active_ranges):
+        if index == 0 or index == len(active_ranges) - 1:
+            filtered_ranges.append(current_range)
+            continue
+
+        current_start, current_end = current_range
+        current_duration = current_end - current_start
+        if current_duration > SHORT_BRIDGE_ACTIVE_RANGE_MAX_DURATION:
+            filtered_ranges.append(current_range)
+            continue
+
+        current_onsets = [time for time in onset_times if current_start <= time <= current_end]
+        if len(current_onsets) != 1:
+            filtered_ranges.append(current_range)
+            continue
+
+        current_onset = current_onsets[0]
+        if current_onset - current_start > SHORT_BRIDGE_ACTIVE_RANGE_MAX_ONSET_OFFSET:
+            filtered_ranges.append(current_range)
+            continue
+
+        next_start, _ = active_ranges[index + 1]
+        next_prior_onsets = [
+            time
+            for time in onset_times
+            if next_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= next_start + 0.005
+            and time >= current_end + 0.005
+        ]
+        if not next_prior_onsets:
+            filtered_ranges.append(current_range)
+            continue
+
+        next_backtracked_onset = next_prior_onsets[-1]
+        onset_gap = next_backtracked_onset - current_onset
+        edge_gap = next_backtracked_onset - current_end
+        if not (
+            SHORT_BRIDGE_ACTIVE_RANGE_MIN_NEXT_ONSET_GAP
+            <= onset_gap
+            <= SHORT_BRIDGE_ACTIVE_RANGE_MAX_NEXT_ONSET_GAP
+            and SHORT_BRIDGE_ACTIVE_RANGE_MIN_NEXT_EDGE_GAP
+            <= edge_gap
+            <= SHORT_BRIDGE_ACTIVE_RANGE_MAX_NEXT_EDGE_GAP
+        ):
+            filtered_ranges.append(current_range)
+            continue
+
+        suppressed_ranges.append(current_range)
+
+    return filtered_ranges, suppressed_ranges
+
+
+def should_keep_low_register_sparse_gap_tail(
+    candidates: list[NoteCandidate],
+    tuning: InstrumentTuning,
+    descending_primary_suffix_floor: float | None,
+    descending_primary_suffix_note_names: set[str],
+) -> bool:
+    if len(candidates) != 1 or descending_primary_suffix_floor is None:
+        return False
+
+    candidate = candidates[0]
+    if candidate.octave >= 6:
+        return False
+    if candidate.note_name in descending_primary_suffix_note_names:
+        return False
+
+    sorted_notes = sorted(tuning.notes, key=lambda item: item.frequency)
+    rank_by_name = {note.note_name: index for index, note in enumerate(sorted_notes)}
+    suffix_floor_name = next((note.note_name for note in sorted_notes if abs(note.frequency - descending_primary_suffix_floor) < 1e-6), None)
+    candidate_rank = rank_by_name.get(candidate.note_name)
+    suffix_rank = rank_by_name.get(suffix_floor_name) if suffix_floor_name is not None else None
+    if candidate_rank is None or suffix_rank is None:
+        return False
+    return candidate_rank == suffix_rank - 1
+
+
 def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
@@ -884,6 +976,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=HOP_LENGTH)
     onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sample_rate, hop_length=HOP_LENGTH, backtrack=True)
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
+    active_ranges, short_bridge_active_ranges = suppress_short_bridge_active_ranges(active_ranges, onset_times)
     gap_ioi_diagnostics = build_gap_ioi_diagnostics(active_ranges, onset_times)
 
     leading_orphan_segments = collect_leading_orphan_segments(active_ranges, onset_times)
@@ -1037,6 +1130,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "onsetTimes": onset_times,
         "gapIoiDiagnostics": gap_ioi_diagnostics,
         "activeRanges": [[round(start, 4), round(end, 4)] for start, end in active_ranges],
+        "shortBridgeActiveRanges": [[round(start, 4), round(end, 4)] for start, end in short_bridge_active_ranges],
         "gapInjectedSegments": [[round(start, 4), round(end, 4)] for start, end in gap_injected_segments],
         "leadingOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in leading_orphan_segments],
         "multiOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in multi_onset_gap_segments],
@@ -1793,6 +1887,60 @@ def suppress_descending_upper_singleton_spikes(raw_events: list[RawEvent]) -> li
             if is_descending_upper_spike:
                 index += 1
                 continue
+
+        cleaned.append(event)
+        index += 1
+
+    return cleaned
+
+
+def suppress_descending_upper_return_overlap(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 4:
+        return raw_events
+
+    cleaned: list[RawEvent] = []
+    index = 0
+    while index < len(raw_events):
+        if index < 2 or index + 1 >= len(raw_events):
+            cleaned.append(raw_events[index])
+            index += 1
+            continue
+
+        previous_previous_event = raw_events[index - 2]
+        previous_event = raw_events[index - 1]
+        event = raw_events[index]
+        next_event = raw_events[index + 1]
+        duration = event.end_time - event.start_time
+
+        if (
+            len(previous_previous_event.notes) == 1
+            and len(previous_event.notes) == 1
+            and len(event.notes) == 2
+            and len(next_event.notes) == 1
+            and not previous_previous_event.is_gliss_like
+            and not previous_event.is_gliss_like
+            and not event.is_gliss_like
+            and not next_event.is_gliss_like
+            and duration <= DESCENDING_STEP_HANDOFF_MAX_DURATION
+        ):
+            primary_note = next((note for note in event.notes if note.note_name == event.primary_note_name), None)
+            if primary_note is not None:
+                upper_notes = [note for note in event.notes if note.note_name != primary_note.note_name and note.frequency > primary_note.frequency]
+                if len(upper_notes) == 1:
+                    upper_note = upper_notes[0]
+                    if (
+                        previous_previous_event.notes[0].note_name == upper_note.note_name
+                        and previous_event.notes[0].note_name == primary_note.note_name
+                        and next_event.notes[0].frequency < primary_note.frequency
+                        and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                        <= cents_distance(primary_note.frequency, upper_note.frequency)
+                        <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                        and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
+                        <= abs(cents_distance(next_event.notes[0].frequency, primary_note.frequency))
+                        <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
+                    ):
+                        index += 1
+                        continue
 
         cleaned.append(event)
         index += 1
@@ -4441,10 +4589,18 @@ async def transcribe_audio(
                 else "active_or_gap"
             )
         if segment_key in sparse_gap_tail_segment_keys and max(note.octave for note in candidates) < 6:
+            if not should_keep_low_register_sparse_gap_tail(
+                candidates,
+                tuning,
+                descending_primary_suffix_floor,
+                descending_primary_suffix_note_names,
+            ):
+                if debug and candidate_debug:
+                    candidate_debug["droppedBy"] = "low_register_sparse_gap_tail"
+                    segment_candidates_debug.append(candidate_debug)
+                continue
             if debug and candidate_debug:
-                candidate_debug["droppedBy"] = "low_register_sparse_gap_tail"
-                segment_candidates_debug.append(candidate_debug)
-            continue
+                candidate_debug["sparseGapTailAdjustment"] = "descending_restart_kept"
         if segment_key in sparse_gap_tail_segment_keys:
             simplified_candidates = simplify_sparse_gap_tail_high_octave_dyad(candidates)
             if len(simplified_candidates) != len(candidates):
@@ -4474,6 +4630,7 @@ async def transcribe_audio(
     processed_events = suppress_leading_descending_overlap(processed_events, tuning)
     processed_events = simplify_descending_adjacent_dyad_residue(processed_events)
     processed_events = suppress_descending_upper_singleton_spikes(processed_events)
+    processed_events = suppress_descending_upper_return_overlap(processed_events)
     processed_events = merge_short_gliss_clusters(processed_events)
     processed_events = simplify_short_gliss_prefix_to_contiguous_singleton(processed_events)
     processed_events = merge_four_note_gliss_clusters(processed_events)

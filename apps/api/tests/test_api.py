@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_late_descending_step_handoffs, collapse_same_start_primary_singletons, simplify_descending_adjacent_dyad_residue, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_late_descending_step_handoffs, collapse_same_start_primary_singletons, simplify_descending_adjacent_dyad_residue, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_descending_upper_return_overlap, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 
@@ -531,6 +531,22 @@ def test_suppress_resonant_carryover_keeps_lower_note_in_descending_adjacent_cha
     cleaned = suppress_resonant_carryover(events)
 
     assert [note.note_name for note in cleaned[1].notes] == ["F4"]
+
+
+def test_suppress_descending_upper_return_overlap_drops_residual_dyad() -> None:
+    e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
+    d6 = NoteCandidate(1, "D6", 1174.6590716696303, "D", 6)
+    c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
+    events = [
+        RawEvent(0.0, 0.14, [e6], False, "E6", 320.0),
+        RawEvent(0.14, 0.25, [d6], False, "D6", 300.0),
+        RawEvent(0.25, 0.36, [d6, e6], False, "D6", 280.0),
+        RawEvent(0.36, 0.58, [c6], False, "C6", 290.0),
+    ]
+
+    cleaned = suppress_descending_upper_return_overlap(events)
+
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [["E6"], ["D6"], ["C6"]]
 
 
 def test_suppress_leading_descending_overlap_collapses_first_bridge() -> None:
@@ -2032,5 +2048,44 @@ def test_transcription_eliminates_b5_d6_restart_residue_in_51_note_fixture() -> 
     merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
     assert "B5+D6" not in merged_note_sets
 
+
+def test_transcription_reaches_exact_event_count_in_51_note_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={
+            "tuning": json.dumps(request_payload["tuning"]),
+            "debug": "true",
+        },
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload["events"]) == 51
+
+
+def test_transcription_recovers_third_cycle_prefix_in_51_note_fixture() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={
+            "tuning": json.dumps(request_payload["tuning"]),
+            "debug": "true",
+        },
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = ["+".join("{}{}".format(note["pitchClass"], note["octave"]) for note in event["notes"]) for event in payload["events"]]
+    assert note_sets[33:37] == ["C4", "E6", "D6", "C6"]
+    assert [round(start, 4) for start, _ in payload["debug"]["shortBridgeActiveRanges"]] == [20.6013]
 
 
