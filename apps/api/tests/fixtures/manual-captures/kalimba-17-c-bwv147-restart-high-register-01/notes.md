@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: review_needed
 - scenario: 2026-03-25-bwv147-restart-high-register-01-kalimba-17-c
 - expected note: [E5,C4] / C5 / D5 / <E5,C5> / G5 / F5 / [F5,A4] / A5 / G5 / [G5,E4] / C6 / B5 / [C6,A4]
 - capture intent: unknown
@@ -35,5 +35,7 @@
 
 ## Review
 
-- summary: practical BWV147 restart/high-register child fixture extracted from the parent corpus for focused recognizer improvement
-- reason: practical BWV147 restart/high-register child fixture extracted from the parent corpus for focused recognizer improvement
+- summary: expected F5/[F5,A4] and final [C6,A4] sections do not match the scoped audio cleanly; this child is better treated as provenance review than as an active recognizer target
+- reason: expected F5/[F5,A4] and final [C6,A4] sections do not match the scoped audio cleanly; this child is better treated as provenance review than as an active recognizer target
+
+- scoped debug shows only one onset around the supposed `F5 -> [F5,A4]` region (`9.0613s`) and only two onsets around the final region (`19.3520s`, `19.6187s`), which aligns better with `A4+F5` and `C6 -> A4+C5` than with the current expected ordering

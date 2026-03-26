@@ -1,6 +1,6 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "review_needed",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "practical BWV147 restart/high-register child fixture extracted from the parent corpus for focused recognizer improvement",
+  "reason": "expected F5/[F5,A4] and final [C6,A4] sections do not match the scoped audio cleanly; this child is better treated as provenance review than as an active recognizer target",
   "evaluationWindows": [
     {
       "startSec": 1.5,
