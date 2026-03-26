@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: review_needed
 - scenario: 2026-03-25-bwv147-late-upper-tail-01-kalimba-17-c
 - expected note: G5 / E5 / <C5,A4> / D5 / E5
 - capture intent: unknown
@@ -27,8 +27,10 @@
 
 ## Review
 
-- summary: practical BWV147 late upper-tail child extracted from the parent corpus to compare a repeated mixed phrase against the earlier upper-mixed child
-- reason: practical BWV147 late upper-tail child extracted from the parent corpus to compare a repeated mixed phrase against the earlier upper-mixed child
+- summary: expected late-tail ordering does not match the scoped audio; D5/E5 tail events are not evident enough to keep this child as an active recognizer target
+- reason: expected late-tail ordering does not match the scoped audio; D5/E5 tail events are not evident enough to keep this child as an active recognizer target
 
 - evaluation window trimmed to exclude preceding phrase tail from the parent recording
 
+
+- scoped debug shows only `G5`, `E5`, and the following mixed clusters; the expected `D5 / E5` tail is not isolated in the extracted audio

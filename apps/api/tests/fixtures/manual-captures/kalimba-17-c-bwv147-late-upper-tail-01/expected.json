@@ -1,6 +1,6 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "review_needed",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "practical BWV147 late upper-tail child extracted from the parent corpus to compare a repeated mixed phrase against the earlier upper-mixed child",
+  "reason": "expected late-tail ordering does not match the scoped audio; D5/E5 tail events are not evident enough to keep this child as an active recognizer target",
   "evaluationWindows": [
     {
       "startSec": 1.9,
