@@ -1,0 +1,13 @@
+{
+  "pending": true,
+  "status": "pending",
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "reason": "clean BWV147 lower/mixed phrase candidate covering [C5,G4] / D5 / E5 / <A4,F4> / G5 / F5 / [E5,G4]; hold pending until recognizer behavior on the scoped clip is confirmed"
+}

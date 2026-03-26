@@ -2194,3 +2194,20 @@ def test_bwv147_lower_context_roll_matches_completed_nine_event_phrase() -> None
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-lower-context-roll-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets == ["C5", "D4+G4+B4", "C5", "D5", "D4+G4", "B4", "D5", "G4+B4+D5+F5", "E5"]
+
+
+@manual_capture_slow
+def test_bwv147_lower_f4_mixed_run_is_a_clean_pending_child_with_late_tail_miss() -> None:
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-lower-f4-mixed-run-01")
+    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
+    assert len(note_sets) == 4
+    assert set(note_sets[0].split("+")) == {"C5", "G4"}
+    assert note_sets[1:3] == ["D5", "E5"]
+    assert set(note_sets[3].split("+")) == {"A4", "F4"}
+    assert [round(onset, 4) for onset in payload["debug"]["onsetTimes"][-4:]] == [5.848, 6.9813, 9.568, 9.76]
+    assert [tuple(round(value, 4) for value in segment) for segment in payload["debug"]["segments"]] == [
+        (0.0107, 0.9653),
+        (1.0667, 1.72),
+        (2.072, 2.8613),
+        (4.0747, 4.7067),
+    ]
