@@ -60,6 +60,22 @@
   - the relevant local problem statement directly
 - Close subagents after their result is integrated.
 - Use subagents aggressively for parallel analysis, but keep write scopes explicit when delegating implementation.
+- Explorer subagents should treat file edits as exceptional, not normal.
+- Explorer subagents must not edit the main worktree directly.
+- If an explorer concludes that a file edit is necessary for the investigation, it must:
+  - stop before editing
+  - report that need back to the primary agent
+  - let the primary agent either apply the change itself or move the task into a dedicated editing worktree
+- Any subagent that may edit files must work in its own git worktree under `.codex-worktrees/<agent-name>/`.
+- For editing subagents:
+  - create a dedicated branch for that subagent
+  - keep the branch name under the `codex/` prefix
+  - do not let the subagent edit the main worktree directly
+- The primary agent is responsible for:
+  - creating the worktree and branch before delegation
+  - integrating or cherry-picking the result
+  - cleaning up stale `.codex-worktrees/...` directories after the work is resolved
+- If a subagent is only doing inspection or debugging, prefer `explorer` plus no file edits over creating a worktree.
 
 ## Recognizer Strategy Notes
 
