@@ -9,5 +9,11 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "practical BWV147 mid-phrase gesture-cluster child fixture extracted from the parent corpus for orthogonal recognizer evaluation"
+  "reason": "practical BWV147 mid-phrase gesture-cluster child fixture extracted from the parent corpus for orthogonal recognizer evaluation",
+  "evaluationWindows": [
+    {
+      "startSec": 1.5,
+      "endSec": 12.61
+    }
+  ]
 }

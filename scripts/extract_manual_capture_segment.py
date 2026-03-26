@@ -36,6 +36,8 @@ def main() -> int:
     parser.add_argument("--end-sec", type=float, required=True)
     parser.add_argument("--start-event", type=int, required=True)
     parser.add_argument("--end-event", type=int, required=True)
+    parser.add_argument("--context-before", type=float, default=0.0)
+    parser.add_argument("--context-after", type=float, default=0.0)
     parser.add_argument("--status", choices=sorted(VALID_STATUSES), default="pending")
     parser.add_argument("--reason", required=True)
     parser.add_argument("--scenario")
@@ -43,6 +45,8 @@ def main() -> int:
 
     if args.end_sec <= args.start_sec:
         raise SystemExit("--end-sec must be greater than --start-sec")
+    if args.context_before < 0 or args.context_after < 0:
+        raise SystemExit("--context-before/--context-after must be non-negative")
     if args.start_event < 1 or args.end_event < args.start_event:
         raise SystemExit("Invalid event range")
 
@@ -71,7 +75,14 @@ def main() -> int:
 
     (target_dir / "request.json").write_text(json.dumps(request_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    audio_bytes = clip_audio_bytes(source_dir / "audio.wav", args.start_sec, args.end_sec)
+    request_audio = request_payload.get("audio") or {}
+    source_duration = float(request_audio.get("durationSec") or 0.0)
+    clip_start = max(0.0, args.start_sec - args.context_before)
+    clip_end = args.end_sec + args.context_after
+    if source_duration > 0:
+        clip_end = min(source_duration, clip_end)
+
+    audio_bytes = clip_audio_bytes(source_dir / "audio.wav", clip_start, clip_end)
     (target_dir / "audio.wav").write_bytes(audio_bytes)
 
     response_path = source_dir / "response.json"
@@ -91,6 +102,13 @@ def main() -> int:
         },
         "reason": args.reason,
     }
+    if clip_start != args.start_sec or clip_end != args.end_sec:
+        expected_payload["evaluationWindows"] = [
+            {
+                "startSec": round(args.start_sec - clip_start, 4),
+                "endSec": round(args.end_sec - clip_start, 4),
+            }
+        ]
     (target_dir / "expected.json").write_text(json.dumps(expected_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     notes = [
@@ -106,6 +124,7 @@ def main() -> int:
         f"- captured at: {request_payload.get('capturedAt', '')}",
         f"- source fixture: {source_dir.name}",
         f"- extracted range: {args.start_sec:.3f}s - {args.end_sec:.3f}s",
+        f"- audio clip range: {clip_start:.3f}s - {clip_end:.3f}s",
         f"- extracted events: {args.start_event}-{args.end_event}",
         "",
         "## Expected Performance",

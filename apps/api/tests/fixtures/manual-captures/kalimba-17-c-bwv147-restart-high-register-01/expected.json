@@ -9,5 +9,11 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "practical BWV147 restart/high-register child fixture extracted from the parent corpus for focused recognizer improvement"
+  "reason": "practical BWV147 restart/high-register child fixture extracted from the parent corpus for focused recognizer improvement",
+  "evaluationWindows": [
+    {
+      "startSec": 1.5,
+      "endSec": 19.62
+    }
+  ]
 }

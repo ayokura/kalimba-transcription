@@ -10,6 +10,7 @@
 - captured at: 2026-03-25T13:49:01.459Z
 - source fixture: kalimba-17-c-bwv147-sequence-163-01
 - extracted range: 135.740s - 146.850s
+- audio clip range: 134.240s - 148.350s
 - extracted events: 77-82
 
 ## Expected Performance
