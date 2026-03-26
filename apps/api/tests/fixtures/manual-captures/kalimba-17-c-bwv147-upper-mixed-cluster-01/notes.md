@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: review_needed
 - scenario: 2026-03-25-bwv147-upper-mixed-cluster-01-kalimba-17-c
 - expected note: [C6,A4] / G5 / E5 / <C5,A4> / D5 / E5
 - capture intent: unknown
@@ -28,5 +28,7 @@
 
 ## Review
 
-- summary: practical BWV147 upper mixed-cluster child extracted from the parent corpus to isolate merge-heavy recognizer failures
-- reason: practical BWV147 upper mixed-cluster child extracted from the parent corpus to isolate merge-heavy recognizer failures
+- summary: BWV147 upper mixed-cluster child is practical but the middle C5/A4/D5/E5 region currently has unresolved expected/provenance ambiguity
+- reason: audio review is needed around the middle C5/A4/D5/E5 region before using this child as an active recognizer target
+
+- audio review focus: verify approximately 3.5s-4.0s within this child clip; current recognizer hears a middle C5/A4 region followed by an extra E5 before D5
