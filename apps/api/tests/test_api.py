@@ -2258,3 +2258,25 @@ def test_bwv147_upper_cluster_recovers_delayed_terminal_e5() -> None:
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets[-2:] == ["D5", "E5"]
     assert [round(start, 4) for start, _ in payload["debug"]["delayedTerminalOrphanSegments"]] == [5.416]
+
+
+
+def test_bwv147_restart_tail_promotes_recent_upper_octave_alias() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-bwv147-restart-tail-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
+    assert note_sets[-2:] == ["C6", "A4+C6"]
+    assert payload["debug"]["segmentCandidates"][-1]["primaryPromotion"]["reason"] == "recent-upper-octave-alias-primary"
+    trail = payload["debug"]["segmentCandidates"][-1]["secondaryDecisionTrail"]
+    assert trail[0]["reasons"] == ["recent-upper-octave-alias-secondary-blocked"]
+    assert trail[1]["noteName"] == "A4" and trail[1]["accepted"] is True

@@ -125,6 +125,12 @@ STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_UPPER_SCORE_RATIO = 0.25
 STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_UPPER_ALIAS_RATIO = 1.2
 STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_SUPPORTING_SCORE_RATIO = 0.75
 STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MIN_SCORE = 121.0
+RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MAX_DURATION = 0.35
+RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MAX_PRIMARY_FUNDAMENTAL_RATIO = 0.7
+RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO = 0.95
+RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_UPPER_ALIAS_RATIO = 0.8
+RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_UPPER_SCORE_RATIO = 0.7
+RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_SUPPORTING_LOWER_SCORE_RATIO = 0.45
 LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_LOWER_SCORE_RATIO = 0.4
 LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_LOWER_FUNDAMENTAL_RATIO = 0.85
 LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO = 0.94
@@ -1783,6 +1789,72 @@ def maybe_promote_stale_primary_to_upper_octave(
     }
 
 
+def maybe_promote_recent_upper_octave_alias_primary(
+    primary: NoteHypothesis,
+    ranked: list[NoteHypothesis],
+    segment_duration: float,
+    recent_note_names: set[str] | None,
+) -> tuple[NoteHypothesis, dict[str, Any] | None]:
+    if segment_duration > RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MAX_DURATION:
+        return primary, None
+    if not recent_note_names:
+        return primary, None
+    if primary.candidate.octave >= 6:
+        return primary, None
+    if primary.fundamental_ratio > RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MAX_PRIMARY_FUNDAMENTAL_RATIO:
+        return primary, None
+
+    target_octave = primary.candidate.octave + 1
+    upper_candidate: NoteHypothesis | None = None
+    for hypothesis in ranked[1:6]:
+        if hypothesis.candidate.pitch_class != primary.candidate.pitch_class:
+            continue
+        if hypothesis.candidate.octave != target_octave:
+            continue
+        if hypothesis.candidate.note_name not in recent_note_names:
+            continue
+        if hypothesis.score < primary.score * RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_UPPER_SCORE_RATIO:
+            continue
+        if hypothesis.fundamental_ratio < RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO:
+            continue
+        if hypothesis.octave_alias_ratio < RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_UPPER_ALIAS_RATIO:
+            continue
+        upper_candidate = hypothesis
+        break
+    if upper_candidate is None:
+        return primary, None
+
+    has_supporting_lower = any(
+        hypothesis.candidate.note_name != upper_candidate.candidate.note_name
+        and hypothesis.candidate.frequency < upper_candidate.candidate.frequency
+        and not are_harmonic_related(hypothesis.candidate, upper_candidate.candidate)
+        and hypothesis.score >= primary.score * RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_SUPPORTING_LOWER_SCORE_RATIO
+        for hypothesis in ranked[1:6]
+    )
+    if not has_supporting_lower:
+        return primary, None
+
+    promoted = NoteHypothesis(
+        candidate=upper_candidate.candidate,
+        score=upper_candidate.score,
+        fundamental_energy=upper_candidate.fundamental_energy,
+        overtone_energy=upper_candidate.overtone_energy,
+        fundamental_ratio=upper_candidate.fundamental_ratio,
+        subharmonic_alias_energy=upper_candidate.subharmonic_alias_energy,
+        octave_alias_energy=upper_candidate.octave_alias_energy,
+        octave_alias_ratio=upper_candidate.octave_alias_ratio,
+        octave_alias_penalty=upper_candidate.octave_alias_penalty,
+        second_harmonic_energy=upper_candidate.second_harmonic_energy,
+        harmonics=upper_candidate.harmonics,
+        subharmonics=upper_candidate.subharmonics,
+    )
+    return promoted, {
+        'replacedPrimaryNote': primary.candidate.note_name,
+        'replacementNote': promoted.candidate.note_name,
+        'reason': 'recent-upper-octave-alias-primary',
+    }
+
+
 def select_contiguous_four_note_cluster(
     primary: NoteHypothesis,
     ranked: list[NoteHypothesis],
@@ -2260,6 +2332,14 @@ def segment_peaks(
     )
     if stale_upper_promotion_debug is not None:
         primary_promotion_debug = stale_upper_promotion_debug
+    primary, recent_upper_alias_promotion_debug = maybe_promote_recent_upper_octave_alias_primary(
+        primary,
+        ranked,
+        end_time - start_time,
+        recent_note_names,
+    )
+    if recent_upper_alias_promotion_debug is not None:
+        primary_promotion_debug = recent_upper_alias_promotion_debug
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     promoted_secondary_to_recent_upper_octave = False
@@ -2300,6 +2380,13 @@ def segment_peaks(
                 score_ratio = min(score_ratio, OCTAVE_DYAD_UPPER_SCORE_RATIO)
             if hypothesis.candidate.note_name == primary.candidate.note_name:
                 reasons.append("same-as-primary")
+            if (
+                primary_promotion_debug is not None
+                and primary_promotion_debug.get("reason") == "recent-upper-octave-alias-primary"
+                and hypothesis.candidate.pitch_class == primary.candidate.pitch_class
+                and hypothesis.candidate.octave == primary.candidate.octave - 1
+            ):
+                reasons.append("recent-upper-octave-alias-secondary-blocked")
             if hypothesis.score < primary.score * score_ratio and not octave_dyad_allowed:
                 reasons.append("score-below-threshold")
             if hypothesis.fundamental_ratio < secondary_min_fundamental_ratio:
