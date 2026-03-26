@@ -92,6 +92,21 @@ ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
 SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY = 2000.0
+ONSET_ATTACK_MIN_BROADBAND_GAIN = 10.0
+ONSET_ATTACK_MIN_HIGH_BAND_FLUX = 2.0
+ATTACK_VALIDATED_GAP_SEGMENT_DURATION = 0.24
+USE_ATTACK_VALIDATED_GAP_COLLECTOR = False
+ABLATE_LEADING_ORPHAN = False
+ABLATE_CLOSE_TERMINAL_ORPHAN = False
+ABLATE_DELAYED_TERMINAL_ORPHAN = False
+ABLATE_SINGLE_ONSET_GAP_HEAD = False
+ABLATE_SPARSE_GAP_TAIL = False
+ABLATE_TWO_ONSET_GAP = False
+ABLATE_MULTI_ONSET_GAP = False
+ABLATE_POST_TAIL_GAP_HEAD = False
+ABLATE_TERMINAL_MULTI_ONSET = False
+ABLATE_GAP_INJECTED = False
+ABLATE_TWO_ONSET_TERMINAL_TAIL = False
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO = 0.18
 RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO = 0.6
@@ -542,6 +557,7 @@ def should_suppress_staircase_supplemental_start(
 def collect_multi_onset_gap_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
+    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
 ) -> list[tuple[float, float]]:
     segments: list[tuple[float, float]] = []
     for index in range(len(active_ranges) - 1):
@@ -590,6 +606,7 @@ def collect_multi_onset_gap_segments(
 def collect_post_tail_gap_head_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
+    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
 ) -> list[tuple[float, float]]:
     segments: list[tuple[float, float]] = []
     for index in range(len(active_ranges) - 1):
@@ -642,6 +659,7 @@ def collect_post_tail_gap_head_segments(
 def collect_two_onset_gap_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
+    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
 ) -> list[tuple[float, float]]:
     segments: list[tuple[float, float]] = []
     for index in range(len(active_ranges) - 1):
@@ -678,6 +696,7 @@ def collect_two_onset_gap_segments(
 def collect_leading_orphan_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
+    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
 ) -> list[tuple[float, float]]:
     if not active_ranges:
         return []
@@ -703,6 +722,7 @@ def collect_leading_orphan_segments(
 def collect_sparse_gap_tail_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
+    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
 ) -> list[tuple[float, float]]:
     segments: list[tuple[float, float]] = []
     for index in range(len(active_ranges) - 1):
@@ -751,6 +771,7 @@ def collect_sparse_gap_tail_segments(
 def collect_single_onset_gap_head_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
+    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
 ) -> list[tuple[float, float]]:
     segments: list[tuple[float, float]] = []
     for index in range(len(active_ranges) - 1):
@@ -788,6 +809,7 @@ def collect_two_onset_terminal_tail_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
     audio_duration: float,
+    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
 ) -> list[tuple[float, float]]:
     if not active_ranges:
         return []
@@ -817,6 +839,65 @@ def collect_two_onset_terminal_tail_segments(
     second_end = min(second_onset + TERMINAL_TWO_ONSET_TAIL_SEGMENT_DURATION, audio_duration)
     if second_end - second_onset >= 0.08:
         segments.append((second_onset, second_end))
+
+    return segments
+
+
+def collect_attack_validated_gap_segments(
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+    onset_profiles: dict[float, OnsetAttackProfile],
+    audio_duration: float,
+) -> list[tuple[float, float]]:
+    segments: list[tuple[float, float]] = []
+
+    def _valid_gap_onsets(gap_start: float, gap_end: float) -> list[float]:
+        return [
+            time
+            for time in onset_times
+            if gap_start + 0.05 < time < gap_end - 0.05
+            and onset_profiles.get(round(time, 4), OnsetAttackProfile(
+                onset_time=time, broadband_onset_gain=0.0, high_band_spectral_flux=0.0,
+                broadband_spectral_flux=0.0, is_valid_attack=False,
+            )).is_valid_attack
+        ]
+
+    # Inter-range gaps
+    for index in range(len(active_ranges) - 1):
+        previous_end = active_ranges[index][1]
+        next_start = active_ranges[index + 1][0]
+        valid_onsets = _valid_gap_onsets(previous_end, next_start)
+        for onset_index, onset_time in enumerate(valid_onsets):
+            if onset_index + 1 < len(valid_onsets):
+                end_time = valid_onsets[onset_index + 1]
+            else:
+                end_time = min(onset_time + ATTACK_VALIDATED_GAP_SEGMENT_DURATION, next_start)
+            if end_time - onset_time >= 0.08:
+                segments.append((onset_time, end_time))
+
+    # Leading gap (before first active range)
+    if active_ranges:
+        first_start = active_ranges[0][0]
+        valid_leading = _valid_gap_onsets(0.0, first_start)
+        for onset_index, onset_time in enumerate(valid_leading):
+            if onset_index + 1 < len(valid_leading):
+                end_time = valid_leading[onset_index + 1]
+            else:
+                end_time = min(onset_time + ATTACK_VALIDATED_GAP_SEGMENT_DURATION, first_start)
+            if end_time - onset_time >= 0.08:
+                segments.append((onset_time, end_time))
+
+    # Trailing gap (after last active range)
+    if active_ranges:
+        last_end = active_ranges[-1][1]
+        valid_trailing = _valid_gap_onsets(last_end, audio_duration + 0.06)
+        for onset_index, onset_time in enumerate(valid_trailing):
+            if onset_index + 1 < len(valid_trailing):
+                end_time = valid_trailing[onset_index + 1]
+            else:
+                end_time = min(onset_time + ATTACK_VALIDATED_GAP_SEGMENT_DURATION, audio_duration)
+            if end_time - onset_time >= 0.08:
+                segments.append((onset_time, end_time))
 
     return segments
 
@@ -862,6 +943,7 @@ def collect_close_terminal_orphan_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
     audio_duration: float,
+    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
 ) -> list[tuple[float, float]]:
     if not active_ranges:
         return []
@@ -888,6 +970,7 @@ def collect_delayed_terminal_orphan_segments(
     base_segment: tuple[float, float] | None,
     onset_times: list[float],
     audio_duration: float,
+    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
 ) -> list[tuple[float, float]]:
     if base_segment is None:
         return []
@@ -922,6 +1005,7 @@ def collect_terminal_multi_onset_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
     audio_duration: float,
+    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
 ) -> list[tuple[float, float]]:
     if not active_ranges:
         return []
@@ -1163,40 +1247,43 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sample_rate, hop_length=HOP_LENGTH, backtrack=True)
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
     active_ranges, short_bridge_active_ranges = suppress_short_bridge_active_ranges(active_ranges, onset_times)
+    onset_attack_profiles = precompute_onset_attack_profiles(audio, sample_rate, onset_times)
     gap_ioi_diagnostics = build_gap_ioi_diagnostics(active_ranges, onset_times)
 
-    leading_orphan_segments = collect_leading_orphan_segments(active_ranges, onset_times)
+    leading_orphan_segments = [] if ABLATE_LEADING_ORPHAN else collect_leading_orphan_segments(active_ranges, onset_times, onset_attack_profiles)
     gap_injected_segments: list[tuple[float, float]] = []
-    multi_onset_gap_segments = collect_multi_onset_gap_segments(active_ranges, onset_times)
-    post_tail_gap_head_segments = collect_post_tail_gap_head_segments(active_ranges, onset_times)
-    two_onset_gap_segments = collect_two_onset_gap_segments(active_ranges, onset_times)
-    single_onset_gap_head_segments = collect_single_onset_gap_head_segments(active_ranges, onset_times)
-    sparse_gap_tail_segments = collect_sparse_gap_tail_segments(active_ranges, onset_times)
-    qualifying_gap_run: list[tuple[float, float]] = []
-    for index in range(len(active_ranges) - 1):
-        previous_end = active_ranges[index][1]
-        next_start = active_ranges[index + 1][0]
-        gap_onsets = [time for time in onset_times if previous_end + 0.05 < time < next_start - 0.05]
-        qualifies = (
-            len(gap_onsets) == 1
-            and gap_onsets[0] - previous_end >= 0.35
-            and next_start - gap_onsets[0] >= 0.35
-        )
-        if qualifies:
-            qualifying_gap_run.append((gap_onsets[0], next_start))
-            continue
+    multi_onset_gap_segments = [] if ABLATE_MULTI_ONSET_GAP else collect_multi_onset_gap_segments(active_ranges, onset_times, onset_attack_profiles)
+    post_tail_gap_head_segments = [] if ABLATE_POST_TAIL_GAP_HEAD else collect_post_tail_gap_head_segments(active_ranges, onset_times, onset_attack_profiles)
+    two_onset_gap_segments = [] if ABLATE_TWO_ONSET_GAP else collect_two_onset_gap_segments(active_ranges, onset_times, onset_attack_profiles)
+    single_onset_gap_head_segments = [] if ABLATE_SINGLE_ONSET_GAP_HEAD else collect_single_onset_gap_head_segments(active_ranges, onset_times, onset_attack_profiles)
+    sparse_gap_tail_segments = [] if ABLATE_SPARSE_GAP_TAIL else collect_sparse_gap_tail_segments(active_ranges, onset_times, onset_attack_profiles)
+    if not ABLATE_GAP_INJECTED:
+        qualifying_gap_run: list[tuple[float, float]] = []
+        for index in range(len(active_ranges) - 1):
+            previous_end = active_ranges[index][1]
+            next_start = active_ranges[index + 1][0]
+            gap_onsets = [time for time in onset_times if previous_end + 0.05 < time < next_start - 0.05]
+            qualifies = (
+                len(gap_onsets) == 1
+                and gap_onsets[0] - previous_end >= 0.35
+                and next_start - gap_onsets[0] >= 0.35
+            )
+            if qualifies:
+                qualifying_gap_run.append((gap_onsets[0], next_start))
+                continue
+            if len(qualifying_gap_run) >= 3:
+                gap_injected_segments.extend(qualifying_gap_run)
+            qualifying_gap_run = []
+
         if len(qualifying_gap_run) >= 3:
             gap_injected_segments.extend(qualifying_gap_run)
-        qualifying_gap_run = []
-
-    if len(qualifying_gap_run) >= 3:
-        gap_injected_segments.extend(qualifying_gap_run)
 
     terminal_orphan_segments: list[tuple[float, float]] = []
     close_terminal_orphan_segments: list[tuple[float, float]] = []
     delayed_terminal_orphan_segments: list[tuple[float, float]] = []
     terminal_multi_onset_segments: list[tuple[float, float]] = []
     terminal_two_onset_tail_segments: list[tuple[float, float]] = []
+    attack_validated_gap_segments: list[tuple[float, float]] = []
     if active_ranges:
         audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
         last_range_end = active_ranges[-1][1]
@@ -1212,12 +1299,14 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
             orphan_end = min(orphan_start + TERMINAL_ORPHAN_SEGMENT_DURATION, audio_duration)
             if orphan_end - orphan_start >= 0.08:
                 terminal_orphan_segments.append((orphan_start, orphan_end))
-        close_terminal_orphan_segments = collect_close_terminal_orphan_segments(active_ranges, onset_times, audio_duration)
+        close_terminal_orphan_segments = [] if ABLATE_CLOSE_TERMINAL_ORPHAN else collect_close_terminal_orphan_segments(active_ranges, onset_times, audio_duration, onset_attack_profiles)
         delayed_base_segment = close_terminal_orphan_segments[-1] if close_terminal_orphan_segments else (terminal_orphan_segments[-1] if terminal_orphan_segments else None)
-        delayed_terminal_orphan_segments = collect_delayed_terminal_orphan_segments(delayed_base_segment, onset_times, audio_duration)
-        terminal_multi_onset_segments = collect_terminal_multi_onset_segments(active_ranges, onset_times, audio_duration)
+        delayed_terminal_orphan_segments = [] if ABLATE_DELAYED_TERMINAL_ORPHAN else collect_delayed_terminal_orphan_segments(delayed_base_segment, onset_times, audio_duration, onset_attack_profiles)
+        terminal_multi_onset_segments = [] if ABLATE_TERMINAL_MULTI_ONSET else collect_terminal_multi_onset_segments(active_ranges, onset_times, audio_duration, onset_attack_profiles)
         if not terminal_orphan_segments and not close_terminal_orphan_segments and not delayed_terminal_orphan_segments and not terminal_multi_onset_segments:
-            terminal_two_onset_tail_segments = collect_two_onset_terminal_tail_segments(active_ranges, onset_times, audio_duration)
+            terminal_two_onset_tail_segments = [] if ABLATE_TWO_ONSET_TERMINAL_TAIL else collect_two_onset_terminal_tail_segments(active_ranges, onset_times, audio_duration, onset_attack_profiles)
+        if USE_ATTACK_VALIDATED_GAP_COLLECTOR:
+            attack_validated_gap_segments = collect_attack_validated_gap_segments(active_ranges, onset_times, onset_attack_profiles, audio_duration)
 
     segments: list[tuple[float, float]] = []
     for range_index, (range_start, range_end) in enumerate(active_ranges):
@@ -1308,6 +1397,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for start_time, end_time in terminal_two_onset_tail_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
+    for start_time, end_time in attack_validated_gap_segments:
+        if end_time - start_time >= 0.08:
+            segments.append((start_time, end_time))
 
     segments = dedupe_nested_segments(segments)
     segments = trim_small_overlapping_segments(segments)
@@ -1347,12 +1439,22 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "delayedTerminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in delayed_terminal_orphan_segments],
         "terminalMultiOnsetSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_multi_onset_segments],
         "terminalTwoOnsetTailSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_two_onset_tail_segments],
+        "attackValidatedGapSegments": [[round(start, 4), round(end, 4)] for start, end in attack_validated_gap_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),
         "tempoRaw": round(tempo, 4),
         "tempoHopLength": TEMPO_ESTIMATION_HOP_LENGTH,
         "tempoAudioDurationSec": round(tempo_audio_duration_sec, 4),
         "tempoEstimationMs": round(tempo_estimation_ms, 3),
+        "onsetAttackProfiles": {
+            str(key): {
+                "broadbandOnsetGain": round(profile.broadband_onset_gain, 6),
+                "highBandSpectralFlux": round(profile.high_band_spectral_flux, 6),
+                "broadbandSpectralFlux": round(profile.broadband_spectral_flux, 6),
+                "isValidAttack": profile.is_valid_attack,
+            }
+            for key, profile in onset_attack_profiles.items()
+        },
     }
     return segments, tempo, debug_info
 
@@ -1749,6 +1851,65 @@ def _positive_spectral_flux(
         target = target_spectrum
     positive_delta = np.maximum(target - reference, 0.0)
     return float(np.sum(positive_delta) / (np.sum(reference) + 1e-6))
+
+
+@dataclass
+class OnsetAttackProfile:
+    onset_time: float
+    broadband_onset_gain: float
+    high_band_spectral_flux: float
+    broadband_spectral_flux: float
+    is_valid_attack: bool
+
+
+def compute_onset_attack_profile(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    *,
+    window_seconds: float = ONSET_ENERGY_WINDOW_SECONDS,
+) -> OnsetAttackProfile | None:
+    window_samples = max(int(sample_rate * window_seconds), 512)
+    onset_sample = max(int(onset_time * sample_rate), 0)
+    pre_start = max(0, onset_sample - window_samples)
+    pre_chunk = audio[pre_start:onset_sample]
+    attack_end = min(onset_sample + window_samples, len(audio))
+    attack_chunk = audio[onset_sample:attack_end]
+    if len(pre_chunk) < 512 or len(attack_chunk) < 512:
+        return None
+
+    n_fft = max(4096, 1 << int(np.ceil(np.log2(max(len(pre_chunk), len(attack_chunk))))))
+    frequencies, pre_spectrum = _chunk_spectrum(pre_chunk, sample_rate, n_fft)
+    _, attack_spectrum = _chunk_spectrum(attack_chunk, sample_rate, n_fft)
+
+    pre_energy = _broadband_chunk_energy(pre_chunk)
+    attack_energy = _broadband_chunk_energy(attack_chunk)
+    broadband_gain = (attack_energy + 1e-6) / (pre_energy + 1e-6)
+    broadband_flux = _positive_spectral_flux(pre_spectrum, attack_spectrum, frequencies)
+    high_band_flux = _positive_spectral_flux(
+        pre_spectrum, attack_spectrum, frequencies, min_frequency=SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY,
+    )
+    is_valid = broadband_gain >= ONSET_ATTACK_MIN_BROADBAND_GAIN or high_band_flux >= ONSET_ATTACK_MIN_HIGH_BAND_FLUX
+    return OnsetAttackProfile(
+        onset_time=onset_time,
+        broadband_onset_gain=broadband_gain,
+        high_band_spectral_flux=high_band_flux,
+        broadband_spectral_flux=broadband_flux,
+        is_valid_attack=is_valid,
+    )
+
+
+def precompute_onset_attack_profiles(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_times: list[float],
+) -> dict[float, OnsetAttackProfile]:
+    profiles: dict[float, OnsetAttackProfile] = {}
+    for onset_time in onset_times:
+        profile = compute_onset_attack_profile(audio, sample_rate, onset_time)
+        if profile is not None:
+            profiles[round(onset_time, 4)] = profile
+    return profiles
 
 
 def prepare_attack_debug_context(
