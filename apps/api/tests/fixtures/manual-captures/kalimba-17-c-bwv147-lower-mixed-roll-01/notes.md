@@ -29,7 +29,7 @@
 
 ## Review
 
-- summary: human listening confirms the scoped lower mixed BWV147 phrase with high confidence, and the current recognizer still under-segments the middle and terminal lower-roll region
-- reason: ear review confirms the phrase at 3:52.990-4:03.309 with high confidence; the leading edge has only minor resonance contamination, while the current recognizer still collapses much of the middle and terminal lower-roll content, so this should stay pending as a practical target
+- summary: human listening confirms the scoped lower mixed BWV147 phrase is correctly cut; the recognizer now recovers the middle lower-roll run, but the opening mixed dyad and terminal four-note roll are still incomplete
+- reason: ear review confirms the clip is scoped correctly: the audible content is C5 resonance / [<B4,G4>,D4] / C5 / D5 / [G4,D4] / B4 / D5 / <F5,D5,B4,G4> / E5, with the leading C5 resonance and trailing E5 outside the intended evaluation phrase; after the long-gap lower-roll segmentation fix the recognizer now recovers D5 / [G4,D4] / B4 / D5 as separate in-scope events, but it still misses the opening G4 inside [<B4,G4>,D4] and does not yet reconstruct the full terminal <F5,D5,B4,G4> roll, so the fixture should remain pending
 
-- user audio review: all expected events are audible in the scoped region, the leading edge has only minor resonance contamination, and confidence is high
+- user audio review: C5 resonance / [<B4,G4>,D4] / C5 / D5 / [G4,D4] / B4 / D5 / <F5,D5,B4,G4> / E5 is audible; the cut is correct and boundary handling is OK (confidence: high)

@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "human listening confirms the scoped lower mixed BWV147 phrase with high confidence, while the current recognizer under-segments the middle and terminal lower-roll region; keep this as a practical pending target",
+  "reason": "human listening confirms the scoped lower mixed BWV147 phrase is correctly cut; the recognizer now recovers the middle lower-roll run, but still under-recovers the opening G4 in the first mixed dyad and the terminal four-note roll",
   "evaluationWindows": [
     {
       "startSec": 1.0,
