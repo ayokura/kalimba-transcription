@@ -2275,8 +2275,9 @@ def test_bwv147_restart_tail_promotes_recent_upper_octave_alias() -> None:
     assert response.status_code == 200
     payload = response.json()
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
-    assert note_sets[-2:] == ["C6", "A4+C6"]
+    assert note_sets == ["G5", "E4+G5", "C6", "B5", "A4+C6"]
     assert payload["debug"]["segmentCandidates"][-1]["primaryPromotion"]["reason"] == "recent-upper-octave-alias-primary"
     trail = payload["debug"]["segmentCandidates"][-1]["secondaryDecisionTrail"]
     assert trail[0]["reasons"] == ["recent-upper-octave-alias-secondary-blocked"]
     assert trail[1]["noteName"] == "A4" and trail[1]["accepted"] is True
+

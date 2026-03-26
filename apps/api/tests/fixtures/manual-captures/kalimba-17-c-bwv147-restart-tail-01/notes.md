@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-25-bwv147-restart-tail-01-kalimba-17-c
 - expected note: G5 / [G5,E4] / C6 / B5 / [C6,A4]
 - capture intent: unknown
@@ -27,5 +27,5 @@
 
 ## Review
 
-- summary: practical BWV147 restart-tail child extracted to isolate late restart bundling and final [C6,A4] reconstruction
-- reason: practical BWV147 restart-tail child extracted to isolate late restart bundling and final [C6,A4] reconstruction
+- summary: practical BWV147 restart-tail child completed after local restart-tail subset cleanup and evaluation-window alignment
+- reason: practical BWV147 restart-tail child now matches expected note sets; evaluation window extended to include the final [C6,A4] chord onset

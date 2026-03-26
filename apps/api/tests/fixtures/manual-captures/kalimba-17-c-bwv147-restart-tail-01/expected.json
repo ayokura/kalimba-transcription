@@ -1,19 +1,26 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "completed",
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
+    "minEvents": 5,
+    "maxEvents": 5,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {},
-    "maxEventNoteSetOccurrences": {}
+    "maxEventNoteSetOccurrences": {},
+    "expectedEventNoteSetsOrdered": [
+      "G5",
+      "E4+G5",
+      "C6",
+      "B5",
+      "A4+C6"
+    ]
   },
-  "reason": "practical BWV147 restart-tail child extracted to isolate late restart bundling and final [C6,A4] reconstruction",
+  "reason": "practical BWV147 restart-tail child now matches expected note sets; evaluation window extended to include the final [C6,A4] chord onset",
   "evaluationWindows": [
     {
       "startSec": 0.2,
-      "endSec": 7.27
+      "endSec": 7.57
     }
   ]
 }
