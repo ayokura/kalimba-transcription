@@ -26,6 +26,11 @@ SEGMENT_OVERLAP_TRIM_MIN_DURATION = 0.18
 TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE = 0.18
 TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE = 0.7
 TERMINAL_ORPHAN_SEGMENT_DURATION = 0.32
+TERMINAL_TWO_ONSET_TAIL_MIN_GAP_AFTER_ACTIVE = 0.9
+TERMINAL_TWO_ONSET_TAIL_MAX_GAP_AFTER_ACTIVE = 1.6
+TERMINAL_TWO_ONSET_TAIL_MIN_INTERVAL = 0.6
+TERMINAL_TWO_ONSET_TAIL_MAX_INTERVAL = 1.3
+TERMINAL_TWO_ONSET_TAIL_SEGMENT_DURATION = 0.32
 LEADING_ORPHAN_ONSET_MIN_GAP_BEFORE_ACTIVE = 0.35
 LEADING_ORPHAN_ONSET_MAX_GAP_BEFORE_ACTIVE = 0.85
 LEADING_ORPHAN_SEGMENT_DURATION = 0.24
@@ -779,6 +784,43 @@ def collect_single_onset_gap_head_segments(
     return segments
 
 
+def collect_two_onset_terminal_tail_segments(
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+    audio_duration: float,
+) -> list[tuple[float, float]]:
+    if not active_ranges:
+        return []
+
+    last_range_end = active_ranges[-1][1]
+    trailing_onsets = [
+        onset_time
+        for onset_time in onset_times
+        if last_range_end + TERMINAL_TWO_ONSET_TAIL_MIN_GAP_AFTER_ACTIVE
+        <= onset_time
+        <= audio_duration - 0.08
+    ]
+    if len(trailing_onsets) != 2:
+        return []
+
+    first_onset, second_onset = trailing_onsets
+    if first_onset > last_range_end + TERMINAL_TWO_ONSET_TAIL_MAX_GAP_AFTER_ACTIVE:
+        return []
+    if not (TERMINAL_TWO_ONSET_TAIL_MIN_INTERVAL <= second_onset - first_onset <= TERMINAL_TWO_ONSET_TAIL_MAX_INTERVAL):
+        return []
+
+    segments: list[tuple[float, float]] = []
+    first_end = min(first_onset + TERMINAL_TWO_ONSET_TAIL_SEGMENT_DURATION, second_onset - 0.08)
+    if first_end - first_onset >= 0.08:
+        segments.append((first_onset, first_end))
+
+    second_end = min(second_onset + TERMINAL_TWO_ONSET_TAIL_SEGMENT_DURATION, audio_duration)
+    if second_end - second_onset >= 0.08:
+        segments.append((second_onset, second_end))
+
+    return segments
+
+
 def build_gap_ioi_diagnostics(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
@@ -1154,6 +1196,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     close_terminal_orphan_segments: list[tuple[float, float]] = []
     delayed_terminal_orphan_segments: list[tuple[float, float]] = []
     terminal_multi_onset_segments: list[tuple[float, float]] = []
+    terminal_two_onset_tail_segments: list[tuple[float, float]] = []
     if active_ranges:
         audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
         last_range_end = active_ranges[-1][1]
@@ -1173,6 +1216,8 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         delayed_base_segment = close_terminal_orphan_segments[-1] if close_terminal_orphan_segments else (terminal_orphan_segments[-1] if terminal_orphan_segments else None)
         delayed_terminal_orphan_segments = collect_delayed_terminal_orphan_segments(delayed_base_segment, onset_times, audio_duration)
         terminal_multi_onset_segments = collect_terminal_multi_onset_segments(active_ranges, onset_times, audio_duration)
+        if not terminal_orphan_segments and not close_terminal_orphan_segments and not delayed_terminal_orphan_segments and not terminal_multi_onset_segments:
+            terminal_two_onset_tail_segments = collect_two_onset_terminal_tail_segments(active_ranges, onset_times, audio_duration)
 
     segments: list[tuple[float, float]] = []
     for range_index, (range_start, range_end) in enumerate(active_ranges):
@@ -1260,6 +1305,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for start_time, end_time in terminal_multi_onset_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
+    for start_time, end_time in terminal_two_onset_tail_segments:
+        if end_time - start_time >= 0.08:
+            segments.append((start_time, end_time))
 
     segments = dedupe_nested_segments(segments)
     segments = trim_small_overlapping_segments(segments)
@@ -1298,6 +1346,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "closeTerminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in close_terminal_orphan_segments],
         "delayedTerminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in delayed_terminal_orphan_segments],
         "terminalMultiOnsetSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_multi_onset_segments],
+        "terminalTwoOnsetTailSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_two_onset_tail_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),
         "tempoRaw": round(tempo, 4),

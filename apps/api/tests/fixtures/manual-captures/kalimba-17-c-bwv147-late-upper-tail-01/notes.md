@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-25-bwv147-late-upper-tail-01-kalimba-17-c
 - expected note: G5 / E5 / <C5,A4> / D5 / E5
 - capture intent: unknown
@@ -27,8 +27,8 @@
 
 ## Review
 
-- summary: human listening confirms the expected late-tail D5 / E5 region, so this remains a practical pending recognizer target
-- reason: ear review confirms D5 / E5 without a boundary problem, with the terminal E5 played softly but intentionally; recognizer under-recovery here is a real practical miss
+- summary: practical BWV147 late-tail child now recovers the scoped G5 / E5 / <C5,A4> / D5 / E5 phrase, including the sparse terminal D5 / E5 tail
+- reason: ear review confirmed D5 / E5 without a boundary problem, and the current recognizer now recovers the scoped phrase including the sparse terminal D5 / E5 tail, so this child can move to completed
 
 - evaluation window trimmed to exclude preceding phrase tail from the parent recording
 

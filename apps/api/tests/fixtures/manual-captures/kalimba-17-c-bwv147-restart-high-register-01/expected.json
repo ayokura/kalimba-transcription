@@ -1,6 +1,6 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "review_needed",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "human listening confirms the expected F5 -> [F5,A4] separation and final [C6,A4] region; this is a valid practical BWV147 target, but the recognizer still collapses those sections incorrectly",
+  "reason": "human listening confirms the F5 / [F5,A4] and final [C6,A4] subregions, but the current extracted target still contains a mistaken middle retake and clips the final onset at the evaluation-window edge; re-scope this child before using it as an active recognizer target",
   "evaluationWindows": [
     {
       "startSec": 1.5,

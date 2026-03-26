@@ -1,15 +1,22 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "completed",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {},
-    "maxEventNoteSetOccurrences": {}
+    "maxEventNoteSetOccurrences": {},
+    "expectedEventNoteSetsOrdered": [
+      "G5",
+      "C5+E5+G5",
+      "A4+C5+E5",
+      "D5",
+      "E5"
+    ]
   },
-  "reason": "human listening confirms the expected D5 / E5 tail without a boundary problem; this is a valid practical BWV147 target, but the recognizer still under-recovers the soft terminal E5",
+  "reason": "practical BWV147 late-tail child now recovers the scoped G5 / E5 / <C5,A4> / D5 / E5 phrase, including the sparse terminal D5 / E5 tail",
   "evaluationWindows": [
     {
       "startSec": 1.9,

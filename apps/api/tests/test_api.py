@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_ascending_restart_lower_residue_singletons, collapse_late_descending_step_handoffs, collapse_same_start_primary_singletons, simplify_descending_adjacent_dyad_residue, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_descending_upper_return_overlap, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_ascending_restart_lower_residue_singletons, collapse_late_descending_step_handoffs, collapse_same_start_primary_singletons, simplify_descending_adjacent_dyad_residue, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, collect_two_onset_terminal_tail_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_descending_upper_return_overlap, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 MANUAL_CAPTURE_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "manual-captures"
@@ -293,6 +293,15 @@ def test_collect_terminal_multi_onset_segments_requires_close_orphan_then_regula
     segments = collect_terminal_multi_onset_segments(active_ranges, onset_times, 24.9)
 
     assert segments == [(23.088, 23.5307), (23.5307, 23.96), (23.96, 24.3627), (24.3627, 24.6827)]
+
+
+def test_collect_two_onset_terminal_tail_segments_requires_sparse_two_hit_tail() -> None:
+    active_ranges = [(4.2013, 4.6533)]
+    onset_times = [2.032, 3.0853, 4.2027, 5.9147, 7.0]
+
+    segments = collect_two_onset_terminal_tail_segments(active_ranges, onset_times, 7.8)
+
+    assert segments == [(5.9147, 6.2347), (7.0, 7.32)]
 
 
 def test_detect_segments_collapses_redundant_same_start_segments() -> None:
@@ -2074,10 +2083,10 @@ def test_transcription_recovers_third_cycle_prefix_in_51_note_fixture() -> None:
 
 
 @manual_capture_slow
-def test_bwv147_restart_high_register_collapses_short_repeated_overlap() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-high-register-01")
+def test_bwv147_restart_prefix_recovers_scoped_opening_phrase() -> None:
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-prefix-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
-    assert note_sets[1:4] == ["C5", "D5", "C5+E5"]
+    assert note_sets == ["C4+E5", "C5", "D5", "C5+E5", "G5"]
     assert "E4" not in note_sets
 
 
@@ -2108,3 +2117,14 @@ def test_bwv147_restart_tail_promotes_recent_upper_octave_alias() -> None:
     trail = payload["debug"]["segmentCandidates"][-1]["secondaryDecisionTrail"]
     assert trail[0]["reasons"] == ["recent-upper-octave-alias-secondary-blocked"]
     assert trail[1]["noteName"] == "A4" and trail[1]["accepted"] is True
+
+
+@manual_capture_slow
+def test_bwv147_late_upper_tail_recovers_sparse_terminal_d5_e5_tail() -> None:
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-late-upper-tail-01")
+    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
+    assert note_sets[-5:] == ["G5", "C5+E5+G5", "A4+C5+E5", "D5", "E5"]
+    assert [tuple(round(value, 4) for value in segment) for segment in payload["debug"]["terminalTwoOnsetTailSegments"]] == [
+        (5.9147, 6.2347),
+        (7.0, 7.32),
+    ]
