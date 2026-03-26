@@ -1234,6 +1234,45 @@ def test_suppress_resonant_carryover_keeps_lower_note_when_high_return_is_stale(
         ["D4"],
     ]
 
+def test_suppress_resonant_carryover_keeps_repeated_note_for_short_restart_overlap() -> None:
+    c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
+    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.32, notes=[c5], is_gliss_like=False, primary_note_name="C5", primary_score=320.0),
+        RawEvent(start_time=0.32, end_time=0.438, notes=[c5, e4], is_gliss_like=False, primary_note_name="C5", primary_score=180.0),
+        RawEvent(start_time=0.438, end_time=0.62, notes=[d5], is_gliss_like=False, primary_note_name="D5", primary_score=260.0),
+    ]
+
+    cleaned = suppress_resonant_carryover(raw_events)
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [
+        ["C5"],
+        ["C5"],
+        ["D5"],
+    ]
+
+
+def test_suppress_resonant_carryover_keeps_repeated_note_for_short_post_triad_upper_tail() -> None:
+    tuning = next(tuning for tuning in get_default_tunings() if tuning.id == "kalimba-17-c")
+    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
+    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
+
+    raw_events = [
+        RawEvent(start_time=0.0, end_time=0.44, notes=[g4, b4, d5], is_gliss_like=False, primary_note_name="D5", primary_score=420.0),
+        RawEvent(start_time=0.44, end_time=0.556, notes=[d5, e5], is_gliss_like=False, primary_note_name="D5", primary_score=210.0),
+        RawEvent(start_time=0.556, end_time=0.76, notes=[g4], is_gliss_like=False, primary_note_name="G4", primary_score=260.0),
+    ]
+
+    cleaned = suppress_resonant_carryover(raw_events, tuning)
+    assert [[note.note_name for note in event.notes] for event in cleaned] == [
+        ["G4", "B4", "D5"],
+        ["D5"],
+        ["G4"],
+    ]
+
 def test_collapse_same_start_primary_singletons_prefers_singleton_over_lower_carryover() -> None:
     e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
     a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
@@ -2164,3 +2203,40 @@ def test_transcription_recovers_third_cycle_prefix_in_51_note_fixture() -> None:
 
 
 
+
+
+def test_bwv147_restart_high_register_collapses_short_repeated_overlap() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-bwv147-restart-high-register-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
+    assert note_sets[1:4] == ["C5", "D5", "C5+E5"]
+    assert "E4" not in note_sets
+
+
+def test_bwv147_mid_cluster_rebundles_short_upper_tail_into_triad() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-bwv147-mid-gesture-cluster-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
+    assert note_sets[:3] == ["A4+F5", "B4", "C5+E5"]
+    assert set(note_sets[3].split("+")) == {"B4", "D5", "G4"}
+    assert "E5" not in note_sets

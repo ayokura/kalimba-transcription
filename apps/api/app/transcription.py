@@ -2712,6 +2712,19 @@ def suppress_resonant_carryover(raw_events: list[RawEvent], tuning: InstrumentTu
                     and cents_distance(repeated_notes[0].frequency, fresh_notes[0].frequency) >= RESONANT_CARRYOVER_HIGH_RETURN_MIN_INTERVAL_CENTS
                 ):
                     keep_phrase_reset_lower_repeated = True
+            keep_repeated_short_restart_overlap = False
+            if len(repeated_notes) == 1 and len(fresh_notes) == 1 and index + 1 < len(raw_events):
+                previous_event = cleaned[-1]
+                next_event = raw_events[index + 1]
+                if (
+                    len(previous_event.notes) == 1
+                    and previous_event.notes[0].note_name == repeated_notes[0].note_name
+                    and len(next_event.notes) == 1
+                    and fresh_notes[0].frequency < repeated_notes[0].frequency < next_event.notes[0].frequency
+                    and duration <= 0.14
+                    and cents_distance(fresh_notes[0].frequency, repeated_notes[0].frequency) >= 300.0
+                ):
+                    keep_repeated_short_restart_overlap = True
             keep_descending_lower_repeated = False
             if len(repeated_notes) == 1 and len(fresh_notes) == 1 and index + 1 < len(raw_events):
                 next_event = raw_events[index + 1]
@@ -2755,7 +2768,35 @@ def suppress_resonant_carryover(raw_events: list[RawEvent], tuning: InstrumentTu
                     and (event.end_time - event.start_time) <= DESCENDING_STEP_HANDOFF_MAX_DURATION
                 ):
                     keep_high_register_repeated_lower_restart = True
-            if keep_phrase_reset_lower_repeated or keep_descending_lower_repeated or keep_high_register_repeated_lower_restart:
+            keep_post_triad_upper_tail_repeated = False
+            if (
+                tuning is not None
+                and len(repeated_notes) == 1
+                and len(fresh_notes) == 1
+                and index + 1 < len(raw_events)
+            ):
+                previous_event = cleaned[-1]
+                next_event = raw_events[index + 1]
+                repeated_note = repeated_notes[0]
+                fresh_note = fresh_notes[0]
+                if (
+                    len(previous_event.notes) >= 3
+                    and len(next_event.notes) == 1
+                    and repeated_note.note_name in {note.note_name for note in previous_event.notes}
+                    and event.primary_note_name == repeated_note.note_name
+                    and repeated_note.frequency < fresh_note.frequency
+                    and next_event.notes[0].frequency < repeated_note.frequency
+                    and is_adjacent_tuning_step(repeated_note, fresh_note, tuning)
+                    and duration <= 0.14
+                ):
+                    keep_post_triad_upper_tail_repeated = True
+            if (
+                keep_phrase_reset_lower_repeated
+                or keep_repeated_short_restart_overlap
+                or keep_descending_lower_repeated
+                or keep_high_register_repeated_lower_restart
+                or keep_post_triad_upper_tail_repeated
+            ):
                 updated_event = RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,
@@ -2767,7 +2808,7 @@ def suppress_resonant_carryover(raw_events: list[RawEvent], tuning: InstrumentTu
             if len(repeated_notes) == 1 and len(fresh_notes) == 1 and (
                 repeated_notes[0].frequency < fresh_notes[0].frequency
                 or duration <= 0.14
-            ) and not keep_short_octave_dyad and not keep_phrase_reset_ascending_dyad and not keep_phrase_reset_lower_repeated and not keep_descending_lower_repeated and not keep_high_register_repeated_lower_restart:
+            ) and not keep_short_octave_dyad and not keep_phrase_reset_ascending_dyad and not keep_phrase_reset_lower_repeated and not keep_repeated_short_restart_overlap and not keep_descending_lower_repeated and not keep_high_register_repeated_lower_restart and not keep_post_triad_upper_tail_repeated:
                 updated_event = RawEvent(
                     start_time=event.start_time,
                     end_time=event.end_time,
