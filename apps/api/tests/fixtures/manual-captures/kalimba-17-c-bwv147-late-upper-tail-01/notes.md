@@ -29,3 +29,6 @@
 
 - summary: practical BWV147 late upper-tail child extracted from the parent corpus to compare a repeated mixed phrase against the earlier upper-mixed child
 - reason: practical BWV147 late upper-tail child extracted from the parent corpus to compare a repeated mixed phrase against the earlier upper-mixed child
+
+- evaluation window trimmed to exclude preceding phrase tail from the parent recording
+
