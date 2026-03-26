@@ -98,6 +98,9 @@ ACTIVE_RANGE_START_CLUSTER_MIN_GAP = 0.45
 ACTIVE_RANGE_START_CLUSTER_MAX_SPAN = 0.09
 ACTIVE_RANGE_START_CLUSTER_MAX_DURATION = 0.35
 CLUSTERED_RANGE_HEAD_MIN_DURATION = 0.05
+ACTIVE_RANGE_HEAD_CLUSTER_MAX_OFFSET = 0.3
+ACTIVE_RANGE_HEAD_CLUSTER_MAX_INTERVAL = 0.14
+ACTIVE_RANGE_HEAD_CLUSTER_MIN_DURATION = 0.35
 ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
@@ -105,6 +108,9 @@ SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY = 2000.0
 ONSET_ATTACK_MIN_BROADBAND_GAIN = 10.0
 ONSET_ATTACK_MIN_HIGH_BAND_FLUX = 2.0
 ATTACK_VALIDATED_GAP_SEGMENT_DURATION = 0.24
+ATTACK_REFINED_ONSET_MAX_INTERVAL = 0.15
+ATTACK_REFINED_ONSET_MIN_HIGH_BAND_FLUX = 6.0
+ATTACK_REFINED_ONSET_MIN_HIGH_BAND_FLUX_RATIO = 1.4
 USE_ATTACK_VALIDATED_GAP_COLLECTOR = False
 FILTER_GAP_ONSETS_BY_ATTACK_PROFILE = True
 ABLATE_LEADING_ORPHAN = False
@@ -118,7 +124,6 @@ ABLATE_POST_TAIL_GAP_HEAD = False
 ABLATE_TERMINAL_MULTI_ONSET = False
 ABLATE_GAP_INJECTED = False
 ABLATE_TWO_ONSET_TERMINAL_TAIL = False
-ABLATE_SUPPLEMENTAL_STARTS = True
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO = 0.18
 RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO = 0.6
@@ -126,7 +131,9 @@ RECENT_PRIMARY_REPLACEMENT_RELAXED_FUNDAMENTAL_RATIO = 0.45
 RECENT_PRIMARY_REPLACEMENT_STRONG_ONSET_GAIN = 100.0
 RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_GAIN = 20.0
 RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_RATIO = 8.0
-DESCENDING_REPEATED_PRIMARY_MAX_DURATION = 0.45
+RECENT_PRIMARY_REPLACEMENT_MAX_DURATION = 0.47
+CLOSE_ONSET_BOUNDARY_GAIN_RATIO = 1.2
+DESCENDING_REPEATED_PRIMARY_MAX_DURATION = 0.47
 DESCENDING_REPEATED_PRIMARY_MAX_PRIMARY_ONSET_GAIN = 2.5
 DESCENDING_REPEATED_PRIMARY_MIN_REPLACEMENT_ONSET_GAIN = 5.0
 DESCENDING_REPEATED_PRIMARY_MIN_REPLACEMENT_ONSET_RATIO = 4.0
@@ -554,28 +561,93 @@ def should_keep_short_range_trailing_onset(
         and range_end - current_time <= 0.45
     )
 
-def should_suppress_staircase_supplemental_start(
-    start_time: float,
-    raw_starts: list[float],
-    range_onsets: list[float],
+
+def _lookup_onset_attack_profile(
+    onset_profiles: dict[float, OnsetAttackProfile] | None,
+    onset_time: float,
+) -> OnsetAttackProfile | None:
+    if onset_profiles is None:
+        return None
+    return onset_profiles.get(round(onset_time, 4))
+
+
+def should_replace_close_boundary_with_valid_attack(
+    previous_time: float,
+    current_time: float,
+    onset_profiles: dict[float, OnsetAttackProfile],
 ) -> bool:
-    previous_onsets = [time for time in range_onsets if time < start_time]
-    following_onsets = [time for time in range_onsets if time > start_time]
-    if not previous_onsets or not following_onsets:
+    if current_time - previous_time > ATTACK_REFINED_ONSET_MAX_INTERVAL:
         return False
-
-    previous_distance = start_time - previous_onsets[-1]
-    following_distance = following_onsets[0] - start_time
-    if not (0.14 <= previous_distance <= 0.3 and 0.14 <= following_distance <= 0.3):
+    previous_profile = _lookup_onset_attack_profile(onset_profiles, previous_time)
+    current_profile = _lookup_onset_attack_profile(onset_profiles, current_time)
+    if previous_profile is None or current_profile is None:
         return False
-
-    staircase_cluster = sorted(time for time in raw_starts if abs(time - start_time) <= 0.05)
-    if len(staircase_cluster) < 4:
+    if current_profile.is_valid_attack is False:
         return False
+    return previous_profile.is_valid_attack is False
 
-    intervals = [staircase_cluster[index + 1] - staircase_cluster[index] for index in range(len(staircase_cluster) - 1)]
-    return all(interval <= 0.02 for interval in intervals)
 
+def should_keep_stronger_close_boundary(
+    previous_time: float,
+    current_time: float,
+    onset_profiles: dict[float, OnsetAttackProfile],
+) -> bool:
+    previous_profile = _lookup_onset_attack_profile(onset_profiles, previous_time)
+    current_profile = _lookup_onset_attack_profile(onset_profiles, current_time)
+    if previous_profile is None or current_profile is None:
+        return False
+    if not previous_profile.is_valid_attack or not current_profile.is_valid_attack:
+        return False
+    return current_profile.broadband_onset_gain >= previous_profile.broadband_onset_gain * CLOSE_ONSET_BOUNDARY_GAIN_RATIO
+
+
+def should_snap_range_start_to_first_onset(
+    range_start: float,
+    first_onset: float,
+    onset_profiles: dict[float, OnsetAttackProfile],
+) -> bool:
+    if first_onset - range_start > ATTACK_REFINED_ONSET_MAX_INTERVAL:
+        return False
+    first_profile = _lookup_onset_attack_profile(onset_profiles, first_onset)
+    if first_profile is None or not first_profile.is_valid_attack:
+        return False
+    return first_profile.high_band_spectral_flux >= ATTACK_REFINED_ONSET_MIN_HIGH_BAND_FLUX
+
+def collapse_active_range_head_onsets(
+    effective_range_start: float,
+    range_end: float,
+    range_onsets: list[float],
+    onset_profiles: dict[float, OnsetAttackProfile],
+) -> list[float]:
+    if not range_onsets:
+        return range_onsets
+    if range_end - effective_range_start < ACTIVE_RANGE_HEAD_CLUSTER_MIN_DURATION:
+        return range_onsets
+
+    head_cluster: list[float] = []
+    previous_time = effective_range_start
+    for onset_time in range_onsets:
+        if onset_time - effective_range_start > ACTIVE_RANGE_HEAD_CLUSTER_MAX_OFFSET:
+            break
+        if onset_time - previous_time > ACTIVE_RANGE_HEAD_CLUSTER_MAX_INTERVAL:
+            break
+        profile = _lookup_onset_attack_profile(onset_profiles, onset_time)
+        if profile is None:
+            break
+        if not profile.is_valid_attack and not head_cluster:
+            break
+        head_cluster.append(onset_time)
+        previous_time = onset_time
+
+    anchor_profile = _lookup_onset_attack_profile(onset_profiles, effective_range_start)
+    anchor_valid = anchor_profile is not None and anchor_profile.is_valid_attack
+    if len(head_cluster) + (1 if anchor_valid else 0) < 2:
+        return range_onsets
+    if len(range_onsets) > 3:
+        return range_onsets
+
+    head_cluster_set = {round(onset_time, 4) for onset_time in head_cluster}
+    return [onset_time for onset_time in range_onsets if round(onset_time, 4) not in head_cluster_set]
 
 def collect_multi_onset_gap_segments(
     active_ranges: list[tuple[float, float]],
@@ -764,6 +836,19 @@ def collect_post_sparse_gap_run_segments(
                 continue
             if cluster[-1] - cluster[0] <= POST_SPARSE_GAP_RUN_CLUSTER_MAX_SPAN:
                 dense_cluster = cluster
+
+        if dense_cluster is None:
+            for cluster_start_index in range(len(gap_onsets) - 1):
+                cluster = gap_onsets[cluster_start_index:cluster_start_index + 2]
+                if len(cluster) < 2:
+                    continue
+                if cluster[0] - run_onsets[-1] < POST_SPARSE_GAP_RUN_MIN_FOLLOWUP_GAP:
+                    continue
+                if followup_start is not None and cluster[0] - followup_start < POST_SPARSE_GAP_RUN_MIN_FOLLOWUP_GAP:
+                    continue
+                if cluster[-1] - cluster[0] <= POST_SPARSE_GAP_RUN_CLUSTER_MAX_SPAN:
+                    dense_cluster = cluster
+                    break
 
         if dense_cluster is None:
             continue
@@ -1365,8 +1450,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=HOP_LENGTH)
     onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sample_rate, hop_length=HOP_LENGTH, backtrack=True)
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
-    active_ranges, short_bridge_active_ranges = suppress_short_bridge_active_ranges(active_ranges, onset_times)
     onset_attack_profiles = precompute_onset_attack_profiles(audio, sample_rate, onset_times)
+    onset_times = refine_onset_times_by_attack_profile(onset_times, onset_attack_profiles)
+    active_ranges, short_bridge_active_ranges = suppress_short_bridge_active_ranges(active_ranges, onset_times)
     gap_onset_times = filter_gap_onsets_by_attack(onset_times, active_ranges, onset_attack_profiles) if FILTER_GAP_ONSETS_BY_ATTACK_PROFILE else onset_times
     gap_ioi_diagnostics = build_gap_ioi_diagnostics(active_ranges, onset_times)
 
@@ -1456,22 +1542,32 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
                     relaxed_head_segment = True
 
         range_onsets = [time for time in onset_times if effective_range_start + 0.005 < time < range_end - 0.05]
-        raw_range_starts = [start for start, _ in raw_active_ranges]
-        supplemental_starts = [] if ABLATE_SUPPLEMENTAL_STARTS else [
-            start
-            for start in raw_range_starts
-            if effective_range_start + 0.18 < start < range_end - 0.05
-            and all(abs(start - onset) >= 0.24 for onset in range_onsets)
-            and not should_suppress_staircase_supplemental_start(start, raw_range_starts, range_onsets)
-        ]
-        boundary_times = sorted([*range_onsets, *supplemental_starts])
+        range_onsets = collapse_active_range_head_onsets(effective_range_start, range_end, range_onsets, onset_attack_profiles)
+        if not prior_onsets and not relaxed_head_segment and range_onsets:
+            first_range_onset = range_onsets[0]
+            if should_snap_range_start_to_first_onset(effective_range_start, first_range_onset, onset_attack_profiles):
+                effective_range_start = first_range_onset
+                range_onsets = [time for time in range_onsets if effective_range_start + 0.005 < time < range_end - 0.05]
+        boundary_times = sorted(range_onsets)
         deduped_onsets: list[float] = []
         for boundary_index, time in enumerate(boundary_times):
+            if not deduped_onsets:
+                deduped_onsets.append(time)
+                continue
+
+            previous_time = deduped_onsets[-1]
+            if should_replace_close_boundary_with_valid_attack(previous_time, time, onset_attack_profiles):
+                deduped_onsets[-1] = time
+                continue
+
+            keep_dense_trailing = should_keep_dense_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end)
+            keep_short_trailing = should_keep_short_range_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end)
             if (
-                not deduped_onsets
-                or time - deduped_onsets[-1] >= 0.18
-                or should_keep_dense_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end)
-                or should_keep_short_range_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end)
+                time - previous_time >= 0.18
+                or (
+                    (keep_dense_trailing or keep_short_trailing)
+                    and should_keep_stronger_close_boundary(previous_time, time, onset_attack_profiles)
+                )
             ):
                 deduped_onsets.append(time)
 
@@ -2038,6 +2134,42 @@ def precompute_onset_attack_profiles(
     return profiles
 
 
+def refine_onset_times_by_attack_profile(
+    onset_times: list[float],
+    onset_profiles: dict[float, OnsetAttackProfile],
+) -> list[float]:
+    if not onset_times:
+        return onset_times
+
+    refined: list[float] = []
+    for onset_time in onset_times:
+        if not refined:
+            refined.append(onset_time)
+            continue
+
+        previous_time = refined[-1]
+        if onset_time - previous_time >= ATTACK_REFINED_ONSET_MAX_INTERVAL:
+            refined.append(onset_time)
+            continue
+
+        previous_profile = onset_profiles.get(round(previous_time, 4))
+        current_profile = onset_profiles.get(round(onset_time, 4))
+        if current_profile is None:
+            continue
+
+        should_replace_previous = previous_profile is None
+        if not should_replace_previous and not previous_profile.is_valid_attack and current_profile.is_valid_attack:
+            should_replace_previous = True
+
+        if should_replace_previous:
+            refined[-1] = onset_time
+            continue
+
+        refined.append(onset_time)
+
+    return refined
+
+
 GAP_ONSET_REJECT_MAX_BROADBAND_GAIN = 2.0
 GAP_ONSET_REJECT_MAX_HIGH_BAND_FLUX = 0.5
 
@@ -2187,7 +2319,7 @@ def maybe_replace_stale_recent_primary(
         return primary, None, None
 
     duration = end_time - start_time
-    if duration > 0.45:
+    if duration > RECENT_PRIMARY_REPLACEMENT_MAX_DURATION:
         return primary, None, None
 
     primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)

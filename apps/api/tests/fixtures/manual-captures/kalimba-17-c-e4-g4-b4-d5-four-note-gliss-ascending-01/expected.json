@@ -1,5 +1,5 @@
 {
-  "pending": true,
+  "pending": false,
   "assertions": {
     "minEvents": 5,
     "maxEvents": 5,
@@ -17,7 +17,7 @@
       "B4+D5+E4+G4"
     ]
   },
-  "status": "pending",
-  "reason": "Reverted to pending: supplemental_starts removal causes regression. Needs onset detection improvement instead of RMS-based workaround. See #30.",
+  "status": "completed",
+  "reason": "Recovered via onset boundary refinement and head-cluster collapse after supplemental_starts removal (#30).",
   "auditVerdict": "slide-chord-intent-now-reconstructed"
 }

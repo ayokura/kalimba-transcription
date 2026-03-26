@@ -1,6 +1,6 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "completed",
   "assertions": {
     "minEvents": 51,
     "maxEvents": 51,
@@ -62,5 +62,5 @@
       "C4"
     ]
   },
-  "reason": "Reverted to pending: supplemental_starts removal causes regression. Needs onset detection improvement instead of RMS-based workaround. See #30."
+  "reason": "Recovered via onset boundary refinement and head-cluster collapse after supplemental_starts removal (#30)."
 }

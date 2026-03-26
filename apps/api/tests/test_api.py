@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_ascending_restart_lower_residue_singletons, collapse_late_descending_step_handoffs, collapse_same_start_primary_singletons, simplify_descending_adjacent_dyad_residue, collect_multi_onset_gap_segments, collect_post_sparse_gap_run_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, collect_two_onset_terminal_tail_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_descending_upper_return_overlap, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_ascending_restart_lower_residue_singletons, collapse_late_descending_step_handoffs, collapse_same_start_primary_singletons, simplify_descending_adjacent_dyad_residue, collect_multi_onset_gap_segments, collect_post_sparse_gap_run_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, collect_two_onset_terminal_tail_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_descending_upper_return_overlap, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 MANUAL_CAPTURE_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "manual-captures"
@@ -271,20 +271,6 @@ def test_collect_two_onset_gap_segments_requires_tight_mute_restrike_shape() -> 
     segments = collect_two_onset_gap_segments(active_ranges, onset_times)
 
     assert segments == [(12.6667, 12.752)]
-
-def test_should_suppress_staircase_supplemental_start_detects_dense_bridge_cluster() -> None:
-    raw_starts = [4.4013, 4.4120, 4.4200, 4.4307, 4.4413, 4.4493, 4.4600, 4.4707, 4.4787]
-    range_onsets = [4.2373, 4.6800]
-
-    assert should_suppress_staircase_supplemental_start(4.4200, raw_starts, range_onsets) is True
-    assert should_suppress_staircase_supplemental_start(4.4787, raw_starts, range_onsets) is True
-
-
-def test_should_suppress_staircase_supplemental_start_keeps_isolated_restart_helper() -> None:
-    raw_starts = [12.4200, 12.7800, 13.1400]
-    range_onsets = [12.2373, 13.4800]
-
-    assert should_suppress_staircase_supplemental_start(12.7800, raw_starts, range_onsets) is False
 
 def test_collect_terminal_multi_onset_segments_requires_close_orphan_then_regular_run() -> None:
     active_ranges = [(21.692, 21.968)]
@@ -1765,14 +1751,62 @@ def test_transcription_regression_for_manual_mixed_sequence() -> None:
     ]
 
 @manual_capture_slow
-def test_probe_four_note_gliss_pending_capture() -> None:
+def test_transcription_regression_for_manual_four_note_gliss_ascending() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01")
     note_sets = [
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
     ]
-    assert len(payload["events"]) <= 7
-    assert note_sets.count("B4+D5+E4+G4") >= 4
+    assert note_sets == [
+        "B4+D5+E4+G4",
+        "B4+D5+E4+G4",
+        "B4+D5+E4+G4",
+        "B4+D5+E4+G4",
+        "B4+D5+E4+G4",
+    ]
+
+
+@manual_capture_slow
+def test_transcription_regression_for_manual_triad_repeat() -> None:
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e4-g4-b4-triad-repeat-01")
+    note_sets = [
+        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
+        for event in payload["events"]
+    ]
+    assert note_sets == [
+        "B4+E4+G4",
+        "B4+E4+G4",
+        "B4+E4+G4",
+        "B4+E4+G4",
+        "B4+E4+G4",
+    ]
+
+
+@manual_capture_slow
+def test_transcription_regression_for_manual_e6_to_c4_sequence_17() -> None:
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-17-01")
+    note_sets = [
+        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
+        for event in payload["events"]
+    ]
+    assert note_sets == [
+        "E6", "D6", "C6", "B5", "A5", "G5", "F5", "E5", "D5",
+        "C5", "B4", "A4", "G4", "F4", "E4", "D4", "C4",
+    ]
+
+
+@manual_capture_slow
+def test_transcription_regression_for_manual_e6_to_c4_sequence_51() -> None:
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
+    note_sets = [
+        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
+        for event in payload["events"]
+    ]
+    expected_cycle = [
+        "E6", "D6", "C6", "B5", "A5", "G5", "F5", "E5", "D5",
+        "C5", "B4", "A4", "G4", "F4", "E4", "D4", "C4",
+    ]
+    assert note_sets == [*expected_cycle, *expected_cycle, *expected_cycle]
 
 
 @manual_capture_slow
