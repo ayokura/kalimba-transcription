@@ -1,5 +1,5 @@
 {
-  "pending": false,
+  "pending": true,
   "assertions": {
     "minEvents": 5,
     "maxEvents": 5,
@@ -17,7 +17,7 @@
       "B4+D5+E4+G4"
     ]
   },
-  "status": "completed",
-  "reason": "slide_chord intent remains realistic and the current reconstruction now returns 5 full four-note sweep events; this fixture can serve as a completed regression target",
+  "status": "pending",
+  "reason": "Reverted to pending: supplemental_starts removal causes regression. Needs onset detection improvement instead of RMS-based workaround. See #30.",
   "auditVerdict": "slide-chord-intent-now-reconstructed"
 }
