@@ -14,3 +14,10 @@ coverage/
 .claude/
 .codex-*/
 artifacts/
+.venv313-worktree/
+.pip-cache/
+.pytest_cache_worktree/
+.pytest-tmp-*/
+.tmp-runtime/
+.tmp-venv/
+pytest-cache-files-*/

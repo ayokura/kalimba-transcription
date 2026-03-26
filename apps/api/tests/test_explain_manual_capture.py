@@ -1,39 +1,37 @@
 import json
-import os
-import subprocess
-import sys
+from io import StringIO
 from pathlib import Path
+from contextlib import redirect_stdout
 
 from manual_capture_helpers import assertion_failure_details
+from scripts.explain_manual_capture import build_explanation, print_text, REPEATED_PATTERN_PASS_IDS
 
 ROOT = Path(__file__).resolve().parents[3]
-SCRIPT = ROOT / "scripts" / "explain_manual_capture.py"
 
 
-def run_script(*args: str) -> subprocess.CompletedProcess[str]:
-    env = dict(os.environ)
-    env.setdefault("PYTHONPATH", str(ROOT / "apps" / "api"))
-    return subprocess.run(
-        [sys.executable, str(SCRIPT), *args],
-        capture_output=True,
-        text=True,
-        cwd=ROOT,
-        env=env,
-        check=True,
-    )
+def explain_fixture(fixture_id: str, *disabled_passes: str) -> dict:
+    fixture_dir = ROOT / "apps" / "api" / "tests" / "fixtures" / "manual-captures" / fixture_id
+    return build_explanation(fixture_dir, disabled_passes=list(disabled_passes))
+
+
+def render_text(summary: dict) -> str:
+    buffer = StringIO()
+    with redirect_stdout(buffer):
+        print_text(summary)
+    return buffer.getvalue()
 
 
 def test_explain_manual_capture_text_output() -> None:
-    result = run_script("kalimba-17-c-c4-repeat-01")
-    assert "fixture: kalimba-17-c-c4-repeat-01" in result.stdout
-    assert "status: completed" in result.stdout
-    assert "sourceProfile: acoustic_real" in result.stdout
-    assert "evaluationMode: full_audio" in result.stdout
+    summary = explain_fixture("kalimba-17-c-c4-repeat-01")
+    output = render_text(summary)
+    assert "fixture: kalimba-17-c-c4-repeat-01" in output
+    assert "status: completed" in output
+    assert "sourceProfile: acoustic_real" in output
+    assert "evaluationMode: full_audio" in output
 
 
 def test_explain_manual_capture_json_output() -> None:
-    result = run_script("kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03", "--json")
-    payload = json.loads(result.stdout)
+    payload = explain_fixture("kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03")
     assert payload["fixtureId"] == "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03"
     assert payload["status"] == "completed"
     assert payload["sourceProfile"] == "acoustic_real"
@@ -55,9 +53,9 @@ def test_explain_manual_capture_json_output() -> None:
     assert "attackToSustainRatio" in first_ranked
     assert "candidateOnsetGain" in first_ranked
 
+
 def test_explain_manual_capture_json_output_with_ignored_ranges_reports_scope() -> None:
-    result = run_script("kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01", "--json")
-    payload = json.loads(result.stdout)
+    payload = explain_fixture("kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01")
     assert payload["evaluationMode"] == "ignored_ranges"
     assert payload["sourceDurationSec"] > payload["evaluationDurationSec"]
     assert any(event["scope"] == "out_of_scope" for event in payload["eventCoverage"])
@@ -85,8 +83,7 @@ def test_assertion_failure_details_report_order_mismatch() -> None:
 
 
 def test_explain_manual_capture_reports_pending_summary_hints() -> None:
-    result = run_script("kalimba-17-c-c4-to-g4-sequence-17-01", "--json")
-    payload = json.loads(result.stdout)
+    payload = explain_fixture("kalimba-17-c-c4-to-g4-sequence-17-01")
     assert payload["eventCompression"]["expected"] == 17
     assert payload["eventCompression"]["detected"] == 17
     assert len(payload["expectedEvents"]) == 17
@@ -98,21 +95,14 @@ def test_explain_manual_capture_reports_pending_summary_hints() -> None:
     assert any(item["rule"] == "merged_duplicate" for item in payload["normalizationDecisions"])
     assert isinstance(payload["phraseBreakGuess"], list)
 
+
 def test_explain_manual_capture_reports_disabled_pass_trace() -> None:
-    result = run_script(
-        "kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03",
-        "--json",
-        "--disable-pass",
-        "normalize_repeated_triad_patterns",
-    )
-    payload = json.loads(result.stdout)
+    payload = explain_fixture("kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03", "normalize_repeated_triad_patterns")
     assert payload["disabledRepeatedPatternPasses"] == ["normalize_repeated_triad_patterns"]
     pass_trace = next(item for item in payload["repeatedPatternPassTrace"] if item["pass"] == "normalize_repeated_triad_patterns")
     assert pass_trace["enabled"] is False
 
 
 def test_explain_manual_capture_lists_repeated_pattern_passes() -> None:
-    result = run_script("--list-passes")
-    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    lines = [line.strip() for line in REPEATED_PATTERN_PASS_IDS if line.strip()]
     assert "normalize_repeated_triad_patterns" in lines
-

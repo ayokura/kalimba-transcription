@@ -22,6 +22,8 @@ from manual_capture_helpers import (
     assertion_failures,
 )
 
+pytestmark = [pytest.mark.manual_capture, pytest.mark.slow]
+
 client = TestClient(app)
 COMPLETED_FIXTURES = fixture_dirs_for_status("completed")
 
@@ -41,7 +43,7 @@ def test_completed_manual_capture_regression(fixture_dir: Path) -> None:
 
     response = client.post(
         "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        data={"tuning": json.dumps(request_payload["tuning"])},
         files={"file": ("audio.wav", audio_bytes, "audio/wav")},
     )
 

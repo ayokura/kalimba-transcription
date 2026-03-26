@@ -10,6 +10,8 @@ if str(TESTS_DIR) not in sys.path:
 
 from manual_capture_helpers import build_evaluation_audio_bytes, fixture_id, list_fixture_dirs, load_fixture, validate_expected_metadata, validate_request_metadata
 
+pytestmark = pytest.mark.manual_capture
+
 ALL_FIXTURES = list_fixture_dirs()
 
 

@@ -115,6 +115,23 @@ Current pytest behavior:
 - `pending` fixtures run as smoke probes only
 - `rerecord`, `review_needed`, and `reference_only` run through metadata validation only unless a dedicated probe test exists
 
+Pytest markers:
+
+- `manual_capture`: tests that exercise saved real-audio fixtures
+- `slow`: long-running regression and integration tests
+
+Useful commands:
+
+```powershell
+# Fast inner loop: skip slow audio regressions
+$env:PYTHONPATH='C:\src\calimba-score\apps\api'
+.\.venv313\Scripts\python -m pytest apps/api/tests -m "not slow"
+
+# Focus on manual-capture regressions only
+$env:PYTHONPATH='C:\src\calimba-score\apps\api'
+.\.venv313\Scripts\python -m pytest apps/api/tests -m manual_capture
+```
+
 ## Fixture Evaluation Scope
 
 Keep the original `audio.wav` untouched. If only part of the recording should count toward regression, describe that in `expected.json`.
@@ -305,5 +322,4 @@ Recommended collection strategy:
 4. Only request explicit re-records when a case blocks recognition work
    - Example: a capture is the best candidate for a strict baseline but the attacks are too staggered
    - Otherwise, prefer collecting broader musical material and triaging it with `pending / review_needed / reference_only`
-
 
