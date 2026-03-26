@@ -1,6 +1,8 @@
+from copy import deepcopy
+from functools import lru_cache
 import json
-from pathlib import Path
 from io import BytesIO
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -12,6 +14,60 @@ from app.tunings import get_default_tunings
 from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_ascending_restart_lower_residue_singletons, collapse_late_descending_step_handoffs, collapse_same_start_primary_singletons, simplify_descending_adjacent_dyad_residue, collect_multi_onset_gap_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, should_suppress_staircase_supplemental_start, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_descending_upper_return_overlap, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
+MANUAL_CAPTURE_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "manual-captures"
+
+
+@lru_cache(maxsize=32)
+def _load_manual_capture_fixture_inputs(fixture_name: str) -> tuple[dict, Path]:
+    fixture_dir = MANUAL_CAPTURE_FIXTURE_ROOT / fixture_name
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    return request_payload, fixture_dir / "audio.wav"
+
+
+@lru_cache(maxsize=32)
+def _transcribe_manual_capture_fixture(
+    fixture_name: str,
+    debug: bool,
+    disabled_repeated_pattern_passes_json: str | None,
+) -> dict:
+    request_payload, audio_path = _load_manual_capture_fixture_inputs(fixture_name)
+    audio_bytes = audio_path.read_bytes()
+    data = {
+        "tuning": json.dumps(request_payload["tuning"]),
+        "debug": "true" if debug else "false",
+    }
+    if disabled_repeated_pattern_passes_json is not None:
+        data["disabledRepeatedPatternPasses"] = disabled_repeated_pattern_passes_json
+
+    response = client.post(
+        "/api/transcriptions",
+        data=data,
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200, (
+        f"Unexpected status code {response.status_code} for fixture '{fixture_name}' "
+        f"(debug={debug}, disabled_repeated_pattern_passes_json={disabled_repeated_pattern_passes_json}). "
+        f"Response body: {response.text}"
+    )
+    return response.json()
+
+
+def transcribe_manual_capture_fixture(
+    fixture_name: str,
+    *,
+    debug: bool = True,
+    disabled_repeated_pattern_passes: tuple[str, ...] | None = None,
+) -> dict:
+    disabled_passes_json = None
+    if disabled_repeated_pattern_passes is not None:
+        disabled_passes_json = json.dumps(list(disabled_repeated_pattern_passes))
+    return deepcopy(_transcribe_manual_capture_fixture(fixture_name, debug, disabled_passes_json))
+
+
+def manual_capture_slow(test_func):
+    return pytest.mark.slow(pytest.mark.manual_capture(test_func))
+
 
 def synthesize_note(frequency: float, sample_rate: int = 44100, duration: float = 0.45, harmonics: tuple[float, ...] = (0.7, 0.45, 0.25)) -> np.ndarray:
     times = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
@@ -763,22 +819,9 @@ def test_should_block_descending_repeated_primary_tertiary_extension_requires_de
     ) is False
 
 
+@manual_capture_slow
 def test_transcription_blocks_descending_repeated_primary_tertiary_extension_in_51_note_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={
-            "tuning": json.dumps(request_payload["tuning"]),
-            "debug": "true",
-        },
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
     target_segment = next(
         segment
         for segment in payload["debug"]["segmentCandidates"]
@@ -947,19 +990,9 @@ def test_segment_peaks_suppresses_descending_restart_upper_carryover(monkeypatch
     )
 
 
+@manual_capture_slow
 def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01")
     note_sets = [
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
@@ -1012,19 +1045,9 @@ def test_build_recent_note_names_collapses_consecutive_duplicates() -> None:
 
     assert build_recent_note_names(raw_events) == {"C4", "D4", "E4", "F4"}
 
+@manual_capture_slow
 def test_transcription_drops_low_register_sparse_gap_tail_helpers_in_d4_d5_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-d4-d5-sequence-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-d4-d5-sequence-01")
     note_sets = [
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
@@ -1039,19 +1062,9 @@ def test_transcription_drops_low_register_sparse_gap_tail_helpers_in_d4_d5_fixtu
     assert all(candidate.get("droppedBy") == "low_register_sparse_gap_tail" for candidate in sparse_candidates)
 
 
+@manual_capture_slow
 def test_transcription_regression_for_e6_to_g4_restart_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-g4-sequence-06-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-g4-sequence-06-01")
     note_sets = [
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
@@ -1060,19 +1073,9 @@ def test_transcription_regression_for_e6_to_g4_restart_fixture() -> None:
 
 
 
+@manual_capture_slow
 def test_transcription_regression_for_d6_to_e6_sequence_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-d6-to-e6-sequence-10-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-d6-to-e6-sequence-10-01")
     note_sets = [
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
@@ -1080,19 +1083,9 @@ def test_transcription_regression_for_d6_to_e6_sequence_fixture() -> None:
     assert note_sets == ["D6", "E6", "D6", "E6", "D6", "E6", "D6", "E6", "D6", "E6"]
 
 
+@manual_capture_slow
 def test_transcription_regression_for_e6_to_c6_sequence_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c6-sequence-15-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c6-sequence-15-01")
     note_sets = [
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
@@ -1101,19 +1094,9 @@ def test_transcription_regression_for_e6_to_c6_sequence_fixture() -> None:
 
 
 
+@manual_capture_slow
 def test_transcription_regression_for_c6_to_e6_sequence_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-c6-to-e6-sequence-15-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-c6-to-e6-sequence-15-01")
     note_sets = [
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
@@ -1751,16 +1734,9 @@ def test_suppress_short_residual_tails_drops_recent_single_note_tail() -> None:
         ["G5"],
     ]
 
+@manual_capture_slow
 def test_transcription_regression_for_manual_mixed_sequence() -> None:
-    fixture = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-mixed-sequence-01"
-    request_payload = json.loads((fixture / "request.json").read_text(encoding="utf-8"))
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", (fixture / "audio.wav").read_bytes(), "audio/wav")},
-    )
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-mixed-sequence-01")
     assert [sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]] == [
         ["C4"],
         ["C5"],
@@ -1770,19 +1746,9 @@ def test_transcription_regression_for_manual_mixed_sequence() -> None:
         ["F5"],
     ]
 
+@manual_capture_slow
 def test_probe_four_note_gliss_pending_capture() -> None:
-    fixture = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01"
-    request_payload = json.loads((fixture / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01")
     note_sets = [
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
         for event in payload["events"]
@@ -1791,16 +1757,9 @@ def test_probe_four_note_gliss_pending_capture() -> None:
     assert note_sets.count("B4+D5+E4+G4") >= 4
 
 
+@manual_capture_slow
 def test_transcription_regression_for_manual_triple_glissando() -> None:
-    fixture = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-triple-glissando-ascending-01"
-    request_payload = json.loads((fixture / "request.json").read_text(encoding="utf-8"))
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", (fixture / "audio.wav").read_bytes(), "audio/wav")},
-    )
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-triple-glissando-ascending-01")
     assert [sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]] == [
         ["C4", "E4", "G4"],
         ["A4", "D4", "F4"],
@@ -2060,143 +2019,52 @@ def test_transcription_debug_reports_disabled_repeated_pattern_passes() -> None:
     assert triad_trace["enabled"] is False
 
 
+@manual_capture_slow
 def test_transcription_recovers_terminal_descending_onset_run_in_51_note_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={
-            "tuning": json.dumps(request_payload["tuning"]),
-            "debug": "true",
-        },
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
     assert payload["debug"]["terminalMultiOnsetSegments"]
     assert payload["events"][-1]["notes"][0]["pitchClass"] == "C"
     assert payload["events"][-1]["notes"][0]["octave"] == 4
     assert len(payload["events"]) >= 50
 
 
+@manual_capture_slow
 def test_transcription_drops_descending_restart_bridge_in_51_note_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={
-            "tuning": json.dumps(request_payload["tuning"]),
-            "debug": "true",
-        },
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
     note_sets = {"+".join(note["pitchClass"] + str(note["octave"]) for note in event["notes"]) for event in payload["events"]}
     assert "D4+E4" not in note_sets
 
 
+@manual_capture_slow
 def test_transcription_eliminates_second_cycle_g4_a4_merged_dyad_in_51_note_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={
-            "tuning": json.dumps(request_payload["tuning"]),
-            "debug": "true",
-        },
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
     merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
     assert "G4+A4" not in merged_note_sets
 
 
+@manual_capture_slow
 def test_transcription_eliminates_first_cycle_f4_g4_merged_dyad_in_51_note_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={
-            "tuning": json.dumps(request_payload["tuning"]),
-            "debug": "true",
-        },
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
     merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
     assert "F4+G4" not in merged_note_sets
 
 
+@manual_capture_slow
 def test_transcription_eliminates_b5_d6_restart_residue_in_51_note_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={
-            "tuning": json.dumps(request_payload["tuning"]),
-            "debug": "true",
-        },
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
     merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
     assert "B5+D6" not in merged_note_sets
 
 
+@manual_capture_slow
 def test_transcription_reaches_exact_event_count_in_51_note_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={
-            "tuning": json.dumps(request_payload["tuning"]),
-            "debug": "true",
-        },
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
     assert len(payload["events"]) == 51
 
 
+@manual_capture_slow
 def test_transcription_recovers_third_cycle_prefix_in_51_note_fixture() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-e6-to-c4-sequence-51-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={
-            "tuning": json.dumps(request_payload["tuning"]),
-            "debug": "true",
-        },
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
     note_sets = ["+".join("{}{}".format(note["pitchClass"], note["octave"]) for note in event["notes"]) for event in payload["events"]]
     assert note_sets[33:37] == ["C4", "E6", "D6", "C6"]
     assert [round(start, 4) for start, _ in payload["debug"]["shortBridgeActiveRanges"]] == [20.6013]
@@ -2205,79 +2073,38 @@ def test_transcription_recovers_third_cycle_prefix_in_51_note_fixture() -> None:
 
 
 
+@manual_capture_slow
 def test_bwv147_restart_high_register_collapses_short_repeated_overlap() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-bwv147-restart-high-register-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-high-register-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets[1:4] == ["C5", "D5", "C5+E5"]
     assert "E4" not in note_sets
 
 
+@manual_capture_slow
 def test_bwv147_mid_cluster_rebundles_short_upper_tail_into_triad() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-bwv147-mid-gesture-cluster-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-mid-gesture-cluster-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets[:3] == ["A4+F5", "B4", "C5+E5"]
     assert set(note_sets[3].split("+")) == {"B4", "D5", "G4"}
     assert "E5" not in note_sets
 
 
+@manual_capture_slow
 def test_bwv147_upper_cluster_recovers_delayed_terminal_e5() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-bwv147-upper-mixed-cluster-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-upper-mixed-cluster-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets == ["B5", "A4+C6", "G5", "E5", "A4+C5", "D5", "E5"]
     assert [round(start, 4) for start, _ in payload["debug"]["delayedTerminalOrphanSegments"]] == [5.416]
 
 
 
+@manual_capture_slow
 def test_bwv147_restart_tail_promotes_recent_upper_octave_alias() -> None:
-    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-bwv147-restart-tail-01"
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
-
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-tail-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets == ["G5", "E4+G5", "C6", "B5", "A4+C6"]
     assert payload["debug"]["segmentCandidates"][-1]["primaryPromotion"]["reason"] == "recent-upper-octave-alias-primary"
     trail = payload["debug"]["segmentCandidates"][-1]["secondaryDecisionTrail"]
     assert trail[0]["reasons"] == ["recent-upper-octave-alias-secondary-blocked"]
     assert trail[1]["noteName"] == "A4" and trail[1]["accepted"] is True
-

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import io
 import json
+from copy import deepcopy
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -33,18 +35,31 @@ RangeSpec = dict[str, float]
 AssertionFailureDetail = dict[str, Any]
 
 
+@lru_cache(maxsize=1)
+def _fixture_dirs() -> tuple[Path, ...]:
+    return tuple(sorted(path for path in FIXTURE_ROOT.iterdir() if path.is_dir()))
+
+
 def list_fixture_dirs() -> list[Path]:
-    return sorted(path for path in FIXTURE_ROOT.iterdir() if path.is_dir())
+    return list(_fixture_dirs())
 
 
 def fixture_id(fixture_dir: Path) -> str:
     return fixture_dir.name
 
 
+@lru_cache(maxsize=None)
+def _load_request_payload(fixture_dir: Path) -> dict[str, Any]:
+    return json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+
+
+@lru_cache(maxsize=None)
+def _load_expected_payload(fixture_dir: Path) -> dict[str, Any]:
+    return json.loads((fixture_dir / "expected.json").read_text(encoding="utf-8"))
+
+
 def load_fixture(fixture_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
-    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    expected = json.loads((fixture_dir / "expected.json").read_text(encoding="utf-8"))
-    return request_payload, expected
+    return deepcopy(_load_request_payload(fixture_dir)), deepcopy(_load_expected_payload(fixture_dir))
 
 
 def validate_request_metadata(fixture_dir: Path, request_payload: dict[str, Any]) -> None:
@@ -77,7 +92,7 @@ def fixture_status(expected: dict[str, Any]) -> str:
 
 
 def fixture_dirs_for_status(status: str) -> list[Path]:
-    return [fixture_dir for fixture_dir in list_fixture_dirs() if fixture_status(load_fixture(fixture_dir)[1]) == status]
+    return [fixture_dir for fixture_dir in _fixture_dirs() if fixture_status(_load_expected_payload(fixture_dir)) == status]
 
 
 def normalized_assertions(expected: dict[str, Any]) -> dict[str, Any]:
@@ -332,6 +347,19 @@ def explain_fixture_output(fixture_dir: Path, payload: dict[str, Any], expected:
 def build_evaluation_audio_bytes(fixture_dir: Path, expected: dict[str, Any]) -> bytes:
     windows = parse_ranges(expected, "evaluationWindows")
     ignored = parse_ranges(expected, "ignoredRanges")
+    return _build_evaluation_audio_bytes_cached(
+        fixture_dir,
+        tuple((entry["startSec"], entry["endSec"]) for entry in windows),
+        tuple((entry["startSec"], entry["endSec"]) for entry in ignored),
+    )
+
+
+@lru_cache(maxsize=32)
+def _build_evaluation_audio_bytes_cached(
+    fixture_dir: Path,
+    windows: tuple[tuple[float, float], ...],
+    ignored: tuple[tuple[float, float], ...],
+) -> bytes:
     if not windows and not ignored:
         return (fixture_dir / "audio.wav").read_bytes()
 
@@ -339,14 +367,14 @@ def build_evaluation_audio_bytes(fixture_dir: Path, expected: dict[str, Any]) ->
     total_duration = audio.shape[0] / sample_rate
 
     if windows:
-        segments = windows
+        segments = [{"startSec": start, "endSec": end} for start, end in windows]
     else:
         cursor = 0.0
         segments = []
-        for entry in ignored:
-            if cursor < entry["startSec"]:
-                segments.append({"startSec": cursor, "endSec": entry["startSec"]})
-            cursor = max(cursor, entry["endSec"])
+        for start, end in ignored:
+            if cursor < start:
+                segments.append({"startSec": cursor, "endSec": start})
+            cursor = max(cursor, end)
         if cursor < total_duration:
             segments.append({"startSec": cursor, "endSec": total_duration})
 

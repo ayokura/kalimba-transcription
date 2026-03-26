@@ -12,6 +12,8 @@ if str(TESTS_DIR) not in sys.path:
 from manual_capture_helpers import build_evaluation_audio_bytes, fixture_dirs_for_status, fixture_id, load_fixture
 from app.main import app
 
+pytestmark = [pytest.mark.manual_capture, pytest.mark.slow]
+
 client = TestClient(app)
 PENDING_FIXTURES = fixture_dirs_for_status("pending")
 
@@ -22,9 +24,7 @@ def test_pending_manual_capture_smoke(fixture_dir: Path) -> None:
     audio_bytes = build_evaluation_audio_bytes(fixture_dir, expected)
 
     response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+        "/api/transcriptions", data={"tuning": json.dumps(request_payload["tuning"])}, files={"file": ("audio.wav", audio_bytes, "audio/wav")}
     )
 
     assert response.status_code == 200, fixture_dir.name
