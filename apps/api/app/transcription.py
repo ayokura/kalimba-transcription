@@ -184,6 +184,17 @@ GLISS_TERTIARY_MIN_SCORE = 20.0
 GLISS_TERTIARY_STRONG_ONSET_GAIN = 5.0
 GLISS_TERTIARY_WEAK_ONSET_GAIN = 2.0
 GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.9
+LOWER_MIXED_ROLL_EXTENSION_MAX_DURATION = 1.2
+LOWER_MIXED_ROLL_EXTENSION_MIN_EXTENSION_SCORE_RATIO = 0.35
+LOWER_MIXED_ROLL_EXTENSION_MIN_UPPER_SCORE_RATIO = 0.4
+LOWER_MIXED_ROLL_EXTENSION_MIN_FUNDAMENTAL_RATIO = 0.97
+LOWER_MIXED_ROLL_EXTENSION_MIN_PRIMARY_ONSET_GAIN = 25.0
+LOWER_MIXED_ROLL_EXTENSION_MIN_EXTENSION_ONSET_GAIN = 20.0
+LOWER_ROLL_TAIL_EXTENSION_MAX_DURATION = 0.4
+LOWER_ROLL_TAIL_EXTENSION_MIN_FUNDAMENTAL_RATIO = 0.95
+LOWER_ROLL_TAIL_EXTENSION_MIN_PRIMARY_ONSET_GAIN = 25.0
+LOWER_ROLL_TAIL_EXTENSION_MAX_ONSET_GAIN = 5.0
+LOWER_ROLL_TAIL_EXTENSION_MIN_SCORE_RATIO = 0.9
 FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_DURATION = 0.55
 FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_SCORE_RATIO = 0.08
 FOUR_NOTE_CONTIGUOUS_CLUSTER_MIN_FUNDAMENTAL_RATIO = 0.9
@@ -3077,6 +3088,117 @@ def segment_peaks(
                             "octaveDyadAllowed": False,
                         }
                     )
+
+    if (
+        len(selected) == 2
+        and end_time - start_time <= LOWER_MIXED_ROLL_EXTENSION_MAX_DURATION
+        and primary.candidate.frequency == min(note.frequency for note in selected)
+        and primary.candidate.octave <= 4
+    ):
+        upper_note = max(selected, key=lambda note: note.frequency)
+        selected_names = {note.note_name for note in selected}
+        if upper_note.key - primary.candidate.key >= 3:
+            selected_secondary_scores = [
+                secondary.score
+                for secondary in residual_ranked[:4]
+                if secondary.candidate.note_name in selected_names
+            ]
+            extension_candidate: tuple[NoteHypothesis, float] | None = None
+            for hypothesis in residual_ranked[:8]:
+                candidate = hypothesis.candidate
+                if candidate.note_name in selected_names:
+                    continue
+                if not (primary.candidate.frequency < candidate.frequency < upper_note.frequency):
+                    continue
+                if upper_note.key - candidate.key > 1:
+                    continue
+                if candidate.key - primary.candidate.key < 2:
+                    continue
+                if hypothesis.score < primary.score * LOWER_MIXED_ROLL_EXTENSION_MIN_EXTENSION_SCORE_RATIO:
+                    continue
+                if hypothesis.score < GLISS_TERTIARY_MIN_SCORE:
+                    continue
+                if hypothesis.fundamental_ratio < LOWER_MIXED_ROLL_EXTENSION_MIN_FUNDAMENTAL_RATIO:
+                    continue
+                if any(are_harmonic_related(candidate, existing) for existing in selected):
+                    continue
+                if selected_secondary_scores and hypothesis.score < max(selected_secondary_scores) * LOWER_MIXED_ROLL_EXTENSION_MIN_UPPER_SCORE_RATIO:
+                    continue
+                if primary_onset_gain is None:
+                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                if primary_onset_gain < LOWER_MIXED_ROLL_EXTENSION_MIN_PRIMARY_ONSET_GAIN:
+                    continue
+                onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, candidate.frequency)
+                if onset_gain < LOWER_MIXED_ROLL_EXTENSION_MIN_EXTENSION_ONSET_GAIN:
+                    continue
+                extension_candidate = (hypothesis, onset_gain)
+                break
+
+            if extension_candidate is not None:
+                hypothesis, onset_gain = extension_candidate
+                selected.append(hypothesis.candidate)
+                secondary_decision_trail.append(
+                    {
+                        "noteName": hypothesis.candidate.note_name,
+                        "score": round(hypothesis.score, 6),
+                        "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
+                        "onsetGain": round(onset_gain, 6),
+                        "accepted": True,
+                        "reasons": ["lower-mixed-roll-extension"],
+                        "octaveDyadAllowed": False,
+                    }
+                )
+
+    if (
+        len(selected) == 3
+        and end_time - start_time <= LOWER_ROLL_TAIL_EXTENSION_MAX_DURATION
+        and primary.candidate.frequency == max(note.frequency for note in selected)
+    ):
+        selected_keys = sorted(note.key for note in selected)
+        if selected_keys[-1] - selected_keys[0] == 2:
+            selected_names = {note.note_name for note in selected}
+            lowest_selected = min(selected, key=lambda note: note.frequency)
+            extension_key = selected_keys[0] - 1
+            extension_candidate: tuple[NoteHypothesis, float] | None = None
+            for hypothesis in residual_ranked[:8]:
+                candidate = hypothesis.candidate
+                if candidate.note_name in selected_names:
+                    continue
+                if candidate.key != extension_key:
+                    continue
+                if hypothesis.fundamental_ratio < LOWER_ROLL_TAIL_EXTENSION_MIN_FUNDAMENTAL_RATIO:
+                    continue
+                if hypothesis.score < GLISS_TERTIARY_MIN_SCORE:
+                    continue
+                if any(are_harmonic_related(candidate, existing) for existing in selected):
+                    continue
+                lowest_selected_score = next((item.score for item in residual_ranked[:8] if item.candidate.note_name == lowest_selected.note_name), None)
+                if lowest_selected_score is not None and hypothesis.score < lowest_selected_score * LOWER_ROLL_TAIL_EXTENSION_MIN_SCORE_RATIO:
+                    continue
+                if primary_onset_gain is None:
+                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                if primary_onset_gain < LOWER_ROLL_TAIL_EXTENSION_MIN_PRIMARY_ONSET_GAIN:
+                    continue
+                onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, candidate.frequency)
+                if onset_gain > LOWER_ROLL_TAIL_EXTENSION_MAX_ONSET_GAIN:
+                    continue
+                extension_candidate = (hypothesis, onset_gain)
+                break
+
+            if extension_candidate is not None:
+                hypothesis, onset_gain = extension_candidate
+                selected.append(hypothesis.candidate)
+                secondary_decision_trail.append(
+                    {
+                        "noteName": hypothesis.candidate.note_name,
+                        "score": round(hypothesis.score, 6),
+                        "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
+                        "onsetGain": round(onset_gain, 6),
+                        "accepted": True,
+                        "reasons": ["lower-roll-tail-extension"],
+                        "octaveDyadAllowed": False,
+                    }
+                )
 
     debug_payload = None
     if debug:

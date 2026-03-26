@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "human listening confirms the scoped lower mixed BWV147 phrase is correctly cut; the recognizer now recovers the middle lower-roll run, but still under-recovers the opening G4 in the first mixed dyad and the terminal four-note roll",
+  "reason": "the full clip now recovers the target lower mixed phrase, but the current evaluation window compression collapses the long-gap structure into a 5-event scoped output; keep this pending until the fixture can be stabilized as a scoped practical regression",
   "evaluationWindows": [
     {
       "startSec": 1.0,

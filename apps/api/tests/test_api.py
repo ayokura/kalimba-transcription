@@ -2140,10 +2140,13 @@ def test_bwv147_late_upper_tail_recovers_sparse_terminal_d5_e5_tail() -> None:
 
 
 @manual_capture_slow
-def test_bwv147_lower_mixed_roll_recovers_long_gap_lower_run_segments() -> None:
+def test_bwv147_lower_mixed_roll_recovers_opening_mixed_dyad_and_long_gap_run() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-lower-mixed-roll-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
-    assert note_sets == ["C5", "D4+B4", "C5", "G4+C5", "D5", "D4+G4", "B4", "D5", "B4+D5+F5", "E5"]
+    assert note_sets == ["C5", "D4+G4+B4", "C5", "D5", "D4+G4", "B4", "D5", "G4+B4+D5+F5", "E5"]
+    opening_segment = next(segment for segment in payload["debug"]["segmentCandidates"] if abs(segment["startTime"] - 1.0667) < 0.02)
+    assert opening_segment["selectedNotes"] == ["D4", "B4", "G4"]
+    assert any(decision["noteName"] == "G4" and decision["accepted"] and decision["reasons"] == ["lower-mixed-roll-extension"] for decision in opening_segment["secondaryDecisionTrail"])
     assert [tuple(round(value, 4) for value in segment) for segment in payload["debug"]["postSparseGapRunSegments"]] == [
         (5.0613, 5.68),
         (6.3013, 6.6213),

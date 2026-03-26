@@ -29,7 +29,7 @@
 
 ## Review
 
-- summary: human listening confirms the scoped lower mixed BWV147 phrase is correctly cut; the recognizer now recovers the middle lower-roll run, but the opening mixed dyad and terminal four-note roll are still incomplete
-- reason: ear review confirms the clip is scoped correctly: the audible content is C5 resonance / [<B4,G4>,D4] / C5 / D5 / [G4,D4] / B4 / D5 / <F5,D5,B4,G4> / E5, with the leading C5 resonance and trailing E5 outside the intended evaluation phrase; after the long-gap lower-roll segmentation fix the recognizer now recovers D5 / [G4,D4] / B4 / D5 as separate in-scope events, but it still misses the opening G4 inside [<B4,G4>,D4] and does not yet reconstruct the full terminal <F5,D5,B4,G4> roll, so the fixture should remain pending
+- summary: human listening confirms the scoped lower mixed BWV147 phrase is correctly cut; the full clip now recovers the target phrase, but the current scoped evaluation window still compresses the long-gap structure
+- reason: ear review confirms the clip is scoped correctly: the audible content is C5 resonance / [<B4,G4>,D4] / C5 / D5 / [G4,D4] / B4 / D5 / <F5,D5,B4,G4> / E5, with the leading C5 resonance and trailing E5 outside the intended evaluation phrase; after the lower-mixed opening extension, long-gap segmentation fix, and lower-roll tail extension, the full clip recognizer output now recovers the intended phrase, but the current evaluationWindow crop removes too much surrounding context and collapses the scoped regression to five events, so the fixture should remain pending until its scoped evaluation strategy is revised
 
 - user audio review: C5 resonance / [<B4,G4>,D4] / C5 / D5 / [G4,D4] / B4 / D5 / <F5,D5,B4,G4> / E5 is audible; the cut is correct and boundary handling is OK (confidence: high)
