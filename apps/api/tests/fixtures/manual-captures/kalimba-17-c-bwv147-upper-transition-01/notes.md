@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: review_needed
 - scenario: 2026-03-25-bwv147-upper-transition-01-kalimba-17-c
 - expected note: F5 / [F5,A4] / A5 / G5 / [G5,E4]
 - capture intent: unknown
@@ -27,5 +27,7 @@
 
 ## Review
 
-- summary: practical BWV147 upper transition child extracted to isolate F5/[F5,A4]/A5/G5/[G5,E4] carryover and merge behavior
-- reason: practical BWV147 upper transition child extracted to isolate F5/[F5,A4]/A5/G5/[G5,E4] carryover and merge behavior
+- summary: expected event ordering around the upper transition does not match the extracted audio; provenance must be reviewed before using this child as an active recognizer target
+- reason: expected event ordering around the upper transition does not match the extracted audio; provenance must be reviewed before using this child as an active recognizer target
+
+- scoped debug shows the expected `A5` is shifted later in the clip; the extracted audio around event 3 ranks `A4`/`F4` instead of `A5`
