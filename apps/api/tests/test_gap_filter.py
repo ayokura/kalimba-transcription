@@ -1,4 +1,4 @@
-"""Pure ablation: disable each legacy collector individually WITHOUT the attack-validated replacement."""
+"""Test: gap onset filtering by attack profile enabled."""
 import json
 import sys
 from pathlib import Path
@@ -19,36 +19,19 @@ from manual_capture_helpers import (
     assertion_failures,
 )
 
-pytestmark = [pytest.mark.manual_capture, pytest.mark.slow, pytest.mark.ablation]
+pytestmark = [pytest.mark.manual_capture, pytest.mark.slow]
 
 COMPLETED_FIXTURES = fixture_dirs_for_status("completed")
 
-ABLATION_FLAGS = [
-    "ABLATE_LEADING_ORPHAN",
-    "ABLATE_CLOSE_TERMINAL_ORPHAN",
-    "ABLATE_DELAYED_TERMINAL_ORPHAN",
-    "ABLATE_SINGLE_ONSET_GAP_HEAD",
-    "ABLATE_SPARSE_GAP_TAIL",
-    "ABLATE_TWO_ONSET_GAP",
-    "ABLATE_MULTI_ONSET_GAP",
-    "ABLATE_POST_TAIL_GAP_HEAD",
-    "ABLATE_TERMINAL_MULTI_ONSET",
-    "ABLATE_GAP_INJECTED",
-    "ABLATE_TWO_ONSET_TERMINAL_TAIL",
-    "ABLATE_SUPPLEMENTAL_STARTS",
-]
 
-
-@pytest.fixture(params=ABLATION_FLAGS)
-def ablated_flag(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> str:
+@pytest.fixture(autouse=True)
+def _enable_gap_filter(monkeypatch: pytest.MonkeyPatch) -> None:
     import app.transcription as mod
-    flag_name = request.param
-    monkeypatch.setattr(mod, flag_name, True)
-    return flag_name
+    monkeypatch.setattr(mod, "FILTER_GAP_ONSETS_BY_ATTACK_PROFILE", True)
 
 
 @pytest.mark.parametrize("fixture_dir", COMPLETED_FIXTURES, ids=fixture_id)
-def test_pure_ablation(fixture_dir: Path, ablated_flag: str) -> None:
+def test_gap_filter(fixture_dir: Path) -> None:
     from app.main import app
     client = TestClient(app)
 
@@ -62,10 +45,10 @@ def test_pure_ablation(fixture_dir: Path, ablated_flag: str) -> None:
         files={"file": ("audio.wav", audio_bytes, "audio/wav")},
     )
 
-    assert response.status_code == 200, f"{fixture_dir.name} [{ablated_flag}]"
+    assert response.status_code == 200, fixture_dir.name
     failures = assertion_failures(fixture_dir, response.json(), expected)
     if failures:
-        pytest.fail(f"{fixture_dir.name} [{ablated_flag}]: {'; '.join(failures)}")
+        pytest.fail(f"{fixture_dir.name}: {'; '.join(failures)}")
 
 
 if not COMPLETED_FIXTURES:

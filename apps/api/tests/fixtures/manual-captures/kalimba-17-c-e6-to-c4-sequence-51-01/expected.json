@@ -1,6 +1,6 @@
 {
-  "pending": false,
-  "status": "completed",
+  "pending": true,
+  "status": "pending",
   "assertions": {
     "minEvents": 51,
     "maxEvents": 51,
@@ -62,5 +62,5 @@
       "C4"
     ]
   },
-  "reason": "descending practical separated-notes sequence now matches expected coverage across all three cycles"
+  "reason": "Reverted to pending: supplemental_starts removal causes regression. Needs onset detection improvement instead of RMS-based workaround. See #30."
 }

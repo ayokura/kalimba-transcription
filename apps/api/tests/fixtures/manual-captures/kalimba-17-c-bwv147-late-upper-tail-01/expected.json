@@ -10,13 +10,13 @@
     "maxEventNoteSetOccurrences": {},
     "expectedEventNoteSetsOrdered": [
       "G5",
-      "C5+E5+G5",
-      "A4+C5+E5",
+      "E5",
+      "A4+C5",
       "D5",
       "E5"
     ]
   },
-  "reason": "practical BWV147 late-tail child now recovers the scoped G5 / E5 / <C5,A4> / D5 / E5 phrase, including the sparse terminal D5 / E5 tail",
+  "reason": "BWV147 late-tail phrase G5 / E5 / <C5,A4> / D5 / E5 per notes.md; supplemental_starts removal fixed over-merged chords",
   "evaluationWindows": [
     {
       "startSec": 1.9,

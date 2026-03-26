@@ -1,6 +1,6 @@
 {
-  "pending": false,
-  "status": "completed",
+  "pending": true,
+  "status": "pending",
   "assertions": {
     "minEvents": 17,
     "maxEvents": 17,
@@ -45,5 +45,5 @@
       "C4": 1
     }
   },
-  "reason": "descending separated-notes run now completes after active-range backtracking no longer borrows prior onsets from the previous active window"
+  "reason": "Reverted to pending: supplemental_starts removal causes regression. Needs onset detection improvement instead of RMS-based workaround. See #30."
 }
