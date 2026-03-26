@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: review_needed
 - scenario: 2026-03-25-bwv147-f5-a5-transition-01-kalimba-17-c
 - expected note: F5 / [F5,A4] / A5
 - capture intent: unknown
@@ -25,5 +25,7 @@
 
 ## Review
 
-- summary: practical BWV147 F5-to-A5 child extracted to isolate the A5 lower-carryover artifact after [F5,A4]
-- reason: practical BWV147 F5-to-A5 child extracted to isolate the A5 lower-carryover artifact after [F5,A4]
+- summary: expected F5/A5 ordering does not match the extracted audio; the scoped clip begins on G5 and does not provide a clean active recognizer target
+- reason: expected F5/A5 ordering does not match the extracted audio; the scoped clip begins on G5 and does not provide a clean active recognizer target
+
+- scoped debug starts on `G5` and ends on `A4+F4`; the expected `F5 / [F5,A4] / A5` ordering is not aligned closely enough to use as an active recognizer target
