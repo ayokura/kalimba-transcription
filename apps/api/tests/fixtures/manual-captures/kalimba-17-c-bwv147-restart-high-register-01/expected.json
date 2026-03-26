@@ -1,6 +1,6 @@
 {
   "pending": false,
-  "status": "review_needed",
+  "status": "reference_only",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "human listening confirms the F5 / [F5,A4] and final [C6,A4] subregions, but the current extracted target still contains a mistaken middle retake and clips the final onset at the evaluation-window edge; re-scope this child before using it as an active recognizer target",
+  "reason": "the clip still contains a mistaken middle retake and trims the final onset at the evaluation-window edge; retain it only as reference while the usable restart subsets stay covered by cleaner children",
   "evaluationWindows": [
     {
       "startSec": 1.5,

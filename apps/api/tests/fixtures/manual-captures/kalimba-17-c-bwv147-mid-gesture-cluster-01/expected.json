@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "human listening confirms the intended A4 / [G5,G4] / [F5,A4] opening, but leading boundary contamination and the soft A4 make the current extraction unsuitable as a clean active target without re-scoping",
+  "reason": "human listening confirms the intended opening, but leading boundary contamination and the soft A4 still make this extraction unsuitable as a clean active target; suffix-only windowing also collapses the later B4, so this child needs re-scoping from the parent rather than a narrow evaluation window",
   "evaluationWindows": [
     {
       "startSec": 1.5,

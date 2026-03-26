@@ -29,5 +29,6 @@
 ## Review
 
 - summary: human listening confirms the intended opening A4 / [G5,G4] / [F5,A4], but the current extraction still has leading-boundary contamination
-- reason: the expected opening is correct by ear, but a preceding resonance bleeds into the start of the clip and the initial A4 is intentionally soft; re-scope this child before treating it as a clean active recognizer target
+- reason: the expected opening is correct by ear, but a preceding resonance bleeds into the start of the clip and the initial A4 is intentionally soft; suffix-only re-windowing is not enough because it collapses the later `B4`, so re-scope this child from the parent before treating it as a clean active recognizer target
 - user audio review: A4 / [G5,G4] / [F5,A4] is audible, with the A4 played softly and a leading boundary issue from the previous note residue (confidence: high)
+- scoped re-windowing test: trimming this clip down to the later `B4 / <E5,C5> / <D5,B4,G4>` suffix drops `B4` and yields only `C5+E5 / B4+D5+G4`, so a new child must preserve more parent context instead of relying on `evaluationWindows`

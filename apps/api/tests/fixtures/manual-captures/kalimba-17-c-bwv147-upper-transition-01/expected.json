@@ -1,6 +1,6 @@
 {
   "pending": false,
-  "status": "review_needed",
+  "status": "reference_only",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -9,5 +9,5 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "expected event ordering around the upper transition does not match the extracted audio; provenance must be reviewed before using this child as an active recognizer target"
+  "reason": "expected ordering and the extracted audio do not describe the same upper-transition phrase; retain this clip only as provenance reference until a cleaner child is re-cut"
 }

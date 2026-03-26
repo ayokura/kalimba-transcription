@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: review_needed
+- verdict: reference_only
 - scenario: 2026-03-25-bwv147-upper-transition-01-kalimba-17-c
 - expected note: F5 / [F5,A4] / A5 / G5 / [G5,E4]
 - capture intent: unknown
@@ -27,7 +27,9 @@
 
 ## Review
 
-- summary: expected event ordering around the upper transition does not match the extracted audio; provenance must be reviewed before using this child as an active recognizer target
-- reason: expected event ordering around the upper transition does not match the extracted audio; provenance must be reviewed before using this child as an active recognizer target
+- summary: current full-clip output is `G5 / [F5,A4] / A5 / G5`, so this clip is retained only as provenance reference rather than an active recognizer target
+- reason: keep this fixture as provenance reference until the clip is reinterpreted or recut around the actual upper-transition phrase; the present clip does not support `F5 / [F5,A4] / A5 / G5 / [G5,E4]` as a clean active target
 
-- scoped debug shows the expected `A5` is shifted later in the clip; the extracted audio around event 3 ranks `A4`/`F4` instead of `A5`
+- explain output on the current clip is `G5 / [F5,A4] / A5 / G5`
+- the opening expected `F5` is not present as the first detected event, and the terminal expected `[G5,E4]` does not appear at the end of the clip
+- this looks like a provenance/scoping mismatch, not a narrow recognizer miss
