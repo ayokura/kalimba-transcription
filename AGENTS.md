@@ -10,9 +10,10 @@
 
 - Primary API test environment:
   - `.venv313`
-- API test command:
+- API test command (run from the repository root so that `PYTHONPATH=apps/api` resolves correctly):
   - PowerShell: `$env:PYTHONPATH='apps/api'; .\.venv313\Scripts\python -m pytest apps/api/tests -q`
-  - Bash: `PYTHONPATH=apps/api .venv313/Scripts/python -m pytest apps/api/tests -q`
+  - Bash (Git Bash on Windows, Windows-created venv): `PYTHONPATH=apps/api .venv313/Scripts/python -m pytest apps/api/tests -q`
+  - Other environments (Linux/macOS): venv layout and paths differ; test commands need separate consideration.
 - Note: `PYTHONPATH` is required because `apps/api` is not installed as a package. See issue #24 for a potential fix via `pyproject.toml`.
 
 ## Fixture Policy
@@ -89,7 +90,7 @@
 ## Claude Code-Specific Notes
 
 - Claude Code reads this file via `@AGENTS.md` in CLAUDE.md.
-- Agent-specific rules for Claude Code are maintained in CLAUDE.md, not here.
+- Detailed agent-specific rules for Claude Code are maintained in CLAUDE.md; this section only summarizes cross-cutting conventions and defaults.
 - Explorer subagents: use `subagent_type: "Explore"` — this type has no Edit/Write access by design, satisfying the "explorer must not edit" rule automatically.
 - Editing subagents: use `isolation: "worktree"` on the Agent tool — equivalent isolation is provided automatically, no manual worktree setup needed.
 - Branch prefix for Claude Code-initiated spikes: `claude/` (mirrors Codex's `codex/` convention).
