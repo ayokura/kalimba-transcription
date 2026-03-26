@@ -70,6 +70,11 @@ SHORT_BRIDGE_ACTIVE_RANGE_MAX_NEXT_EDGE_GAP = 0.2
 CLOSE_TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE = 0.05
 CLOSE_TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE = 0.18
 CLOSE_TERMINAL_ORPHAN_SEGMENT_DURATION = 0.24
+DELAYED_TERMINAL_ORPHAN_MIN_GAP_AFTER_ACTIVE = 0.35
+DELAYED_TERMINAL_ORPHAN_MAX_GAP_AFTER_ACTIVE = 0.65
+DELAYED_TERMINAL_ORPHAN_SEGMENT_DURATION = 0.24
+DELAYED_TERMINAL_ORPHAN_MIN_BASE_DURATION = 0.24
+DELAYED_TERMINAL_ORPHAN_MAX_BASE_DURATION = 0.4
 TERMINAL_MULTI_ONSET_MIN_COUNT = 4
 TERMINAL_MULTI_ONSET_MIN_INTERVAL = 0.18
 TERMINAL_MULTI_ONSET_MAX_INTERVAL = 0.55
@@ -830,6 +835,40 @@ def collect_close_terminal_orphan_segments(
     return [(orphan_start, orphan_end)]
 
 
+def collect_delayed_terminal_orphan_segments(
+    base_segment: tuple[float, float] | None,
+    onset_times: list[float],
+    audio_duration: float,
+) -> list[tuple[float, float]]:
+    if base_segment is None:
+        return []
+
+    base_start, base_end = base_segment
+    base_duration = base_end - base_start
+    if not (
+        DELAYED_TERMINAL_ORPHAN_MIN_BASE_DURATION
+        <= base_duration
+        <= DELAYED_TERMINAL_ORPHAN_MAX_BASE_DURATION
+    ):
+        return []
+
+    trailing_onsets = [
+        onset_time
+        for onset_time in onset_times
+        if base_end + DELAYED_TERMINAL_ORPHAN_MIN_GAP_AFTER_ACTIVE
+        <= onset_time
+        <= min(base_end + DELAYED_TERMINAL_ORPHAN_MAX_GAP_AFTER_ACTIVE, audio_duration - 0.08)
+    ]
+    if len(trailing_onsets) != 1:
+        return []
+
+    orphan_start = trailing_onsets[0]
+    orphan_end = min(orphan_start + DELAYED_TERMINAL_ORPHAN_SEGMENT_DURATION, audio_duration)
+    if orphan_end - orphan_start < 0.08:
+        return []
+    return [(orphan_start, orphan_end)]
+
+
 def collect_terminal_multi_onset_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
@@ -1033,6 +1072,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
 
     terminal_orphan_segments: list[tuple[float, float]] = []
     close_terminal_orphan_segments: list[tuple[float, float]] = []
+    delayed_terminal_orphan_segments: list[tuple[float, float]] = []
     terminal_multi_onset_segments: list[tuple[float, float]] = []
     if active_ranges:
         audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
@@ -1050,6 +1090,8 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
             if orphan_end - orphan_start >= 0.08:
                 terminal_orphan_segments.append((orphan_start, orphan_end))
         close_terminal_orphan_segments = collect_close_terminal_orphan_segments(active_ranges, onset_times, audio_duration)
+        delayed_base_segment = close_terminal_orphan_segments[-1] if close_terminal_orphan_segments else (terminal_orphan_segments[-1] if terminal_orphan_segments else None)
+        delayed_terminal_orphan_segments = collect_delayed_terminal_orphan_segments(delayed_base_segment, onset_times, audio_duration)
         terminal_multi_onset_segments = collect_terminal_multi_onset_segments(active_ranges, onset_times, audio_duration)
 
     segments: list[tuple[float, float]] = []
@@ -1132,6 +1174,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for start_time, end_time in close_terminal_orphan_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
+    for start_time, end_time in delayed_terminal_orphan_segments:
+        if end_time - start_time >= 0.08:
+            segments.append((start_time, end_time))
     for start_time, end_time in terminal_multi_onset_segments:
         if end_time - start_time >= 0.08:
             segments.append((start_time, end_time))
@@ -1170,6 +1215,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "sparseGapTailSegments": [[round(start, 4), round(end, 4)] for start, end in sparse_gap_tail_segments],
         "terminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_orphan_segments],
         "closeTerminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in close_terminal_orphan_segments],
+        "delayedTerminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in delayed_terminal_orphan_segments],
         "terminalMultiOnsetSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_multi_onset_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),
@@ -4964,6 +5010,7 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
+
 
 
 

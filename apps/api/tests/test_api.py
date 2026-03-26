@@ -2240,3 +2240,21 @@ def test_bwv147_mid_cluster_rebundles_short_upper_tail_into_triad() -> None:
     assert note_sets[:3] == ["A4+F5", "B4", "C5+E5"]
     assert set(note_sets[3].split("+")) == {"B4", "D5", "G4"}
     assert "E5" not in note_sets
+
+
+def test_bwv147_upper_cluster_recovers_delayed_terminal_e5() -> None:
+    fixture_dir = Path(__file__).parent / "fixtures" / "manual-captures" / "kalimba-17-c-bwv147-upper-mixed-cluster-01"
+    request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
+    audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
+    assert note_sets[-2:] == ["D5", "E5"]
+    assert [round(start, 4) for start, _ in payload["debug"]["delayedTerminalOrphanSegments"]] == [5.416]
