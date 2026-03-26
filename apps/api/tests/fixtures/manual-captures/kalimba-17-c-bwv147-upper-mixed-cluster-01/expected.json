@@ -1,6 +1,6 @@
 {
-  "pending": false,
-  "status": "review_needed",
+  "pending": true,
+  "status": "pending",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "upper mixed-cluster child has unresolved provenance around the middle C5/A4/D5/E5 region; keep for reference until audio review confirms intended event order",
+  "reason": "practical BWV147 upper mixed-cluster child where the intended soft D5 remains audible to a human listener but is still unstable for the recognizer",
   "evaluationWindows": [
     {
       "startSec": 1.0,
