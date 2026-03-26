@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: review_needed
 - scenario: 2026-03-25-bwv147-mid-gesture-cluster-01
 - expected note: A4 / [G5,G4] / [F5,A4] / B4 / <E5,C5> / <D5,B4,G4>
 - capture intent: unknown
@@ -28,5 +28,6 @@
 
 ## Review
 
-- summary: practical BWV147 mid-phrase gesture-cluster child fixture extracted from the parent corpus for orthogonal recognizer evaluation
-- reason: practical BWV147 mid-phrase gesture-cluster child fixture extracted from the parent corpus for orthogonal recognizer evaluation
+- summary: extracted practical BWV147 child; opening events 1-3 currently appear mismatched to the audio and need provenance review
+- reason: short attack windows still rank A4+F5 rather than the expected A4 / [G5,G4] / [F5,A4]; verify parent mapping or user-entered expected before treating this as a recognizer target
+- analysis note: 60-300ms opening windows continue to rank F5/A4 as the dominant content, which points to metadata/provenance uncertainty rather than a clean recognizer miss.
