@@ -28,18 +28,23 @@
 
 ## Spike / Rollback Policy
 
-- For promising but not-yet-mergeable recognizer changes, use a dedicated `codex/...` branch.
+- Main-agent-only rule: for promising but not-yet-mergeable recognizer changes, use a dedicated `codex/...` branch.
 - Do not keep speculative or knowingly regressive spikes on `main`.
 - Preserve reusable failed experiments only when all of the following are true:
   - the target practical fixture clearly improves
   - the approach may be useful later
   - the regression risk is understandable and documented
 - Discard low-value experiments that only add noise.
+- If the primary agent tries a change on `main` and later decides not to keep it, archive that experiment by:
+  - recreating it on a dedicated `codex/...` branch
+  - committing it there with a detailed commit body
+  - returning `main` to the clean accepted state
+- If the archived experiment is important enough to track, the primary agent may add a short indexed issue comment using the spike tags below.
 
 ## How To Record Spike History
 
 - Put the detailed rationale in the commit body.
-- Add a short issue comment as an index, not as the full writeup.
+- For primary-agent spike archives, add a short issue comment as an index, not as the full writeup, when the spike is important enough to keep discoverable.
 - Use the following tags in the issue comment so spike history can be filtered:
   - `[spike-archive]`
   - `[fixture: <fixture-id>]`
@@ -51,6 +56,7 @@
   - what regressed
   - why it was not merged
   - that the detailed explanation is in the commit body
+- Subagents should not create separate spike-archive branches of their own for this purpose. Because subagents already work on isolated branches/worktrees, they should preserve undoable experiment history with normal commits plus explicit revert commits when needed.
 
 ## Subagent Coordination
 
