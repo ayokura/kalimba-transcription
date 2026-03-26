@@ -11,7 +11,6 @@
   - `C:\src\calimba-score\.venv313`
 - API test command:
   - `$env:PYTHONPATH='C:\src\calimba-score\apps\api'; .\.venv313\Scripts\python -m pytest apps/api/tests -q`
-- Expect `.pytest_cache` access-denied warnings on this Windows setup. They are non-blocking unless the test itself fails.
 
 ## Fixture Policy
 
@@ -89,8 +88,6 @@
 - Before large recognizer redesigns, add ablation controls and provenance first.
 - Enter `xhigh` reasoning only when starting actual large-scale redesign, not for preparatory audits or narrow local fixes.
 
-## Windows / Tooling Notes
+## Local Paths
 
-- `apply_patch` may fail intermittently on this Windows sandbox. If it fails, use the smallest possible fallback edit and note that the failure was tool-side.
-- `gh` auth is expected to come from `.codex-gh/gh.env` in this workspace.
 - `.codex-*` paths are local-only and must remain ignored.
