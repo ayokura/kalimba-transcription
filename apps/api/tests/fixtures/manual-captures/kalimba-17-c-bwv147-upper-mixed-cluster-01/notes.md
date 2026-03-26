@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-25-bwv147-upper-mixed-cluster-01-kalimba-17-c
 - expected note: [C6,A4] / G5 / E5 / <C5,A4> / D5 / E5
 - capture intent: unknown
@@ -28,7 +28,7 @@
 
 ## Review
 
-- summary: BWV147 upper mixed-cluster child remains a practical pending target; human listening confirms the intended middle phrase is <C5,A4> / D5 / E5
-- reason: D5 is intentionally soft (around p relative to typical mf playing), so the recognizer still needs to recover a musically valid but low-level event
+- summary: practical BWV147 upper mixed-cluster child now matches the intended middle phrase <C5,A4> / D5 / E5
+- reason: D5 remains intentionally soft, but the local upper-echo cleanup now preserves the intended phrase without reintroducing the extra E5/triad bundle
 
 - audio review result: human listening confirms the intended middle phrase is <C5,A4> / D5 / E5, and the inserted E5 currently heard by the recognizer is not a true new note

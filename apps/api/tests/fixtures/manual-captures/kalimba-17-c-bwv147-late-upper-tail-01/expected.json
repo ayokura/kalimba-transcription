@@ -1,6 +1,6 @@
 {
-  "pending": false,
-  "status": "review_needed",
+  "pending": true,
+  "status": "pending",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "expected late-tail ordering does not match the scoped audio; D5/E5 tail events are not evident enough to keep this child as an active recognizer target",
+  "reason": "human listening confirms the expected D5 / E5 tail without a boundary problem; this is a valid practical BWV147 target, but the recognizer still under-recovers the soft terminal E5",
   "evaluationWindows": [
     {
       "startSec": 1.9,

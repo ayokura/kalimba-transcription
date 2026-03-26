@@ -287,6 +287,15 @@ def build_explanation(fixture_dir: Path, disabled_passes: list[str] | None = Non
             "normalizationReasonCounts": normalization_reason_counts,
             "disabledRepeatedPatternPasses": full_debug.get("disabledRepeatedPatternPasses") or [],
             "repeatedPatternPassTrace": full_debug.get("repeatedPatternPassTrace") or [],
+            "segmentCandidates": full_debug.get("segmentCandidates") or [],
+            "mergedEvents": full_debug.get("mergedEvents") or [],
+            "segmentDetection": {
+                "onsetTimes": full_debug.get("onsetTimes") or [],
+                "activeRanges": full_debug.get("activeRanges") or [],
+                "rawActiveRanges": full_debug.get("rawActiveRanges") or [],
+                "segments": full_debug.get("segments") or [],
+                "shortBridgeActiveRanges": full_debug.get("shortBridgeActiveRanges") or [],
+            },
         }
     )
     return summary

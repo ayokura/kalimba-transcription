@@ -43,6 +43,17 @@ def test_explain_manual_capture_json_output() -> None:
     assert len(payload["expectedEvents"]) == 6
     assert all(event["intent"] == "strict_chord" for event in payload["expectedEvents"])
     assert payload["expectedSummary"] == "E4 + G4 + B4 + D5 x 6"
+    assert payload["segmentCandidates"]
+    assert payload["mergedEvents"]
+    assert payload["segmentDetection"]["segments"]
+    first_segment = payload["segmentCandidates"][0]
+    assert "broadbandOnsetGain" in first_segment
+    assert "spectralFlux" in first_segment
+    assert "localOnsetCount" in first_segment
+    first_ranked = first_segment["rankedCandidates"][0]
+    assert "attackEnergy" in first_ranked
+    assert "attackToSustainRatio" in first_ranked
+    assert "candidateOnsetGain" in first_ranked
 
 def test_explain_manual_capture_json_output_with_ignored_ranges_reports_scope() -> None:
     result = run_script("kalimba-17-c-e4-g4-b4-d5-four-note-rolled-repeat-01", "--json")

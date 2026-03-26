@@ -2,26 +2,25 @@
   "pending": false,
   "status": "completed",
   "assertions": {
-    "minEvents": 6,
-    "maxEvents": 6,
+    "minEvents": 5,
+    "maxEvents": 5,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {},
     "expectedEventNoteSetsOrdered": [
-      "A4+C6",
-      "G5",
-      "E5",
-      "A4+C5",
+      "C4+E5",
+      "C5",
       "D5",
-      "E5"
+      "C5+E5",
+      "G5"
     ]
   },
-  "reason": "practical BWV147 upper mixed-cluster child now matches the intended [C6,A4] / G5 / E5 / <C5,A4> / D5 / E5 phrase without the extra upper echo or triad carryover",
+  "reason": "practical BWV147 restart-prefix child now matches the scoped opening phrase cleanly and avoids the provenance-ambiguous tail region",
   "evaluationWindows": [
     {
-      "startSec": 1.0,
-      "endSec": 5.62
+      "startSec": 1.5,
+      "endSec": 6.8
     }
   ]
 }

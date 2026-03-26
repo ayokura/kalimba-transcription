@@ -2256,7 +2256,7 @@ def test_bwv147_upper_cluster_recovers_delayed_terminal_e5() -> None:
     assert response.status_code == 200
     payload = response.json()
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
-    assert note_sets[-2:] == ["D5", "E5"]
+    assert note_sets == ["B5", "A4+C6", "G5", "E5", "A4+C5", "D5", "E5"]
     assert [round(start, 4) for start, _ in payload["debug"]["delayedTerminalOrphanSegments"]] == [5.416]
 
 

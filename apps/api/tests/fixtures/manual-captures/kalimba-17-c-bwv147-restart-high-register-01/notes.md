@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: review_needed
+- verdict: pending
 - scenario: 2026-03-25-bwv147-restart-high-register-01-kalimba-17-c
 - expected note: [E5,C4] / C5 / D5 / <E5,C5> / G5 / F5 / [F5,A4] / A5 / G5 / [G5,E4] / C6 / B5 / [C6,A4]
 - capture intent: unknown
@@ -35,7 +35,7 @@
 
 ## Review
 
-- summary: expected F5/[F5,A4] and final [C6,A4] sections do not match the scoped audio cleanly; this child is better treated as provenance review than as an active recognizer target
-- reason: expected F5/[F5,A4] and final [C6,A4] sections do not match the scoped audio cleanly; this child is better treated as provenance review than as an active recognizer target
+- summary: human listening confirms the expected F5 / [F5,A4] separation and final [C6,A4]; keep this as a practical pending recognizer target
+- reason: 6s-10s ear review confirms F5 -> [F5,A4] with a clear gap, and the final region audibly contains [C6,A4]; recognizer behavior here is a real target rather than a provenance mismatch
 
-- scoped debug shows only one onset around the supposed `F5 -> [F5,A4]` region (`9.0613s`) and only two onsets around the final region (`19.3520s`, `19.6187s`), which aligns better with `A4+F5` and `C6 -> A4+C5` than with the current expected ordering
+- user audio review: F5 -> [F5,A4] is audible with a gap in the 6s-10s region, and the final region audibly contains [C6,A4] (confidence: high, boundary issue: no)

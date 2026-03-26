@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "opening events 1-3 appear mismatched to the extracted audio; short attack windows still rank A4+F5 rather than the expected A4 / [G5,G4] / [F5,A4], so the provenance needs review before using this as a recognizer target",
+  "reason": "human listening confirms the intended A4 / [G5,G4] / [F5,A4] opening, but leading boundary contamination and the soft A4 make the current extraction unsuitable as a clean active target without re-scoping",
   "evaluationWindows": [
     {
       "startSec": 1.5,

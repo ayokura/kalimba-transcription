@@ -1,6 +1,6 @@
 {
-  "pending": false,
-  "status": "review_needed",
+  "pending": true,
+  "status": "pending",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "expected F5/[F5,A4] and final [C6,A4] sections do not match the scoped audio cleanly; this child is better treated as provenance review than as an active recognizer target",
+  "reason": "human listening confirms the expected F5 -> [F5,A4] separation and final [C6,A4] region; this is a valid practical BWV147 target, but the recognizer still collapses those sections incorrectly",
   "evaluationWindows": [
     {
       "startSec": 1.5,

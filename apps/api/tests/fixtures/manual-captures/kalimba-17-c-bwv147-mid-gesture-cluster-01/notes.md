@@ -28,6 +28,6 @@
 
 ## Review
 
-- summary: extracted practical BWV147 child; opening events 1-3 currently appear mismatched to the audio and need provenance review
-- reason: short attack windows still rank A4+F5 rather than the expected A4 / [G5,G4] / [F5,A4]; verify parent mapping or user-entered expected before treating this as a recognizer target
-- analysis note: 60-300ms opening windows continue to rank F5/A4 as the dominant content, which points to metadata/provenance uncertainty rather than a clean recognizer miss.
+- summary: human listening confirms the intended opening A4 / [G5,G4] / [F5,A4], but the current extraction still has leading-boundary contamination
+- reason: the expected opening is correct by ear, but a preceding resonance bleeds into the start of the clip and the initial A4 is intentionally soft; re-scope this child before treating it as a clean active recognizer target
+- user audio review: A4 / [G5,G4] / [F5,A4] is audible, with the A4 played softly and a leading boundary issue from the previous note residue (confidence: high)

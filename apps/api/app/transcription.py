@@ -86,6 +86,7 @@ CLUSTERED_RANGE_HEAD_MIN_DURATION = 0.05
 ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
+SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY = 2000.0
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO = 0.18
 RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO = 0.6
@@ -1018,6 +1019,79 @@ def should_keep_low_register_sparse_gap_tail(
     return candidate_rank == suffix_rank - 1
 
 
+def _active_range_debug_context(
+    range_index: int,
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+) -> dict[str, Any]:
+    range_start, range_end = active_ranges[range_index]
+    effective_range_start = range_start
+    previous_range_end = active_ranges[range_index - 1][1] if range_index > 0 else None
+    prior_onsets = [
+        time
+        for time in onset_times
+        if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005
+        and (previous_range_end is None or time >= previous_range_end + 0.005)
+    ]
+    if prior_onsets:
+        effective_range_start = prior_onsets[-1]
+        if (
+            previous_range_end is not None
+            and range_start - previous_range_end >= ACTIVE_RANGE_START_CLUSTER_MIN_GAP
+            and range_end - range_start <= ACTIVE_RANGE_START_CLUSTER_MAX_DURATION
+        ):
+            trailing_cluster = [
+                time for time in prior_onsets if effective_range_start - time <= ACTIVE_RANGE_START_CLUSTER_MAX_SPAN
+            ]
+            if len(trailing_cluster) >= 2:
+                effective_range_start = trailing_cluster[0]
+
+    range_onsets = [time for time in onset_times if effective_range_start + 0.005 < time < range_end - 0.05]
+    return {
+        "activeRangeStart": round(range_start, 4),
+        "activeRangeEnd": round(range_end, 4),
+        "backtrackedStartTime": round(effective_range_start, 4),
+        "activeRangeOnsets": [round(time, 4) for time in range_onsets],
+        "activeRangeOnsetCount": len(range_onsets),
+    }
+
+
+def build_segment_debug_contexts(
+    segments: list[tuple[float, float]],
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+) -> dict[tuple[float, float], dict[str, Any]]:
+    active_contexts = [_active_range_debug_context(index, active_ranges, onset_times) for index in range(len(active_ranges))]
+    segment_contexts: dict[tuple[float, float], dict[str, Any]] = {}
+    for index, (start_time, end_time) in enumerate(segments):
+        segment_key = (round(start_time, 4), round(end_time, 4))
+        segment_onsets = [time for time in onset_times if start_time <= time <= end_time]
+        context = {
+            "previousGapSec": None if index == 0 else round(start_time - segments[index - 1][1], 4),
+            "nextGapSec": None if index + 1 >= len(segments) else round(segments[index + 1][0] - end_time, 4),
+            "segmentOnsets": [round(time, 4) for time in segment_onsets],
+            "localOnsetCount": len(segment_onsets),
+        }
+        active_index = next(
+            (range_index for range_index, (range_start, range_end) in enumerate(active_ranges) if start_time < range_end and end_time > range_start),
+            None,
+        )
+        if active_index is not None:
+            context.update(active_contexts[active_index])
+        else:
+            context.update(
+                {
+                    "activeRangeStart": None,
+                    "activeRangeEnd": None,
+                    "backtrackedStartTime": None,
+                    "activeRangeOnsets": [],
+                    "activeRangeOnsetCount": 0,
+                }
+            )
+        segment_contexts[segment_key] = context
+    return segment_contexts
+
+
 def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
@@ -1211,6 +1285,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "onsetTimes": onset_times,
         "gapIoiDiagnostics": gap_ioi_diagnostics,
         "activeRanges": [[round(start, 4), round(end, 4)] for start, end in active_ranges],
+        "rawActiveRanges": [[round(start, 4), round(end, 4)] for start, end in raw_active_ranges],
         "shortBridgeActiveRanges": [[round(start, 4), round(end, 4)] for start, end in short_bridge_active_ranges],
         "gapInjectedSegments": [[round(start, 4), round(end, 4)] for start, end in gap_injected_segments],
         "leadingOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in leading_orphan_segments],
@@ -1572,9 +1647,130 @@ def onset_energy_gain(
     early_energy = _energy(early_chunk)
     return (early_energy + 1e-6) / (pre_energy + 1e-6)
 
-def build_debug_candidates(ranked: list[NoteHypothesis], limit: int = 5) -> list[dict[str, Any]]:
-    return [
-        {
+
+def _build_analysis_window_chunks(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    end_time: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
+    window_samples = max(int(sample_rate * ONSET_ENERGY_WINDOW_SECONDS), 512)
+    start_sample = max(int(start_time * sample_rate), 0)
+    end_sample = min(int(end_time * sample_rate), len(audio))
+    if end_sample - start_sample < 512:
+        return None
+
+    attack_end = min(start_sample + window_samples, end_sample)
+    pre_start = max(0, start_sample - window_samples)
+    pre_chunk = audio[pre_start:start_sample]
+    attack_chunk = audio[start_sample:attack_end]
+    sustain_start = max(start_sample, end_sample - window_samples)
+    sustain_chunk = audio[sustain_start:end_sample]
+    if len(pre_chunk) < 512 or len(attack_chunk) < 512 or len(sustain_chunk) < 512:
+        return None
+    return pre_chunk, attack_chunk, sustain_chunk
+
+
+def _chunk_spectrum(chunk: np.ndarray, sample_rate: int, n_fft: int) -> tuple[np.ndarray, np.ndarray]:
+    window = np.hanning(len(chunk))
+    spectrum = np.abs(np.fft.rfft(chunk * window, n=n_fft))
+    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    return frequencies, spectrum
+
+
+def _broadband_chunk_energy(chunk: np.ndarray) -> float:
+    return float(np.mean(np.square(np.asarray(chunk, dtype=np.float64))))
+
+
+def _positive_spectral_flux(
+    reference_spectrum: np.ndarray,
+    target_spectrum: np.ndarray,
+    frequencies: np.ndarray,
+    *,
+    min_frequency: float = 0.0,
+) -> float:
+    if min_frequency > 0.0:
+        mask = frequencies >= min_frequency
+        if not np.any(mask):
+            return 0.0
+        reference = reference_spectrum[mask]
+        target = target_spectrum[mask]
+    else:
+        reference = reference_spectrum
+        target = target_spectrum
+    positive_delta = np.maximum(target - reference, 0.0)
+    return float(np.sum(positive_delta) / (np.sum(reference) + 1e-6))
+
+
+def prepare_attack_debug_context(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    end_time: float,
+) -> dict[str, Any] | None:
+    chunks = _build_analysis_window_chunks(audio, sample_rate, start_time, end_time)
+    if chunks is None:
+        return None
+
+    pre_chunk, attack_chunk, sustain_chunk = chunks
+    n_fft = max(4096, 1 << int(np.ceil(np.log2(max(len(pre_chunk), len(attack_chunk), len(sustain_chunk))))))
+    frequencies, pre_spectrum = _chunk_spectrum(pre_chunk, sample_rate, n_fft)
+    _, attack_spectrum = _chunk_spectrum(attack_chunk, sample_rate, n_fft)
+    _, sustain_spectrum = _chunk_spectrum(sustain_chunk, sample_rate, n_fft)
+
+    pre_energy = _broadband_chunk_energy(pre_chunk)
+    attack_energy = _broadband_chunk_energy(attack_chunk)
+    sustain_energy = _broadband_chunk_energy(sustain_chunk)
+    return {
+        "frequencies": frequencies,
+        "preSpectrum": pre_spectrum,
+        "attackSpectrum": attack_spectrum,
+        "sustainSpectrum": sustain_spectrum,
+        "broadband": {
+            "broadbandPreAttackEnergy": round(pre_energy, 6),
+            "broadbandAttackEnergy": round(attack_energy, 6),
+            "broadbandSustainEnergy": round(sustain_energy, 6),
+            "broadbandOnsetGain": round((attack_energy + 1e-6) / (pre_energy + 1e-6), 6),
+            "broadbandAttackToSustainRatio": round((attack_energy + 1e-6) / (sustain_energy + 1e-6), 6),
+            "spectralFlux": round(_positive_spectral_flux(pre_spectrum, attack_spectrum, frequencies), 6),
+            "highBandSpectralFlux": round(
+                _positive_spectral_flux(
+                    pre_spectrum,
+                    attack_spectrum,
+                    frequencies,
+                    min_frequency=SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY,
+                ),
+                6,
+            ),
+        },
+    }
+
+
+def build_candidate_attack_debug(attack_context: dict[str, Any], target_frequency: float) -> dict[str, Any]:
+    frequencies = attack_context["frequencies"]
+    pre_spectrum = attack_context["preSpectrum"]
+    attack_spectrum = attack_context["attackSpectrum"]
+    sustain_spectrum = attack_context["sustainSpectrum"]
+    pre_energy = peak_energy_near(frequencies, pre_spectrum, target_frequency)
+    attack_energy = peak_energy_near(frequencies, attack_spectrum, target_frequency)
+    sustain_energy = peak_energy_near(frequencies, sustain_spectrum, target_frequency)
+    return {
+        "preAttackEnergy": round(pre_energy, 6),
+        "attackEnergy": round(attack_energy, 6),
+        "sustainEnergy": round(sustain_energy, 6),
+        "attackToSustainRatio": round((attack_energy + 1e-6) / (sustain_energy + 1e-6), 6),
+        "candidateOnsetGain": round((attack_energy + 1e-6) / (pre_energy + 1e-6), 6),
+    }
+
+
+def build_debug_candidates(
+    ranked: list[NoteHypothesis],
+    limit: int = 5,
+    attack_profiles: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    payload: list[dict[str, Any]] = []
+    for hypothesis in ranked[:limit]:
+        item = {
             "noteName": hypothesis.candidate.note_name,
             "score": round(hypothesis.score, 6),
             "fundamentalEnergy": round(hypothesis.fundamental_energy, 6),
@@ -1587,8 +1783,12 @@ def build_debug_candidates(ranked: list[NoteHypothesis], limit: int = 5) -> list
             "harmonics": hypothesis.harmonics or [],
             "subharmonics": hypothesis.subharmonics or [],
         }
-        for hypothesis in ranked[:limit]
-    ]
+        if attack_profiles is not None:
+            profile = attack_profiles.get(hypothesis.candidate.note_name)
+            if profile is not None:
+                item.update(profile)
+        payload.append(item)
+    return payload
 
 def maybe_replace_stale_recent_primary(
     audio: np.ndarray,
@@ -2719,16 +2919,25 @@ def segment_peaks(
 
     debug_payload = None
     if debug:
+        attack_context = prepare_attack_debug_context(audio, sample_rate, start_time, end_time)
+        segment_attack_debug = attack_context["broadband"] if attack_context is not None else {}
+        attack_profiles: dict[str, dict[str, Any]] = {}
+        if attack_context is not None:
+            for hypothesis in [primary, *ranked[:5], *residual_ranked[:5]]:
+                note_name = hypothesis.candidate.note_name
+                if note_name not in attack_profiles:
+                    attack_profiles[note_name] = build_candidate_attack_debug(attack_context, hypothesis.candidate.frequency)
         debug_payload = {
             "startTime": round(start_time, 4),
             "endTime": round(end_time, 4),
             "durationSec": round(end_time - start_time, 4),
             "selectedNotes": [candidate.note_name for candidate in selected],
-            "primaryCandidate": build_debug_candidates([primary], limit=1)[0],
+            **segment_attack_debug,
+            "primaryCandidate": build_debug_candidates([primary], limit=1, attack_profiles=attack_profiles)[0],
             "primaryOnsetGain": None if primary_onset_gain is None else round(primary_onset_gain, 6),
             "primaryPromotion": primary_promotion_debug,
-            "rankedCandidates": build_debug_candidates(ranked),
-            "residualCandidates": build_debug_candidates(residual_ranked),
+            "rankedCandidates": build_debug_candidates(ranked, attack_profiles=attack_profiles),
+            "residualCandidates": build_debug_candidates(residual_ranked, attack_profiles=attack_profiles),
             "secondaryDecisionTrail": secondary_decision_trail,
             "rawPeaks": build_raw_peaks(frequencies, spectrum, tuning),
         }
@@ -4656,6 +4865,74 @@ def suppress_isolated_triad_extensions(raw_events: list[RawEvent]) -> list[RawEv
     return cleaned
 
 
+def suppress_recent_upper_echo_mixed_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
+    if len(raw_events) < 5:
+        return raw_events
+
+    without_echo: list[RawEvent] = []
+    for index, event in enumerate(raw_events):
+        if 2 <= index < len(raw_events) - 2 and len(event.notes) == 1:
+            previous_previous_event = raw_events[index - 2]
+            previous_event = raw_events[index - 1]
+            next_event = raw_events[index + 1]
+            next_next_event = raw_events[index + 2]
+            current_note = event.notes[0]
+            if (
+                len(previous_previous_event.notes) == 1
+                and len(previous_event.notes) == 1
+                and len(next_event.notes) == 3
+                and len(next_next_event.notes) == 1
+                and event.is_gliss_like
+                and event.end_time - event.start_time <= 0.14
+                and current_note.note_name == previous_previous_event.notes[0].note_name
+                and previous_event.notes[0].frequency < current_note.frequency
+                and 250.0 <= abs(cents_distance(previous_event.notes[0].frequency, current_note.frequency)) <= 350.0
+                and previous_event.notes[0].note_name in {note.note_name for note in next_event.notes}
+                and all(note.frequency < current_note.frequency for note in next_event.notes)
+                and max(note.frequency for note in next_event.notes if note.note_name != previous_event.notes[0].note_name)
+                < next_next_event.notes[0].frequency
+                < previous_event.notes[0].frequency
+            ):
+                continue
+        without_echo.append(event)
+
+    cleaned: list[RawEvent] = []
+    for index, event in enumerate(without_echo):
+        updated_event = event
+        if 2 <= index < len(without_echo) - 1 and len(event.notes) == 3:
+            previous_previous_event = without_echo[index - 2]
+            previous_event = without_echo[index - 1]
+            next_event = without_echo[index + 1]
+            if (
+                len(previous_previous_event.notes) == 1
+                and len(previous_event.notes) == 1
+                and len(next_event.notes) == 1
+            ):
+                repeated_notes = [note for note in event.notes if note.note_name == previous_event.notes[0].note_name]
+                fresh_notes = [note for note in event.notes if note.note_name != previous_event.notes[0].note_name]
+                if len(repeated_notes) == 1 and len(fresh_notes) == 2:
+                    repeated_note = repeated_notes[0]
+                    if (
+                        repeated_note.frequency == max(note.frequency for note in event.notes)
+                        and previous_previous_event.notes[0].frequency > repeated_note.frequency
+                        and 250.0 <= abs(cents_distance(previous_previous_event.notes[0].frequency, repeated_note.frequency)) <= 350.0
+                        and max(note.frequency for note in fresh_notes) < next_event.notes[0].frequency < repeated_note.frequency
+                        and event.end_time - event.start_time <= 0.55
+                    ):
+                        sorted_fresh_notes = sorted(fresh_notes, key=lambda note: note.frequency)
+                        updated_event = RawEvent(
+                            start_time=event.start_time,
+                            end_time=event.end_time,
+                            notes=sorted_fresh_notes,
+                            is_gliss_like=event.is_gliss_like,
+                            primary_note_name=sorted_fresh_notes[-1].note_name,
+                            primary_score=event.primary_score,
+                        )
+        cleaned.append(updated_event)
+
+    return cleaned
+
+
 def _debug_event_signature(raw_event: RawEvent) -> tuple[float, float, tuple[str, ...], bool]:
     return (
         round(raw_event.start_time, 4),
@@ -4963,6 +5240,11 @@ async def transcribe_audio(
 
     raw_events: list[RawEvent] = []
     segment_candidates_debug: list[dict[str, Any]] = []
+    segment_contexts = build_segment_debug_contexts(
+        segments,
+        [tuple(item) for item in segment_debug.get("activeRanges", [])],
+        [float(value) for value in segment_debug.get("onsetTimes", [])],
+    ) if debug else {}
     sparse_gap_tail_segment_keys = {
         (round(start_time, 4), round(end_time, 4))
         for start_time, end_time in segment_debug.get("sparseGapTailSegments", [])
@@ -5007,6 +5289,7 @@ async def transcribe_audio(
 
         segment_key = (round(start_time, 4), round(end_time, 4))
         if debug and candidate_debug:
+            candidate_debug.update(segment_contexts.get(segment_key, {}))
             candidate_debug["segmentSource"] = (
                 "single_onset_gap_head" if segment_key in single_onset_gap_head_segment_keys
                 else "sparse_gap_tail" if segment_key in sparse_gap_tail_segment_keys
@@ -5075,6 +5358,7 @@ async def transcribe_audio(
     merged_events = collapse_late_descending_step_handoffs(merged_events)
     merged_events = merge_short_chord_clusters(merged_events)
     merged_events = merge_adjacent_events(merged_events)
+    merged_events = suppress_recent_upper_echo_mixed_clusters(merged_events)
     merged_events = collapse_ascending_restart_lower_residue_singletons(merged_events, tuning)
     merged_events = merge_adjacent_events(merged_events)
     merged_events, repeated_pattern_pass_trace = apply_repeated_pattern_passes(

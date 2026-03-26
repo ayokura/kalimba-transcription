@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: review_needed
+- verdict: pending
 - scenario: 2026-03-25-bwv147-late-upper-tail-01-kalimba-17-c
 - expected note: G5 / E5 / <C5,A4> / D5 / E5
 - capture intent: unknown
@@ -27,10 +27,10 @@
 
 ## Review
 
-- summary: expected late-tail ordering does not match the scoped audio; D5/E5 tail events are not evident enough to keep this child as an active recognizer target
-- reason: expected late-tail ordering does not match the scoped audio; D5/E5 tail events are not evident enough to keep this child as an active recognizer target
+- summary: human listening confirms the expected late-tail D5 / E5 region, so this remains a practical pending recognizer target
+- reason: ear review confirms D5 / E5 without a boundary problem, with the terminal E5 played softly but intentionally; recognizer under-recovery here is a real practical miss
 
 - evaluation window trimmed to exclude preceding phrase tail from the parent recording
 
 
-- scoped debug shows only `G5`, `E5`, and the following mixed clusters; the expected `D5 / E5` tail is not isolated in the extracted audio
+- user audio review: D5 / E5 is audible, boundary issue is absent, and the terminal E5 is intentionally soft (confidence: high)
