@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import sys
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -23,6 +26,19 @@ def render_text(summary: dict) -> str:
     return buffer.getvalue()
 
 
+def run_explain_cli(*args: str) -> subprocess.CompletedProcess[str]:
+    env = dict(os.environ)
+    env.setdefault("PYTHONPATH", str(ROOT / "apps" / "api"))
+    return subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "explain_manual_capture.py"), *args],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+        env=env,
+        check=True,
+    )
+
+
 def test_explain_manual_capture_text_output() -> None:
     summary = explain_fixture("kalimba-17-c-c4-repeat-01")
     output = render_text(summary)
@@ -30,6 +46,14 @@ def test_explain_manual_capture_text_output() -> None:
     assert "status: completed" in output
     assert "sourceProfile: acoustic_real" in output
     assert "evaluationMode: full_audio" in output
+
+
+def test_explain_manual_capture_cli_smoke() -> None:
+    result = run_explain_cli("kalimba-17-c-c4-repeat-01", "--json")
+    payload = json.loads(result.stdout)
+    assert payload["fixtureId"] == "kalimba-17-c-c4-repeat-01"
+    assert payload["status"] == "completed"
+    assert payload["eventCount"] >= 1
 
 
 def test_explain_manual_capture_json_output() -> None:
