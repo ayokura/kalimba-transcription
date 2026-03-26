@@ -1,0 +1,13 @@
+{
+  "pending": true,
+  "status": "pending",
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "reason": "practical BWV147 F5-to-A5 child extracted to isolate the A5 lower-carryover artifact after [F5,A4]"
+}
