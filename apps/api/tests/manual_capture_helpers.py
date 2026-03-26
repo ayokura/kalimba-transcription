@@ -354,7 +354,7 @@ def build_evaluation_audio_bytes(fixture_dir: Path, expected: dict[str, Any]) ->
     )
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=32)
 def _build_evaluation_audio_bytes_cached(
     fixture_dir: Path,
     windows: tuple[tuple[float, float], ...],

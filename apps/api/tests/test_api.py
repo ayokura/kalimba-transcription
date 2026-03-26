@@ -17,20 +17,21 @@ client = TestClient(app)
 MANUAL_CAPTURE_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "manual-captures"
 
 
-@lru_cache(maxsize=None)
-def _load_manual_capture_fixture_inputs(fixture_name: str) -> tuple[dict, bytes]:
+@lru_cache(maxsize=32)
+def _load_manual_capture_fixture_inputs(fixture_name: str) -> tuple[dict, Path]:
     fixture_dir = MANUAL_CAPTURE_FIXTURE_ROOT / fixture_name
     request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    return request_payload, (fixture_dir / "audio.wav").read_bytes()
+    return request_payload, fixture_dir / "audio.wav"
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=32)
 def _transcribe_manual_capture_fixture(
     fixture_name: str,
     debug: bool,
     disabled_repeated_pattern_passes_json: str | None,
 ) -> dict:
-    request_payload, audio_bytes = _load_manual_capture_fixture_inputs(fixture_name)
+    request_payload, audio_path = _load_manual_capture_fixture_inputs(fixture_name)
+    audio_bytes = audio_path.read_bytes()
     data = {
         "tuning": json.dumps(request_payload["tuning"]),
         "debug": "true" if debug else "false",
@@ -44,7 +45,11 @@ def _transcribe_manual_capture_fixture(
         files={"file": ("audio.wav", audio_bytes, "audio/wav")},
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 200, (
+        f"Unexpected status code {response.status_code} for fixture '{fixture_name}' "
+        f"(debug={debug}, disabled_repeated_pattern_passes_json={disabled_repeated_pattern_passes_json}). "
+        f"Response body: {response.text}"
+    )
     return response.json()
 
 

@@ -1,12 +1,14 @@
 import json
+from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
-from contextlib import redirect_stdout
 
+import pytest
 from manual_capture_helpers import assertion_failure_details
-from scripts.explain_manual_capture import build_explanation, print_text, REPEATED_PATTERN_PASS_IDS
+from scripts.explain_manual_capture import REPEATED_PATTERN_PASS_IDS, build_explanation, print_text
 
 ROOT = Path(__file__).resolve().parents[3]
+pytestmark = [pytest.mark.manual_capture, pytest.mark.slow]
 
 
 def explain_fixture(fixture_id: str, *disabled_passes: str) -> dict:
