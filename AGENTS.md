@@ -57,7 +57,7 @@
   - that the detailed explanation is in the commit body
 - Subagents should not create separate spike-archive branches of their own for this purpose. Because subagents already work on isolated branches/worktrees, they should preserve undoable experiment history with normal commits plus explicit revert commits when needed.
 
-## Subagent Coordination
+## Common Agent Workflow
 
 - When asking subagents to inspect an issue, do not pass only an issue number.
 - Always include either:
@@ -71,23 +71,22 @@
   - stop before editing
   - report that need back to the primary agent
   - let the primary agent either apply the change itself or move the task into a dedicated editing worktree
-- Any subagent that may edit files must work in its own git worktree under `.codex-worktrees/<agent-name>/`.
+- Any subagent that may edit files must use a dedicated worktree rather than the main worktree.
 - For editing subagents:
-  - create a dedicated branch for that subagent
-  - keep the branch name under the `codex/` prefix
+  - use a dedicated branch for that subagent
   - do not let the subagent edit the main worktree directly
-- The primary agent is responsible for:
-  - creating the worktree and branch before delegation
-  - integrating or cherry-picking the result
-  - cleaning up stale `.codex-worktrees/...` directories after the work is resolved
+- Dedicated worktree setup, integration, and cleanup should be handled by the primary agent unless the active toolset provides equivalent isolation automatically.
 - If a subagent is only doing inspection or debugging, prefer `explorer` plus no file edits over creating a worktree.
 
 ## Recognizer Strategy Notes
 
 - Treat repeated-pattern normalizers as suspicious until proven necessary. Favor local/causal explanations over corpus-wide dominant-pattern rewrites.
 - Before large recognizer redesigns, add ablation controls and provenance first.
-- Enter `xhigh` reasoning only when starting actual large-scale redesign, not for preparatory audits or narrow local fixes.
 
-## Local Paths
+## Codex-Specific Notes
 
+- In Codex, editing subagents must use dedicated worktrees under `.codex-worktrees/<agent-name>/` because the toolset does not provide equivalent automatic isolation.
+- In Codex, editing subagent branches should use the `codex/` prefix.
+- In Codex subagent coordination, do not pass only an issue number; include the issue title/summary or the local problem statement.
+- In Codex/GPT-5.4-era reasoning controls, enter `xhigh` only when starting actual large-scale redesign, not for preparatory audits or narrow local fixes. Re-evaluate this guidance if the toolset or reasoning-tier definitions change.
 - `.codex-*` paths are local-only and must remain ignored.
