@@ -1,0 +1,22 @@
+{
+  "status": "completed",
+  "assertions": {
+    "minEvents": 9,
+    "maxEvents": 9,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {},
+    "expectedEventNoteSetsOrdered": [
+      "C5",
+      "B4+D4+G4",
+      "C5",
+      "D5",
+      "D4+G4",
+      "B4",
+      "D5",
+      "B4+D5+F5+G4",
+      "E5"
+    ]
+  }
+}

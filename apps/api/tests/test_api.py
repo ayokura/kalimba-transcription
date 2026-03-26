@@ -2153,3 +2153,10 @@ def test_bwv147_lower_mixed_roll_recovers_opening_mixed_dyad_and_long_gap_run() 
         (7.5467, 7.8667),
         (9.0667, 9.3867),
     ]
+
+
+@manual_capture_slow
+def test_bwv147_lower_context_roll_matches_completed_nine_event_phrase() -> None:
+    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-lower-context-roll-01")
+    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
+    assert note_sets == ["C5", "D4+G4+B4", "C5", "D5", "D4+G4", "B4", "D5", "G4+B4+D5+F5", "E5"]
