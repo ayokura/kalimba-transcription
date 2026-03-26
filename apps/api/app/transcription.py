@@ -2627,6 +2627,12 @@ def segment_peaks(
                 selected.append(accepted_hypothesis.candidate)
                 break
 
+    rejected_recent_carryover_names = {
+        entry["noteName"]
+        for entry in secondary_decision_trail
+        if not entry.get("accepted") and "recent-carryover-candidate" in entry.get("reasons", [])
+    }
+
     if (
         len(selected) == 2
         and not promoted_secondary_to_recent_upper_octave
@@ -2652,6 +2658,11 @@ def segment_peaks(
                 if any(are_harmonic_related(candidate, existing) for existing in selected):
                     continue
                 onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, candidate.frequency)
+                if (
+                    candidate.note_name in rejected_recent_carryover_names
+                    and onset_gain < GLISS_TERTIARY_STRONG_ONSET_GAIN
+                ):
+                    continue
                 viable_extensions.append((hypothesis, onset_gain))
 
             chosen_extension: tuple[NoteHypothesis, float] | None = None
