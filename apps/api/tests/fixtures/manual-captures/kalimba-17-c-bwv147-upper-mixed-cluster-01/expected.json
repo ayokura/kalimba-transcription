@@ -1,0 +1,19 @@
+{
+  "pending": true,
+  "status": "pending",
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "reason": "practical BWV147 upper mixed-cluster child extracted from the parent corpus to isolate merge-heavy recognizer failures",
+  "evaluationWindows": [
+    {
+      "startSec": 1.0,
+      "endSec": 4.01
+    }
+  ]
+}
