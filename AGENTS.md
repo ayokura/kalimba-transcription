@@ -2,15 +2,18 @@
 
 ## Scope
 
-- This file captures repo-specific collaboration rules for Codex/agents working in `C:\src\calimba-score`.
+- This file is the shared source of truth for all agents working in this repository.
 - Keep `main` runnable. Do not leave `main` in a knowingly broken state.
+- Shared rules go here. Agent-specific rules go in the agent-specific Notes sections within this document, or in files referenced from those sections.
 
 ## Python / Test Environment
 
 - Primary API test environment:
-  - `C:\src\calimba-score\.venv313`
+  - `.venv313`
 - API test command:
-  - `$env:PYTHONPATH='C:\src\calimba-score\apps\api'; .\.venv313\Scripts\python -m pytest apps/api/tests -q`
+  - PowerShell: `$env:PYTHONPATH='apps/api'; .\.venv313\Scripts\python -m pytest apps/api/tests -q`
+  - Bash: `PYTHONPATH=apps/api .venv313/Scripts/python -m pytest apps/api/tests -q`
+- Note: `PYTHONPATH` is required because `apps/api` is not installed as a package. See issue #24 for a potential fix via `pyproject.toml`.
 
 ## Fixture Policy
 
@@ -82,6 +85,14 @@
 
 - Treat repeated-pattern normalizers as suspicious until proven necessary. Favor local/causal explanations over corpus-wide dominant-pattern rewrites.
 - Before large recognizer redesigns, add ablation controls and provenance first.
+
+## Claude Code-Specific Notes
+
+- Claude Code reads this file via `@AGENTS.md` in CLAUDE.md.
+- Agent-specific rules for Claude Code are maintained in CLAUDE.md, not here.
+- Explorer subagents: use `subagent_type: "Explore"` — this type has no Edit/Write access by design, satisfying the "explorer must not edit" rule automatically.
+- Editing subagents: use `isolation: "worktree"` on the Agent tool — equivalent isolation is provided automatically, no manual worktree setup needed.
+- Branch prefix for Claude Code-initiated spikes: `claude/` (mirrors Codex's `codex/` convention).
 
 ## Codex-Specific Notes
 
