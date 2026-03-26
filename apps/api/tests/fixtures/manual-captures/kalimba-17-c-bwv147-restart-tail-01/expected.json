@@ -1,0 +1,19 @@
+{
+  "pending": true,
+  "status": "pending",
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "reason": "practical BWV147 restart-tail child extracted to isolate late restart bundling and final [C6,A4] reconstruction",
+  "evaluationWindows": [
+    {
+      "startSec": 0.2,
+      "endSec": 7.27
+    }
+  ]
+}
