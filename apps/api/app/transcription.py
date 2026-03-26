@@ -972,15 +972,14 @@ def collect_attack_validated_gap_segments(
     segments: list[tuple[float, float]] = []
 
     def _valid_gap_onsets(gap_start: float, gap_end: float) -> list[float]:
-        return [
-            time
-            for time in onset_times
-            if gap_start + 0.05 < time < gap_end - 0.05
-            and onset_profiles.get(round(time, 4), OnsetAttackProfile(
-                onset_time=time, broadband_onset_gain=0.0, high_band_spectral_flux=0.0,
-                broadband_spectral_flux=0.0, is_valid_attack=False,
-            )).is_valid_attack
-        ]
+        valid: list[float] = []
+        for time in onset_times:
+            if not (gap_start + 0.05 < time < gap_end - 0.05):
+                continue
+            profile = onset_profiles.get(round(time, 4))
+            if profile is not None and profile.is_valid_attack:
+                valid.append(time)
+        return valid
 
     # Inter-range gaps
     for index in range(len(active_ranges) - 1):
