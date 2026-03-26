@@ -1,0 +1,13 @@
+{
+  "pending": true,
+  "status": "pending",
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "reason": "practical BWV147 upper transition child extracted to isolate F5/[F5,A4]/A5/G5/[G5,E4] carryover and merge behavior"
+}
