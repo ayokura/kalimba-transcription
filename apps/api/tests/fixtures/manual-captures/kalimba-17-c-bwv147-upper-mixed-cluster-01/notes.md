@@ -9,8 +9,8 @@
 - source profile: acoustic_real
 - captured at: 2026-03-25T13:49:01.459Z
 - source fixture: kalimba-17-c-bwv147-sequence-163-01
-- extracted range: 14.180s - 17.190s
-- audio clip range: 13.180s - 18.190s
+- extracted range: 14.180s - 18.800s
+- audio clip range: 13.180s - 19.800s
 - extracted events: 13-18
 
 ## Expected Performance
