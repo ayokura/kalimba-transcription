@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.tunings import get_default_tunings
-from app.transcription import REPEATED_PATTERN_PASS_IDS, NoteCandidate, NoteHypothesis, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_ascending_restart_lower_residue_singletons, collapse_late_descending_step_handoffs, collapse_same_start_primary_singletons, simplify_descending_adjacent_dyad_residue, collect_multi_onset_gap_segments, collect_post_sparse_gap_run_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, collect_two_onset_terminal_tail_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_descending_upper_return_overlap, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
+from app.transcription import REPEATED_PATTERN_PASS_IDS, GapAttackCandidates, NoteCandidate, NoteHypothesis, OnsetAttackProfile, RawEvent, apply_repeated_pattern_passes, build_recent_ascending_primary_run_ceiling, build_recent_note_names, classify_event_gesture, collapse_ascending_restart_lower_residue_singletons, collapse_late_descending_step_handoffs, collapse_same_start_primary_singletons, simplify_descending_adjacent_dyad_residue, collect_attack_validated_gap_candidates, collect_multi_onset_gap_segments, collect_post_sparse_gap_run_segments, collect_terminal_multi_onset_segments, collect_two_onset_gap_segments, collect_two_onset_terminal_tail_segments, detect_segments, is_adjacent_tuning_step, merge_four_note_gliss_clusters, merge_short_chord_clusters, merge_short_gliss_clusters, normalize_repeated_explicit_four_note_patterns, normalize_repeated_four_note_family, normalize_repeated_triad_patterns, normalize_strict_four_note_subsets, select_contiguous_four_note_cluster, is_slide_playable_contiguous_cluster, should_block_descending_repeated_primary_tertiary_extension, should_keep_dense_trailing_onset, simplify_short_gliss_prefix_to_contiguous_singleton, simplify_short_secondary_bleed, suppress_descending_restart_residual_cluster, suppress_descending_terminal_residual_cluster, suppress_descending_upper_return_overlap, suppress_isolated_triad_extensions, suppress_leading_descending_overlap, suppress_leading_gliss_neighbor_noise, suppress_repeated_triad_blips, segment_peaks, suppress_leading_gliss_subset_transients, suppress_resonant_carryover, suppress_short_residual_tails, suppress_subset_decay_events
 
 client = TestClient(app)
 MANUAL_CAPTURE_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "manual-captures"
@@ -262,6 +262,47 @@ def test_collect_multi_onset_gap_segments_requires_long_regular_gap() -> None:
     segments = collect_multi_onset_gap_segments(active_ranges, onset_times)
 
     assert segments == [(0.62, 0.94), (0.94, 1.24), (1.24, 1.82), (1.82, 2.5)]
+
+
+def test_collect_attack_validated_gap_candidates_returns_valid_attack_subset() -> None:
+    active_ranges = [(2.4573, 3.0747), (11.3773, 11.9013)]
+    onset_times = [3.504, 3.552, 5.0613, 5.68, 6.3013, 7.5467, 8.9467, 8.9893, 9.0667]
+    onset_profiles = {
+        3.504: OnsetAttackProfile(3.504, 4.219822, 28.350282, 2.38015, True),
+        3.552: OnsetAttackProfile(3.552, 1.300026, 0.000596, 0.052879, False),
+        5.0613: OnsetAttackProfile(5.0613, 1996.969355, 188.369779, 141.707333, True),
+        5.68: OnsetAttackProfile(5.68, 0.807941, 54.555144, 1.22241, True),
+        6.3013: OnsetAttackProfile(6.3013, 4.875818, 23.044867, 2.73317, True),
+        7.5467: OnsetAttackProfile(7.5467, 35.267216, 67.174492, 8.80443, True),
+        8.9467: OnsetAttackProfile(8.9467, 18.432635, 30.794041, 13.678491, True),
+        8.9893: OnsetAttackProfile(8.9893, 4.577633, 0.810421, 0.784021, False),
+        9.0667: OnsetAttackProfile(9.0667, 53.035509, 10.489827, 7.509409, True),
+    }
+
+    candidates = collect_attack_validated_gap_candidates(active_ranges, onset_times, onset_profiles, 12.319)
+
+    assert [[round(value, 4) for value in gap] for gap in candidates.inter_ranges] == [[3.504, 5.0613, 5.68, 6.3013, 7.5467, 8.9467, 9.0667]]
+    assert candidates.leading == []
+    assert candidates.trailing == []
+
+
+def test_collect_multi_onset_gap_segments_promotes_attack_validated_run_candidates() -> None:
+    active_ranges = [(2.4573, 3.0747), (11.3773, 11.9013)]
+    onset_times = [3.504, 3.552, 5.0613, 5.68, 6.3013, 7.5467, 8.9467, 9.0667]
+    gap_attack_candidates = GapAttackCandidates(
+        inter_ranges=[[3.504, 5.0613, 5.68, 6.3013, 7.5467, 8.9467, 9.0667]],
+        leading=[],
+        trailing=[],
+    )
+
+    segments = collect_multi_onset_gap_segments(active_ranges, onset_times, gap_attack_candidates=gap_attack_candidates)
+
+    assert [tuple(round(value, 4) for value in segment) for segment in segments] == [
+        (5.0613, 5.68),
+        (6.3013, 6.6213),
+        (7.5467, 7.8667),
+        (9.0667, 9.3867),
+    ]
 
 
 def test_collect_two_onset_gap_segments_requires_tight_mute_restrike_shape() -> None:
@@ -2196,6 +2237,32 @@ def test_bwv147_lower_context_roll_matches_completed_nine_event_phrase() -> None
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-lower-context-roll-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets == ["C5", "D4+G4+B4", "C5", "D5", "D4+G4", "B4", "D5", "G4+B4+D5+F5", "E5"]
+
+
+@manual_capture_slow
+def test_bwv147_lower_context_roll_keeps_gap_run_without_post_sparse_collector(monkeypatch: pytest.MonkeyPatch) -> None:
+    import app.transcription as transcription
+
+    request_payload, audio_path = _load_manual_capture_fixture_inputs("kalimba-17-c-bwv147-lower-context-roll-01")
+    audio_bytes = audio_path.read_bytes()
+    monkeypatch.setattr(transcription, "ABLATE_POST_SPARSE_GAP_RUN", True)
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
+
+    assert note_sets == ["C5", "D4+G4+B4", "C5", "D5", "D4+G4", "B4", "D5", "G4+B4+D5+F5", "E5"]
+    assert payload["debug"]["postSparseGapRunSegments"] == []
+    assert [tuple(round(value, 4) for value in segment) for segment in payload["debug"]["multiOnsetGapSegments"]] == [
+        (5.0613, 5.68),
+        (6.3013, 6.6213),
+        (7.5467, 7.8667),
+        (9.0667, 9.3867),
+    ]
 
 
 @manual_capture_slow
