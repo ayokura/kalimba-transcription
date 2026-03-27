@@ -607,15 +607,19 @@ class GapAttackCandidates:
     trailing: list[float]
 
 
+LEADING_GAP_START_MARGIN = 0.10
+
+
 def _valid_attack_gap_onsets(
     gap_start: float,
     gap_end: float,
     onset_times: list[float],
     onset_profiles: dict[float, OnsetAttackProfile],
+    start_margin: float = 0.05,
 ) -> list[float]:
     valid: list[float] = []
     for time in onset_times:
-        if not (gap_start + 0.05 < time < gap_end - 0.05):
+        if not (gap_start + start_margin < time < gap_end - 0.05):
             continue
         profile = onset_profiles.get(round(time, 4))
         if profile is not None and profile.is_valid_attack:
@@ -638,7 +642,7 @@ def collect_attack_validated_gap_candidates(
     leading: list[float] = []
     trailing: list[float] = []
     if active_ranges:
-        leading = _valid_attack_gap_onsets(0.0, active_ranges[0][0], onset_times, onset_profiles)
+        leading = _valid_attack_gap_onsets(0.0, active_ranges[0][0], onset_times, onset_profiles, start_margin=LEADING_GAP_START_MARGIN)
         trailing = _valid_attack_gap_onsets(active_ranges[-1][1], audio_duration + 0.06, onset_times, onset_profiles)
 
     return GapAttackCandidates(inter_ranges=inter_ranges, leading=leading, trailing=trailing)
