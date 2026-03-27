@@ -662,75 +662,50 @@ def collect_attack_validated_gap_candidates(
     return GapAttackCandidates(inter_ranges=inter_ranges, leading=leading, trailing=trailing)
 
 
-def _collect_promoted_candidate_gap_segments(
-    gap_onsets: list[float],
+CANDIDATE_PROMOTION_MIN_CANDIDATES = 1
+CANDIDATE_PROMOTION_MIN_EDGE_DISTANCE = 0.3
+CANDIDATE_PROMOTION_MIN_SEGMENT_DURATION = 0.08
+CANDIDATE_PROMOTION_SEGMENT_DURATION = 0.32
+CANDIDATE_PROMOTION_CLUSTER_MAX_INTERVAL = 0.1
+
+
+def _cluster_gap_candidates(candidate_onsets: list[float]) -> list[float]:
+    if not candidate_onsets:
+        return []
+    clusters: list[list[float]] = [[candidate_onsets[0]]]
+    for onset_time in candidate_onsets[1:]:
+        if onset_time - clusters[-1][-1] <= CANDIDATE_PROMOTION_CLUSTER_MAX_INTERVAL:
+            clusters[-1].append(onset_time)
+        else:
+            clusters.append([onset_time])
+    return [cluster[-1] for cluster in clusters]
+
+
+def _promote_gap_candidates_by_structure(
     candidate_onsets: list[float],
-    next_start: float,
+    gap_start: float,
+    gap_end: float,
 ) -> list[tuple[float, float]]:
-    if len(candidate_onsets) < POST_SPARSE_GAP_RUN_MIN_RUN_ONSETS:
+    clustered = _cluster_gap_candidates(candidate_onsets)
+    if len(clustered) < CANDIDATE_PROMOTION_MIN_CANDIDATES:
         return []
 
-    run_start_index = None
-    run_end_index = None
-    for start_index in range(len(candidate_onsets) - POST_SPARSE_GAP_RUN_MIN_RUN_ONSETS + 1):
-        run = [candidate_onsets[start_index]]
-        for onset_time in candidate_onsets[start_index + 1:]:
-            interval = onset_time - run[-1]
-            if POST_SPARSE_GAP_RUN_MIN_INTERVAL <= interval <= POST_SPARSE_GAP_RUN_MAX_INTERVAL:
-                run.append(onset_time)
-                continue
-            break
-        if len(run) >= POST_SPARSE_GAP_RUN_MIN_RUN_ONSETS:
-            run_start_index = start_index
-            run_end_index = start_index + len(run) - 1
-            break
-
-    if run_start_index is None or run_end_index is None:
+    eligible = [
+        t for t in clustered
+        if t - gap_start >= CANDIDATE_PROMOTION_MIN_EDGE_DISTANCE
+        and gap_end - t >= CANDIDATE_PROMOTION_MIN_EDGE_DISTANCE
+    ]
+    if len(eligible) < CANDIDATE_PROMOTION_MIN_CANDIDATES:
         return []
 
     segments: list[tuple[float, float]] = []
-    run_onsets = candidate_onsets[run_start_index:run_end_index + 1]
-    first_run_start = run_onsets[0]
-    first_run_end = run_onsets[1]
-    if first_run_end - first_run_start >= 0.08:
-        segments.append((first_run_start, first_run_end))
-
-    run_tail_start = run_onsets[-1]
-    run_tail_end = min(run_tail_start + POST_SPARSE_GAP_RUN_SEGMENT_DURATION, next_start - 0.08)
-    if run_tail_end - run_tail_start >= 0.08:
-        segments.append((run_tail_start, run_tail_end))
-
-    promoted_anchor = run_onsets[-1]
-    followup_start = None
-    followup_candidates = [
-        onset_time
-        for onset_time in candidate_onsets[run_end_index + 1:]
-        if onset_time - promoted_anchor >= POST_SPARSE_GAP_RUN_MIN_FOLLOWUP_GAP
-    ]
-    if followup_candidates:
-        followup_start = followup_candidates[0]
-        followup_end = min(followup_start + POST_SPARSE_GAP_RUN_SEGMENT_DURATION, next_start - 0.08)
-        if followup_end - followup_start >= 0.08:
-            segments.append((followup_start, followup_end))
-
-    dense_cluster = None
-    for cluster_start_index in range(len(gap_onsets) - 1):
-        cluster = gap_onsets[cluster_start_index:cluster_start_index + 2]
-        if len(cluster) < 2:
-            continue
-        if cluster[0] - promoted_anchor < POST_SPARSE_GAP_RUN_MIN_FOLLOWUP_GAP:
-            continue
-        if followup_start is not None and cluster[0] - followup_start < POST_SPARSE_GAP_RUN_MIN_FOLLOWUP_GAP:
-            continue
-        if cluster[-1] - cluster[0] <= POST_SPARSE_GAP_RUN_CLUSTER_MAX_SPAN:
-            dense_cluster = cluster
-            break
-
-    if dense_cluster is not None:
-        cluster_start = dense_cluster[-1]
-        cluster_end = min(cluster_start + POST_SPARSE_GAP_RUN_SEGMENT_DURATION, next_start - 0.08)
-        if cluster_end - cluster_start >= 0.08:
-            segments.append((cluster_start, cluster_end))
+    for i, onset_time in enumerate(eligible):
+        if i + 1 < len(eligible):
+            end_time = eligible[i + 1]
+        else:
+            end_time = min(onset_time + CANDIDATE_PROMOTION_SEGMENT_DURATION, gap_end - 0.08)
+        if end_time - onset_time >= CANDIDATE_PROMOTION_MIN_SEGMENT_DURATION:
+            segments.append((onset_time, end_time))
 
     return segments
 
@@ -785,33 +760,11 @@ def collect_multi_onset_gap_segments(
             else []
         )
         if candidate_onsets:
-            segments.extend(_collect_promoted_candidate_gap_segments(gap_onsets, candidate_onsets, next_start))
+            segments.extend(_promote_gap_candidates_by_structure(candidate_onsets, previous_end, next_start))
 
     return segments
 
 
-
-
-def collect_candidate_promoted_gap_segments(
-    active_ranges: list[tuple[float, float]],
-    onset_times: list[float],
-    gap_attack_candidates: GapAttackCandidates,
-) -> list[tuple[float, float]]:
-    segments: list[tuple[float, float]] = []
-    for index in range(len(active_ranges) - 1):
-        previous_end = active_ranges[index][1]
-        next_start = active_ranges[index + 1][0]
-        gap_onsets = [
-            time
-            for time in onset_times
-            if previous_end + 0.05 < time < next_start - 0.05
-        ]
-        if len(gap_onsets) < 3:
-            continue
-        candidate_onsets = gap_attack_candidates.inter_ranges[index] if index < len(gap_attack_candidates.inter_ranges) else []
-        if candidate_onsets:
-            segments.extend(_collect_promoted_candidate_gap_segments(gap_onsets, candidate_onsets, next_start))
-    return segments
 
 
 def collect_post_tail_gap_head_segments(
@@ -1570,11 +1523,6 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         onset_attack_profiles,
         attack_validated_gap_candidates,
     )
-    candidate_promoted_gap_segments = collect_candidate_promoted_gap_segments(
-        active_ranges,
-        gap_onset_times,
-        attack_validated_gap_candidates,
-    )
     post_tail_gap_head_segments = [] if ABLATE_POST_TAIL_GAP_HEAD else collect_post_tail_gap_head_segments(active_ranges, gap_onset_times, onset_attack_profiles)
     post_sparse_gap_run_segments = [] if ABLATE_POST_SPARSE_GAP_RUN else collect_post_sparse_gap_run_segments(active_ranges, gap_onset_times)
     two_onset_gap_segments = [] if ABLATE_TWO_ONSET_GAP else collect_two_onset_gap_segments(active_ranges, gap_onset_times, onset_attack_profiles)
@@ -1770,7 +1718,6 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
         "gapInjectedSegments": [[round(start, 4), round(end, 4)] for start, end in gap_injected_segments],
         "leadingOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in leading_orphan_segments],
         "multiOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in multi_onset_gap_segments],
-        "candidatePromotedGapSegments": [[round(start, 4), round(end, 4)] for start, end in candidate_promoted_gap_segments],
         "postTailGapHeadSegments": [[round(start, 4), round(end, 4)] for start, end in post_tail_gap_head_segments],
         "postSparseGapRunSegments": [[round(start, 4), round(end, 4)] for start, end in post_sparse_gap_run_segments],
         "twoOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in two_onset_gap_segments],
@@ -6008,14 +5955,6 @@ async def transcribe_audio(
     post_sparse_gap_run_segment_keys = {
         (round(start_time, 4), round(end_time, 4))
         for start_time, end_time in post_sparse_gap_run_segments
-    }
-    candidate_promoted_gap_segments = [
-        (float(start_time), float(end_time))
-        for start_time, end_time in segment_debug.get("candidatePromotedGapSegments", [])
-    ]
-    candidate_promoted_gap_segment_keys = {
-        (round(start_time, 4), round(end_time, 4))
-        for start_time, end_time in candidate_promoted_gap_segments
     }
     single_onset_gap_head_segment_keys = {
         (round(start_time, 4), round(end_time, 4))
