@@ -110,8 +110,6 @@ ONSET_ATTACK_MIN_HIGH_BAND_FLUX = 1.5
 ONSET_ATTACK_GAIN_REQUIRES_MIN_FLUX = 0.5
 ATTACK_VALIDATED_GAP_SEGMENT_DURATION = 0.24
 ATTACK_REFINED_ONSET_MAX_INTERVAL = 0.15
-ATTACK_REFINED_ONSET_MIN_HIGH_BAND_FLUX = 6.0
-ATTACK_REFINED_ONSET_MIN_HIGH_BAND_FLUX_RATIO = 1.4
 USE_ATTACK_VALIDATED_GAP_COLLECTOR = False
 FILTER_GAP_ONSETS_BY_ATTACK_PROFILE = True
 ABLATE_LEADING_ORPHAN = False
@@ -610,9 +608,7 @@ def should_snap_range_start_to_first_onset(
     if first_onset - range_start > ATTACK_REFINED_ONSET_MAX_INTERVAL:
         return False
     first_profile = _lookup_onset_attack_profile(onset_profiles, first_onset)
-    if first_profile is None or not first_profile.is_valid_attack:
-        return False
-    return first_profile.high_band_spectral_flux >= ATTACK_REFINED_ONSET_MIN_HIGH_BAND_FLUX
+    return first_profile is not None and first_profile.is_valid_attack
 
 def collapse_active_range_head_onsets(
     effective_range_start: float,
