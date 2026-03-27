@@ -12,6 +12,7 @@ coverage/
 .pydeps/
 .pydeps313/
 .claude/settings*.json
+.claude/worktrees/
 .codex-*/
 artifacts/
 .venv313-worktree/
