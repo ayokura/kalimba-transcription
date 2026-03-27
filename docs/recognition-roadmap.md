@@ -71,6 +71,7 @@ Tracking issue:
 ## Local Rule Debt
 
 For fixture-specific or very local recognizer rules that may become debt for future free-performance transcription, see [recognizer-local-rules.md](recognizer-local-rules.md).
+For Strategy B gap-candidate design and the current candidate/promotion prototype, see [strategy-b-gap-candidates.md](strategy-b-gap-candidates.md).
 
 ## Immediate Next Engineering Tasks
 
