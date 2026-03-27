@@ -68,6 +68,10 @@ Planned direction:
 Tracking issue:
 - [#6](https://github.com/ayokura/kalimba-transcription/issues/6)
 
+## Local Rule Debt
+
+For fixture-specific or very local recognizer rules that may become debt for future free-performance transcription, see [recognizer-local-rules.md](recognizer-local-rules.md).
+
 ## Immediate Next Engineering Tasks
 
 1. keep the completed strict four-note baseline stable
