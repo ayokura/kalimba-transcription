@@ -106,7 +106,8 @@ ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
 SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY = 2000.0
 ONSET_ATTACK_MIN_BROADBAND_GAIN = 10.0
-ONSET_ATTACK_MIN_HIGH_BAND_FLUX = 2.0
+ONSET_ATTACK_MIN_HIGH_BAND_FLUX = 1.5
+ONSET_ATTACK_GAIN_REQUIRES_MIN_FLUX = 0.5
 ATTACK_VALIDATED_GAP_SEGMENT_DURATION = 0.24
 ATTACK_REFINED_ONSET_MAX_INTERVAL = 0.15
 ATTACK_REFINED_ONSET_MIN_HIGH_BAND_FLUX = 6.0
@@ -2111,7 +2112,7 @@ def compute_onset_attack_profile(
     high_band_flux = _positive_spectral_flux(
         pre_spectrum, attack_spectrum, frequencies, min_frequency=SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY,
     )
-    is_valid = broadband_gain >= ONSET_ATTACK_MIN_BROADBAND_GAIN or high_band_flux >= ONSET_ATTACK_MIN_HIGH_BAND_FLUX
+    is_valid = high_band_flux >= ONSET_ATTACK_MIN_HIGH_BAND_FLUX or (broadband_gain >= ONSET_ATTACK_MIN_BROADBAND_GAIN and high_band_flux >= ONSET_ATTACK_GAIN_REQUIRES_MIN_FLUX)
     return OnsetAttackProfile(
         onset_time=onset_time,
         broadband_onset_gain=broadband_gain,
