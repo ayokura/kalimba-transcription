@@ -19,6 +19,13 @@
 - 5. D4 :: D4 (#8)
 - 6. D5 :: D5 (#13)
 
+## Audio Quality
+
+- 0s-3s contains chair noise (not kalimba), which the recognizer detects as D6/C4/E4
+- actual kalimba performance begins at approximately 3.49s
+- the chair noise has strong attack profiles (gain=28.5, flux=3.1) indistinguishable from kalimba by current thresholds
+
 ## Memo
 
-(empty)
+- downgraded to pending: fixture passes through pattern normalization removing chair noise events and a G5+B5 misdetection at 11.82s (actually D4), coincidentally producing the correct 6 events
+- resolution requires: upstream non-instrument sound rejection, and correct peak detection at 11.82s active range boundary
