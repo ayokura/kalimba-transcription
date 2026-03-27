@@ -6,6 +6,17 @@
 - Keep `main` runnable. Do not leave `main` in a knowingly broken state.
 - Shared rules go here. Agent-specific rules go in the agent-specific Notes sections within this document, or in files referenced from those sections.
 
+## Product Vision and Technical Direction
+
+- The end goal is transcription of free-form kalimba performance into sheet music, without any Expected Performance or prior knowledge of what will be played.
+- Current fixtures with Expected Performance are stepping stones for building and validating the recognizer; the final product must work without them.
+- Design decisions should favor approaches that work without Expected Performance over those that depend on it.
+- Future UX direction includes near-real-time (streaming) transcription. Prefer causal/streaming-friendly algorithms over batch-only approaches where quality is comparable.
+- A future milestone is browser-side-only implementation (no server round-trip) using WebAudio API and/or WebAssembly. Keep recognizer logic portable:
+  - Avoid deep coupling to Python-specific libraries (librosa, numpy) in core algorithm design.
+  - Prefer simple, well-defined numerical operations over complex library-specific abstractions.
+  - This does not mean avoiding these libraries now, but the algorithmic logic should be expressible without them.
+
 ## Python / Test Environment
 
 - Primary API test environment:
