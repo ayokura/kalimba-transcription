@@ -1751,11 +1751,7 @@ def test_transcription_regression_for_manual_mixed_sequence() -> None:
     ]
 
 @manual_capture_slow
-<<<<<<< Updated upstream
 def test_transcription_regression_for_manual_four_note_gliss_ascending() -> None:
-=======
-def test_probe_four_note_gliss_pending_capture() -> None:
->>>>>>> Stashed changes
     payload = transcribe_manual_capture_fixture("kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01")
     note_sets = [
         "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
@@ -1771,7 +1767,6 @@ def test_probe_four_note_gliss_pending_capture() -> None:
 
 
 @manual_capture_slow
-<<<<<<< Updated upstream
 def test_transcription_regression_for_manual_triad_repeat() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-e4-g4-b4-triad-repeat-01")
     note_sets = [
@@ -1815,8 +1810,6 @@ def test_transcription_regression_for_manual_e6_to_c4_sequence_51() -> None:
 
 
 @manual_capture_slow
-=======
->>>>>>> Stashed changes
 def test_transcription_regression_for_manual_triple_glissando() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-triple-glissando-ascending-01")
     assert [sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]] == [
@@ -2133,13 +2126,10 @@ def test_transcription_recovers_third_cycle_prefix_in_51_note_fixture() -> None:
 
 
 @manual_capture_slow
-<<<<<<< Updated upstream
 def test_bwv147_restart_prefix_recovers_scoped_opening_phrase() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-prefix-01")
-=======
 def test_bwv147_restart_high_register_collapses_short_repeated_overlap() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-high-register-01")
->>>>>>> Stashed changes
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets == ["C4+E5", "C5", "D5", "C5+E5", "G5"]
     assert "E4" not in note_sets
@@ -2172,7 +2162,6 @@ def test_bwv147_restart_tail_promotes_recent_upper_octave_alias() -> None:
     trail = payload["debug"]["segmentCandidates"][-1]["secondaryDecisionTrail"]
     assert trail[0]["reasons"] == ["recent-upper-octave-alias-secondary-blocked"]
     assert trail[1]["noteName"] == "A4" and trail[1]["accepted"] is True
-<<<<<<< Updated upstream
 
 
 @manual_capture_slow
@@ -2224,5 +2213,5 @@ def test_bwv147_lower_f4_mixed_run_is_a_clean_pending_child_with_late_tail_miss(
         (2.072, 2.8613),
         (4.0747, 4.7067),
     ]
-=======
->>>>>>> Stashed changes
+
+
