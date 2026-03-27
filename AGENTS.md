@@ -24,7 +24,7 @@
 - API test command (run from the repository root so that `PYTHONPATH=apps/api` resolves correctly):
   - PowerShell: `$env:PYTHONPATH='apps/api'; .\.venv313\Scripts\python -m pytest apps/api/tests -q`
   - Bash (Git Bash on Windows, Windows-created venv): `PYTHONPATH=apps/api .venv313/Scripts/python -m pytest apps/api/tests -q`
-  - Other environments (Linux/macOS): venv layout and paths differ; test commands need separate consideration.
+  - WSL / Linux / macOS (uv environment): `PYTHONPATH=apps/api uv run pytest apps/api/tests -q`
 - Note: `PYTHONPATH` is required because `apps/api` is not installed as a package. See issue #24 for a potential fix via `pyproject.toml`.
 
 ## Fixture Policy
