@@ -131,7 +131,6 @@ RECENT_PRIMARY_REPLACEMENT_STRONG_ONSET_GAIN = 100.0
 RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_GAIN = 20.0
 RECENT_PRIMARY_REPLACEMENT_MIN_ONSET_RATIO = 8.0
 RECENT_PRIMARY_REPLACEMENT_MAX_DURATION = 0.47
-CLOSE_ONSET_BOUNDARY_GAIN_RATIO = 1.2
 DESCENDING_REPEATED_PRIMARY_MAX_DURATION = 0.47
 DESCENDING_REPEATED_PRIMARY_MAX_PRIMARY_ONSET_GAIN = 2.5
 DESCENDING_REPEATED_PRIMARY_MIN_REPLACEMENT_ONSET_GAIN = 5.0
@@ -570,34 +569,6 @@ def _lookup_onset_attack_profile(
     return onset_profiles.get(round(onset_time, 4))
 
 
-def should_replace_close_boundary_with_valid_attack(
-    previous_time: float,
-    current_time: float,
-    onset_profiles: dict[float, OnsetAttackProfile],
-) -> bool:
-    if current_time - previous_time > ATTACK_REFINED_ONSET_MAX_INTERVAL:
-        return False
-    previous_profile = _lookup_onset_attack_profile(onset_profiles, previous_time)
-    current_profile = _lookup_onset_attack_profile(onset_profiles, current_time)
-    if previous_profile is None or current_profile is None:
-        return False
-    if current_profile.is_valid_attack is False:
-        return False
-    return previous_profile.is_valid_attack is False
-
-
-def should_keep_stronger_close_boundary(
-    previous_time: float,
-    current_time: float,
-    onset_profiles: dict[float, OnsetAttackProfile],
-) -> bool:
-    previous_profile = _lookup_onset_attack_profile(onset_profiles, previous_time)
-    current_profile = _lookup_onset_attack_profile(onset_profiles, current_time)
-    if previous_profile is None or current_profile is None:
-        return False
-    if not previous_profile.is_valid_attack or not current_profile.is_valid_attack:
-        return False
-    return current_profile.broadband_onset_gain >= previous_profile.broadband_onset_gain * CLOSE_ONSET_BOUNDARY_GAIN_RATIO
 
 
 def should_snap_range_start_to_first_onset(
@@ -1553,18 +1524,10 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
                 continue
 
             previous_time = deduped_onsets[-1]
-            if should_replace_close_boundary_with_valid_attack(previous_time, time, onset_attack_profiles):
-                deduped_onsets[-1] = time
-                continue
-
-            keep_dense_trailing = should_keep_dense_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end)
-            keep_short_trailing = should_keep_short_range_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end)
             if (
                 time - previous_time >= 0.18
-                or (
-                    (keep_dense_trailing or keep_short_trailing)
-                    and should_keep_stronger_close_boundary(previous_time, time, onset_attack_profiles)
-                )
+                or should_keep_dense_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end)
+                or should_keep_short_range_trailing_onset(boundary_times, boundary_index, effective_range_start, range_end)
             ):
                 deduped_onsets.append(time)
 
