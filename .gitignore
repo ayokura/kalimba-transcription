@@ -11,7 +11,7 @@ __pycache__/
 coverage/
 .pydeps/
 .pydeps313/
-.claude/
+.claude/settings*.json
 .codex-*/
 artifacts/
 .venv313-worktree/
