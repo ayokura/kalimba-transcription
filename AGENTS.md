@@ -147,3 +147,12 @@
 - In Codex subagent coordination, do not pass only an issue number; include the issue title/summary or the local problem statement.
 - In Codex/GPT-5.4-era reasoning controls, enter `xhigh` only when starting actual large-scale redesign, not for preparatory audits or narrow local fixes. Re-evaluate this guidance if the toolset or reasoning-tier definitions change.
 - `.codex-*` paths are local-only and must remain ignored.
+- Runtime-specific guidance for Codex should be applied explicitly by shell/runtime:
+  - WSL/Linux:
+    - Prefer the repo-standard `uv` workflow directly.
+    - Standard API test command remains `uv run pytest apps/api/tests -q`.
+    - In this WSL `/mnt/c/...` worktree, if the standard pytest run fails with a temp/capture `FileNotFoundError`, rerun with `TMPDIR=/tmp uv run pytest apps/api/tests -q`.
+    - In this workspace, `gh` auth is expected from `.codex-gh/gh.env`; if that file sets `GH_CONFIG_DIR` to a Windows path, normalize or override it to `/mnt/c/src/calimba-score/.codex-gh` before running `gh`.
+  - Windows PowerShell:
+    - The repo has shifted toward WSL/Linux as the primary runtime; call out the environment mismatch explicitly before assuming parity with the user's shell.
+    - In this workspace, `gh` auth is expected from `.codex-gh/gh.env`.
