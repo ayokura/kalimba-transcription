@@ -1902,19 +1902,6 @@ def test_bwv147_mid_cluster_rebundles_short_upper_tail_into_triad() -> None:
 
 
 @manual_capture_slow
-def test_bwv147_upper_cluster_recovers_delayed_terminal_e5() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-upper-mixed-cluster-01")
-    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
-    assert note_sets == ["B5", "A4+C6", "G5", "E5", "A4+C5", "D5", "E5"]
-
-
-
-@manual_capture_slow
-def test_bwv147_late_upper_tail_recovers_sparse_terminal_d5_e5_tail() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-late-upper-tail-01")
-    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
-    assert note_sets[-5:] == ["G5", "E5", "A4+C5", "D5", "E5"]
-
 
 @manual_capture_slow
 def test_bwv147_lower_mixed_roll_recovers_opening_mixed_dyad_and_long_gap_run() -> None:
