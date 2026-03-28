@@ -6,15 +6,15 @@
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {
-      "A4+D4+F4": 5
+      "D4+F4+A4": 5
     },
     "maxEventNoteSetOccurrences": {},
     "expectedEventNoteSetsOrdered": [
-      "A4+D4+F4",
-      "A4+D4+F4",
-      "A4+D4+F4",
-      "A4+D4+F4",
-      "A4+D4+F4"
+      "D4+F4+A4",
+      "D4+F4+A4",
+      "D4+F4+A4",
+      "D4+F4+A4",
+      "D4+F4+A4"
     ]
   },
   "status": "completed"

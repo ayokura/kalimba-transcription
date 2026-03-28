@@ -9,7 +9,7 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {},
     "expectedEventNoteSetsOrdered": [
-      "C4+E4+E5+G4",
+      "C4+E4+G4+E5",
       "C5",
       "D5",
       "C5+E5",

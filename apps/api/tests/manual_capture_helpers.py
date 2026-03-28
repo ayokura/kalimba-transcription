@@ -133,10 +133,22 @@ def primary_note_names(payload: dict[str, Any]) -> list[str]:
     return names
 
 
+def _note_sort_key(note_name: str) -> float:
+    """Sort key by frequency (low to high) for consistent note set ordering."""
+    from app.tunings import note_name_to_frequency
+    try:
+        return note_name_to_frequency(note_name)
+    except Exception:
+        return 0.0
+
+
 def event_note_sets(payload: dict[str, Any]) -> list[str]:
     note_sets: list[str] = []
     for event in payload["events"]:
-        notes = sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"])
+        notes = sorted(
+            (f"{note['pitchClass']}{note['octave']}" for note in event["notes"]),
+            key=_note_sort_key,
+        )
         if notes:
             note_sets.append("+".join(notes))
     return note_sets
