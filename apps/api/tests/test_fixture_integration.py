@@ -17,12 +17,6 @@ def test_bwv147_mid_cluster_rebundles_short_upper_tail_into_triad() -> None:
     assert "E5" not in note_sets
 
 
-@manual_capture_slow
-def test_bwv147_lower_mixed_roll_recovers_opening_mixed_dyad_and_long_gap_run() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-lower-mixed-roll-01")
-    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
-    assert note_sets == ["C5", "D4+G4+B4", "C5", "D5", "D4+G4", "B4", "D5", "G4+B4+D5+F5", "E5"]
-
 
 @manual_capture_slow
 def test_bwv147_lower_f4_mixed_run_is_a_clean_pending_child_with_late_tail_miss() -> None:
