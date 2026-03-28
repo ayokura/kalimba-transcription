@@ -607,7 +607,7 @@ class GapAttackCandidates:
     trailing: list[float]
 
 
-LEADING_GAP_START_MARGIN = 0.10
+LEADING_GAP_START_MARGIN = 0.05
 GAP_ONSET_MIN_BROADBAND_GAIN = 0.95
 GAP_ONSET_MAX_KURTOSIS = 2.0
 GAP_ONSET_MAX_POST_CREST = 0.0  # disabled; set to e.g. 3.8 to enable
