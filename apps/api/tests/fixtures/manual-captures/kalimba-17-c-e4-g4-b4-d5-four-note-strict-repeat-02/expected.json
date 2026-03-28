@@ -1,14 +1,25 @@
 {
-  "pending": true,
+  "pending": false,
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
+    "minEvents": 5,
+    "maxEvents": 5,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {},
-    "maxEventNoteSetOccurrences": {}
+    "requiredEventNoteSetOccurrences": {
+      "B4+D5+E4+G4": 5
+    },
+    "maxEventNoteSetOccurrences": {
+      "B4+D5+E4+G4": 5
+    },
+    "expectedEventNoteSetsOrdered": [
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4"
+    ]
   },
-  "status": "reference_only",
-  "reason": "older strict four-note rerecord attempt kept as reference evidence only; superseded by strict-repeat-03 as the primary rerecord target",
+  "status": "completed",
+  "reason": "Recognizer correctly detects all 5 strict four-note chord events. Superseded by strict-repeat-03 but still valid as additional regression data.",
   "auditVerdict": "strict-intent-superseded-by-repeat-03"
 }

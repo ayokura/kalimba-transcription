@@ -1,15 +1,25 @@
 {
-  "pending": true,
+  "pending": false,
   "assertions": {
-    "minEvents": null,
-    "maxEvents": null,
+    "minEvents": 5,
+    "maxEvents": 5,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
-    "requiredEventNoteSetOccurrences": {},
-    "maxEventNoteSetOccurrences": {}
+    "requiredEventNoteSetOccurrences": {
+      "B4+D5+E4+G4": 5
+    },
+    "maxEventNoteSetOccurrences": {
+      "B4+D5+E4+G4": 5
+    },
+    "expectedEventNoteSetsOrdered": [
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4"
+    ]
   },
-  "status": "reference_only",
-  "reason": "legacy four-note fixture lacks reliable captureIntent and scenario metadata; explicit strict and slide_chord fixtures supersede it, so it is preserved as reference_only evidence",
+  "status": "completed",
+  "reason": "Recognizer correctly detects all 5 four-note chord events. Legacy metadata concerns no longer blocking.",
   "auditVerdict": "legacy-reference-only"
 }
-
