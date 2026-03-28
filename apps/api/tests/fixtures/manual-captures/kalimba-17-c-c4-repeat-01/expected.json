@@ -10,7 +10,14 @@
     "requiredEventNoteSetOccurrences": {
       "C4": 5
     },
-    "maxEventNoteSetOccurrences": {}
+    "maxEventNoteSetOccurrences": {},
+    "expectedEventNoteSetsOrdered": [
+      "C4",
+      "C4",
+      "C4",
+      "C4",
+      "C4"
+    ]
   },
   "status": "completed"
 }

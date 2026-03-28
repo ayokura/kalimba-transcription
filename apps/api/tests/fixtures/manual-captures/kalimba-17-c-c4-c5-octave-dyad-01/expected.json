@@ -11,7 +11,14 @@
     "maxEventNoteSetOccurrences": {
       "C4": 0,
       "C5": 0
-    }
+    },
+    "expectedEventNoteSetsOrdered": [
+      "C4+C5",
+      "C4+C5",
+      "C4+C5",
+      "C4+C5",
+      "C4+C5"
+    ]
   },
   "status": "completed"
 }

@@ -8,7 +8,14 @@
     "requiredEventNoteSetOccurrences": {
       "A4+D4+F4": 5
     },
-    "maxEventNoteSetOccurrences": {}
+    "maxEventNoteSetOccurrences": {},
+    "expectedEventNoteSetsOrdered": [
+      "A4+D4+F4",
+      "A4+D4+F4",
+      "A4+D4+F4",
+      "A4+D4+F4",
+      "A4+D4+F4"
+    ]
   },
   "status": "completed"
 }

@@ -8,7 +8,14 @@
     "requiredEventNoteSetOccurrences": {
       "C4+E4+G4": 5
     },
-    "maxEventNoteSetOccurrences": {}
+    "maxEventNoteSetOccurrences": {},
+    "expectedEventNoteSetsOrdered": [
+      "C4+E4+G4",
+      "C4+E4+G4",
+      "C4+E4+G4",
+      "C4+E4+G4",
+      "C4+E4+G4"
+    ]
   },
   "status": "completed"
 }

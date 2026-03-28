@@ -23,7 +23,26 @@
       "D5": 1,
       "C4+E5": 1,
       "E5+G5": 1
-    }
+    },
+    "expectedEventNoteSetsOrdered": [
+      "C4",
+      "G4",
+      "C5+E5",
+      "C4",
+      "G4",
+      "C5+E5",
+      "C4",
+      "G4",
+      "C5+E5",
+      "C4",
+      "G4",
+      "C5",
+      "C4+E5",
+      "D5",
+      "C5",
+      "E5+G5",
+      "G4"
+    ]
   },
   "reason": "mixed free-performance phrase now completes after a narrow two-onset gap supplement recovers the local D5 mute-restrike event without regressing completed fixtures"
 }

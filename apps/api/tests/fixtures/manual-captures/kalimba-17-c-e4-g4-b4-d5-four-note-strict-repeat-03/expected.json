@@ -11,6 +11,14 @@
     "requiredEventNoteSetOccurrences": {
       "B4+D5+E4+G4": 6
     },
-    "maxEventNoteSetOccurrences": {}
+    "maxEventNoteSetOccurrences": {},
+    "expectedEventNoteSetsOrdered": [
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4",
+      "B4+D5+E4+G4"
+    ]
   }
 }

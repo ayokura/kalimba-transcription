@@ -10,7 +10,14 @@
       "E6": 1,
       "B5": 1,
       "A5": 1
-    }
+    },
+    "expectedEventNoteSetsOrdered": [
+      "D5",
+      "D5",
+      "D5",
+      "D5",
+      "D5"
+    ]
   },
   "status": "completed"
 }

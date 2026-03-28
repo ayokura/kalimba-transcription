@@ -8,7 +8,14 @@
     "requiredEventNoteSetOccurrences": {
       "B4+D5": 5
     },
-    "maxEventNoteSetOccurrences": {}
+    "maxEventNoteSetOccurrences": {},
+    "expectedEventNoteSetsOrdered": [
+      "B4+D5",
+      "B4+D5",
+      "B4+D5",
+      "B4+D5",
+      "B4+D5"
+    ]
   },
   "status": "completed"
 }
