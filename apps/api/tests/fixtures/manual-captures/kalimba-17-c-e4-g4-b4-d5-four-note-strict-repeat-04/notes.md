@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: reference_only
+- verdict: completed
 - scenario: 2026-03-23-e4-plus-g4-plus-b4-plus-d5-repeat-05-strict-chord-kalimba-17-c
 - expected note: E4 + G4 + B4 + D5 x 5
 - capture intent: strict_chord

@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-21-C4C5-kalimba-17-c
 - expected note: C5 + C4 x 5
 - captured at: 2026-03-21T15:02:10.005Z

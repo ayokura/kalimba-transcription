@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-26-bwv147-lower-mixed-roll-01-kalimba-17-c
 - expected note: [<B4,G4>,D4] / C5 / D5 / [G4,D4] / B4 / D5 / <F5,D5,B4,G4>
 - capture intent: unknown
@@ -29,7 +29,7 @@
 
 ## Review
 
-- summary: human listening confirms the scoped lower mixed BWV147 phrase is correctly cut; the full clip now recovers the target phrase, but the current scoped evaluation window still compresses the long-gap structure
-- reason: ear review confirms the clip is scoped correctly: the audible content is C5 resonance / [<B4,G4>,D4] / C5 / D5 / [G4,D4] / B4 / D5 / <F5,D5,B4,G4> / E5, with the leading C5 resonance and trailing E5 outside the intended evaluation phrase; after the lower-mixed opening extension, long-gap segmentation fix, and lower-roll tail extension, the full clip recognizer output now recovers the intended phrase, but the current evaluationWindow crop removes too much surrounding context and collapses the scoped regression to five events, so the fixture should remain pending until its scoped evaluation strategy is revised
+- summary: human listening confirms the lower mixed BWV147 phrase and the current full-audio regression target matches it
+- reason: ear review confirms the clip is scoped correctly: the audible content is C5 resonance / [<B4,G4>,D4] / C5 / D5 / [G4,D4] / B4 / D5 / <F5,D5,B4,G4> / E5, with the leading C5 resonance and trailing E5 outside the intended phrase; the evaluation window was removed, and the current completed regression now tracks the full-audio 9-event phrase directly
 
 - user audio review: C5 resonance / [<B4,G4>,D4] / C5 / D5 / [G4,D4] / B4 / D5 / <F5,D5,B4,G4> / E5 is audible; the cut is correct and boundary handling is OK (confidence: high)

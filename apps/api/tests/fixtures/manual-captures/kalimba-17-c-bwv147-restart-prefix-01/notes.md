@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: completed
+- verdict: pending
 - scenario: 2026-03-26-bwv147-restart-prefix-01-kalimba-17-c
 - expected note: [E5,C4] / C5 / D5 / <E5,C5> / G5
 - capture intent: unknown

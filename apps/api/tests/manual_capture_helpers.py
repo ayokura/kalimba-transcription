@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
@@ -14,6 +15,7 @@ FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "manual-captures"
 VALID_STATUSES = {"completed", "pending", "rerecord", "review_needed", "reference_only"}
 VALID_SOURCE_PROFILES = {"acoustic_real", "app_synth"}
 VALID_CAPTURE_INTENTS = {"strict_chord", "slide_chord", "arpeggio", "separated_notes", "unknown"}
+VALID_GROUND_TRUTH_METHODS = {"ear_verified", "spectrogram_verified", "aubio_cross_checked"}
 ASSERTION_KEYS = {
     "minEvents",
     "maxEvents",
@@ -33,6 +35,7 @@ DEFAULT_ASSERTIONS = {
 }
 RangeSpec = dict[str, float]
 AssertionFailureDetail = dict[str, Any]
+NOTES_VERDICT_PATTERN = re.compile(r"^- verdict:\s*(.+)$", re.MULTILINE)
 
 
 @lru_cache(maxsize=1)
@@ -93,6 +96,26 @@ def fixture_status(expected: dict[str, Any]) -> str:
 
 def fixture_dirs_for_status(status: str) -> list[Path]:
     return [fixture_dir for fixture_dir in _fixture_dirs() if fixture_status(_load_expected_payload(fixture_dir)) == status]
+
+
+def load_notes_verdict(fixture_dir: Path) -> str:
+    notes_text = (fixture_dir / "notes.md").read_text(encoding="utf-8")
+    match = NOTES_VERDICT_PATTERN.search(notes_text)
+    if match is None:
+        raise AssertionError(f"{fixture_dir.name}: notes.md must include a '- verdict: ...' line")
+    verdict = match.group(1).strip()
+    if not verdict:
+        raise AssertionError(f"{fixture_dir.name}: notes.md verdict must not be empty")
+    return verdict
+
+
+def validate_notes_metadata(fixture_dir: Path, expected: dict[str, Any]) -> None:
+    expected_status = fixture_status(expected)
+    notes_verdict = load_notes_verdict(fixture_dir)
+    if notes_verdict != expected_status:
+        raise AssertionError(
+            f"{fixture_dir.name}: notes.md verdict '{notes_verdict}' must match expected status '{expected_status}'"
+        )
 
 
 def normalized_assertions(expected: dict[str, Any]) -> dict[str, Any]:
@@ -400,7 +423,63 @@ def load_ground_truth(fixture_dir: Path) -> dict[str, Any] | None:
     gt_path = fixture_dir / "ground_truth.json"
     if not gt_path.exists():
         return None
-    return json.loads(gt_path.read_text(encoding="utf-8"))
+    ground_truth = json.loads(gt_path.read_text(encoding="utf-8"))
+    validate_ground_truth_metadata(fixture_dir, ground_truth)
+    return ground_truth
+
+
+def validate_ground_truth_metadata(fixture_dir: Path, ground_truth: dict[str, Any]) -> None:
+    version = ground_truth.get("version")
+    if version != 1:
+        raise AssertionError(f"{fixture_dir.name}: ground_truth.version must be 1")
+
+    default_tolerance = ground_truth.get("toleranceSec", 0.05)
+    if not isinstance(default_tolerance, (int, float)) or float(default_tolerance) <= 0:
+        raise AssertionError(f"{fixture_dir.name}: ground_truth.toleranceSec must be a positive number")
+
+    onsets = ground_truth.get("onsets")
+    if not isinstance(onsets, list) or not onsets:
+        raise AssertionError(f"{fixture_dir.name}: ground_truth.onsets must be a non-empty array")
+
+    previous_time = None
+    for index, onset in enumerate(onsets, start=1):
+        if not isinstance(onset, dict):
+            raise AssertionError(f"{fixture_dir.name}: ground_truth.onsets[{index}] must be an object")
+
+        time_sec = onset.get("timeSec")
+        if not isinstance(time_sec, (int, float)) or float(time_sec) < 0:
+            raise AssertionError(
+                f"{fixture_dir.name}: ground_truth.onsets[{index}].timeSec must be a non-negative number"
+            )
+        onset_time = float(time_sec)
+        if previous_time is not None and onset_time <= previous_time:
+            raise AssertionError(f"{fixture_dir.name}: ground_truth.onsets must be strictly increasing by timeSec")
+
+        notes = onset.get("notes")
+        if not isinstance(notes, list) or not notes or not all(isinstance(note, str) and note.strip() for note in notes):
+            raise AssertionError(
+                f"{fixture_dir.name}: ground_truth.onsets[{index}].notes must be a non-empty string array"
+            )
+
+        tolerance = onset.get("toleranceSec")
+        if tolerance is not None and (not isinstance(tolerance, (int, float)) or float(tolerance) <= 0):
+            raise AssertionError(
+                f"{fixture_dir.name}: ground_truth.onsets[{index}].toleranceSec must be a positive number"
+            )
+
+        method = onset.get("method")
+        if not isinstance(method, str) or method not in VALID_GROUND_TRUTH_METHODS:
+            raise AssertionError(
+                f"{fixture_dir.name}: ground_truth.onsets[{index}].method must be one of {sorted(VALID_GROUND_TRUTH_METHODS)}"
+            )
+
+        comment = onset.get("comment")
+        if comment is not None and (not isinstance(comment, str) or not comment.strip()):
+            raise AssertionError(
+                f"{fixture_dir.name}: ground_truth.onsets[{index}].comment must be a non-empty string when present"
+            )
+
+        previous_time = onset_time
 
 
 def ground_truth_timing_failures(

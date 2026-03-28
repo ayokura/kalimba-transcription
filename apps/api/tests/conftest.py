@@ -3,6 +3,7 @@ from functools import lru_cache
 from io import BytesIO
 import json
 from pathlib import Path
+import sys
 
 import numpy as np
 import pytest
@@ -11,15 +12,26 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.append(str(TESTS_DIR))
+
+from manual_capture_helpers import build_evaluation_audio_bytes
+
 client = TestClient(app)
-MANUAL_CAPTURE_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "manual-captures"
+MANUAL_CAPTURE_FIXTURE_ROOT = TESTS_DIR / "fixtures" / "manual-captures"
 
 
 @lru_cache(maxsize=32)
-def _load_manual_capture_fixture_inputs(fixture_name: str) -> tuple[dict, Path]:
+def _load_manual_capture_fixture_inputs(fixture_name: str, use_evaluation_scope: bool) -> tuple[dict, bytes]:
     fixture_dir = MANUAL_CAPTURE_FIXTURE_ROOT / fixture_name
     request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
-    return request_payload, fixture_dir / "audio.wav"
+    if use_evaluation_scope:
+        expected = json.loads((fixture_dir / "expected.json").read_text(encoding="utf-8"))
+        audio_bytes = build_evaluation_audio_bytes(fixture_dir, expected)
+    else:
+        audio_bytes = (fixture_dir / "audio.wav").read_bytes()
+    return request_payload, audio_bytes
 
 
 @lru_cache(maxsize=32)
@@ -27,9 +39,9 @@ def _transcribe_manual_capture_fixture(
     fixture_name: str,
     debug: bool,
     disabled_repeated_pattern_passes_json: str | None,
+    use_evaluation_scope: bool,
 ) -> dict:
-    request_payload, audio_path = _load_manual_capture_fixture_inputs(fixture_name)
-    audio_bytes = audio_path.read_bytes()
+    request_payload, audio_bytes = _load_manual_capture_fixture_inputs(fixture_name, use_evaluation_scope)
     data = {
         "tuning": json.dumps(request_payload["tuning"]),
         "debug": "true" if debug else "false",
@@ -45,7 +57,8 @@ def _transcribe_manual_capture_fixture(
 
     assert response.status_code == 200, (
         f"Unexpected status code {response.status_code} for fixture '{fixture_name}' "
-        f"(debug={debug}, disabled_repeated_pattern_passes_json={disabled_repeated_pattern_passes_json}). "
+        f"(debug={debug}, disabled_repeated_pattern_passes_json={disabled_repeated_pattern_passes_json}, "
+        f"use_evaluation_scope={use_evaluation_scope}). "
         f"Response body: {response.text}"
     )
     return response.json()
@@ -60,7 +73,19 @@ def transcribe_manual_capture_fixture(
     disabled_passes_json = None
     if disabled_repeated_pattern_passes is not None:
         disabled_passes_json = json.dumps(list(disabled_repeated_pattern_passes))
-    return deepcopy(_transcribe_manual_capture_fixture(fixture_name, debug, disabled_passes_json))
+    return deepcopy(_transcribe_manual_capture_fixture(fixture_name, debug, disabled_passes_json, True))
+
+
+def transcribe_manual_capture_fixture_full_audio(
+    fixture_name: str,
+    *,
+    debug: bool = True,
+    disabled_repeated_pattern_passes: tuple[str, ...] | None = None,
+) -> dict:
+    disabled_passes_json = None
+    if disabled_repeated_pattern_passes is not None:
+        disabled_passes_json = json.dumps(list(disabled_repeated_pattern_passes))
+    return deepcopy(_transcribe_manual_capture_fixture(fixture_name, debug, disabled_passes_json, False))
 
 
 def manual_capture_slow(test_func):

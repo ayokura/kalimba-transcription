@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pass-with-user-correction
+- verdict: completed
 - scenario: 2026-03-21-b4-d5-double-notes
 - expected note: B4 + D5 x 5
 - captured at: 2026-03-21T08:44:21.800Z

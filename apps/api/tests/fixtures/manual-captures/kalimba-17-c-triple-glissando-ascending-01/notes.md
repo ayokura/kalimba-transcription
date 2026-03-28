@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-22-triple-glissando-kalimba-17-c
 - expected note: C4 + E4 + G4 / A4 + F4 + D4 / E4 + G4 + B4 / C5 + A4 + F4 / G4 + B4 + D5 / E5 + C5 + A4 / B4 + D5 + F5 / G5 + E5 + C5
 - captured at: 2026-03-21T16:05:17.078Z
