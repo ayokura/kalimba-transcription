@@ -15,26 +15,37 @@ npm run dev:web
 
 ### API dependencies
 
+```bash
+# WSL/Linux (primary)
+uv sync
+```
+
 ```powershell
+# Windows (legacy)
 py -3.13 -m pip install -r apps/api/requirements.txt
 ```
 
-Python 3.14 caused a `pydantic-core` build issue. Use Python 3.13 for the API.
+Python 3.14 caused a `pydantic-core` build issue. Use Python 3.13 for the API (Windows only; WSL uses uv-managed Python 3.13).
 
 ## Recommended local run
 
 ### API
 
+```bash
+# WSL/Linux (primary)
+uv run uvicorn app.main:app --reload --app-dir apps/api
+```
+
 ```powershell
+# Windows (legacy)
 $env:PYTHONPATH = "C:\src\calimba-score\apps\api"
 py -3.13 -m uvicorn app.main:app --reload --app-dir apps/api
 ```
 
 ### Web
 
-```powershell
-$env:NEXT_PUBLIC_API_BASE_URL = "http://localhost:8000"
-npm run dev:web
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev:web
 ```
 
 ## Minimum manual test cases
@@ -122,14 +133,22 @@ Pytest markers:
 
 Useful commands:
 
-```powershell
+```bash
+# WSL/Linux (primary environment)
+# Full test suite
+uv run pytest apps/api/tests -q
+
 # Fast inner loop: skip slow audio regressions
-$env:PYTHONPATH='C:\src\calimba-score\apps\api'
-.\.venv313\Scripts\python -m pytest apps/api/tests -m "not slow"
+uv run pytest apps/api/tests -m "not slow" -q
 
 # Focus on manual-capture regressions only
+uv run pytest apps/api/tests -m manual_capture -q
+```
+
+```powershell
+# Windows PowerShell (legacy)
 $env:PYTHONPATH='C:\src\calimba-score\apps\api'
-.\.venv313\Scripts\python -m pytest apps/api/tests -m manual_capture
+.\.venv313\Scripts\python -m pytest apps/api/tests -m "not slow"
 ```
 
 ## Fixture Evaluation Scope
@@ -152,26 +171,32 @@ Rules:
 
 A saved browser capture pack can be turned into an API fixture.
 
+```bash
+# WSL/Linux (primary)
+uv run python scripts/import_manual_capture.py <zip-path> <fixture-id> --min-events 5 --max-events 5 --required-event-note-set B4+D5=5
+```
+
 ```powershell
+# Windows (legacy)
 py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --min-events 5 --max-events 5 --required-event-note-set B4+D5=5
 ```
 
 For a pending capture that should be stored but not executed yet:
 
-```powershell
-py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --status pending --reason "expected looks plausible but recognizer still fragments the gesture" --allow-incomplete
+```bash
+uv run python scripts/import_manual_capture.py <zip-path> <fixture-id> --status pending --reason "expected looks plausible but recognizer still fragments the gesture" --allow-incomplete
 ```
 
 For a rerecord target with explicit guidance:
 
-```powershell
-py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --status rerecord --reason "strict chord ground truth is weak" --recommended-recapture "Record 5 clearly simultaneous takes." --recommended-recapture "Leave 1 second of silence between takes." --allow-incomplete
+```bash
+uv run python scripts/import_manual_capture.py <zip-path> <fixture-id> --status rerecord --reason "strict chord ground truth is weak" --recommended-recapture "Record 5 clearly simultaneous takes." --recommended-recapture "Leave 1 second of silence between takes." --allow-incomplete
 ```
 
 For a completed fixture that should only evaluate part of the source audio:
 
-```powershell
-py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --status completed --min-events 5 --max-events 5 --required-event-note-set C4+E4+G4=5 --evaluation-window 0.35:5.90
+```bash
+uv run python scripts/import_manual_capture.py <zip-path> <fixture-id> --status completed --min-events 5 --max-events 5 --required-event-note-set C4+E4+G4=5 --evaluation-window 0.35:5.90
 ```
 
 The importer extracts:
@@ -186,9 +211,8 @@ into `apps/api/tests/fixtures/manual-captures/<fixture-id>/`.
 
 Then run:
 
-```powershell
-$env:PYTHONPATH='C:\src\calimba-score\apps\api'
-.\.venv313\Scripts\python -m pytest apps/api/tests
+```bash
+uv run pytest apps/api/tests -q
 ```
 
 ## Recording Request Format
@@ -310,23 +334,27 @@ This audit should happen after a small cluster of improvements lands, not after 
 
 Use the helper script when you want a fast raw-audio audit over the non-completed fixtures:
 
+```bash
+# WSL/Linux (primary)
+uv run python scripts/audit_manual_captures.py
+```
+
 ```powershell
+# Windows (legacy)
 $env:PYTHONPATH='C:\src\calimba-score\apps\api'
 .\.venv313\Scripts\python scripts/audit_manual_captures.py
 ```
 
 You can also limit the audit to one source profile:
 
-```powershell
-$env:PYTHONPATH='C:\src\calimba-score\apps\api'
-.\.venv313\Scripts\python scripts/audit_manual_captures.py --source-profile acoustic_real
+```bash
+uv run python scripts/audit_manual_captures.py --source-profile acoustic_real
 ```
 
 To inspect corpus balance instead of per-fixture audio details:
 
-```powershell
-$env:PYTHONPATH='C:\src\calimba-score\apps\api'
-.\.venv313\Scripts\python scripts/audit_manual_captures.py --status completed --status pending --status rerecord --status review_needed --status reference_only --taxonomy-summary --summary-only
+```bash
+uv run python scripts/audit_manual_captures.py --status completed --status pending --status rerecord --status review_needed --status reference_only --taxonomy-summary --summary-only
 ```
 
 Current taxonomy buckets are heuristic and intended for collection planning, not for hard gating:
@@ -341,14 +369,18 @@ This does not change fixture status by itself. It gives a quick waveform/STFT-ba
 
 ## Current caveat
 
-The web app compiles cleanly. API syntax compiles cleanly with `py -3.13 -m compileall apps/api/app apps/api/tests`, and the canonical runtime path is now:
+The canonical runtime path is:
+
+```bash
+# WSL/Linux (primary)
+uv run pytest apps/api/tests -q
+```
 
 ```powershell
+# Windows (legacy)
 $env:PYTHONPATH='C:\src\calimba-score\apps\api'
 .\.venv313\Scripts\python -m pytest apps/api/tests
 ```
-
-`.pytest_cache` still emits an access denied warning in this Windows environment, but the test run itself is valid.
 
 ## Next manual capture priorities
 
