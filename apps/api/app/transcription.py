@@ -609,6 +609,32 @@ class GapAttackCandidates:
 
 LEADING_GAP_START_MARGIN = 0.10
 GAP_ONSET_MIN_BROADBAND_GAIN = 0.95
+GAP_ONSET_MAX_KURTOSIS = 2.0
+GAP_ONSET_MAX_POST_CREST = 0.0  # disabled; set to e.g. 3.8 to enable
+
+
+@dataclass(frozen=True)
+class OnsetWaveformStats:
+    kurtosis: float
+    crest: float
+
+
+def precompute_onset_waveform_stats(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_times: list[float],
+) -> dict[float, OnsetWaveformStats]:
+    """Pre-compute kurtosis and crest factor for each onset (20ms post-onset window)."""
+    stats: dict[float, OnsetWaveformStats] = {}
+    window_samples = int(sample_rate * _KURTOSIS_WINDOW_SECONDS)
+    for onset_time in onset_times:
+        onset_sample = max(int(onset_time * sample_rate), 0)
+        seg = np.array(audio[onset_sample:min(len(audio), onset_sample + window_samples)], copy=True)
+        stats[round(onset_time, 4)] = OnsetWaveformStats(
+            kurtosis=_waveform_kurtosis(seg),
+            crest=_waveform_crest_factor(seg),
+        )
+    return stats
 
 
 def _valid_attack_gap_onsets(
@@ -617,14 +643,25 @@ def _valid_attack_gap_onsets(
     onset_times: list[float],
     onset_profiles: dict[float, OnsetAttackProfile],
     start_margin: float = 0.05,
+    waveform_stats: dict[float, OnsetWaveformStats] | None = None,
 ) -> list[float]:
     valid: list[float] = []
     for time in onset_times:
         if not (gap_start + start_margin < time < gap_end - 0.05):
             continue
         profile = onset_profiles.get(round(time, 4))
-        if profile is not None and profile.is_valid_attack and profile.broadband_onset_gain >= GAP_ONSET_MIN_BROADBAND_GAIN:
-            valid.append(time)
+        if profile is None or not profile.is_valid_attack:
+            continue
+        if profile.broadband_onset_gain < GAP_ONSET_MIN_BROADBAND_GAIN:
+            continue
+        if waveform_stats is not None:
+            ws = waveform_stats.get(round(time, 4))
+            if ws is not None:
+                if GAP_ONSET_MAX_KURTOSIS > 0 and ws.kurtosis > GAP_ONSET_MAX_KURTOSIS:
+                    continue
+                if GAP_ONSET_MAX_POST_CREST > 0 and ws.crest > GAP_ONSET_MAX_POST_CREST:
+                    continue
+        valid.append(time)
     return valid
 
 
@@ -633,18 +670,28 @@ def collect_attack_validated_gap_candidates(
     onset_times: list[float],
     onset_profiles: dict[float, OnsetAttackProfile],
     audio_duration: float,
+    waveform_stats: dict[float, OnsetWaveformStats] | None = None,
 ) -> GapAttackCandidates:
     inter_ranges: list[list[float]] = []
     for index in range(len(active_ranges) - 1):
         previous_end = active_ranges[index][1]
         next_start = active_ranges[index + 1][0]
-        inter_ranges.append(_valid_attack_gap_onsets(previous_end, next_start, onset_times, onset_profiles))
+        inter_ranges.append(_valid_attack_gap_onsets(
+            previous_end, next_start, onset_times, onset_profiles,
+            waveform_stats=waveform_stats,
+        ))
 
     leading: list[float] = []
     trailing: list[float] = []
     if active_ranges:
-        leading = _valid_attack_gap_onsets(0.0, active_ranges[0][0], onset_times, onset_profiles, start_margin=LEADING_GAP_START_MARGIN)
-        trailing = _valid_attack_gap_onsets(active_ranges[-1][1], audio_duration + 0.06, onset_times, onset_profiles)
+        leading = _valid_attack_gap_onsets(
+            0.0, active_ranges[0][0], onset_times, onset_profiles,
+            start_margin=LEADING_GAP_START_MARGIN, waveform_stats=waveform_stats,
+        )
+        trailing = _valid_attack_gap_onsets(
+            active_ranges[-1][1], audio_duration + 0.06, onset_times, onset_profiles,
+            waveform_stats=waveform_stats,
+        )
 
     return GapAttackCandidates(inter_ranges=inter_ranges, leading=leading, trailing=trailing)
 
@@ -1354,7 +1401,16 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     gap_ioi_diagnostics = build_gap_ioi_diagnostics(active_ranges, onset_times)
 
     audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
-    attack_validated_gap_candidates = collect_attack_validated_gap_candidates(active_ranges, gap_onset_times, onset_attack_profiles, audio_duration)
+    waveform_stats = precompute_onset_waveform_stats(audio, sample_rate, gap_onset_times)
+    # Unfiltered candidates for multi_onset_gap_segments (shared path)
+    attack_validated_gap_candidates = collect_attack_validated_gap_candidates(
+        active_ranges, gap_onset_times, onset_attack_profiles, audio_duration,
+    )
+    # Filtered candidates for attack-validated gap collector only
+    filtered_gap_candidates = collect_attack_validated_gap_candidates(
+        active_ranges, gap_onset_times, onset_attack_profiles, audio_duration,
+        waveform_stats=waveform_stats,
+    ) if USE_ATTACK_VALIDATED_GAP_COLLECTOR else None
     leading_orphan_segments = [] if ABLATE_LEADING_ORPHAN else collect_leading_orphan_segments(active_ranges, gap_onset_times, onset_attack_profiles)
     gap_injected_segments: list[tuple[float, float]] = []
     multi_onset_gap_segments = [] if ABLATE_MULTI_ONSET_GAP else collect_multi_onset_gap_segments(
@@ -1420,7 +1476,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
                 gap_onset_times,
                 onset_attack_profiles,
                 audio_duration,
-                attack_validated_gap_candidates,
+                filtered_gap_candidates,
             )
 
     segments: list[tuple[float, float]] = []
@@ -1981,6 +2037,28 @@ class OnsetAttackProfile:
     is_valid_attack: bool
 
 
+_KURTOSIS_WINDOW_SECONDS = 0.02
+
+
+def _waveform_kurtosis(signal: np.ndarray) -> float:
+    """Excess kurtosis (Fisher). Normal distribution = 0, periodic ≈ -1.5."""
+    if len(signal) < 4:
+        return 0.0
+    var = float(np.var(signal))
+    if var < 1e-20:
+        return 0.0
+    mean = float(np.mean(signal))
+    return float(np.mean((signal - mean) ** 4) / (var * var)) - 3.0
+
+
+def _waveform_crest_factor(signal: np.ndarray) -> float:
+    """Peak / RMS. Sine wave ≈ 1.41, impulsive spike >> 1."""
+    rms = float(np.sqrt(np.mean(signal ** 2)))
+    if rms < 1e-20:
+        return 0.0
+    return float(np.max(np.abs(signal))) / rms
+
+
 def compute_onset_attack_profile(
     audio: np.ndarray,
     sample_rate: int,
@@ -2009,6 +2087,7 @@ def compute_onset_attack_profile(
         pre_spectrum, attack_spectrum, frequencies, min_frequency=SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY,
     )
     is_valid = high_band_flux >= ONSET_ATTACK_MIN_HIGH_BAND_FLUX or (broadband_gain >= ONSET_ATTACK_MIN_BROADBAND_GAIN and high_band_flux >= ONSET_ATTACK_GAIN_REQUIRES_MIN_FLUX)
+
     return OnsetAttackProfile(
         onset_time=onset_time,
         broadband_onset_gain=broadband_gain,
