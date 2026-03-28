@@ -1,6 +1,6 @@
 {
-  "pending": false,
-  "status": "completed",
+  "pending": true,
+  "status": "pending",
   "assertions": {
     "minEvents": 5,
     "maxEvents": 5,
@@ -9,14 +9,14 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {},
     "expectedEventNoteSetsOrdered": [
-      "C4+E5",
+      "C4+E4+E5+G4",
       "C5",
       "D5",
       "C5+E5",
       "G5"
     ]
   },
-  "reason": "practical BWV147 restart-prefix child now matches the scoped opening phrase cleanly and avoids the provenance-ambiguous tail region",
+  "reason": "Ear check confirmed #0 has 4 notes (C4+E4+E5+G4) but recognizer only detects C4+E5. Other events match.",
   "evaluationWindows": [
     {
       "startSec": 1.5,
