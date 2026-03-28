@@ -21,7 +21,15 @@
       "E4": 1,
       "F4": 1,
       "G4": 1
-    }
+    },
+    "expectedEventNoteSetsOrdered": [
+      "E6",
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4"
+    ]
   },
   "reason": "restart separated-notes phrase now completes after narrow local carryover cleanup removes stale upper E6 and mirrored D4/E4 overlap without regressing completed practical fixtures"
 }

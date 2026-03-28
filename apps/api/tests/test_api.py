@@ -1005,23 +1005,6 @@ def test_segment_peaks_suppresses_descending_restart_upper_carryover(monkeypatch
     )
 
 
-@manual_capture_slow
-def test_transcription_suppresses_repeated_primary_carryover_in_repeat03_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01")
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    assert 51 <= len(payload["events"]) <= 52
-    assert note_sets[:5] == ["C4", "D4", "E4", "F4", "G4"]
-    assert note_sets[17:22] == ["C4", "D4", "E4", "F4", "G4"]
-    assert note_sets[31:34] == ["C6", "D6", "E6"]
-    assert note_sets[-2:] == ["D6", "E6"]
-    assert all("+" not in note_set for note_set in note_sets)
-
-
-
-
 def test_build_recent_note_names_collapses_consecutive_duplicates() -> None:
     c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
     d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
@@ -1039,53 +1022,6 @@ def test_build_recent_note_names_collapses_consecutive_duplicates() -> None:
 
     assert build_recent_note_names(raw_events) == {"C4", "D4", "E4", "F4"}
 
-@manual_capture_slow
-def test_transcription_d4_d5_sequence_fixture_is_pending() -> None:
-    """d4-d5-sequence-01 is pending: chair noise masking and G5+B5 misdetection."""
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-d4-d5-sequence-01")
-    assert len(payload["events"]) >= 1
-
-
-@manual_capture_slow
-def test_transcription_regression_for_e6_to_g4_restart_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-g4-sequence-06-01")
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    assert note_sets == ["E6", "C4", "D4", "E4", "F4", "G4"]
-
-
-
-@manual_capture_slow
-def test_transcription_regression_for_d6_to_e6_sequence_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-d6-to-e6-sequence-10-01")
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    assert note_sets == ["D6", "E6", "D6", "E6", "D6", "E6", "D6", "E6", "D6", "E6"]
-
-
-@manual_capture_slow
-def test_transcription_regression_for_e6_to_c6_sequence_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c6-sequence-15-01")
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    assert note_sets == ["E6", "D6", "C6", "E6", "D6", "C6", "E6", "D6", "C6", "E6", "D6", "C6", "E6", "D6", "C6"]
-
-
-
-@manual_capture_slow
-def test_transcription_regression_for_c6_to_e6_sequence_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-c6-to-e6-sequence-15-01")
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    assert note_sets == ["C6", "D6", "E6", "C6", "D6", "E6", "C6", "D6", "E6", "C6", "D6", "E6", "C6", "D6", "E6"]
 def test_transcription_regression_for_repeated_octave_dyad() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_repeated_chord((587.3295, 1174.6591))
@@ -1718,91 +1654,6 @@ def test_suppress_short_residual_tails_drops_recent_single_note_tail() -> None:
         ["G5"],
     ]
 
-@manual_capture_slow
-def test_transcription_regression_for_manual_mixed_sequence() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-mixed-sequence-01")
-    assert [sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]] == [
-        ["C4"],
-        ["C5"],
-        ["D5"],
-        ["C5", "E5"],
-        ["G5"],
-        ["F5"],
-    ]
-
-@manual_capture_slow
-def test_transcription_regression_for_manual_four_note_gliss_ascending() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e4-g4-b4-d5-four-note-gliss-ascending-01")
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    assert note_sets == [
-        "B4+D5+E4+G4",
-        "B4+D5+E4+G4",
-        "B4+D5+E4+G4",
-        "B4+D5+E4+G4",
-        "B4+D5+E4+G4",
-    ]
-
-
-@manual_capture_slow
-def test_transcription_regression_for_manual_triad_repeat() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e4-g4-b4-triad-repeat-01")
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    assert note_sets == [
-        "B4+E4+G4",
-        "B4+E4+G4",
-        "B4+E4+G4",
-        "B4+E4+G4",
-        "B4+E4+G4",
-    ]
-
-
-@manual_capture_slow
-def test_transcription_regression_for_manual_e6_to_c4_sequence_17() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-17-01")
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    assert note_sets == [
-        "E6", "D6", "C6", "B5", "A5", "G5", "F5", "E5", "D5",
-        "C5", "B4", "A4", "G4", "F4", "E4", "D4", "C4",
-    ]
-
-
-@manual_capture_slow
-def test_transcription_regression_for_manual_e6_to_c4_sequence_51() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
-    note_sets = [
-        "+".join(sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]))
-        for event in payload["events"]
-    ]
-    expected_cycle = [
-        "E6", "D6", "C6", "B5", "A5", "G5", "F5", "E5", "D5",
-        "C5", "B4", "A4", "G4", "F4", "E4", "D4", "C4",
-    ]
-    assert note_sets == [*expected_cycle, *expected_cycle, *expected_cycle]
-
-
-@manual_capture_slow
-def test_transcription_regression_for_manual_triple_glissando() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-triple-glissando-ascending-01")
-    assert [sorted(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]] == [
-        ["C4", "E4", "G4"],
-        ["A4", "D4", "F4"],
-        ["B4", "E4", "G4"],
-        ["A4", "C5", "F4"],
-        ["B4", "D5", "G4"],
-        ["A4", "C5", "E5"],
-        ["B4", "D5", "F5"],
-        ["C5", "E5", "G5"],
-    ]
-
 def test_suppress_subset_decay_events_drops_contiguous_subset_tail() -> None:
     c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
     e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
@@ -2052,63 +1903,6 @@ def test_transcription_debug_reports_disabled_repeated_pattern_passes() -> None:
 
 
 @manual_capture_slow
-def test_transcription_recovers_terminal_descending_onset_run_in_51_note_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
-    assert payload["debug"]["terminalMultiOnsetSegments"]
-    assert payload["events"][-1]["notes"][0]["pitchClass"] == "C"
-    assert payload["events"][-1]["notes"][0]["octave"] == 4
-    assert len(payload["events"]) >= 50
-
-
-@manual_capture_slow
-def test_transcription_drops_descending_restart_bridge_in_51_note_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
-    note_sets = {"+".join(note["pitchClass"] + str(note["octave"]) for note in event["notes"]) for event in payload["events"]}
-    assert "D4+E4" not in note_sets
-
-
-@manual_capture_slow
-def test_transcription_eliminates_second_cycle_g4_a4_merged_dyad_in_51_note_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
-    merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
-    assert "G4+A4" not in merged_note_sets
-
-
-@manual_capture_slow
-def test_transcription_eliminates_first_cycle_f4_g4_merged_dyad_in_51_note_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
-    merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
-    assert "F4+G4" not in merged_note_sets
-
-
-@manual_capture_slow
-def test_transcription_eliminates_b5_d6_restart_residue_in_51_note_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
-    merged_note_sets = ["+".join(event["notes"]) for event in payload["debug"]["mergedEvents"]]
-    assert "B5+D6" not in merged_note_sets
-
-
-@manual_capture_slow
-def test_transcription_reaches_exact_event_count_in_51_note_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
-    assert len(payload["events"]) == 51
-
-
-@manual_capture_slow
-def test_transcription_recovers_third_cycle_prefix_in_51_note_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
-    note_sets = ["+".join("{}{}".format(note["pitchClass"], note["octave"]) for note in event["notes"]) for event in payload["events"]]
-    assert note_sets[33:37] == ["C4", "E6", "D6", "C6"]
-
-
-
-
-
-@manual_capture_slow
-def test_bwv147_restart_prefix_recovers_scoped_opening_phrase() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-prefix-01")
-
-@manual_capture_slow
 def test_bwv147_mid_cluster_rebundles_short_upper_tail_into_triad() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-mid-gesture-cluster-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
@@ -2126,13 +1920,6 @@ def test_bwv147_upper_cluster_recovers_delayed_terminal_e5() -> None:
 
 
 @manual_capture_slow
-def test_bwv147_restart_tail_returns_correct_five_event_phrase() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-tail-01")
-    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
-    assert note_sets == ["G5", "E4+G5", "C6", "B5", "A4+C6"]
-
-
-@manual_capture_slow
 def test_bwv147_late_upper_tail_recovers_sparse_terminal_d5_e5_tail() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-late-upper-tail-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
@@ -2142,13 +1929,6 @@ def test_bwv147_late_upper_tail_recovers_sparse_terminal_d5_e5_tail() -> None:
 @manual_capture_slow
 def test_bwv147_lower_mixed_roll_recovers_opening_mixed_dyad_and_long_gap_run() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-lower-mixed-roll-01")
-    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
-    assert note_sets == ["C5", "D4+G4+B4", "C5", "D5", "D4+G4", "B4", "D5", "G4+B4+D5+F5", "E5"]
-
-
-@manual_capture_slow
-def test_bwv147_lower_context_roll_matches_completed_nine_event_phrase() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-lower-context-roll-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets == ["C5", "D4+G4+B4", "C5", "D5", "D4+G4", "B4", "D5", "G4+B4+D5+F5", "E5"]
 

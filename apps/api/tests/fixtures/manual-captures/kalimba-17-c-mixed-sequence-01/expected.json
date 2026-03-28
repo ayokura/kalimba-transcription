@@ -32,7 +32,15 @@
       "C5+E5": 1,
       "G5": 1,
       "F5": 1
-    }
+    },
+    "expectedEventNoteSetsOrdered": [
+      "C4",
+      "C5",
+      "D5",
+      "C5+E5",
+      "G5",
+      "F5"
+    ]
   },
   "status": "completed"
 }
