@@ -90,6 +90,43 @@
 - Dedicated worktree setup, integration, and cleanup should be handled by the primary agent unless the active toolset provides equivalent isolation automatically.
 - If a subagent is only doing inspection or debugging, prefer `explorer` plus no file edits over creating a worktree.
 
+## Test Architecture
+
+テストは3層モデルに従う:
+
+| Tier | 目的 | 入力 | アサーション対象 |
+|------|------|------|----------------|
+| **Mechanism** | 個別の recognizer 関数の動作確認 | 構築した RawEvent/NoteCandidate、または marshal した中間データ | 関数の戻り値 |
+| **Fixture regression** | 実音声に対する転写結果の回帰検出 | WAV ファイル (HTTP 経由) | expected.json のアサーション (イベント数、ノートセット、順序) |
+| **Ablation/variant** | フィーチャーフラグ変更が既存 fixture を壊さないか | WAV ファイル + monkeypatch | expected.json のアサーション |
+
+### ルール
+
+1. **Fixture テストで debug 構造をアサートしない。** `payload["debug"]` のサブフィールド（`segmentCandidates`, `multiOnsetGapSegments`, `secondaryDecisionTrail`, `mergedEvents` 等）を exact-match でピン留めしない。recognizer リファクタリングで内部出力が変わっても転写結果が正しければテストは壊れてはならない。
+2. **Mechanism テストは構築入力を使う。** `RawEvent`/`NoteCandidate` を直接構築して関数を呼ぶ。合成音声で `segment_peaks` を直接呼ぶのも可。
+3. **実データが必要な mechanism テストは marshal する。** パイプラインの中間状態を JSON にダンプし、`apps/api/tests/fixtures/mechanism-snapshots/` に保存して読み込む。フルパイプライン実行で中間状態を取得してはならない。
+4. **Fixture 回帰の権威は parameterized テスト。** `test_manual_capture_completed.py` が全 completed fixture を自動的に検証する。個別の fixture テストを `test_api.py` に追加する前に、`expected.json` のアサーションで表現できないか検討する。
+5. **個別 fixture テストは parameterized で表現不可能な場合のみ。** pending/review_needed fixture の暫定チェック、またはイベント間の関係性など `expected.json` で表現できないアサーションに限る。
+6. **ground_truth.json でタイミング情報を管理する。** 人間が耳・スペクトログラムで確認した onset 時刻を `ground_truth.json` に記録する。librosa の onset 検出に依存しない絶対秒で記録し、自動テストでの timing 検証に使用する。
+
+### ground_truth.json スキーマ
+
+```json
+{
+  "version": 1,
+  "toleranceSec": 0.05,
+  "onsets": [
+    {"timeSec": 1.05, "notes": ["C4"], "method": "ear_verified"},
+    {"timeSec": 2.03, "notes": ["D4"], "toleranceSec": 0.08, "method": "spectrogram_verified", "comment": "soft attack"}
+  ]
+}
+```
+
+- `timeSec`: audio.wav 先頭からの絶対秒
+- `toleranceSec`: デフォルト50ms、onset ごとにオーバーライド可能
+- `method`: `ear_verified`, `spectrogram_verified`, `aubio_cross_checked`
+- ファイルはオプショナル（存在する fixture のみ timing チェック実施）
+
 ## Recognizer Strategy Notes
 
 - Treat repeated-pattern normalizers as suspicious until proven necessary. Favor local/causal explanations over corpus-wide dominant-pattern rewrites.
