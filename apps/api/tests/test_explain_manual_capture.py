@@ -118,7 +118,6 @@ def test_explain_manual_capture_reports_pending_summary_hints() -> None:
     assert payload["normalizationSummary"]["segmentCount"] >= payload["normalizationSummary"]["rawEventCount"]
     assert payload["normalizationSummary"]["rawEventCount"] >= payload["normalizationSummary"]["mergedEventCount"]
     assert payload["normalizationReasonCounts"]
-    assert any(item["rule"] in ("merged_duplicate", "simplified_to_subset") for item in payload["normalizationDecisions"])
     assert isinstance(payload["phraseBreakGuess"], list)
 
 

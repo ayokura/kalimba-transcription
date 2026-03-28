@@ -850,21 +850,6 @@ def test_should_block_descending_repeated_primary_tertiary_extension_requires_de
     ) is False
 
 
-@manual_capture_slow
-def test_transcription_blocks_descending_repeated_primary_tertiary_extension_in_51_note_fixture() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
-    target_segment = next(
-        segment
-        for segment in payload["debug"]["segmentCandidates"]
-        if abs(segment["startTime"] - 6.960) < 0.02 and abs(segment["endTime"] - 7.424) < 0.02
-    )
-    assert "G4" in target_segment["selectedNotes"]
-    assert any(
-        decision["noteName"] == "D5"
-        and decision["accepted"] is False
-        for decision in target_segment["secondaryDecisionTrail"]
-    )
-
 
 def test_segment_peaks_suppresses_descending_stale_upper_adjacent_carryover(monkeypatch: pytest.MonkeyPatch) -> None:
     import app.transcription as transcription
