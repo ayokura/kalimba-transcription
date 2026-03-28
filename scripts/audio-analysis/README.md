@@ -35,6 +35,34 @@ praat --run pitch_detect.praat <audio_file> <start> <duration> <step> <min_pitch
 
 出力: 時刻、周波数、最も近いカリンバ音、偏差%
 
+### onset_separation_analysis.py
+onset群を比較し、分離に最も有効な特徴量を特定。Cohen's d + overlap分析。
+
+```bash
+# 簡易モード（1ファイル内の2群比較）
+uv run python scripts/audio-analysis/onset_separation_analysis.py \
+  --audio bwv147-restart-prefix-01 --real 1.87,3.15,5.06 --compare 4.16
+
+# JSON設定（複数ファイル・複数群の包括分析）
+uv run python scripts/audio-analysis/onset_separation_analysis.py --config samples.json
+```
+
+出力:
+- 40以上の特徴量のCohen's d（分離度）をランキング表示
+- CLEAN分離（群間overlap無し）の自動検出
+- 上位特徴量の生値テーブル
+
+JSON設定フォーマット:
+```json
+{
+  "groups": {
+    "real": [{"audio": "fixture-name", "onset": 1.87, "label": "E5"}],
+    "noise": [{"audio": "fixture-name", "onset": 16.97, "label": "trailing"}]
+  },
+  "reference_group": "real"
+}
+```
+
 ### analyze_spectral_spread.py
 複数fixtureのスペクトル帯域幅を比較分析。
 
@@ -64,6 +92,7 @@ praat --run pitch_detect.praat <audio_file> <start> <duration> <step> <min_pitch
 - `/audio-pitch` - ピッチ検出 (praat)
 - `/audio-spectrum` - スペクトル特徴量 (librosa)
 - `/audio-diagnose` - 統合診断
+- `/audio-separate` - onset群の特徴量分離分析
 
 ## 関連ドキュメント
 

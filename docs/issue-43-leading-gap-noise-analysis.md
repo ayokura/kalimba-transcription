@@ -128,9 +128,62 @@ onset直後の音程を自己相関で検出し、期待される音と比較：
 
 補助的に **案2（gain/hf_flux比率）** を組み合わせることで、0.1秒より後のノイズも除外可能。
 
+## Phase 7: 波形特徴量による trailing noise フィルタ（2026-03-28）
+
+### 手法: fake種類別の特徴量分離分析
+
+単一の「fake vs real」比較では有効な閾値が見つからなかった。
+**fake を種類別に分類し直した**ところ、trailing noise に対して6つのメトリクスが CLEAN 分離を示した。
+
+| fake種類 | 物理的原因 | 分離性 |
+|----------|-----------|--------|
+| noise_trailing | 演奏停止後の環境ノイズ/機器ノイズ | 高（6メトリクスCLEAN） |
+| noise_leading | 録音開始時のノイズ | 中（1サンプルのため一般化注意） |
+| residual | カリンバ残響の減衰 | 低（スペクトルが実音と本質的に同一） |
+
+### trailing noise に有効な特徴量
+
+| メトリック | Cohen's d | 分離 | 閾値方向 |
+|-----------|----------|------|---------|
+| kurtosis_20ms | 3.31 | CLEAN | noise > 2.0, real < 1.0 |
+| post_crest_20ms | 2.59 | CLEAN | noise > 3.8, real < 3.6 |
+| crest_change | 2.01 | CLEAN | noise > 1.0, real < 0.6 |
+| gain_positive_frac | 1.90 | CLEAN | noise > 0.77, real < 0.68 |
+| broadband_gain_80ms | 2.87 | CLEAN | noise > 8.3, real < 3.7 |
+| rms_ratio_80ms | 2.51 | CLEAN | noise > 2.9, real < 1.9 |
+
+### 実装結果
+
+| フィルタ | 定数 | 値 | 状態 | 理由 |
+|---------|------|-----|------|------|
+| broadband_onset_gain | `GAP_ONSET_MIN_BROADBAND_GAIN` | 0.95 | 有効 | 既存、residual decay対策 |
+| kurtosis | `GAP_ONSET_MAX_KURTOSIS` | 2.0 | **有効** | 最もロバスト（振幅/ダイナミクス非依存） |
+| post_crest | `GAP_ONSET_MAX_POST_CREST` | 0.0 | 無効化可能 | 3.8で有効化可能 |
+| gain_positive_frac | — | — | 未実装 | マージン狭い、改善案は #44 |
+
+### 実装上の注意: candidates の分離
+
+kurtosis フィルタを `attack_validated_gap_candidates` に適用すると、フィルタされた candidates が `collect_multi_onset_gap_segments` にも漏れ、意図しない回帰を引き起こした。
+
+**対策**: unfiltered candidates（共有パス用）と filtered candidates（gap collector専用）を分離。
+
+## Onset分類の標準手順
+
+今回確立した手法（再利用可能）:
+
+1. **可視化で仮説を立てる**: `/audio-spectrum`, `/audio-visualize`
+2. **特徴量を網羅的に計算**: `onset_separation_analysis.py` or `/audio-separate`
+3. **fake種類別に分離度を評価**: 混合分析は避ける
+4. **Cohen's d + overlap分析で客観的に閾値を決定**
+5. 閾値が CLEAN 分離を示すか確認（overlap があれば false positive リスクを検討）
+
 ## 関連ファイル
 
-分析スクリプト（/tmp/に作成）:
+分析スクリプト:
+- `scripts/audio-analysis/onset_separation_analysis.py` — 汎用onset群分離分析
+- `.claude/skills/audio-separate.md` — 分離分析スキル
+
+旧分析スクリプト（/tmp/に作成、参考用）:
 - analyze_is_valid_attack.py
 - analyze_first_2sec.py
 - analyze_attack_spectrum.py
@@ -138,7 +191,15 @@ onset直後の音程を自己相関で検出し、期待される音と比較：
 - analyze_spectral_spread.py
 - analyze_kalimba_signature.py
 - find_real_first_note.py
+- per_type_separation.py（onset_separation_analysis.pyの元）
+- crest_impulse_analysis.py
+
+## 関連Issue
+
+- #43: attack-validated gap collector regressions
+- #44: gain_positive_frac による広帯域ノイズ検出
 
 ## 更新履歴
 
 - 2026-03-27: 初版作成（Issue #43調査結果）
+- 2026-03-28: Phase 7追加（波形特徴量フィルタ実装、onset分類手法の確立）
