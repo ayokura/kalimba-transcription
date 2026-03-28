@@ -106,9 +106,4 @@ def build_custom_tuning(name: str, note_names: list[str]) -> InstrumentTuning:
     clean_notes = [note.strip() for note in note_names if note.strip()]
     if not clean_notes:
         raise HTTPException(status_code=400, detail="Tuning must contain at least one valid note.")
-    canonical = [f"{parse_note_name(n)[0]}{parse_note_name(n)[1]}" for n in clean_notes]
-    if len(set(canonical)) != len(canonical):
-        seen: set[str] = set()
-        dupes = [n for n in canonical if n in seen or seen.add(n)]  # type: ignore[func-returns-value]
-        raise HTTPException(status_code=400, detail=f"Duplicate notes in tuning: {', '.join(dupes)}")
     return build_tuning("custom", name or "Custom Tuning", clean_notes)
