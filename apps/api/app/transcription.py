@@ -398,7 +398,7 @@ async def read_audio(upload: UploadFile) -> tuple[np.ndarray, int]:
         raise HTTPException(status_code=400, detail="Unsupported audio format. Send WAV audio from the web client.") from exc
 
     if audio.ndim > 1:
-        audio = np.mean(audio, axis=1)
+        audio = audio[:, 0]
 
     if float(np.max(np.abs(audio))) < 1e-4:
         raise HTTPException(status_code=422, detail="Audio appears to be silent.")
