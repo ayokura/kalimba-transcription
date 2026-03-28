@@ -219,6 +219,58 @@ Example:
 
 This makes later fixture review and independent audit much easier.
 
+## Test Architecture (3-Tier Model)
+
+テストは3層に分かれる。詳細は `AGENTS.md` の `## Test Architecture` を参照。
+
+### Tier 1: Mechanism Tests
+
+個別の recognizer 関数（`suppress_resonant_carryover`, `simplify_short_secondary_bleed` 等）を構築した `RawEvent`/`NoteCandidate` 入力でテスト。
+
+- ファイル: `test_event_processing.py`, `test_segment_peaks.py`, `test_detect_segments.py`, `test_repeated_patterns.py`
+- 入力: 直接構築、または `fixtures/mechanism-snapshots/` の marshal データ
+- アサーション: 関数の戻り値（ノート名、イベント数、etc.）
+- **`payload["debug"]` のサブフィールドをアサートしない**
+
+### Tier 2: Fixture Regression Tests
+
+`test_manual_capture_completed.py` が全 `completed` fixture を自動的にパラメタライズドテスト。
+
+- `expected.json` のアサーション（イベント数、ノートセット、順序）で検証
+- `ground_truth.json` が存在する fixture はタイミングも検証
+- **個別の fixture テストを追加する前に `expected.json` で表現できないか検討する**
+
+### Tier 3: Ablation / Variant Tests
+
+`test_ablation_pure.py`, `test_gap_filter.py` 等。フィーチャーフラグの ON/OFF で既存 fixture が壊れないかを検証。
+
+### テスト追加ガイドライン
+
+1. 新しい recognizer 関数 → Tier 1 mechanism test を追加
+2. 新しい fixture → `expected.json` に適切なアサーションを記載（`expectedEventNoteSetsOrdered` 推奨）
+3. 特定の偽検出を防ぎたい → `maxEventNoteSetOccurrences` や `expectedEventNoteSetsOrdered` で表現
+4. タイミングの正しさを検証したい → `ground_truth.json` を作成
+
+### ground_truth.json
+
+人間が耳やスペクトログラムで確認した onset 時刻を記録するオプショナルファイル。
+
+```json
+{
+  "version": 1,
+  "toleranceSec": 0.05,
+  "onsets": [
+    {"timeSec": 2.08, "notes": ["D5"], "method": "spectrogram_verified"},
+    {"timeSec": 4.60, "notes": ["D5"], "method": "ear_verified", "toleranceSec": 0.08}
+  ]
+}
+```
+
+- `timeSec`: audio.wav 先頭からの絶対秒（librosa 非依存）
+- `toleranceSec`: デフォルト50ms、onset ごとにオーバーライド可能
+- `method`: `ear_verified`, `spectrogram_verified`, `aubio_cross_checked`
+- `test_manual_capture_completed.py` が自動的にチェック
+
 ## Next automated tests to add
 
 1. API endpoint tests for `/api/health`, `/api/tunings`, and `/api/transcriptions` using WAV fixtures.
