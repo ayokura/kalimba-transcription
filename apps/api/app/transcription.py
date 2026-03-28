@@ -608,6 +608,7 @@ class GapAttackCandidates:
 
 
 LEADING_GAP_START_MARGIN = 0.10
+GAP_ONSET_MIN_BROADBAND_GAIN = 0.95
 
 
 def _valid_attack_gap_onsets(
@@ -622,7 +623,7 @@ def _valid_attack_gap_onsets(
         if not (gap_start + start_margin < time < gap_end - 0.05):
             continue
         profile = onset_profiles.get(round(time, 4))
-        if profile is not None and profile.is_valid_attack:
+        if profile is not None and profile.is_valid_attack and profile.broadband_onset_gain >= GAP_ONSET_MIN_BROADBAND_GAIN:
             valid.append(time)
     return valid
 

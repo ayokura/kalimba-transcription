@@ -281,7 +281,7 @@ def test_collect_attack_validated_gap_candidates_returns_valid_attack_subset() -
 
     candidates = collect_attack_validated_gap_candidates(active_ranges, onset_times, onset_profiles, 12.319)
 
-    assert [[round(value, 4) for value in gap] for gap in candidates.inter_ranges] == [[3.504, 5.0613, 5.68, 6.3013, 7.5467, 8.9467, 9.0667]]
+    assert [[round(value, 4) for value in gap] for gap in candidates.inter_ranges] == [[3.504, 5.0613, 6.3013, 7.5467, 8.9467, 9.0667]]
     assert candidates.leading == []
     assert candidates.trailing == []
 
