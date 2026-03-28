@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "toleranceSec": 0.05,
+  "onsets": [
+    {"timeSec": 2.08, "notes": ["D5"], "method": "spectrogram_verified"},
+    {"timeSec": 4.60, "notes": ["D5"], "method": "spectrogram_verified"},
+    {"timeSec": 7.05, "notes": ["D5"], "method": "spectrogram_verified"},
+    {"timeSec": 9.61, "notes": ["D5"], "method": "spectrogram_verified"},
+    {"timeSec": 12.05, "notes": ["D5"], "method": "spectrogram_verified"}
+  ]
+}

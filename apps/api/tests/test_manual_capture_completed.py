@@ -15,7 +15,9 @@ from manual_capture_helpers import (
     event_note_sets,
     fixture_dirs_for_status,
     fixture_id,
+    ground_truth_timing_failures,
     load_fixture,
+    load_ground_truth,
     normalized_assertions,
     primary_note_names,
     validate_expected_metadata,
@@ -48,7 +50,19 @@ def test_completed_manual_capture_regression(fixture_dir: Path) -> None:
     )
 
     assert response.status_code == 200, fixture_dir.name
-    assert_fixture_output(fixture_dir, response.json(), expected)
+    payload = response.json()
+    assert_fixture_output(fixture_dir, payload, expected)
+
+    ground_truth = load_ground_truth(fixture_dir)
+    if ground_truth is not None:
+        # Re-run with debug=true for timing check (uses full audio, not windowed)
+        debug_response = client.post(
+            "/api/transcriptions",
+            data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+            files={"file": ("audio.wav", (fixture_dir / "audio.wav").read_bytes(), "audio/wav")},
+        )
+        timing_failures = ground_truth_timing_failures(fixture_dir, debug_response.json(), ground_truth)
+        assert not timing_failures, f"{fixture_dir.name} timing: {'; '.join(timing_failures)}"
 
 
 if not COMPLETED_FIXTURES:

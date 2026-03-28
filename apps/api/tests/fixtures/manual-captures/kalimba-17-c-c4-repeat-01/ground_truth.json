@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "toleranceSec": 0.08,
+  "onsets": [
+    {"timeSec": 2.57, "notes": ["C4"], "method": "spectrogram_verified", "comment": "1st note"},
+    {"timeSec": 8.03, "notes": ["C4"], "method": "spectrogram_verified", "comment": "2nd note"},
+    {"timeSec": 12.74, "notes": ["C4"], "method": "spectrogram_verified", "comment": "3rd note"},
+    {"timeSec": 21.73, "notes": ["C4"], "method": "spectrogram_verified", "comment": "4th note, longer gap before"},
+    {"timeSec": 31.08, "notes": ["C4"], "method": "spectrogram_verified", "comment": "5th note, longest gap before"}
+  ]
+}

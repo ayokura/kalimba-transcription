@@ -393,3 +393,59 @@ def _build_evaluation_audio_bytes_cached(
     buffer = io.BytesIO()
     sf.write(buffer, combined, sample_rate, format="WAV")
     return buffer.getvalue()
+
+
+def load_ground_truth(fixture_dir: Path) -> dict[str, Any] | None:
+    """Load ground_truth.json if it exists, return None otherwise."""
+    gt_path = fixture_dir / "ground_truth.json"
+    if not gt_path.exists():
+        return None
+    return json.loads(gt_path.read_text(encoding="utf-8"))
+
+
+def ground_truth_timing_failures(
+    fixture_dir: Path,
+    payload: dict[str, Any],
+    ground_truth: dict[str, Any],
+) -> list[str]:
+    """Check detected event onsets against ground truth timing.
+
+    Returns a list of failure messages. Empty list means all checks passed.
+    """
+    failures: list[str] = []
+    default_tolerance = ground_truth.get("toleranceSec", 0.05)
+    expected_onsets = ground_truth.get("onsets", [])
+
+    # Get detected event start times and note sets
+    detected: list[tuple[float, list[str]]] = []
+    for seg in payload.get("debug", {}).get("segmentCandidates", []):
+        notes = seg.get("selectedNotes", [])
+        if notes:
+            detected.append((seg["startTime"], sorted(notes)))
+
+    # Check each expected onset has a matching detection
+    matched_detected: set[int] = set()
+    for gt_onset in expected_onsets:
+        gt_time = gt_onset["timeSec"]
+        gt_notes = sorted(gt_onset["notes"])
+        tolerance = gt_onset.get("toleranceSec", default_tolerance)
+
+        found = False
+        for idx, (det_time, det_notes) in enumerate(detected):
+            if idx in matched_detected:
+                continue
+            if abs(det_time - gt_time) <= tolerance:
+                matched_detected.add(idx)
+                if det_notes != gt_notes:
+                    failures.append(
+                        f"onset@{gt_time:.3f}s: expected notes {gt_notes}, got {det_notes}"
+                    )
+                found = True
+                break
+
+        if not found:
+            failures.append(
+                f"onset@{gt_time:.3f}s: expected {gt_notes} not detected within {tolerance}s tolerance"
+            )
+
+    return failures
