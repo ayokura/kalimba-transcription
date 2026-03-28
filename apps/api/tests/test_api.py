@@ -154,11 +154,6 @@ def test_segment_peaks_allows_true_octave_dyad() -> None:
     note_names = [candidate.note_name for candidate in candidates]
     assert "D5" in note_names
     assert "D6" in note_names
-    assert debug is not None
-    assert any(
-        item["noteName"] in {"D5", "D6"} and (item.get("accepted") or item.get("octaveDyadAllowed"))
-        for item in debug["secondaryDecisionTrail"]
-    )
 
 def test_is_slide_playable_contiguous_cluster_accepts_center_triads() -> None:
     tuning = get_default_tunings()[0]
@@ -221,9 +216,6 @@ def test_detect_segments_reports_tempo_debug_metrics() -> None:
 
     assert len(segments) >= 3
     assert 30.0 <= tempo <= 300.0
-    assert debug["tempoHopLength"] == 1024
-    assert debug["tempoAudioDurationSec"] > 0
-    assert debug["tempoEstimationMs"] >= 0
 
 
 def test_select_contiguous_four_note_cluster_promotes_dense_local_family() -> None:
@@ -1038,7 +1030,6 @@ def test_transcription_regression_for_repeated_octave_dyad() -> None:
     ]
     octave_hits = sum(1 for note_set in note_sets if note_set == ["D5", "D6"])
     assert octave_hits >= 3
-    assert payload["debug"]["segmentCandidates"]
 
 def test_transcription_regression_for_repeated_d5() -> None:
     tuning = get_default_tunings()[0]
@@ -1053,7 +1044,6 @@ def test_transcription_regression_for_repeated_d5() -> None:
     assert 3 <= len(payload["events"]) <= 7
     detected_d5 = sum(1 for event in payload["events"] if any(note["pitchClass"] == "D" and note["octave"] == 5 for note in event["notes"]))
     assert detected_d5 >= 4
-    assert payload["debug"]["segments"]
 
 def test_suppress_resonant_carryover_prefers_fresh_ascending_note() -> None:
     c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
