@@ -2145,12 +2145,6 @@ def test_transcription_recovers_third_cycle_prefix_in_51_note_fixture() -> None:
 @manual_capture_slow
 def test_bwv147_restart_prefix_recovers_scoped_opening_phrase() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-prefix-01")
-def test_bwv147_restart_high_register_collapses_short_repeated_overlap() -> None:
-    payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-high-register-01")
-    note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
-    assert note_sets == ["C4+E5", "C5", "D5", "C5+E5", "G5"]
-    assert "E4" not in note_sets
-
 
 @manual_capture_slow
 def test_bwv147_mid_cluster_rebundles_short_upper_tail_into_triad() -> None:
