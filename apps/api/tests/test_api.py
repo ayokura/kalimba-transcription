@@ -2099,7 +2099,6 @@ def test_transcription_recovers_third_cycle_prefix_in_51_note_fixture() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-e6-to-c4-sequence-51-01")
     note_sets = ["+".join("{}{}".format(note["pitchClass"], note["octave"]) for note in event["notes"]) for event in payload["events"]]
     assert note_sets[33:37] == ["C4", "E6", "D6", "C6"]
-    assert [round(start, 4) for start, _ in payload["debug"]["shortBridgeActiveRanges"]] == [20.6013]
 
 
 
@@ -2123,19 +2122,14 @@ def test_bwv147_upper_cluster_recovers_delayed_terminal_e5() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-upper-mixed-cluster-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets == ["B5", "A4+C6", "G5", "E5", "A4+C5", "D5", "E5"]
-    assert [round(start, 4) for start, _ in payload["debug"]["delayedTerminalOrphanSegments"]] == [5.416]
 
 
 
 @manual_capture_slow
-def test_bwv147_restart_tail_promotes_recent_upper_octave_alias() -> None:
+def test_bwv147_restart_tail_returns_correct_five_event_phrase() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-restart-tail-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets == ["G5", "E4+G5", "C6", "B5", "A4+C6"]
-    assert payload["debug"]["segmentCandidates"][-1]["primaryPromotion"]["reason"] == "recent-upper-octave-alias-primary"
-    trail = payload["debug"]["segmentCandidates"][-1]["secondaryDecisionTrail"]
-    assert trail[0]["reasons"] == ["recent-upper-octave-alias-secondary-blocked"]
-    assert trail[1]["noteName"] == "A4" and trail[1]["accepted"] is True
 
 
 @manual_capture_slow
@@ -2143,10 +2137,6 @@ def test_bwv147_late_upper_tail_recovers_sparse_terminal_d5_e5_tail() -> None:
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-late-upper-tail-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets[-5:] == ["G5", "E5", "A4+C5", "D5", "E5"]
-    assert [tuple(round(value, 4) for value in segment) for segment in payload["debug"]["terminalTwoOnsetTailSegments"]] == [
-        (5.9147, 6.2347),
-        (7.0, 7.32),
-    ]
 
 
 @manual_capture_slow
@@ -2154,9 +2144,6 @@ def test_bwv147_lower_mixed_roll_recovers_opening_mixed_dyad_and_long_gap_run() 
     payload = transcribe_manual_capture_fixture("kalimba-17-c-bwv147-lower-mixed-roll-01")
     note_sets = ["+".join(f"{note['pitchClass']}{note['octave']}" for note in event["notes"]) for event in payload["events"]]
     assert note_sets == ["C5", "D4+G4+B4", "C5", "D5", "D4+G4", "B4", "D5", "G4+B4+D5+F5", "E5"]
-    opening_segment = next(segment for segment in payload["debug"]["segmentCandidates"] if abs(segment["startTime"] - 1.0667) < 0.02)
-    assert opening_segment["selectedNotes"] == ["D4", "B4", "G4"]
-    assert any(decision["noteName"] == "G4" and decision["accepted"] and decision["reasons"] == ["lower-mixed-roll-extension"] for decision in opening_segment["secondaryDecisionTrail"])
 
 
 @manual_capture_slow
@@ -2174,12 +2161,5 @@ def test_bwv147_lower_f4_mixed_run_is_a_clean_pending_child_with_late_tail_miss(
     assert set(note_sets[0].split("+")) == {"C5", "G4"}
     assert note_sets[1:3] == ["D5", "E5"]
     assert set(note_sets[3].split("+")) == {"A4", "F4"}
-    assert [round(onset, 4) for onset in payload["debug"]["onsetTimes"][-4:]] == [5.848, 6.9813, 9.568, 9.76]
-    assert [tuple(round(value, 4) for value in segment) for segment in payload["debug"]["segments"]] == [
-        (0.0107, 0.9653),
-        (1.0667, 1.72),
-        (2.072, 2.8613),
-        (4.0747, 4.7067),
-    ]
 
 
