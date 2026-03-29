@@ -37,6 +37,13 @@ uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--v
 
 Rejection reasons for missing notes are shown in `[note→reason]` format.
 
+## Known Limitations
+
+**個別イベントの failure 分析には使わないこと。** greedy ordered matching はセグメント数と期待イベント数が一致しない場合にアライメントがずれ、誤った failure 原因を報告する。例: multi-note セグメントが直前の single-note イベントに割り当てられ、本来の multi-note イベントに別セグメントが当たるケース（2026-03-29 bwv147-163 R4 E142 で確認）。
+
+- **全体精度（exact %）と failure カテゴリの大局把握には有効**
+- **個別イベントの原因分析には `/audio-energy-trace` + debug 出力の手動確認を推奨**
+
 ## Example Usage
 ```
 /score-alignment bwv147-sequence-163-01
