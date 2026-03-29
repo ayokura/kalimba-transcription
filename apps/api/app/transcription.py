@@ -179,7 +179,7 @@ HARMONIC_WEIGHTS = [1.0, 0.55, 0.3, 0.15]
 HARMONIC_BAND_CENTS = 40.0
 SUPPRESSION_BAND_CENTS = 45.0
 MAX_POLYPHONY = 4
-TERTIARY_MIN_SCORE_RATIO = 0.06
+TERTIARY_MIN_SCORE_RATIO = 0.12
 TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.85
 TERTIARY_MIN_SCORE = 20.0
 TERTIARY_MIN_ONSET_GAIN = 1.8
@@ -3184,7 +3184,7 @@ def segment_peaks(
                 and hypothesis.candidate.octave == primary.candidate.octave - 1
             ):
                 reasons.append("recent-upper-octave-alias-secondary-blocked")
-            if hypothesis.score < primary.score * score_ratio and not octave_dyad_allowed:
+            if hypothesis.score < primary.score * score_ratio and not octave_dyad_allowed and not is_tertiary_or_beyond:
                 reasons.append("score-below-threshold")
             if hypothesis.fundamental_ratio < secondary_min_fundamental_ratio:
                 reasons.append("fundamental-ratio-too-low")
