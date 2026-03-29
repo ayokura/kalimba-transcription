@@ -225,6 +225,7 @@ OCTAVE_ALIAS_MAX_FUNDAMENTAL_RATIO = 0.34
 OCTAVE_ALIAS_PENALTY = 0.85
 
 OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO = 0.32
+OCTAVE_DYAD_LOWER_OCTAVE4_MIN_FUNDAMENTAL_RATIO = 0.85
 OCTAVE_DYAD_MIN_PRIMARY_ENERGY_RATIO = 0.06
 OCTAVE_DYAD_UPPER_MIN_FUNDAMENTAL_RATIO = 0.95
 OCTAVE_DYAD_UPPER_HARMONIC_ENERGY_RATIO = 0.05
@@ -1850,9 +1851,12 @@ def allow_octave_secondary(primary: NoteHypothesis, hypothesis: NoteHypothesis, 
             if primary_octave_energy > 0.0 and hypothesis.fundamental_energy < primary_octave_energy * OCTAVE_DYAD_UPPER_HARMONIC_ENERGY_RATIO:
                 return False
             return True
-        if hypothesis.candidate.octave <= 4:
+        if hypothesis.candidate.octave <= 3:
             return False
-        if hypothesis.fundamental_ratio < OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO:
+        if hypothesis.candidate.octave == 4:
+            if hypothesis.fundamental_ratio < OCTAVE_DYAD_LOWER_OCTAVE4_MIN_FUNDAMENTAL_RATIO:
+                return False
+        elif hypothesis.fundamental_ratio < OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO:
             return False
         if hypothesis.fundamental_energy < primary.fundamental_energy * OCTAVE_DYAD_MIN_PRIMARY_ENERGY_RATIO:
             return False
