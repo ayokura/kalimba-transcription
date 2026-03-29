@@ -2553,6 +2553,39 @@ def maybe_promote_recent_upper_octave_alias_primary(
     }
 
 
+def is_physically_playable_chord(keys: list[int]) -> bool:
+    """Check if a set of keys can be played simultaneously on a kalimba.
+
+    One thumb can slide across consecutive keys (2-4 tines).
+    The other thumb can strict-press 1-2 adjacent keys.
+    Either thumb can reach any part of the instrument.
+    Valid chords must be splittable into:
+      - a slide group (consecutive keys, any length) + a strict group (≤2 adjacent keys)
+    """
+    if len(keys) <= 2:
+        return True
+    unique = sorted(set(keys))
+    n = len(unique)
+    if n > 4:
+        return False
+
+    def _consecutive(ks: list[int]) -> bool:
+        return len(ks) <= 1 or all(ks[i + 1] - ks[i] == 1 for i in range(len(ks) - 1))
+
+    def _strict_ok(ks: list[int]) -> bool:
+        return len(ks) <= 1 or (len(ks) == 2 and ks[1] - ks[0] == 1)
+
+    # Try all ways to split into slide group + strict group
+    for mask in range(1 << n):
+        slide = [unique[i] for i in range(n) if mask & (1 << i)]
+        strict = [unique[i] for i in range(n) if not (mask & (1 << i))]
+        if len(slide) < 1 or len(strict) > 2:
+            continue
+        if _consecutive(slide) and _strict_ok(strict):
+            return True
+    return False
+
+
 def select_contiguous_four_note_cluster(
     primary: NoteHypothesis,
     ranked: list[NoteHypothesis],
@@ -3079,7 +3112,10 @@ def segment_peaks(
                 score_ratio = min(score_ratio, OCTAVE_DYAD_UPPER_SCORE_RATIO)
             is_tertiary_or_beyond = len(selected) >= 2
             if is_tertiary_or_beyond:
-                if hypothesis.score < primary.score * TERTIARY_MIN_SCORE_RATIO:
+                test_keys = [n.key for n in selected] + [hypothesis.candidate.key]
+                if not is_physically_playable_chord(test_keys):
+                    reasons.append("tertiary-physically-impossible")
+                elif hypothesis.score < primary.score * TERTIARY_MIN_SCORE_RATIO:
                     reasons.append("tertiary-score-below-threshold")
                 elif hypothesis.fundamental_ratio < TERTIARY_MIN_FUNDAMENTAL_RATIO:
                     reasons.append("tertiary-fundamental-ratio-too-low")
