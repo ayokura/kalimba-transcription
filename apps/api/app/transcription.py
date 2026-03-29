@@ -106,6 +106,8 @@ ABLATE_POST_TAIL_GAP_HEAD = False
 ABLATE_TERMINAL_MULTI_ONSET = False
 ABLATE_GAP_INJECTED = False
 ABLATE_TWO_ONSET_TERMINAL_TAIL = False
+ABLATE_COLLAPSE_ACTIVE_RANGE_HEAD = False
+ABLATE_SNAP_RANGE_START_TO_ONSET = False
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO = 0.18
 RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO = 0.6
@@ -1506,8 +1508,9 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
                     relaxed_head_segment = True
 
         range_onsets = [time for time in onset_times if effective_range_start + 0.005 < time < range_end - 0.05]
-        range_onsets = collapse_active_range_head_onsets(effective_range_start, range_end, range_onsets, onset_attack_profiles)
-        if not prior_onsets and not relaxed_head_segment and range_onsets:
+        if not ABLATE_COLLAPSE_ACTIVE_RANGE_HEAD:
+            range_onsets = collapse_active_range_head_onsets(effective_range_start, range_end, range_onsets, onset_attack_profiles)
+        if not ABLATE_SNAP_RANGE_START_TO_ONSET and not prior_onsets and not relaxed_head_segment and range_onsets:
             first_range_onset = range_onsets[0]
             if should_snap_range_start_to_first_onset(effective_range_start, first_range_onset, onset_attack_profiles):
                 effective_range_start = first_range_onset
