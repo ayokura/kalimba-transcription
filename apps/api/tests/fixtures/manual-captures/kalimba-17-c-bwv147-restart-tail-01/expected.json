@@ -1,6 +1,6 @@
 {
-  "pending": false,
-  "status": "completed",
+  "pending": true,
+  "status": "pending",
   "assertions": {
     "minEvents": 5,
     "maxEvents": 5,
@@ -10,13 +10,13 @@
     "maxEventNoteSetOccurrences": {},
     "expectedEventNoteSetsOrdered": [
       "G5",
-      "E4+G5",
+      "E4+G4+G5",
       "C6",
       "B5",
-      "A4+C6"
+      "A4+C5+C6"
     ]
   },
-  "reason": "practical BWV147 restart-tail child now matches expected note sets; evaluation window extended to include the final [C6,A4] chord onset",
+  "reason": "ground truth corrected via energy analysis (issue #50): event 2 [G5,<G4,E4>], event 5 [C6,<C5,A4>]. Currently pending because the recognizer outputs G4+G5 and A4+C6, missing E4 and C5 respectively (3-note chords not yet reliably detected)",
   "evaluationWindows": [
     {
       "startSec": 0.2,

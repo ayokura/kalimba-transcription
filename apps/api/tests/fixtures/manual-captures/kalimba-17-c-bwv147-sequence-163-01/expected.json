@@ -9,6 +9,12 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "large practical free-performance phrase awaiting recognizer evaluation; known local misplay near expected event 116 remains in-scope pending provenance review"
+  "reason": "large practical free-performance phrase awaiting recognizer evaluation; known local misplay near expected event 116 remains in-scope pending provenance review",
+  "ignoredRanges": [
+    {
+      "startSec": 197.2,
+      "endSec": 201.5,
+      "reason": "R3 playing error: 2nd D5 missed (E5 played), restarted from D5"
+    }
+  ]
 }
-

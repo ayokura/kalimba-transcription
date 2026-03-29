@@ -178,7 +178,13 @@ PRIOR_ONSET_BACKTRACK_SECONDS = 0.55
 HARMONIC_WEIGHTS = [1.0, 0.55, 0.3, 0.15]
 HARMONIC_BAND_CENTS = 40.0
 SUPPRESSION_BAND_CENTS = 45.0
-MAX_POLYPHONY = 2
+MAX_POLYPHONY = 4
+TERTIARY_MIN_SCORE_RATIO = 0.12
+TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.85
+TERTIARY_MIN_SCORE = 20.0
+TERTIARY_MIN_ONSET_GAIN = 1.8
+TERTIARY_BACKWARD_LOOKBACK_SECONDS = 0.2
+TERTIARY_MIN_BACKWARD_ATTACK_GAIN = 20.0
 GLISS_CLUSTER_MAX_GAP = 0.06
 GLISS_CLUSTER_MAX_EVENT_DURATION = 0.85
 GLISS_CLUSTER_MAX_TOTAL_DURATION = 1.2
@@ -225,6 +231,7 @@ OCTAVE_ALIAS_MAX_FUNDAMENTAL_RATIO = 0.34
 OCTAVE_ALIAS_PENALTY = 0.85
 
 OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO = 0.32
+OCTAVE_DYAD_LOWER_OCTAVE4_MIN_FUNDAMENTAL_RATIO = 0.85
 OCTAVE_DYAD_MIN_PRIMARY_ENERGY_RATIO = 0.06
 OCTAVE_DYAD_UPPER_MIN_FUNDAMENTAL_RATIO = 0.95
 OCTAVE_DYAD_UPPER_HARMONIC_ENERGY_RATIO = 0.05
@@ -1850,9 +1857,12 @@ def allow_octave_secondary(primary: NoteHypothesis, hypothesis: NoteHypothesis, 
             if primary_octave_energy > 0.0 and hypothesis.fundamental_energy < primary_octave_energy * OCTAVE_DYAD_UPPER_HARMONIC_ENERGY_RATIO:
                 return False
             return True
-        if hypothesis.candidate.octave <= 4:
+        if hypothesis.candidate.octave <= 3:
             return False
-        if hypothesis.fundamental_ratio < OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO:
+        if hypothesis.candidate.octave == 4:
+            if hypothesis.fundamental_ratio < OCTAVE_DYAD_LOWER_OCTAVE4_MIN_FUNDAMENTAL_RATIO:
+                return False
+        elif hypothesis.fundamental_ratio < OCTAVE_DYAD_MIN_FUNDAMENTAL_RATIO:
             return False
         if hypothesis.fundamental_energy < primary.fundamental_energy * OCTAVE_DYAD_MIN_PRIMARY_ENERGY_RATIO:
             return False
@@ -1975,6 +1985,44 @@ def onset_energy_gain(
     pre_energy = _energy(pre_chunk)
     early_energy = _energy(early_chunk)
     return (early_energy + 1e-6) / (pre_energy + 1e-6)
+
+
+def onset_backward_attack_gain(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    target_frequency: float,
+    lookback_seconds: float = TERTIARY_BACKWARD_LOOKBACK_SECONDS,
+) -> float:
+    """Compute the ratio of onset energy to energy at a past reference point.
+
+    Traces the note's own frequency component backward in time.
+    Genuine attacks show high ratio (note absent in the past).
+    Residual notes show low ratio (note was already present and decaying).
+    """
+    window_samples = max(int(sample_rate * ONSET_ENERGY_WINDOW_SECONDS), 512)
+    start_sample = max(int(start_time * sample_rate), 0)
+    lookback_sample = int((start_time - lookback_seconds) * sample_rate)
+
+    # Not enough audio history for a reliable lookback (e.g. first 200ms of
+    # file or evaluation window).  Return 0 so the tertiary gate rejects.
+    if lookback_sample < 0 or lookback_sample + window_samples > start_sample:
+        return 0.0
+
+    early_chunk = audio[start_sample:start_sample + window_samples]
+    past_chunk = audio[lookback_sample:lookback_sample + window_samples]
+    if len(past_chunk) < 512 or len(early_chunk) < 512:
+        return 0.0
+
+    def _energy(chunk: np.ndarray) -> float:
+        n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))
+        spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
+        frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+        return peak_energy_near(frequencies, spectrum, target_frequency)
+
+    past_energy = _energy(past_chunk)
+    onset_energy = _energy(early_chunk)
+    return (onset_energy + 1e-6) / (past_energy + 1e-6)
 
 
 def _build_analysis_window_chunks(
@@ -2547,6 +2595,39 @@ def maybe_promote_recent_upper_octave_alias_primary(
     }
 
 
+def is_physically_playable_chord(keys: list[int]) -> bool:
+    """Check if a set of keys can be played simultaneously on a kalimba.
+
+    One thumb can slide across consecutive keys (2-4 tines).
+    The other thumb can strict-press 1-2 adjacent keys.
+    Either thumb can reach any part of the instrument.
+    Valid chords must be splittable into:
+      - a slide group (consecutive keys, any length) + a strict group (≤2 adjacent keys)
+    """
+    if len(keys) <= 2:
+        return True
+    unique = sorted(set(keys))
+    n = len(unique)
+    if n > 4:
+        return False
+
+    def _consecutive(ks: list[int]) -> bool:
+        return len(ks) <= 1 or all(ks[i + 1] - ks[i] == 1 for i in range(len(ks) - 1))
+
+    def _strict_ok(ks: list[int]) -> bool:
+        return len(ks) <= 1 or (len(ks) == 2 and ks[1] - ks[0] == 1)
+
+    # Try all ways to split into slide group + strict group
+    for mask in range(1 << n):
+        slide = [unique[i] for i in range(n) if mask & (1 << i)]
+        strict = [unique[i] for i in range(n) if not (mask & (1 << i))]
+        if len(slide) < 1 or len(strict) > 2:
+            continue
+        if _consecutive(slide) and _strict_ok(strict):
+            return True
+    return False
+
+
 def select_contiguous_four_note_cluster(
     primary: NoteHypothesis,
     ranked: list[NoteHypothesis],
@@ -3071,6 +3152,29 @@ def segment_peaks(
             score_ratio = secondary_score_ratio
             if octave_dyad_allowed and hypothesis.candidate.frequency > primary.candidate.frequency:
                 score_ratio = min(score_ratio, OCTAVE_DYAD_UPPER_SCORE_RATIO)
+            is_tertiary_or_beyond = len(selected) >= 2
+            if is_tertiary_or_beyond:
+                test_keys = [n.key for n in selected] + [hypothesis.candidate.key]
+                if not is_physically_playable_chord(test_keys):
+                    reasons.append("tertiary-physically-impossible")
+                elif hypothesis.score < primary.score * TERTIARY_MIN_SCORE_RATIO or hypothesis.score < TERTIARY_MIN_SCORE:
+                    reasons.append("tertiary-score-below-threshold")
+                elif hypothesis.fundamental_ratio < TERTIARY_MIN_FUNDAMENTAL_RATIO:
+                    reasons.append("tertiary-fundamental-ratio-too-low")
+                elif any(hypothesis.candidate.note_name == existing.note_name for existing in selected):
+                    reasons.append("tertiary-duplicate-note")
+                if not reasons and is_tertiary_or_beyond:
+                    if onset_gain is None:
+                        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                    if onset_gain < TERTIARY_MIN_ONSET_GAIN:
+                        reasons.append("tertiary-weak-onset")
+                if not reasons and is_tertiary_or_beyond:
+                    backward_gain = onset_backward_attack_gain(
+                        audio, sample_rate, start_time,
+                        hypothesis.candidate.frequency,
+                    )
+                    if backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
+                        reasons.append("tertiary-weak-backward-attack")
             if hypothesis.candidate.note_name == primary.candidate.note_name:
                 reasons.append("same-as-primary")
             if (
@@ -3080,7 +3184,7 @@ def segment_peaks(
                 and hypothesis.candidate.octave == primary.candidate.octave - 1
             ):
                 reasons.append("recent-upper-octave-alias-secondary-blocked")
-            if hypothesis.score < primary.score * score_ratio and not octave_dyad_allowed:
+            if hypothesis.score < primary.score * score_ratio and not octave_dyad_allowed and not is_tertiary_or_beyond:
                 reasons.append("score-below-threshold")
             if hypothesis.fundamental_ratio < secondary_min_fundamental_ratio:
                 reasons.append("fundamental-ratio-too-low")
@@ -3293,7 +3397,7 @@ def segment_peaks(
             accepted = len(reasons) == 0
             accepted_hypothesis = hypothesis
             debug_reasons = reasons
-            if accepted and hypothesis.candidate.frequency < primary.candidate.frequency and not octave_dyad_allowed:
+            if accepted and len(selected) == 1 and hypothesis.candidate.frequency < primary.candidate.frequency and not octave_dyad_allowed:
                 accepted_hypothesis, promoted_from = maybe_promote_lower_secondary_to_recent_upper_octave(
                     primary,
                     hypothesis,
@@ -3317,7 +3421,8 @@ def segment_peaks(
             )
             if accepted:
                 selected.append(accepted_hypothesis.candidate)
-                break
+                if len(selected) >= MAX_POLYPHONY:
+                    break
 
     if (
         len(selected) == 2
@@ -3344,6 +3449,9 @@ def segment_peaks(
                 if any(are_harmonic_related(candidate, existing) for existing in selected):
                     continue
                 onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, candidate.frequency)
+                backward_gain = onset_backward_attack_gain(audio, sample_rate, start_time, candidate.frequency)
+                if backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
+                    continue
                 viable_extensions.append((hypothesis, onset_gain))
 
             chosen_extension: tuple[NoteHypothesis, float] | None = None
