@@ -1,6 +1,6 @@
 {
   "status": "pending",
-  "reason": "passes through pattern normalization masking chair noise misdetection (0-3s) and G5+B5 peak misidentification at 11.82s; requires upstream non-instrument sound rejection to pass cleanly",
+  "reason": "early chair-noise false events are now rejected upstream, but a raw G5+B5 misidentification at 11.82s is still dropped_after_raw by normalization; requires active-range boundary/peak correction to pass cleanly",
   "assertions": {
     "minEvents": 6,
     "maxEvents": 6,
