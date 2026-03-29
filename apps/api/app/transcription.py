@@ -2002,12 +2002,17 @@ def onset_backward_attack_gain(
     """
     window_samples = max(int(sample_rate * ONSET_ENERGY_WINDOW_SECONDS), 512)
     start_sample = max(int(start_time * sample_rate), 0)
-    lookback_sample = max(0, int((start_time - lookback_seconds) * sample_rate))
+    lookback_sample = int((start_time - lookback_seconds) * sample_rate)
+
+    # Not enough audio history for a reliable lookback (e.g. first 200ms of
+    # file or evaluation window).  Return 0 so the tertiary gate rejects.
+    if lookback_sample < 0 or lookback_sample + window_samples > start_sample:
+        return 0.0
 
     early_chunk = audio[start_sample:start_sample + window_samples]
     past_chunk = audio[lookback_sample:lookback_sample + window_samples]
     if len(past_chunk) < 512 or len(early_chunk) < 512:
-        return 999.0
+        return 0.0
 
     def _energy(chunk: np.ndarray) -> float:
         n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))

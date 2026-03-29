@@ -16,7 +16,7 @@
       "A4+C5+C6"
     ]
   },
-  "reason": "ground truth corrected via energy analysis (issue #50): event 2 [G5,<G4,E4>], event 5 [C6,<C5,A4>]. Currently pending because MAX_POLYPHONY=2 limits detection to 2 notes per segment (recognizer outputs G4+G5 and A4+C6, missing E4 and C5 respectively)",
+  "reason": "ground truth corrected via energy analysis (issue #50): event 2 [G5,<G4,E4>], event 5 [C6,<C5,A4>]. Currently pending because the recognizer outputs G4+G5 and A4+C6, missing E4 and C5 respectively (3-note chords not yet reliably detected)",
   "evaluationWindows": [
     {
       "startSec": 0.2,

@@ -52,7 +52,37 @@ def parse_content(content: str) -> list[dict]:
 
 
 def build_time_converter(expected: dict):
-    """Build a function to convert original audio time to evaluation audio time."""
+    """Build a function to convert original audio time to evaluation audio time.
+
+    When evaluationWindows is present, the evaluation audio is the concatenation
+    of those windows only, so the mapping is: each window maps to a contiguous
+    block starting where the previous window ended in cropped time.
+
+    When only ignoredRanges is present, the evaluation audio is the original
+    minus the ignored ranges.
+    """
+    windows = expected.get("evaluationWindows", [])
+    if windows:
+        # evaluationWindows: audio = concat of windows in order
+        sorted_wins = sorted(windows, key=lambda w: w["startSec"])
+        cropped_offset = 0.0
+        mapping = []  # (orig_start, orig_end, cropped_start)
+        for w in sorted_wins:
+            mapping.append((w["startSec"], w["endSec"], cropped_offset))
+            cropped_offset += w["endSec"] - w["startSec"]
+
+        def convert(t: float) -> float:
+            for orig_start, orig_end, crop_start in mapping:
+                if orig_start <= t < orig_end:
+                    return crop_start + (t - orig_start)
+            # Outside all windows: clamp to nearest boundary
+            if mapping and t >= mapping[-1][1]:
+                last = mapping[-1]
+                return last[2] + (last[1] - last[0])
+            return 0.0
+
+        return convert
+
     ignored = []
     for r in expected.get("ignoredRanges", []):
         ignored.append((r["startSec"], r["endSec"]))
@@ -128,8 +158,16 @@ def main():
         data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
         files={"file": ("audio.wav", audio_bytes, "audio/wav")},
     )
+    if response.status_code != 200:
+        print(f"Error: transcription request failed with status {response.status_code}", file=sys.stderr)
+        print(response.text[:500], file=sys.stderr)
+        sys.exit(1)
     payload = response.json()
-    segments = payload["debug"]["segmentCandidates"]
+    debug = payload.get("debug")
+    if not isinstance(debug, dict) or "segmentCandidates" not in debug:
+        print(f"Error: response missing debug.segmentCandidates (keys: {list(payload.keys())})", file=sys.stderr)
+        sys.exit(1)
+    segments = debug["segmentCandidates"]
     score_data = json.loads(score_path.read_text())
     lines = score_data["lines"]
 

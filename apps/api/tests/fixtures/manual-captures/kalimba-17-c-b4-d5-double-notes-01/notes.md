@@ -12,6 +12,6 @@ The saved pack originally labeled this as A5 + D5. During review, the user confi
 
 ## Review (2026-03-30)
 
-- 0-3s contains male voice noise, not kalimba playing. Original C4+G4 event was voice misidentification.
-- Evaluation window set to 3.0-18.0s to exclude noise.
+- 0-3.5s contains male voice noise, not kalimba playing. Original C4+G4 event was voice misidentification.
+- Evaluation window set to 3.5-18.0s to exclude noise.
 - seg 7 (@5.77s) F5 is sympathetic vibration from D5+B4 chord (F5 key14 adjacent to D5 key13), confirmed false positive.
