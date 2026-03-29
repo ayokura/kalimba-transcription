@@ -178,7 +178,9 @@ PRIOR_ONSET_BACKTRACK_SECONDS = 0.55
 HARMONIC_WEIGHTS = [1.0, 0.55, 0.3, 0.15]
 HARMONIC_BAND_CENTS = 40.0
 SUPPRESSION_BAND_CENTS = 45.0
-MAX_POLYPHONY = 2
+MAX_POLYPHONY = 4
+TERTIARY_MIN_SCORE_RATIO = 0.06
+TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.5
 GLISS_CLUSTER_MAX_GAP = 0.06
 GLISS_CLUSTER_MAX_EVENT_DURATION = 0.85
 GLISS_CLUSTER_MAX_TOTAL_DURATION = 1.2
@@ -3075,6 +3077,14 @@ def segment_peaks(
             score_ratio = secondary_score_ratio
             if octave_dyad_allowed and hypothesis.candidate.frequency > primary.candidate.frequency:
                 score_ratio = min(score_ratio, OCTAVE_DYAD_UPPER_SCORE_RATIO)
+            is_tertiary_or_beyond = len(selected) >= 2
+            if is_tertiary_or_beyond:
+                if hypothesis.score < primary.score * TERTIARY_MIN_SCORE_RATIO:
+                    reasons.append("tertiary-score-below-threshold")
+                elif hypothesis.fundamental_ratio < TERTIARY_MIN_FUNDAMENTAL_RATIO:
+                    reasons.append("tertiary-fundamental-ratio-too-low")
+                elif any(hypothesis.candidate.note_name == existing.note_name for existing in selected):
+                    reasons.append("tertiary-duplicate-note")
             if hypothesis.candidate.note_name == primary.candidate.note_name:
                 reasons.append("same-as-primary")
             if (
@@ -3297,7 +3307,7 @@ def segment_peaks(
             accepted = len(reasons) == 0
             accepted_hypothesis = hypothesis
             debug_reasons = reasons
-            if accepted and hypothesis.candidate.frequency < primary.candidate.frequency and not octave_dyad_allowed:
+            if accepted and len(selected) == 1 and hypothesis.candidate.frequency < primary.candidate.frequency and not octave_dyad_allowed:
                 accepted_hypothesis, promoted_from = maybe_promote_lower_secondary_to_recent_upper_octave(
                     primary,
                     hypothesis,
@@ -3321,7 +3331,8 @@ def segment_peaks(
             )
             if accepted:
                 selected.append(accepted_hypothesis.candidate)
-                break
+                if len(selected) >= MAX_POLYPHONY:
+                    break
 
     if (
         len(selected) == 2
