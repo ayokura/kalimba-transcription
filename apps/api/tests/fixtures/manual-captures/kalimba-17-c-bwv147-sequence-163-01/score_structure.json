@@ -6,116 +6,155 @@
     {
       "id": "L1",
       "eventCount": 15,
-      "eventRange": [1, 15],
+      "eventRange": [
+        1,
+        15
+      ],
       "content": "C4 / C5 / D5 / [E5,C4] / G5 / F5 / [F5,A4] / A5 / G5 / [G5,E4] / C6 / B5 / [C6,A4] / G5 / E5",
       "estimatedStartSec": 2.8,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 2.79,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "L2",
       "eventCount": 15,
-      "eventRange": [16, 30],
+      "eventRange": [
+        16,
+        30
+      ],
       "content": "<C5,A4> / D5 / E5 / [F5,D4] / G5 / A5 / [G5,E4] / F5 / E5 / [D5,F4] / E5 / C5 / <B4,G4> / C5 / D5",
       "estimatedStartSec": 16.7,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 16.67,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "L3",
       "eventCount": 15,
-      "eventRange": [31, 45],
+      "eventRange": [
+        31,
+        45
+      ],
       "content": "[G4,D4] / B4 / D5 / F5 / E5 / D5 / [E5,C4] / C5 / D5 / <E5,C5> / G5 / F5 / [F5,A4] / A5 / G5",
       "estimatedStartSec": 43.3,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 39.8,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "L4",
       "eventCount": 15,
-      "eventRange": [46, 60],
+      "eventRange": [
+        46,
+        60
+      ],
       "content": "[G5,E4] / C6 / B5 / [C6,A4] / G5 / E5 / [C5,G4] / D5 / E5 / <A4,F4> / G5 / F5 / [E5,G4] / D5 / C5",
       "estimatedStartSec": 62.0,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 60.45,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "L5",
       "eventCount": 12,
-      "eventRange": [61, 72],
+      "eventRange": [
+        61,
+        72
+      ],
       "content": "[G4,D4] / C5 / B4 / [C5,<G4,E4,C4>] / E5 / G5 / C6 / G5 / E5 / C5 / E5 / [G5,E4]",
       "estimatedStartSec": 79.1,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 84.6,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "L6",
       "eventCount": 10,
-      "eventRange": [73, 82],
+      "eventRange": [
+        73,
+        82
+      ],
       "content": "[E5,C4] / B4 / [F5,A4] / [G5,B4] / A4 / [G5,G4] / [F5,A4] / B4 / <E5,C5> / <D5,B4,G4>",
       "estimatedStartSec": 120.9,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 125.32,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R1",
       "eventCount": 17,
-      "eventRange": [83, 99],
+      "eventRange": [
+        83,
+        99
+      ],
       "content": "G4 / A4 / B4 / D5 / C5 / D5 / F5 / E5 / [F5,D4] / D5 / B4 / G4 / B4 / D5 / <F5,D5,B4,G4> / E5 / D5",
       "estimatedStartSec": 140.9,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 147.9,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R2",
       "eventCount": 15,
-      "eventRange": [100, 114],
+      "eventRange": [
+        100,
+        114
+      ],
       "content": "[E5,<G4,E4,C4>] / C5 / D5 / [E5,C5] / G5 / F5 / [F5,<A4,F4>] / A5 / G5 / [G5,<G4,E4>] / C6 / B5 / [C6,<E5,D4>] / G5 / E5",
       "estimatedStartSec": 166.3,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 173.87,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R3",
       "eventCount": 15,
-      "eventRange": [115, 129],
+      "eventRange": [
+        115,
+        129
+      ],
       "content": "<C5,A4> / D5 / E5 / [F5,<F5,D4>] / G5 / A5 / [G5,<G4,E4>] / F5 / E5 / [D5,<A4,F4>] / E5 / C5 / [<B4,G4>,D4] / C5 / D5",
       "estimatedStartSec": 191.7,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 195.78,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R4",
       "eventCount": 15,
-      "eventRange": [130, 144],
+      "eventRange": [
+        130,
+        144
+      ],
       "content": "[G4,D4] / B4 / D5 / <F5,D5,B4,G4> / E5 / D5 / [E5,<G4,E4,C4>] / C5 / D5 / <E5,C5> / G5 / F5 / [F5,<A4,F4>] / A5 / G5",
       "estimatedStartSec": 221.3,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 237.05,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R5",
       "eventCount": 15,
-      "eventRange": [145, 159],
+      "eventRange": [
+        145,
+        159
+      ],
       "content": "[G5,<G4,E4>] / C6 / B5 / [C6,<C5,A4>] / G5 / E5 / <C5,A4> / D5 / E5 / <A4,F4> / G5 / F5 / [E5,G4] / D5 / C5",
       "estimatedStartSec": 241.1,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 257.03,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R6",
       "eventCount": 4,
-      "eventRange": [160, 163],
+      "eventRange": [
+        160,
+        163
+      ],
       "content": "[G4,D4] / C5 / B4 / [C5,<G4,E4,C4>]",
       "estimatedStartSec": 260.6,
-      "verifiedStartSec": null,
-      "verificationMethod": null
+      "verifiedStartSec": 278.3,
+      "verificationMethod": "ear_verified"
     }
   ],
   "knownIssues": [
     {
       "nearEvent": 116,
-      "description": "演奏ミス: C5/D5/E5と弾くべきところをC5/E5と弾き、弾き直している"
+      "line": "R3",
+      "description": "演奏ミス: R3の2音目のD5が欠落しE5を弾く。R3の2番目のD5から弾き直し（3:21.52 = 201.52s）",
+      "errorStartSec": 195.78,
+      "restartTimeSec": 201.52
     }
   ]
 }
