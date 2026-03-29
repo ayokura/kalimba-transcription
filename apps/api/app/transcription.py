@@ -181,6 +181,7 @@ SUPPRESSION_BAND_CENTS = 45.0
 MAX_POLYPHONY = 4
 TERTIARY_MIN_SCORE_RATIO = 0.06
 TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.5
+TERTIARY_MIN_ONSET_GAIN = 1.8
 GLISS_CLUSTER_MAX_GAP = 0.06
 GLISS_CLUSTER_MAX_EVENT_DURATION = 0.85
 GLISS_CLUSTER_MAX_TOTAL_DURATION = 1.2
@@ -3121,6 +3122,11 @@ def segment_peaks(
                     reasons.append("tertiary-fundamental-ratio-too-low")
                 elif any(hypothesis.candidate.note_name == existing.note_name for existing in selected):
                     reasons.append("tertiary-duplicate-note")
+                if not reasons and is_tertiary_or_beyond:
+                    if onset_gain is None:
+                        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                    if onset_gain < TERTIARY_MIN_ONSET_GAIN:
+                        reasons.append("tertiary-weak-onset")
             if hypothesis.candidate.note_name == primary.candidate.note_name:
                 reasons.append("same-as-primary")
             if (
