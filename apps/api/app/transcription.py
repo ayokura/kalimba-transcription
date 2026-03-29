@@ -183,6 +183,8 @@ TERTIARY_MIN_SCORE_RATIO = 0.06
 TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.85
 TERTIARY_MIN_SCORE = 20.0
 TERTIARY_MIN_ONSET_GAIN = 1.8
+TERTIARY_BACKWARD_LOOKBACK_SECONDS = 0.2
+TERTIARY_MIN_BACKWARD_ATTACK_GAIN = 20.0
 GLISS_CLUSTER_MAX_GAP = 0.06
 GLISS_CLUSTER_MAX_EVENT_DURATION = 0.85
 GLISS_CLUSTER_MAX_TOTAL_DURATION = 1.2
@@ -1985,6 +1987,39 @@ def onset_energy_gain(
     return (early_energy + 1e-6) / (pre_energy + 1e-6)
 
 
+def onset_backward_attack_gain(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    target_frequency: float,
+    lookback_seconds: float = TERTIARY_BACKWARD_LOOKBACK_SECONDS,
+) -> float:
+    """Compute the ratio of onset energy to energy at a past reference point.
+
+    Traces the note's own frequency component backward in time.
+    Genuine attacks show high ratio (note absent in the past).
+    Residual notes show low ratio (note was already present and decaying).
+    """
+    window_samples = max(int(sample_rate * ONSET_ENERGY_WINDOW_SECONDS), 512)
+    start_sample = max(int(start_time * sample_rate), 0)
+    lookback_sample = max(0, int((start_time - lookback_seconds) * sample_rate))
+
+    early_chunk = audio[start_sample:start_sample + window_samples]
+    past_chunk = audio[lookback_sample:lookback_sample + window_samples]
+    if len(past_chunk) < 512 or len(early_chunk) < 512:
+        return 999.0
+
+    def _energy(chunk: np.ndarray) -> float:
+        n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))
+        spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
+        frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+        return peak_energy_near(frequencies, spectrum, target_frequency)
+
+    past_energy = _energy(past_chunk)
+    onset_energy = _energy(early_chunk)
+    return (onset_energy + 1e-6) / (past_energy + 1e-6)
+
+
 def _build_analysis_window_chunks(
     audio: np.ndarray,
     sample_rate: int,
@@ -3128,6 +3163,13 @@ def segment_peaks(
                         onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
                     if onset_gain < TERTIARY_MIN_ONSET_GAIN:
                         reasons.append("tertiary-weak-onset")
+                if not reasons and is_tertiary_or_beyond:
+                    backward_gain = onset_backward_attack_gain(
+                        audio, sample_rate, start_time,
+                        hypothesis.candidate.frequency,
+                    )
+                    if backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
+                        reasons.append("tertiary-weak-backward-attack")
             if hypothesis.candidate.note_name == primary.candidate.note_name:
                 reasons.append("same-as-primary")
             if (
@@ -3402,6 +3444,9 @@ def segment_peaks(
                 if any(are_harmonic_related(candidate, existing) for existing in selected):
                     continue
                 onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, candidate.frequency)
+                backward_gain = onset_backward_attack_gain(audio, sample_rate, start_time, candidate.frequency)
+                if backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
+                    continue
                 viable_extensions.append((hypothesis, onset_gain))
 
             chosen_extension: tuple[NoteHypothesis, float] | None = None
