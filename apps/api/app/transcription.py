@@ -180,7 +180,8 @@ HARMONIC_BAND_CENTS = 40.0
 SUPPRESSION_BAND_CENTS = 45.0
 MAX_POLYPHONY = 4
 TERTIARY_MIN_SCORE_RATIO = 0.06
-TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.5
+TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.85
+TERTIARY_MIN_SCORE = 20.0
 TERTIARY_MIN_ONSET_GAIN = 1.8
 GLISS_CLUSTER_MAX_GAP = 0.06
 GLISS_CLUSTER_MAX_EVENT_DURATION = 0.85
@@ -3116,7 +3117,7 @@ def segment_peaks(
                 test_keys = [n.key for n in selected] + [hypothesis.candidate.key]
                 if not is_physically_playable_chord(test_keys):
                     reasons.append("tertiary-physically-impossible")
-                elif hypothesis.score < primary.score * TERTIARY_MIN_SCORE_RATIO:
+                elif hypothesis.score < primary.score * TERTIARY_MIN_SCORE_RATIO or hypothesis.score < TERTIARY_MIN_SCORE:
                     reasons.append("tertiary-score-below-threshold")
                 elif hypothesis.fundamental_ratio < TERTIARY_MIN_FUNDAMENTAL_RATIO:
                     reasons.append("tertiary-fundamental-ratio-too-low")
