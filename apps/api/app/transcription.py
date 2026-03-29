@@ -180,8 +180,10 @@ HARMONIC_BAND_CENTS = 40.0
 SUPPRESSION_BAND_CENTS = 45.0
 MAX_POLYPHONY = 4
 TERTIARY_MIN_SCORE_RATIO = 0.06
-TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.5
+TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.90
 TERTIARY_MIN_ONSET_GAIN = 1.8
+QUATERNARY_MIN_SCORE_RATIO = 0.30
+GLISS_TERTIARY_MAX_RELATIVE_ONSET_GAIN = 0.12
 GLISS_CLUSTER_MAX_GAP = 0.06
 GLISS_CLUSTER_MAX_EVENT_DURATION = 0.85
 GLISS_CLUSTER_MAX_TOTAL_DURATION = 1.2
@@ -3103,6 +3105,8 @@ def segment_peaks(
     if MAX_POLYPHONY > 1 and contiguous_four_note_cluster is None:
         residual_spectrum = suppress_harmonics(spectrum, frequencies, primary.candidate.frequency)
         residual_ranked = rank_tuning_candidates(frequencies, residual_spectrum, tuning, debug=debug)
+        secondary_onset_gain: float | None = None
+        secondary_fundamental_ratio: float | None = None
         for hypothesis in residual_ranked[:8]:
             reasons: list[str] = []
             onset_gain: float | None = None
@@ -3112,16 +3116,26 @@ def segment_peaks(
             if octave_dyad_allowed and hypothesis.candidate.frequency > primary.candidate.frequency:
                 score_ratio = min(score_ratio, OCTAVE_DYAD_UPPER_SCORE_RATIO)
             is_tertiary_or_beyond = len(selected) >= 2
+            is_quaternary_or_beyond = len(selected) >= 3
             if is_tertiary_or_beyond:
                 test_keys = [n.key for n in selected] + [hypothesis.candidate.key]
+                tertiary_score_ratio = QUATERNARY_MIN_SCORE_RATIO if is_quaternary_or_beyond else TERTIARY_MIN_SCORE_RATIO
                 if not is_physically_playable_chord(test_keys):
                     reasons.append("tertiary-physically-impossible")
-                elif hypothesis.score < primary.score * TERTIARY_MIN_SCORE_RATIO:
+                elif hypothesis.score < primary.score * tertiary_score_ratio:
                     reasons.append("tertiary-score-below-threshold")
                 elif hypothesis.fundamental_ratio < TERTIARY_MIN_FUNDAMENTAL_RATIO:
                     reasons.append("tertiary-fundamental-ratio-too-low")
                 elif any(hypothesis.candidate.note_name == existing.note_name for existing in selected):
                     reasons.append("tertiary-duplicate-note")
+                if not reasons and is_tertiary_or_beyond:
+                    secondary = selected[1]
+                    if secondary_onset_gain is None:
+                        secondary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, secondary.frequency)
+                    if secondary_onset_gain < 1.0:
+                        reasons.append("tertiary-secondary-no-attack")
+                    elif secondary_fundamental_ratio is not None and secondary_fundamental_ratio < TERTIARY_MIN_FUNDAMENTAL_RATIO:
+                        reasons.append("tertiary-secondary-weak-fundamental")
                 if not reasons and is_tertiary_or_beyond:
                     if onset_gain is None:
                         onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
@@ -3372,6 +3386,8 @@ def segment_peaks(
                 }
             )
             if accepted:
+                if len(selected) == 1:
+                    secondary_fundamental_ratio = accepted_hypothesis.fundamental_ratio
                 selected.append(accepted_hypothesis.candidate)
                 if len(selected) >= MAX_POLYPHONY:
                     break
@@ -3401,6 +3417,11 @@ def segment_peaks(
                 if any(are_harmonic_related(candidate, existing) for existing in selected):
                     continue
                 onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, candidate.frequency)
+                if primary_onset_gain is not None and primary_onset_gain > 0 and primary.score > 0:
+                    relative_og = onset_gain / primary_onset_gain
+                    score_ratio = hypothesis.score / primary.score
+                    if relative_og > GLISS_TERTIARY_MAX_RELATIVE_ONSET_GAIN and score_ratio < GLISS_TERTIARY_SCORE_RATIO:
+                        continue
                 viable_extensions.append((hypothesis, onset_gain))
 
             chosen_extension: tuple[NoteHypothesis, float] | None = None
