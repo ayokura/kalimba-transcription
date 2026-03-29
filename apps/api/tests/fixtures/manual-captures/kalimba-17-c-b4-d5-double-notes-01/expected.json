@@ -2,7 +2,7 @@
   "pending": false,
   "assertions": {
     "minEvents": 5,
-    "maxEvents": 9,
+    "maxEvents": 5,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {
@@ -10,14 +10,19 @@
     },
     "maxEventNoteSetOccurrences": {},
     "expectedEventNoteSetsOrdered": [
-      "C4+G4",
       "B4+D5",
-      "D5",
       "B4+D5",
       "B4+D5",
       "B4+D5",
       "B4+D5"
     ]
   },
-  "status": "completed"
+  "status": "completed",
+  "reason": "evaluation window excludes 0-3s male voice noise and trailing noise; C4+G4 was voice misidentification",
+  "evaluationWindows": [
+    {
+      "startSec": 3.5,
+      "endSec": 18.0
+    }
+  ]
 }
