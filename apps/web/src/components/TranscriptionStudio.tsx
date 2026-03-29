@@ -639,6 +639,27 @@ function buildResultOnlyAssessment(result: TranscriptionResult | null): CaptureA
   };
 }
 
+function buildDraftCaptureScenario(captureCaseId: string, suggestedCaptureId: string) {
+  return captureCaseId.trim().length > 0 ? captureCaseId.trim() : suggestedCaptureId;
+}
+
+function buildTuningSignature(tuning: InstrumentTuning | null | undefined) {
+  if (!tuning) {
+    return "none";
+  }
+  const noteSignature = tuning.notes.map((note) => `${note.key}:${note.noteName}`).join("|");
+  return `${tuning.id}:${noteSignature}`;
+}
+
+function normalizeOptionalText(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function serializeExpectedPerformance(expectedPerformance: ManualCaptureExpectedPerformance | null) {
+  return JSON.stringify(expectedPerformance ?? null);
+}
+
 export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const isDebug = mode === "debug";
   const [tunings, setTunings] = useState<InstrumentTuning[]>([]);
@@ -678,13 +699,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
       ? buildCustomTuning(customName, customNotes)
       : tunings.find((tuning) => tuning.id === selectedTuningId) ?? null;
 
-  const tuningSignature = useMemo(() => {
-    if (!selectedTuning) {
-      return "none";
-    }
-    const noteSignature = selectedTuning.notes.map((note) => `${note.key}:${note.noteName}`).join("|");
-    return `${selectedTuning.id}:${noteSignature}`;
-  }, [selectedTuning]);
+  const tuningSignature = useMemo(() => buildTuningSignature(selectedTuning), [selectedTuning]);
 
   useEffect(() => {
     setPendingExpectedKeys([]);
@@ -692,22 +707,87 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setExpectedRepeatCount("1");
     setExpectedImportText("");
     setExpectedImportError(null);
+    clearAnalysisState();
   }, [tuningSignature]);
 
   const expectedPerformance = useMemo(() => buildExpectedPerformance(expectedEvents, captureIntent), [captureIntent, expectedEvents]);
-  const noteNamesByKey = useMemo(() => new Map((selectedTuning?.notes ?? []).map((note) => [note.key, note.noteName])), [selectedTuning]);
+  const analyzedNoteNamesByKey = useMemo(() => new Map((lastCapture?.requestPayload.tuning.notes ?? []).map((note) => [note.key, note.noteName])), [lastCapture]);
   const expectedNote = expectedPerformance?.summary ?? "";
-  const captureReview = useMemo(
-    () => buildCaptureAssessment(lastCapture?.requestPayload.expectedPerformance ?? expectedPerformance, result ?? lastCapture?.responsePayload ?? null, noteNamesByKey, lastCapture?.requestPayload.captureIntent ?? captureIntent),
-    [captureIntent, expectedPerformance, lastCapture, noteNamesByKey, result],
-  );
-  const recaptureGuidance = useMemo(() => buildRecaptureGuidance(captureReview, lastCapture?.requestPayload.captureIntent ?? captureIntent), [captureIntent, captureReview, lastCapture]);
-  const userReview = useMemo(() => buildResultOnlyAssessment(result), [result]);
-  const activeReview = isDebug ? captureReview : userReview;
   const suggestedCaptureId = useMemo(
     () => buildDefaultCaptureIdForValues(new Date().toISOString(), selectedTuning, expectedPerformance, captureIntent),
     [captureIntent, selectedTuning, expectedPerformance],
   );
+  const currentScenario = useMemo(() => buildDraftCaptureScenario(captureCaseId, suggestedCaptureId), [captureCaseId, suggestedCaptureId]);
+  const draftChangedSinceAnalysis = useMemo(() => {
+    if (!lastCapture) {
+      return false;
+    }
+    return (
+      lastCapture.requestPayload.scenario !== currentScenario
+      || lastCapture.requestPayload.captureIntent !== captureIntent
+      || lastCapture.requestPayload.memo !== normalizeOptionalText(captureMemo)
+      || lastCapture.requestPayload.expectedNote !== normalizeOptionalText(expectedNote)
+      || buildTuningSignature(lastCapture.requestPayload.tuning) !== tuningSignature
+      || serializeExpectedPerformance(lastCapture.requestPayload.expectedPerformance) !== serializeExpectedPerformance(expectedPerformance)
+    );
+  }, [captureIntent, captureMemo, currentScenario, expectedNote, expectedPerformance, lastCapture, tuningSignature]);
+  const captureReview = useMemo(
+    () => buildCaptureAssessment(
+      lastCapture?.requestPayload.expectedPerformance ?? null,
+      lastCapture?.responsePayload ?? null,
+      analyzedNoteNamesByKey,
+      lastCapture?.requestPayload.captureIntent ?? null,
+    ),
+    [analyzedNoteNamesByKey, lastCapture],
+  );
+  const recaptureGuidance = useMemo(() => buildRecaptureGuidance(captureReview, lastCapture?.requestPayload.captureIntent ?? "unknown"), [captureReview, lastCapture]);
+  const userReview = useMemo(() => buildResultOnlyAssessment(result), [result]);
+  const activeReview = isDebug ? captureReview : userReview;
+  const analysisStatus = useMemo(() => {
+    if (!recording) {
+      return {
+        label: "Awaiting Recording",
+        detail: "録音を用意すると解析できます。",
+      };
+    }
+    if (!lastCapture) {
+      return {
+        label: "Recording Ready",
+        detail: "録音は準備できています。解析を実行してください。",
+      };
+    }
+    if (draftChangedSinceAnalysis) {
+      return {
+        label: "Analysis Stale",
+        detail: "期待演奏やメモなどが解析後に変わりました。表示中の review と保存パックは前回解析の snapshot を参照しています。",
+      };
+    }
+    return {
+      label: "Analysis Ready",
+      detail: "現在の録音に対する解析結果が利用可能です。",
+    };
+  }, [draftChangedSinceAnalysis, lastCapture, recording]);
+
+  useEffect(() => {
+    setLastCapture((current) => {
+      if (!current) {
+        return current;
+      }
+      return result === current.responsePayload ? current : null;
+    });
+  }, [result]);
+
+  function clearAnalysisState() {
+    setResult(null);
+    setLastCapture(null);
+    setActiveEventId(null);
+  }
+
+  function handleRecordingReady(blob: Blob | null) {
+    setRecording(blob);
+    clearAnalysisState();
+    setError(null);
+  }
 
   function handleToggleExpectedKey(key: number) {
     setPendingExpectedKeys((current) => (current.includes(key) ? current.filter((value) => value !== key) : [...current, key]));
@@ -792,6 +872,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
         memo: captureMemo,
         captureIntent,
       });
+      setCaptureCaseId(resolvedCaseId);
       setResult(capture.responsePayload);
       setActiveEventId(capture.responsePayload.events[0]?.id ?? null);
       setLastCapture(capture);
@@ -811,30 +892,16 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setIsSavingCapture(true);
 
     try {
-      const caseId = captureCaseId.trim().length > 0
-        ? captureCaseId.trim()
-        : buildDefaultCaptureIdForValues(
-            lastCapture.generatedAt,
-            lastCapture.requestPayload.tuning,
-            expectedPerformance ?? lastCapture.requestPayload.expectedPerformance,
-            captureIntent ?? lastCapture.requestPayload.captureIntent ?? "unknown",
-          );
+      const caseId = lastCapture.requestPayload.scenario;
       const archive = await buildCaptureArchive({
         caseId,
         audioWav: lastCapture.audioWav,
-        requestPayload: {
-          ...lastCapture.requestPayload,
-          scenario: caseId,
-          expectedNote: expectedNote.trim() || lastCapture.requestPayload.expectedNote,
-          expectedPerformance: expectedPerformance ?? lastCapture.requestPayload.expectedPerformance,
-          memo: captureMemo.trim() || lastCapture.requestPayload.memo,
-          captureIntent: captureIntent ?? lastCapture.requestPayload.captureIntent,
-        },
+        requestPayload: lastCapture.requestPayload,
         responsePayload: lastCapture.responsePayload,
         notes: {
-          expectedNote,
-          expectedPerformance,
-          memo: captureMemo,
+          expectedNote: lastCapture.requestPayload.expectedNote ?? "",
+          expectedPerformance: lastCapture.requestPayload.expectedPerformance,
+          memo: lastCapture.requestPayload.memo ?? "",
           verdict: captureReview?.status,
           reviewSummary: captureReview?.summary,
           reviewReason: captureReview?.reason,
@@ -869,8 +936,9 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
               <span className="eyebrow">Capture Intent</span>
               <h3>録音の意図を指定する</h3>
             </div>
-            <span className="muted">review 理由に使います</span>
+            <span className="muted">{analysisStatus.label}</span>
           </div>
+          <p className="muted">{analysisStatus.detail}</p>
           <div className="intent-selector">
             {INTENT_OPTIONS.map((option) => (
               <button
@@ -970,9 +1038,9 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
               {isAnalyzing ? "解析中..." : "自動採譜する"}
             </button>
             <button className="secondary wide" onClick={handleDownloadCapture} disabled={!lastCapture || isAnalyzing || isSavingCapture}>
-              {isSavingCapture ? "保存パック作成中..." : "解析結果を保存パックでダウンロード"}
+              {isSavingCapture ? "保存パック作成中..." : "解析 snapshot を保存パックでダウンロード"}
             </button>
-            <p className="muted">保存内容: audio.wav / request.json / response.json / notes.md</p>
+            <p className="muted">保存内容: audio.wav / request.json / response.json / notes.md。保存パックは直近の解析 snapshot をそのまま出力します。</p>
           </div>
         </div>
       </section>
@@ -994,6 +1062,11 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
             <span>intent {buildIntentLabel(lastCapture?.requestPayload.captureIntent ?? captureIntent)}</span>
           </div>
           <p className="muted">通常表記を優先して認識結果を確認し、必要なら保存パックを fixture に取り込みます。</p>
+          {draftChangedSinceAnalysis ? (
+            <div className="warning-box">
+              <p>現在の入力ドラフトは解析 snapshot と一致していません。保存パックと review は前回解析時の request/response を基準にしています。</p>
+            </div>
+          ) : null}
           {captureReview ? (
             <div className={`review-box status-${captureReview.status}`}>
               <div className="panel-header compact">
@@ -1033,7 +1106,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
 
   const debugSide = (
     <div className="stack gap-xl debug-side-stack">
-      <RecorderPanel disabled={isAnalyzing || isSavingCapture} onRecordingReady={setRecording} />
+      <RecorderPanel disabled={isAnalyzing || isSavingCapture} hasRecording={Boolean(recording)} onRecordingReady={handleRecordingReady} />
       <TuningPanel
         tunings={tunings}
         selectedId={selectedTuningId}
@@ -1068,7 +1141,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
 
   const userPrimary = (
     <div className="stack gap-xl">
-      <RecorderPanel disabled={isAnalyzing || isSavingCapture} onRecordingReady={setRecording} />
+      <RecorderPanel disabled={isAnalyzing || isSavingCapture} hasRecording={Boolean(recording)} onRecordingReady={handleRecordingReady} />
       <TuningPanel
         tunings={tunings}
         selectedId={selectedTuningId}
@@ -1087,6 +1160,10 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
           </div>
         </div>
         <p className="muted">録音と調律を用意したら解析します。詳細な再現データ収集は debug capture 画面で行います。</p>
+        <div className="summary-strip">
+          <span>{analysisStatus.label}</span>
+          <span>{analysisStatus.detail}</span>
+        </div>
         <div className="debug-capture-grid">
           <button className="primary wide" onClick={handleAnalyze} disabled={!recording || !selectedTuning || isAnalyzing}>
             {isAnalyzing ? "解析中..." : "自動採譜する"}

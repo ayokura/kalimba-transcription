@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 
 type RecorderPanelProps = {
   disabled?: boolean;
+  hasRecording?: boolean;
   onRecordingReady: (blob: Blob | null) => void;
 };
 
-export function RecorderPanel({ disabled, onRecordingReady }: RecorderPanelProps) {
+export function RecorderPanel({ disabled, hasRecording = false, onRecordingReady }: RecorderPanelProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -62,7 +63,7 @@ export function RecorderPanel({ disabled, onRecordingReady }: RecorderPanelProps
           <p className="eyebrow">Recorder</p>
           <h2>マイク録音</h2>
         </div>
-        <span className={`pill ${isRecording ? "live" : ""}`}>{isRecording ? "Recording" : "Ready"}</span>
+        <span className={`pill ${isRecording ? "live" : ""}`}>{isRecording ? "Recording" : hasRecording ? "Recording Ready" : "Awaiting Recording"}</span>
       </div>
       <p className="muted">
         録音後に解析 API へ送信します。リアルタイム採譜ではなく、録音を止めたあとに変換する方式です。
