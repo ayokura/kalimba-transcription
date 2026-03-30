@@ -102,8 +102,19 @@ def get_default_tunings() -> list[InstrumentTuning]:
     return DEFAULT_TUNINGS
 
 
-def build_custom_tuning(name: str, note_names: list[str]) -> InstrumentTuning:
-    clean_notes = [note.strip() for note in note_names if note.strip()]
+def build_custom_tuning(name: str, note_names: list[object]) -> InstrumentTuning:
+    if not isinstance(name, str):
+        raise HTTPException(status_code=400, detail="Tuning name must be a string.")
+
+    clean_notes: list[str] = []
+    for note in note_names:
+        if not isinstance(note, str):
+            raise HTTPException(status_code=400, detail="Each tuning noteName must be a non-empty string.")
+        cleaned = note.strip()
+        if not cleaned:
+            raise HTTPException(status_code=400, detail="Each tuning noteName must be a non-empty string.")
+        clean_notes.append(cleaned)
+
     if not clean_notes:
         raise HTTPException(status_code=400, detail="Tuning must contain at least one valid note.")
     return build_tuning("custom", name or "Custom Tuning", clean_notes)
