@@ -1,5 +1,5 @@
 {
-  "pending": true,
+  "pending": false,
   "assertions": {
     "minEvents": 5,
     "maxEvents": 5,
@@ -19,7 +19,7 @@
       "E4+G4+B4+D5"
     ]
   },
-  "status": "pending",
-  "reason": "leading C4+B5 false positive from gap collector: ambient noise spike (energy 95 vs genuine 1000+)",
+  "status": "completed",
+  "reason": "Completed: gap collector spike filter (post_sustain_ratio) removes the leading noise segments",
   "auditVerdict": "strict-intent-superseded-by-repeat-03"
 }
