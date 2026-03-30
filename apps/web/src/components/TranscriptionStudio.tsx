@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
-import { EditorPanel } from "@/components/EditorPanel";
 import { ExpectedKeySelector } from "@/components/ExpectedKeySelector";
+import { InitialResultSummary } from "@/components/InitialResultSummary";
 import { NotationPanel } from "@/components/NotationPanel";
 import { RecorderPanel } from "@/components/RecorderPanel";
 import { TuningPanel } from "@/components/TuningPanel";
+import { createReviewSession, saveReviewSession } from "@/lib/reviewSession";
 import {
   CaptureAssessmentDetails,
   CaptureIntent,
@@ -684,6 +686,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const [captureMemo, setCaptureMemo] = useState("");
   const [captureIntent, setCaptureIntent] = useState<CaptureIntent>("unknown");
   const [lastCapture, setLastCapture] = useState<TranscriptionCapture | null>(null);
+  const [latestReviewSessionId, setLatestReviewSessionId] = useState<string | null>(null);
   const [isSavingCapture, setIsSavingCapture] = useState(false);
   const [pendingExpectedKeys, setPendingExpectedKeys] = useState<number[]>([]);
   const [expectedRepeatCount, setExpectedRepeatCount] = useState("1");
@@ -793,6 +796,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setResult(null);
     setLastCapture(null);
     setActiveEventId(null);
+    setLatestReviewSessionId(null);
   }
 
   function confirmTuningDraftDiscard() {
@@ -923,8 +927,19 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
       });
       setCaptureCaseId(resolvedCaseId);
       setResult(capture.responsePayload);
-      setActiveEventId(capture.responsePayload.events[0]?.id ?? null);
+      const nextActiveEventId = capture.responsePayload.events[0]?.id ?? null;
+      setActiveEventId(nextActiveEventId);
       setLastCapture(capture);
+      if (!isDebug) {
+        const reviewSession = createReviewSession({
+          capture,
+          acquisitionMode: "live_mic",
+          notationMode,
+          activeEventId: nextActiveEventId,
+        });
+        saveReviewSession(reviewSession);
+        setLatestReviewSessionId(reviewSession.sessionId);
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "解析に失敗しました。");
     } finally {
@@ -1230,14 +1245,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
 
   const userSecondary = (
     <div className="stack gap-xl">
-      <NotationPanel result={result} mode={notationMode} onModeChange={setNotationMode} review={activeReview} />
-      <EditorPanel
-        result={result}
-        activeEventId={activeEventId}
-        onActiveEventIdChange={setActiveEventId}
-        tuning={selectedTuning}
-        onResultChange={setResult}
-      />
+      <InitialResultSummary result={result} review={activeReview} reviewSessionId={latestReviewSessionId} />
     </div>
   );
 
