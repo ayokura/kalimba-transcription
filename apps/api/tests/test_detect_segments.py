@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 from app.transcription import (
-    CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO,
     GapAttackCandidates,
     OnsetAttackProfile,
     OnsetWaveformStats,
@@ -322,6 +321,14 @@ def test_mid_performance_flags_do_not_affect_inter_range_segments() -> None:
     # nor the latest.
     if len(segs_normal) >= 3:
         core_normal = segs_normal[1:-1]
-        # Core segments should still exist
-        core_both = [s for s in segs_both if s[0] >= core_normal[0][0] - 0.05 and s[1] <= core_normal[-1][1] + 0.05]
-        assert len(core_both) >= len(core_normal)
+        # Core segments should still exist and be unchanged (within tolerance)
+        core_both = [
+            s for s in segs_both
+            if s[0] >= core_normal[0][0] - 0.05
+            and s[1] <= core_normal[-1][1] + 0.05
+        ]
+        assert len(core_both) == len(core_normal)
+        tol = 0.05
+        for s_norm, s_both in zip(core_normal, core_both):
+            assert abs(s_norm[0] - s_both[0]) <= tol
+            assert abs(s_norm[1] - s_both[1]) <= tol

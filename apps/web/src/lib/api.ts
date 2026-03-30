@@ -67,6 +67,8 @@ export type ManualCaptureRequestPayload = {
   memo: string | null;
   captureIntent: CaptureIntent | null;
   sourceProfile: SourceProfile;
+  midPerformanceStart?: boolean;
+  midPerformanceEnd?: boolean;
   tuning: InstrumentTuning;
   audio: WavMetadata & {
     mimeType: string;
@@ -144,6 +146,8 @@ export async function createTranscriptionWithCapture(
       memo: cleanOptionalText(options.memo),
       captureIntent: options.captureIntent ?? null,
       sourceProfile: options.sourceProfile ?? "acoustic_real",
+      ...(options.midPerformanceStart ? { midPerformanceStart: true } : {}),
+      ...(options.midPerformanceEnd ? { midPerformanceEnd: true } : {}),
       tuning,
       audio: {
         ...metadata,

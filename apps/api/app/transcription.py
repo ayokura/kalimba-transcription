@@ -499,7 +499,7 @@ def dedupe_cross_collector_segments(segments: list[tuple[float, float]]) -> list
     When different collectors (active range, gap injection, terminal orphan, etc.)
     detect the same physical onset at slightly different times, the resulting
     segments overlap heavily.  This pass merges such duplicates by checking
-    whether the overlap exceeds CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO of
+    whether the overlap is at least CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO of
     the shorter segment's duration.
 
     Input must be sorted by start time (guaranteed by dedupe_nested_segments).
@@ -1614,7 +1614,6 @@ def detect_segments(
     terminal_two_onset_tail_segments: list[tuple[float, float]] = []
     attack_validated_gap_segments: list[tuple[float, float]] = []
     if active_ranges and not mid_performance_end:
-        audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
         last_range_end = active_ranges[-1][1]
         trailing_onsets = [
             onset_time
