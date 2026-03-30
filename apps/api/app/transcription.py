@@ -673,6 +673,33 @@ def estimate_pre_performance_start(active_ranges: list[tuple[float, float]]) -> 
     return first_start
 
 
+def collect_prior_backtrack_onsets(
+    range_start: float,
+    previous_range_end: float | None,
+    backtrack_onset_times: list[float],
+) -> list[float]:
+    return [
+        time
+        for time in backtrack_onset_times
+        if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005
+        and (previous_range_end is None or time >= previous_range_end + 0.005)
+    ]
+
+
+def collect_range_prior_backtrack_onsets(
+    range_start: float,
+    range_end: float,
+    previous_range_end: float | None,
+    onset_times: list[float],
+    filtered_backtrack_onset_times: list[float] | None = None,
+) -> list[float]:
+    if range_end - range_start <= ACTIVE_RANGE_START_CLUSTER_MAX_DURATION:
+        return collect_prior_backtrack_onsets(range_start, previous_range_end, onset_times)
+
+    backtrack_source = filtered_backtrack_onset_times if filtered_backtrack_onset_times is not None else onset_times
+    return collect_prior_backtrack_onsets(range_start, previous_range_end, backtrack_source)
+
+
 def _valid_attack_gap_onsets(
     gap_start: float,
     gap_end: float,
@@ -1333,16 +1360,18 @@ def _active_range_debug_context(
     range_index: int,
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
+    backtrack_onset_times: list[float] | None = None,
 ) -> dict[str, Any]:
     range_start, range_end = active_ranges[range_index]
     effective_range_start = range_start
     previous_range_end = active_ranges[range_index - 1][1] if range_index > 0 else None
-    prior_onsets = [
-        time
-        for time in onset_times
-        if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005
-        and (previous_range_end is None or time >= previous_range_end + 0.005)
-    ]
+    prior_onsets = collect_range_prior_backtrack_onsets(
+        range_start,
+        range_end,
+        previous_range_end,
+        onset_times,
+        backtrack_onset_times,
+    )
     if prior_onsets:
         effective_range_start = prior_onsets[-1]
         if (
@@ -1370,8 +1399,12 @@ def build_segment_debug_contexts(
     segments: list[tuple[float, float]],
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
+    backtrack_onset_times: list[float] | None = None,
 ) -> dict[tuple[float, float], dict[str, Any]]:
-    active_contexts = [_active_range_debug_context(index, active_ranges, onset_times) for index in range(len(active_ranges))]
+    active_contexts = [
+        _active_range_debug_context(index, active_ranges, onset_times, backtrack_onset_times)
+        for index in range(len(active_ranges))
+    ]
     segment_contexts: dict[tuple[float, float], dict[str, Any]] = {}
     for index, (start_time, end_time) in enumerate(segments):
         segment_key = (round(start_time, 4), round(end_time, 4))
@@ -1529,12 +1562,13 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for range_index, (range_start, range_end) in enumerate(active_ranges):
         effective_range_start = range_start
         previous_range_end = active_ranges[range_index - 1][1] if range_index > 0 else None
-        prior_onsets = [
-            time
-            for time in onset_times
-            if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005
-            and (previous_range_end is None or time >= previous_range_end + 0.005)
-        ]
+        prior_onsets = collect_range_prior_backtrack_onsets(
+            range_start,
+            range_end,
+            previous_range_end,
+            onset_times,
+            gap_onset_times,
+        )
         relaxed_head_segment = False
         if prior_onsets:
             effective_range_start = prior_onsets[-1]
@@ -6041,6 +6075,7 @@ async def transcribe_audio(
         segments,
         [tuple(item) for item in segment_debug.get("activeRanges", [])],
         [float(value) for value in segment_debug.get("onsetTimes", [])],
+        [float(value) for value in segment_debug.get("gapValidatedOnsetTimes", [])] if segment_debug.get("gapValidatedOnsetTimes") else None,
     ) if debug else {}
     sparse_gap_tail_segment_keys = {
         (round(start_time, 4), round(end_time, 4))
@@ -6242,10 +6277,6 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
-
-
-
-
 
 
 

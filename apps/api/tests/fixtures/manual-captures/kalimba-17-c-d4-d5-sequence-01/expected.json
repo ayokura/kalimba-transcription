@@ -1,6 +1,6 @@
 {
-  "status": "pending",
-  "reason": "early chair-noise false events are now rejected upstream, but a raw G5+B5 misidentification at 11.82s is still dropped_after_raw by normalization; requires active-range boundary/peak correction to pass cleanly",
+  "pending": false,
+  "status": "completed",
   "assertions": {
     "minEvents": 6,
     "maxEvents": 6,
@@ -18,10 +18,19 @@
       "D4": 3,
       "D5": 3
     },
+    "expectedEventNoteSetsOrdered": [
+      "D4",
+      "D5",
+      "D4",
+      "D5",
+      "D4",
+      "D5"
+    ],
     "maxEventNoteSetOccurrences": {
       "C4+E4": 0,
       "G5+B5": 0,
       "D4+D5": 0
     }
-  }
+  },
+  "reason": "Completed after upstream pre-performance gap rejection removes the opening chair-noise cluster and long-range active-range backtracking stops reintroducing the later 11.82s boundary contamination."
 }

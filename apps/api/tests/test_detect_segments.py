@@ -5,6 +5,8 @@ from app.transcription import (
     GapAttackCandidates,
     OnsetAttackProfile,
     OnsetWaveformStats,
+    collect_prior_backtrack_onsets,
+    collect_range_prior_backtrack_onsets,
     collect_attack_validated_gap_candidates,
     collect_multi_onset_gap_segments,
     collect_terminal_multi_onset_segments,
@@ -126,6 +128,28 @@ def test_filter_gap_onsets_by_attack_keeps_noise_like_gap_onset_after_performanc
     filtered = filter_gap_onsets_by_attack(onset_times, active_ranges, onset_profiles, waveform_stats)
 
     assert filtered == onset_times
+
+
+def test_collect_prior_backtrack_onsets_uses_filtered_gap_onsets_contract() -> None:
+    prior_onsets = collect_prior_backtrack_onsets(
+        range_start=12.372,
+        previous_range_end=9.1787,
+        backtrack_onset_times=[10.5787, 12.392],
+    )
+
+    assert prior_onsets == []
+
+
+def test_collect_range_prior_backtrack_onsets_uses_raw_onsets_for_short_ranges() -> None:
+    prior_onsets = collect_range_prior_backtrack_onsets(
+        range_start=21.3027,
+        range_end=21.488,
+        previous_range_end=20.4,
+        onset_times=[20.6213, 20.856, 21.3147],
+        filtered_backtrack_onset_times=[],
+    )
+
+    assert prior_onsets == [20.856]
 
 
 def test_collect_terminal_multi_onset_segments_requires_close_orphan_then_regular_run() -> None:

@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-21-D4-D5-kalimba-17-c
 - expected note: D4 x 3 / D5 x 3
 - captured at: 2026-03-21T15:00:53.853Z
@@ -27,6 +27,6 @@
 
 ## Memo
 
-- remains pending: the early chair-noise path is now rejected upstream and the merged output is the correct 6 events
-- remaining issue: raw G5+B5 misdetection at 11.82s (actually D4) is still dropped_after_raw by normalization
-- next resolution target: correct peak detection at the 11.82s active range boundary
+- completed: the output is now the intended 6-event D4/D5 alternation
+- upstream pre-performance gap rejection removes the opening chair-noise cluster before segmentation
+- long-range backtrack filtering no longer reintroduces the later 11.82s boundary contamination into the active range
