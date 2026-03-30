@@ -22,6 +22,7 @@ HOP_LENGTH = 256
 TEMPO_ESTIMATION_HOP_LENGTH = 1024
 RMS_MEDIAN_THRESHOLD_MAX_PEAK_RATIO = 0.45
 NESTED_SEGMENT_DEDUP_MAX_START_DELTA = 0.02
+CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO = 0.5
 SEGMENT_OVERLAP_TRIM_MAX_OVERLAP = 0.18
 SEGMENT_OVERLAP_TRIM_MIN_DURATION = 0.18
 TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE = 0.18
@@ -489,6 +490,36 @@ def dedupe_nested_segments(segments: list[tuple[float, float]]) -> list[tuple[fl
                 continue
         deduped.append((start_time, end_time))
 
+    return deduped
+
+
+def dedupe_cross_collector_segments(segments: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Merge segments that overlap significantly, regardless of which collector produced them.
+
+    When different collectors (active range, gap injection, terminal orphan, etc.)
+    detect the same physical onset at slightly different times, the resulting
+    segments overlap heavily.  This pass merges such duplicates by checking
+    whether the overlap exceeds CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO of
+    the shorter segment's duration.
+
+    Input must be sorted by start time (guaranteed by dedupe_nested_segments).
+    """
+    if len(segments) < 2:
+        return segments
+
+    deduped: list[tuple[float, float]] = [segments[0]]
+    for start_time, end_time in segments[1:]:
+        previous_start, previous_end = deduped[-1]
+        overlap = min(previous_end, end_time) - max(previous_start, start_time)
+        if overlap > 0:
+            shorter_duration = min(
+                previous_end - previous_start,
+                end_time - start_time,
+            )
+            if shorter_duration > 0 and overlap >= shorter_duration * CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO:
+                deduped[-1] = (min(previous_start, start_time), max(previous_end, end_time))
+                continue
+        deduped.append((start_time, end_time))
     return deduped
 
 
@@ -1672,6 +1703,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
             segments.append((start_time, end_time))
 
     segments = dedupe_nested_segments(segments)
+    segments = dedupe_cross_collector_segments(segments)
     segments = trim_small_overlapping_segments(segments)
 
     if not segments:
