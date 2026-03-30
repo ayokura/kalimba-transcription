@@ -112,6 +112,7 @@ ABLATE_TWO_ONSET_TERMINAL_TAIL = False
 ABLATE_COLLAPSE_ACTIVE_RANGE_HEAD = False
 ABLATE_SNAP_RANGE_START_TO_ONSET = False
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
+RESIDUAL_DECAY_MIN_ONSET_GAIN = 1.5
 RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO = 0.18
 RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO = 0.6
 RECENT_PRIMARY_REPLACEMENT_RELAXED_FUNDAMENTAL_RATIO = 0.45
@@ -3345,6 +3346,17 @@ def segment_peaks(
         and primary.fundamental_ratio < PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
     ):
         return [], None, None
+    # Suppress residual-decay segments: if the primary is a recent note and
+    # shows no mute-dip (smooth decay rather than finger-touch-then-repluck),
+    # the segment is likely resonance from a previous event, not a genuine
+    # new attack.  On a kalimba, replucking requires touching the tine first,
+    # which causes the note-band energy to drop before the new onset.
+    if (
+        recent_note_names
+        and primary.candidate.note_name in recent_note_names
+        and _is_residual_decay(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+    ):
+        return [], None, None
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     promoted_secondary_to_recent_upper_octave = False
@@ -4105,6 +4117,55 @@ def suppress_resonant_carryover(raw_events: list[RawEvent], tuning: InstrumentTu
         cleaned.append(updated_event)
 
     return cleaned
+
+
+def _note_band_energy(
+    audio: np.ndarray,
+    sample_rate: int,
+    center_time: float,
+    frequency: float,
+    window_seconds: float = ONSET_ENERGY_WINDOW_SECONDS,
+) -> float:
+    """Compute peak energy near *frequency* in a short window centred on *center_time*."""
+    window_samples = max(int(sample_rate * window_seconds), 512)
+    center_sample = int(center_time * sample_rate)
+    half = window_samples // 2
+    start = max(center_sample - half, 0)
+    end = min(start + window_samples, len(audio))
+    chunk = audio[start:end]
+    if len(chunk) < 256:
+        return 0.0
+    n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))
+    spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
+    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    return peak_energy_near(frequencies, spectrum, frequency)
+
+
+def _is_residual_decay(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    end_time: float,
+    frequency: float,
+) -> bool:
+    """Check whether a note at *frequency* is residual decay at this onset.
+
+    Uses the same 80 ms window as ``onset_energy_gain`` to compare peak
+    energy in the note's frequency band before and after the onset.
+
+    On a kalimba, replucking a tine requires touching it first (mute-dip),
+    which drives the pre-onset energy to near zero.  The resulting
+    note-specific onset gain is high (>> 1).
+
+    Residual decay shows comparable energy before and after the detected
+    onset (gain ≈ 1), because the tine was never muted.
+
+    Returns True when the per-note onset gain is below the threshold,
+    indicating residual decay rather than a genuine new attack.
+    """
+    gain = onset_energy_gain(audio, sample_rate, start_time, end_time, frequency)
+    return gain < RESIDUAL_DECAY_MIN_ONSET_GAIN
+
 
 def collapse_same_start_primary_singletons(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 2:
