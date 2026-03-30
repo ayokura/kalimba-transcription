@@ -372,7 +372,7 @@ def test_segment_peaks_keeps_low_score_primary_with_high_fundamental_ratio(
     def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
         return [
             NoteHypothesis(c4, PRIMARY_REJECTION_MAX_SCORE - 1, 0.0, 0.0,
-                           PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO + 0.01, 0.0, 0.0, 0.0, 0.0),
+                           1.0, 0.0, 0.0, 0.0, 0.0),
         ]
 
     monkeypatch.setattr(transcription, "rank_tuning_candidates", fake_rank_tuning_candidates)
