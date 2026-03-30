@@ -664,6 +664,7 @@ LEADING_GAP_START_MARGIN = 0.05
 GAP_ONSET_MIN_BROADBAND_GAIN = 0.95
 GAP_ONSET_MAX_KURTOSIS = 2.0
 GAP_ONSET_MAX_POST_CREST = 0.0  # disabled; set to e.g. 3.8 to enable
+GAP_ONSET_MIN_POST_SUSTAIN_RATIO = 0.4
 PRE_PERFORMANCE_GAP_REJECT_MAX_POST_AUTOCORR = 0.45
 PRE_PERFORMANCE_GAP_REJECT_MIN_DIFF_CENTROID = 1000.0
 ONSET_WAVEFORM_STATS_MIN_FFT = 512
@@ -676,6 +677,7 @@ class OnsetWaveformStats:
     crest: float
     post_autocorr_20ms: float
     diff_centroid: float
+    post_sustain_ratio: float
 
 
 def precompute_onset_waveform_stats(
@@ -686,6 +688,9 @@ def precompute_onset_waveform_stats(
     """Pre-compute simple waveform/spectral diagnostics for each onset."""
     stats: dict[float, OnsetWaveformStats] = {}
     window_samples = int(sample_rate * _KURTOSIS_WINDOW_SECONDS)
+    sustain_onset_samples = int(sample_rate * 0.04)
+    sustain_check_offset = int(sample_rate * 0.10)
+    sustain_check_samples = int(sample_rate * 0.04)
     min_lag = int(sample_rate / 2000)
     max_lag = int(sample_rate / 150)
     for onset_time in onset_times:
@@ -695,11 +700,21 @@ def precompute_onset_waveform_stats(
         diff_centroid = 0.0
         if len(pre_seg) >= 256 and len(seg) >= 256:
             diff_centroid = _positive_diff_spectral_centroid(pre_seg, seg, sample_rate)
+        onset_chunk = audio[onset_sample:onset_sample + sustain_onset_samples]
+        sustain_start = onset_sample + sustain_check_offset
+        sustain_chunk = audio[sustain_start:sustain_start + sustain_check_samples]
+        if len(onset_chunk) >= sustain_onset_samples and len(sustain_chunk) >= sustain_check_samples:
+            onset_rms = float(np.sqrt(np.mean(onset_chunk ** 2)))
+            sustain_rms = float(np.sqrt(np.mean(sustain_chunk ** 2)))
+            post_sustain_ratio = sustain_rms / onset_rms if onset_rms > 1e-10 else 0.0
+        else:
+            post_sustain_ratio = 1.0
         stats[round(onset_time, 4)] = OnsetWaveformStats(
             kurtosis=_waveform_kurtosis(seg),
             crest=_waveform_crest_factor(seg),
             post_autocorr_20ms=_normalized_autocorrelation(seg, min_lag, max_lag),
             diff_centroid=diff_centroid,
+            post_sustain_ratio=post_sustain_ratio,
         )
     return stats
 
@@ -769,6 +784,8 @@ def _valid_attack_gap_onsets(
                 if GAP_ONSET_MAX_KURTOSIS > 0 and ws.kurtosis > GAP_ONSET_MAX_KURTOSIS:
                     continue
                 if GAP_ONSET_MAX_POST_CREST > 0 and ws.crest > GAP_ONSET_MAX_POST_CREST:
+                    continue
+                if GAP_ONSET_MIN_POST_SUSTAIN_RATIO > 0 and ws.post_sustain_ratio < GAP_ONSET_MIN_POST_SUSTAIN_RATIO:
                     continue
         valid.append(time)
     return valid

@@ -100,13 +100,13 @@ def test_filter_gap_onsets_by_attack_rejects_pre_performance_noise_like_gap_onse
         for onset_time in onset_times
     }
     waveform_stats = {
-        0.0613: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.31, diff_centroid=2297.5),
-        0.8453: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.7, diff_centroid=400.0),
-        1.808: OnsetWaveformStats(kurtosis=0.3, crest=3.4, post_autocorr_20ms=0.37, diff_centroid=1026.9),
-        1.8427: OnsetWaveformStats(kurtosis=3.2, crest=4.5, post_autocorr_20ms=0.36, diff_centroid=1690.6),
-        3.5467: OnsetWaveformStats(kurtosis=-0.4, crest=2.3, post_autocorr_20ms=0.69, diff_centroid=417.6),
-        4.2213: OnsetWaveformStats(kurtosis=0.1, crest=3.0, post_autocorr_20ms=0.65, diff_centroid=951.3),
-        5.68: OnsetWaveformStats(kurtosis=0.2, crest=3.2, post_autocorr_20ms=0.55, diff_centroid=700.0),
+        0.0613: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.31, diff_centroid=2297.5, post_sustain_ratio=0.8),
+        0.8453: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.7, diff_centroid=400.0, post_sustain_ratio=0.8),
+        1.808: OnsetWaveformStats(kurtosis=0.3, crest=3.4, post_autocorr_20ms=0.37, diff_centroid=1026.9, post_sustain_ratio=0.8),
+        1.8427: OnsetWaveformStats(kurtosis=3.2, crest=4.5, post_autocorr_20ms=0.36, diff_centroid=1690.6, post_sustain_ratio=0.8),
+        3.5467: OnsetWaveformStats(kurtosis=-0.4, crest=2.3, post_autocorr_20ms=0.69, diff_centroid=417.6, post_sustain_ratio=0.8),
+        4.2213: OnsetWaveformStats(kurtosis=0.1, crest=3.0, post_autocorr_20ms=0.65, diff_centroid=951.3, post_sustain_ratio=0.8),
+        5.68: OnsetWaveformStats(kurtosis=0.2, crest=3.2, post_autocorr_20ms=0.55, diff_centroid=700.0, post_sustain_ratio=0.8),
     }
 
     filtered = filter_gap_onsets_by_attack(onset_times, active_ranges, onset_profiles, waveform_stats)
@@ -122,9 +122,9 @@ def test_filter_gap_onsets_by_attack_keeps_noise_like_gap_onset_after_performanc
         for onset_time in onset_times
     }
     waveform_stats = {
-        0.2: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.7, diff_centroid=400.0),
-        1.4: OnsetWaveformStats(kurtosis=0.3, crest=3.4, post_autocorr_20ms=0.2, diff_centroid=3000.0),
-        2.1: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.7, diff_centroid=400.0),
+        0.2: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.7, diff_centroid=400.0, post_sustain_ratio=0.8),
+        1.4: OnsetWaveformStats(kurtosis=0.3, crest=3.4, post_autocorr_20ms=0.2, diff_centroid=3000.0, post_sustain_ratio=0.8),
+        2.1: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.7, diff_centroid=400.0, post_sustain_ratio=0.8),
     }
 
     filtered = filter_gap_onsets_by_attack(onset_times, active_ranges, onset_profiles, waveform_stats)
