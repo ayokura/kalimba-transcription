@@ -660,6 +660,14 @@ function serializeExpectedPerformance(expectedPerformance: ManualCaptureExpected
   return JSON.stringify(expectedPerformance ?? null);
 }
 
+function hasProtectedExpectedDraft(
+  pendingExpectedKeys: number[],
+  expectedEvents: ManualCaptureExpectedEvent[],
+  expectedImportText: string,
+) {
+  return pendingExpectedKeys.length > 0 || expectedEvents.length > 0 || expectedImportText.trim().length > 0;
+}
+
 export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const isDebug = mode === "debug";
   const [tunings, setTunings] = useState<InstrumentTuning[]>([]);
@@ -711,6 +719,10 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   }, [tuningSignature]);
 
   const expectedPerformance = useMemo(() => buildExpectedPerformance(expectedEvents, captureIntent), [captureIntent, expectedEvents]);
+  const hasProtectedDraft = useMemo(
+    () => hasProtectedExpectedDraft(pendingExpectedKeys, expectedEvents, expectedImportText),
+    [expectedEvents, expectedImportText, pendingExpectedKeys],
+  );
   const analyzedNoteNamesByKey = useMemo(() => new Map((lastCapture?.requestPayload.tuning.notes ?? []).map((note) => [note.key, note.noteName])), [lastCapture]);
   const expectedNote = expectedPerformance?.summary ?? "";
   const suggestedCaptureId = useMemo(
@@ -781,6 +793,43 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setResult(null);
     setLastCapture(null);
     setActiveEventId(null);
+  }
+
+  function confirmTuningDraftDiscard() {
+    if (!hasProtectedDraft) {
+      return true;
+    }
+    return window.confirm("調律を変更すると expected performance の下書きと現在の解析 snapshot が破棄されます。続行しますか？");
+  }
+
+  function handleTuningSelect(nextId: string) {
+    if (nextId === selectedTuningId) {
+      return;
+    }
+    if (!confirmTuningDraftDiscard()) {
+      return;
+    }
+    setSelectedTuningId(nextId);
+  }
+
+  function handleCustomNameChange(nextValue: string) {
+    if (nextValue === customName) {
+      return;
+    }
+    if (!confirmTuningDraftDiscard()) {
+      return;
+    }
+    setCustomName(nextValue);
+  }
+
+  function handleCustomNotesChange(nextValue: string) {
+    if (nextValue === customNotes) {
+      return;
+    }
+    if (!confirmTuningDraftDiscard()) {
+      return;
+    }
+    setCustomNotes(nextValue);
   }
 
   function handleRecordingReady(blob: Blob | null) {
@@ -1110,11 +1159,12 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
       <TuningPanel
         tunings={tunings}
         selectedId={selectedTuningId}
-        onSelect={setSelectedTuningId}
+        onSelect={handleTuningSelect}
         customName={customName}
         customNotes={customNotes}
-        onCustomNameChange={setCustomName}
-        onCustomNotesChange={setCustomNotes}
+        hasProtectedDraft={hasProtectedDraft}
+        onCustomNameChange={handleCustomNameChange}
+        onCustomNotesChange={handleCustomNotesChange}
       />
       <section className="panel workflow-card workflow-card-secondary debug-secondary-card">
         <div className="workflow-card-header">
@@ -1145,11 +1195,12 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
       <TuningPanel
         tunings={tunings}
         selectedId={selectedTuningId}
-        onSelect={setSelectedTuningId}
+        onSelect={handleTuningSelect}
         customName={customName}
         customNotes={customNotes}
-        onCustomNameChange={setCustomName}
-        onCustomNotesChange={setCustomNotes}
+        hasProtectedDraft={hasProtectedDraft}
+        onCustomNameChange={handleCustomNameChange}
+        onCustomNotesChange={handleCustomNotesChange}
       />
 
       <section className="panel">

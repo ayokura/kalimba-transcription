@@ -8,6 +8,7 @@ type TuningPanelProps = {
   onSelect: (id: string) => void;
   customName: string;
   customNotes: string;
+  hasProtectedDraft?: boolean;
   onCustomNameChange: (value: string) => void;
   onCustomNotesChange: (value: string) => void;
 };
@@ -19,6 +20,7 @@ export function TuningPanel(props: TuningPanelProps) {
     onSelect,
     customName,
     customNotes,
+    hasProtectedDraft = false,
     onCustomNameChange,
     onCustomNotesChange,
   } = props;
@@ -44,6 +46,11 @@ export function TuningPanel(props: TuningPanelProps) {
           <option value="custom">Custom</option>
         </select>
       </label>
+      {hasProtectedDraft ? (
+        <p className="muted">
+          expected performance の下書きがあります。調律を変更すると、確認のうえで下書きと解析 snapshot を破棄します。
+        </p>
+      ) : null}
 
       {selectedId === "custom" ? (
         <div className="stack gap-lg">
