@@ -1,6 +1,6 @@
 {
-  "pending": false,
-  "status": "completed",
+  "pending": true,
+  "status": "pending",
   "assertions": {
     "minEvents": 17,
     "maxEvents": 17,
@@ -37,12 +37,12 @@
       "C4",
       "G4",
       "C5",
-      "C4+E5",
       "D5",
+      "C4+E5",
       "C5",
       "E5+G5",
       "G4"
     ]
   },
-  "reason": "mixed free-performance phrase now completes after a narrow two-onset gap supplement recovers the local D5 mute-restrike event without regressing completed fixtures"
+  "reason": "D5 onset at 12.67s falls in gap between active ranges (12.57-13.13s) — recognizer detects D5 at 13.45s (residual) instead, swapping events 13-14 vs physical order. expectedEventNoteSetsOrdered reflects correct physical order (C5,D5,C4+E5) per notes.md and energy trace verification"
 }
