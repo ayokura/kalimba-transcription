@@ -12,6 +12,7 @@ if str(TESTS_DIR) not in sys.path:
 from app.main import app
 from manual_capture_helpers import (
     build_evaluation_audio_bytes,
+    build_transcription_form_data,
     event_note_sets,
     fixture_dirs_for_status,
     fixture_id,
@@ -45,7 +46,7 @@ def test_completed_manual_capture_regression(fixture_dir: Path) -> None:
 
     response = client.post(
         "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"])},
+        data=build_transcription_form_data(request_payload),
         files={"file": ("audio.wav", audio_bytes, "audio/wav")},
     )
 

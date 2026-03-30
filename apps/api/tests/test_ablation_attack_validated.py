@@ -1,5 +1,4 @@
 """Ablation matrix: enable attack-validated collector, disable each legacy collector individually."""
-import json
 import sys
 from pathlib import Path
 
@@ -12,6 +11,7 @@ if str(TESTS_DIR) not in sys.path:
 
 from manual_capture_helpers import (
     build_evaluation_audio_bytes,
+    build_transcription_form_data,
     fixture_dirs_for_status,
     fixture_id,
     load_fixture,
@@ -62,7 +62,7 @@ def test_ablation(fixture_dir: Path, ablated_flag: str) -> None:
 
     response = client.post(
         "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"])},
+        data=build_transcription_form_data(request_payload),
         files={"file": ("audio.wav", audio_bytes, "audio/wav")},
     )
 

@@ -379,6 +379,16 @@ def explain_fixture_output(fixture_dir: Path, payload: dict[str, Any], expected:
         "reasonCodes": [detail["code"] for detail in assertion_failure_info],
     }
 
+def build_transcription_form_data(request_payload: dict[str, Any]) -> dict[str, str]:
+    """Build the form data dict for /api/transcriptions from a fixture request payload."""
+    form_data: dict[str, str] = {"tuning": json.dumps(request_payload["tuning"])}
+    if request_payload.get("midPerformanceStart"):
+        form_data["midPerformanceStart"] = "true"
+    if request_payload.get("midPerformanceEnd"):
+        form_data["midPerformanceEnd"] = "true"
+    return form_data
+
+
 def build_evaluation_audio_bytes(fixture_dir: Path, expected: dict[str, Any]) -> bytes:
     windows = parse_ranges(expected, "evaluationWindows")
     ignored = parse_ranges(expected, "ignoredRanges")
