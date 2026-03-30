@@ -779,6 +779,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
       detail: "現在の録音に対する解析結果が利用可能です。",
     };
   }, [draftChangedSinceAnalysis, lastCapture, recording]);
+  const hasManualEdits = Boolean(lastCapture && result && result !== lastCapture.responsePayload);
 
   useEffect(() => {
     setLastCapture((current) => {
@@ -836,6 +837,14 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setRecording(blob);
     clearAnalysisState();
     setError(null);
+  }
+
+  function handleResetEditedResult() {
+    if (!lastCapture) {
+      return;
+    }
+    setResult(lastCapture.responsePayload);
+    setActiveEventId(lastCapture.responsePayload.events[0]?.id ?? null);
   }
 
   function handleToggleExpectedKey(key: number) {
@@ -1236,6 +1245,8 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
         activeEventId={activeEventId}
         onActiveEventIdChange={setActiveEventId}
         tuning={selectedTuning}
+        hasManualEdits={hasManualEdits}
+        onResetToAnalysis={handleResetEditedResult}
         onResultChange={setResult}
       />
     </div>

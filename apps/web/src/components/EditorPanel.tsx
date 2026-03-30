@@ -8,6 +8,8 @@ type EditorPanelProps = {
   activeEventId: string | null;
   onActiveEventIdChange: (value: string | null) => void;
   tuning: InstrumentTuning | null;
+  hasManualEdits?: boolean;
+  onResetToAnalysis?: () => void;
   onResultChange: (result: TranscriptionResult) => void;
 };
 
@@ -20,9 +22,15 @@ export function EditorPanel({
   activeEventId,
   onActiveEventIdChange,
   tuning,
+  hasManualEdits = false,
+  onResetToAnalysis,
   onResultChange,
 }: EditorPanelProps) {
   const activeEvent = result?.events.find((event) => event.id === activeEventId) ?? result?.events[0] ?? null;
+
+  function confirmDestructiveEdit(actionLabel: string) {
+    return window.confirm(`${actionLabel}と現在の解析結果の近似編集になります。続行しますか？`);
+  }
 
   function updateEvents(nextEvents: ScoreEvent[]) {
     if (!result) {
@@ -33,6 +41,9 @@ export function EditorPanel({
 
   function removeLastNote() {
     if (!result || !activeEvent) {
+      return;
+    }
+    if (!confirmDestructiveEdit("最後の音を削除する")) {
       return;
     }
 
@@ -53,6 +64,9 @@ export function EditorPanel({
     if (!result || !activeEvent || !tuning || tuning.notes.length === 0) {
       return;
     }
+    if (!confirmDestructiveEdit("音を追加する")) {
+      return;
+    }
     const baseNote = tuning.notes[0];
     const nextEvents = result.events.map((event) =>
       event.id === activeEvent.id
@@ -64,6 +78,9 @@ export function EditorPanel({
 
   function mergeWithNext() {
     if (!result || !activeEvent) {
+      return;
+    }
+    if (!confirmDestructiveEdit("次のイベントと結合する")) {
       return;
     }
     const index = result.events.findIndex((event) => event.id === activeEvent.id);
@@ -84,6 +101,9 @@ export function EditorPanel({
 
   function splitEvent() {
     if (!result || !activeEvent || activeEvent.notes.length < 2) {
+      return;
+    }
+    if (!confirmDestructiveEdit("イベントを2つに分割する")) {
       return;
     }
     const index = result.events.findIndex((event) => event.id === activeEvent.id);
@@ -118,6 +138,17 @@ export function EditorPanel({
       ) : (
         <div className="editor-layout">
           <div className="event-list">
+            <div className="warning-box">
+              <p>手動修正モードです。ここでの変更は解析結果そのものではなく、確認用の近似編集として扱われます。</p>
+              <div className="row wrap">
+                <span className={`pill ${hasManualEdits ? "review-pill status-review_needed" : ""}`}>{hasManualEdits ? "Edited Result" : "Analysis Snapshot"}</span>
+                {hasManualEdits && onResetToAnalysis ? (
+                  <button className="ghost" onClick={onResetToAnalysis}>
+                    解析結果に戻す
+                  </button>
+                ) : null}
+              </div>
+            </div>
             {result.events.map((event) => (
               <button
                 key={event.id}
