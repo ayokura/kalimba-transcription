@@ -5,6 +5,7 @@ import json
 import math
 from collections import Counter
 from dataclasses import dataclass
+from functools import lru_cache
 from time import perf_counter
 from typing import Any, Callable
 
@@ -622,6 +623,8 @@ GAP_ONSET_MAX_KURTOSIS = 2.0
 GAP_ONSET_MAX_POST_CREST = 0.0  # disabled; set to e.g. 3.8 to enable
 PRE_PERFORMANCE_GAP_REJECT_MAX_POST_AUTOCORR = 0.45
 PRE_PERFORMANCE_GAP_REJECT_MIN_DIFF_CENTROID = 1000.0
+ONSET_WAVEFORM_STATS_MIN_FFT = 512
+ONSET_WAVEFORM_STATS_MAX_FFT = 4096
 
 
 @dataclass(frozen=True)
@@ -1464,8 +1467,12 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sample_rate, hop_length=HOP_LENGTH, backtrack=True)
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
     onset_attack_profiles = precompute_onset_attack_profiles(audio, sample_rate, onset_times)
-    onset_waveform_stats = precompute_onset_waveform_stats(audio, sample_rate, onset_times)
     onset_times = refine_onset_times_by_attack_profile(onset_times, onset_attack_profiles)
+    onset_waveform_stats = (
+        precompute_onset_waveform_stats(audio, sample_rate, onset_times)
+        if FILTER_GAP_ONSETS_BY_ATTACK_PROFILE or USE_ATTACK_VALIDATED_GAP_COLLECTOR
+        else {}
+    )
     active_ranges, short_bridge_active_ranges = suppress_short_bridge_active_ranges(active_ranges, onset_times)
     gap_onset_times = (
         filter_gap_onsets_by_attack(onset_times, active_ranges, onset_attack_profiles, onset_waveform_stats)
@@ -2193,12 +2200,27 @@ def _normalized_autocorrelation(
     energy = float(np.sum(centered * centered))
     if energy < 1e-12:
         return 0.0
-    best_corr = 0.0
-    for lag in range(min_lag, min(max_lag, len(centered))):
-        corr = float(np.sum(centered[: len(centered) - lag] * centered[lag:])) / energy
-        if corr > best_corr:
-            best_corr = corr
-    return best_corr
+    max_valid_lag = min(max_lag, len(centered))
+    if min_lag >= max_valid_lag:
+        return 0.0
+
+    full_corr = np.correlate(centered, centered, mode="full")
+    zero_lag_index = len(centered) - 1
+    lag_corr = full_corr[zero_lag_index + min_lag:zero_lag_index + max_valid_lag]
+    if lag_corr.size == 0:
+        return 0.0
+    return float(np.max(lag_corr / energy))
+
+
+def _waveform_stats_n_fft(pre_signal: np.ndarray, post_signal: np.ndarray) -> int:
+    segment_len = max(len(pre_signal), len(post_signal))
+    bounded = max(segment_len, ONSET_WAVEFORM_STATS_MIN_FFT)
+    return min(ONSET_WAVEFORM_STATS_MAX_FFT, 1 << math.ceil(math.log2(bounded)))
+
+
+@lru_cache(maxsize=8)
+def _rfft_frequency_bins(sample_rate: int, n_fft: int) -> np.ndarray:
+    return np.fft.rfftfreq(n_fft, 1 / sample_rate)
 
 
 def _positive_diff_spectral_centroid(
@@ -2208,14 +2230,14 @@ def _positive_diff_spectral_centroid(
 ) -> float:
     if len(pre_signal) < 256 or len(post_signal) < 256:
         return 0.0
-    n_fft = 4096
+    n_fft = _waveform_stats_n_fft(pre_signal, post_signal)
     pre_spec = np.abs(np.fft.rfft(pre_signal, n=n_fft)) ** 2
     post_spec = np.abs(np.fft.rfft(post_signal, n=n_fft)) ** 2
     diff_spec = np.maximum(post_spec - pre_spec, 0.0)
     diff_energy = float(np.sum(diff_spec))
     if diff_energy < 1e-10:
         return 0.0
-    freqs = np.fft.rfftfreq(n_fft, 1 / sample_rate)
+    freqs = _rfft_frequency_bins(sample_rate, n_fft)
     return float(np.sum(freqs * diff_spec)) / diff_energy
 
 
@@ -2319,11 +2341,12 @@ def filter_gap_onsets_by_attack(
     """Return onset_times with obvious-noise gap onsets removed.
 
     Onsets inside active ranges are kept unconditionally (used for segment
-    boundary splitting).  Gap-region onsets are rejected only when BOTH
-    broadband gain AND high-band spectral flux are below the reject
-    thresholds — i.e. clearly not a real note attack.  Borderline onsets
-    are kept so that existing timing heuristics can provide the second
-    layer of validation.
+    boundary splitting). Gap-region onsets are rejected when the attack
+    profile is clearly noise-like, and pre-performance gap onsets can be
+    rejected more aggressively when waveform stats also indicate broadband
+    noise rather than a pitched attack. Borderline onsets are kept so that
+    later local timing heuristics can provide the second layer of
+    validation.
     """
     if not active_ranges:
         return onset_times
