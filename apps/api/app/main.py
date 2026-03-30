@@ -35,6 +35,8 @@ async def create_transcription(
     tuning: str = Form(...),
     debug: bool = Form(False),
     disabledRepeatedPatternPasses: str | None = Form(None),
+    midPerformanceStart: bool = Form(False),
+    midPerformanceEnd: bool = Form(False),
 ) -> TranscriptionResult:
     parsed_tuning = parse_tuning_json(tuning)
     disabled_passes = parse_disabled_repeated_pattern_passes(disabledRepeatedPatternPasses)
@@ -43,4 +45,6 @@ async def create_transcription(
         parsed_tuning,
         debug=debug,
         disabled_repeated_pattern_passes=disabled_passes,
+        mid_performance_start=midPerformanceStart,
+        mid_performance_end=midPerformanceEnd,
     )

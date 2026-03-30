@@ -4,7 +4,7 @@ import io
 import json
 import math
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace as dataclass_replace
 from functools import lru_cache
 from time import perf_counter
 from typing import Any, Callable
@@ -22,6 +22,7 @@ HOP_LENGTH = 256
 TEMPO_ESTIMATION_HOP_LENGTH = 1024
 RMS_MEDIAN_THRESHOLD_MAX_PEAK_RATIO = 0.45
 NESTED_SEGMENT_DEDUP_MAX_START_DELTA = 0.02
+CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO = 0.5
 SEGMENT_OVERLAP_TRIM_MAX_OVERLAP = 0.18
 SEGMENT_OVERLAP_TRIM_MIN_DURATION = 0.18
 TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE = 0.18
@@ -96,7 +97,7 @@ ONSET_ATTACK_MIN_HIGH_BAND_FLUX = 1.5
 ONSET_ATTACK_GAIN_REQUIRES_MIN_FLUX = 0.5
 ATTACK_VALIDATED_GAP_SEGMENT_DURATION = 0.24
 ATTACK_REFINED_ONSET_MAX_INTERVAL = 0.15
-USE_ATTACK_VALIDATED_GAP_COLLECTOR = False
+USE_ATTACK_VALIDATED_GAP_COLLECTOR = True
 FILTER_GAP_ONSETS_BY_ATTACK_PROFILE = True
 ABLATE_LEADING_ORPHAN = False
 ABLATE_CLOSE_TERMINAL_ORPHAN = False
@@ -492,6 +493,36 @@ def dedupe_nested_segments(segments: list[tuple[float, float]]) -> list[tuple[fl
     return deduped
 
 
+def dedupe_cross_collector_segments(segments: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Merge segments that overlap significantly, regardless of which collector produced them.
+
+    When different collectors (active range, gap injection, terminal orphan, etc.)
+    detect the same physical onset at slightly different times, the resulting
+    segments overlap heavily.  This pass merges such duplicates by checking
+    whether the overlap is at least CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO of
+    the shorter segment's duration.
+
+    Input must be sorted by start time (guaranteed by dedupe_nested_segments).
+    """
+    if len(segments) < 2:
+        return segments
+
+    deduped: list[tuple[float, float]] = [segments[0]]
+    for start_time, end_time in segments[1:]:
+        previous_start, previous_end = deduped[-1]
+        overlap = min(previous_end, end_time) - max(previous_start, start_time)
+        if overlap > 0:
+            shorter_duration = min(
+                previous_end - previous_start,
+                end_time - start_time,
+            )
+            if shorter_duration > 0 and overlap >= shorter_duration * CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO:
+                deduped[-1] = (min(previous_start, start_time), max(previous_end, end_time))
+                continue
+        deduped.append((start_time, end_time))
+    return deduped
+
+
 def trim_small_overlapping_segments(segments: list[tuple[float, float]]) -> list[tuple[float, float]]:
     if len(segments) < 2:
         return segments
@@ -633,6 +664,7 @@ LEADING_GAP_START_MARGIN = 0.05
 GAP_ONSET_MIN_BROADBAND_GAIN = 0.95
 GAP_ONSET_MAX_KURTOSIS = 2.0
 GAP_ONSET_MAX_POST_CREST = 0.0  # disabled; set to e.g. 3.8 to enable
+GAP_ONSET_MIN_POST_SUSTAIN_RATIO = 0.4
 PRE_PERFORMANCE_GAP_REJECT_MAX_POST_AUTOCORR = 0.45
 PRE_PERFORMANCE_GAP_REJECT_MIN_DIFF_CENTROID = 1000.0
 ONSET_WAVEFORM_STATS_MIN_FFT = 512
@@ -645,6 +677,7 @@ class OnsetWaveformStats:
     crest: float
     post_autocorr_20ms: float
     diff_centroid: float
+    post_sustain_ratio: float
 
 
 def precompute_onset_waveform_stats(
@@ -655,6 +688,9 @@ def precompute_onset_waveform_stats(
     """Pre-compute simple waveform/spectral diagnostics for each onset."""
     stats: dict[float, OnsetWaveformStats] = {}
     window_samples = int(sample_rate * _KURTOSIS_WINDOW_SECONDS)
+    sustain_onset_samples = int(sample_rate * 0.04)
+    sustain_check_offset = int(sample_rate * 0.10)
+    sustain_check_samples = int(sample_rate * 0.04)
     min_lag = int(sample_rate / 2000)
     max_lag = int(sample_rate / 150)
     for onset_time in onset_times:
@@ -664,11 +700,21 @@ def precompute_onset_waveform_stats(
         diff_centroid = 0.0
         if len(pre_seg) >= 256 and len(seg) >= 256:
             diff_centroid = _positive_diff_spectral_centroid(pre_seg, seg, sample_rate)
+        onset_chunk = audio[onset_sample:onset_sample + sustain_onset_samples]
+        sustain_start = onset_sample + sustain_check_offset
+        sustain_chunk = audio[sustain_start:sustain_start + sustain_check_samples]
+        if len(onset_chunk) >= sustain_onset_samples and len(sustain_chunk) >= sustain_check_samples:
+            onset_rms = float(np.sqrt(np.mean(onset_chunk ** 2)))
+            sustain_rms = float(np.sqrt(np.mean(sustain_chunk ** 2)))
+            post_sustain_ratio = sustain_rms / onset_rms if onset_rms > 1e-10 else 0.0
+        else:
+            post_sustain_ratio = 1.0
         stats[round(onset_time, 4)] = OnsetWaveformStats(
             kurtosis=_waveform_kurtosis(seg),
             crest=_waveform_crest_factor(seg),
             post_autocorr_20ms=_normalized_autocorrelation(seg, min_lag, max_lag),
             diff_centroid=diff_centroid,
+            post_sustain_ratio=post_sustain_ratio,
         )
     return stats
 
@@ -738,6 +784,8 @@ def _valid_attack_gap_onsets(
                 if GAP_ONSET_MAX_KURTOSIS > 0 and ws.kurtosis > GAP_ONSET_MAX_KURTOSIS:
                     continue
                 if GAP_ONSET_MAX_POST_CREST > 0 and ws.crest > GAP_ONSET_MAX_POST_CREST:
+                    continue
+                if GAP_ONSET_MIN_POST_SUSTAIN_RATIO > 0 and ws.post_sustain_ratio < GAP_ONSET_MIN_POST_SUSTAIN_RATIO:
                     continue
         valid.append(time)
     return valid
@@ -1450,7 +1498,13 @@ def build_segment_debug_contexts(
     return segment_contexts
 
 
-def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
+def detect_segments(
+    audio: np.ndarray,
+    sample_rate: int,
+    *,
+    mid_performance_start: bool = False,
+    mid_performance_end: bool = False,
+) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
     max_rms = float(np.max(rms))
@@ -1504,12 +1558,24 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     attack_validated_gap_candidates = collect_attack_validated_gap_candidates(
         active_ranges, gap_onset_times, onset_attack_profiles, audio_duration,
     )
+    if mid_performance_start or mid_performance_end:
+        attack_validated_gap_candidates = dataclass_replace(
+            attack_validated_gap_candidates,
+            **({"leading": []} if mid_performance_start else {}),
+            **({"trailing": []} if mid_performance_end else {}),
+        )
     # Filtered candidates for attack-validated gap collector only
     filtered_gap_candidates = collect_attack_validated_gap_candidates(
         active_ranges, gap_onset_times, onset_attack_profiles, audio_duration,
         waveform_stats=waveform_stats,
     ) if USE_ATTACK_VALIDATED_GAP_COLLECTOR else None
-    leading_orphan_segments = [] if ABLATE_LEADING_ORPHAN else collect_leading_orphan_segments(active_ranges, gap_onset_times, onset_attack_profiles)
+    if filtered_gap_candidates is not None and (mid_performance_start or mid_performance_end):
+        filtered_gap_candidates = dataclass_replace(
+            filtered_gap_candidates,
+            **({"leading": []} if mid_performance_start else {}),
+            **({"trailing": []} if mid_performance_end else {}),
+        )
+    leading_orphan_segments = [] if (ABLATE_LEADING_ORPHAN or mid_performance_start) else collect_leading_orphan_segments(active_ranges, gap_onset_times, onset_attack_profiles)
     gap_injected_segments: list[tuple[float, float]] = []
     multi_onset_gap_segments = [] if ABLATE_MULTI_ONSET_GAP else collect_multi_onset_gap_segments(
         active_ranges,
@@ -1547,8 +1613,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     terminal_multi_onset_segments: list[tuple[float, float]] = []
     terminal_two_onset_tail_segments: list[tuple[float, float]] = []
     attack_validated_gap_segments: list[tuple[float, float]] = []
-    if active_ranges:
-        audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
+    if active_ranges and not mid_performance_end:
         last_range_end = active_ranges[-1][1]
         trailing_onsets = [
             onset_time
@@ -1672,6 +1737,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
             segments.append((start_time, end_time))
 
     segments = dedupe_nested_segments(segments)
+    segments = dedupe_cross_collector_segments(segments)
     segments = trim_small_overlapping_segments(segments)
 
     if not segments:
@@ -6099,10 +6165,16 @@ async def transcribe_audio(
     *,
     debug: bool = False,
     disabled_repeated_pattern_passes: frozenset[str] | None = None,
+    mid_performance_start: bool = False,
+    mid_performance_end: bool = False,
 ) -> TranscriptionResult:
     audio, sample_rate = await read_audio(upload)
     normalized = normalize_audio(audio)
-    segments, tempo, segment_debug = detect_segments(normalized, sample_rate)
+    segments, tempo, segment_debug = detect_segments(
+        normalized, sample_rate,
+        mid_performance_start=mid_performance_start,
+        mid_performance_end=mid_performance_end,
+    )
 
     raw_events: list[RawEvent] = []
     segment_candidates_debug: list[dict[str, Any]] = []

@@ -20,6 +20,6 @@
     ]
   },
   "status": "completed",
-  "reason": "Recognizer correctly detects all 5 strict four-note chord events. Superseded by strict-repeat-03 but still valid as additional regression data.",
+  "reason": "Completed: gap collector spike filter (post_sustain_ratio) removes the leading noise segments",
   "auditVerdict": "strict-intent-superseded-by-repeat-03"
 }

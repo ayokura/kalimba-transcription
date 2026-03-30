@@ -16,7 +16,7 @@ TESTS_DIR = Path(__file__).resolve().parent
 if str(TESTS_DIR) not in sys.path:
     sys.path.append(str(TESTS_DIR))
 
-from manual_capture_helpers import build_evaluation_audio_bytes
+from manual_capture_helpers import build_evaluation_audio_bytes, build_transcription_form_data
 
 client = TestClient(app)
 MANUAL_CAPTURE_FIXTURE_ROOT = TESTS_DIR / "fixtures" / "manual-captures"
@@ -42,10 +42,8 @@ def _transcribe_manual_capture_fixture(
     use_evaluation_scope: bool,
 ) -> dict:
     request_payload, audio_bytes = _load_manual_capture_fixture_inputs(fixture_name, use_evaluation_scope)
-    data = {
-        "tuning": json.dumps(request_payload["tuning"]),
-        "debug": "true" if debug else "false",
-    }
+    data = build_transcription_form_data(request_payload)
+    data["debug"] = "true" if debug else "false"
     if disabled_repeated_pattern_passes_json is not None:
         data["disabledRepeatedPatternPasses"] = disabled_repeated_pattern_passes_json
 

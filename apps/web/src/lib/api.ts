@@ -67,6 +67,8 @@ export type ManualCaptureRequestPayload = {
   memo: string | null;
   captureIntent: CaptureIntent | null;
   sourceProfile: SourceProfile;
+  midPerformanceStart?: boolean;
+  midPerformanceEnd?: boolean;
   tuning: InstrumentTuning;
   audio: WavMetadata & {
     mimeType: string;
@@ -88,6 +90,8 @@ export type CreateTranscriptionOptions = {
   memo?: string;
   captureIntent?: CaptureIntent | null;
   sourceProfile?: SourceProfile;
+  midPerformanceStart?: boolean;
+  midPerformanceEnd?: boolean;
 };
 
 export async function fetchTunings(): Promise<InstrumentTuning[]> {
@@ -113,6 +117,12 @@ export async function createTranscriptionWithCapture(
   const formData = new FormData();
   formData.append("file", wavBlob, "recording.wav");
   formData.append("tuning", JSON.stringify(tuning));
+  if (options.midPerformanceStart) {
+    formData.append("midPerformanceStart", "true");
+  }
+  if (options.midPerformanceEnd) {
+    formData.append("midPerformanceEnd", "true");
+  }
 
   const response = await fetch(`${API_BASE_URL}/api/transcriptions`, {
     method: "POST",
@@ -136,6 +146,8 @@ export async function createTranscriptionWithCapture(
       memo: cleanOptionalText(options.memo),
       captureIntent: options.captureIntent ?? null,
       sourceProfile: options.sourceProfile ?? "acoustic_real",
+      ...(options.midPerformanceStart ? { midPerformanceStart: true } : {}),
+      ...(options.midPerformanceEnd ? { midPerformanceEnd: true } : {}),
       tuning,
       audio: {
         ...metadata,

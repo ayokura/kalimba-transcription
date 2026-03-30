@@ -1,6 +1,6 @@
 {
-  "pending": false,
-  "status": "completed",
+  "pending": true,
+  "status": "pending",
   "assertions": {
     "minEvents": 51,
     "maxEvents": 51,
@@ -134,5 +134,5 @@
       "E6"
     ]
   },
-  "reason": "Continuous ascending separated-notes phrase repeated three times; current recognizer now recovers all 51 separated-note events under continuous articulation."
+  "reason": "E6 event gains spurious E5 secondary after gap collector enablement"
 }

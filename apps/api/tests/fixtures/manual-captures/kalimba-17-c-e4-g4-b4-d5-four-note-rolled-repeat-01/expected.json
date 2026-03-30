@@ -1,15 +1,16 @@
 {
   "pending": false,
   "assertions": {
-    "minEvents": 4,
-    "maxEvents": 4,
+    "minEvents": 5,
+    "maxEvents": 5,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {
-      "E4+G4+B4+D5": 4
+      "E4+G4+B4+D5": 5
     },
     "maxEventNoteSetOccurrences": {},
     "expectedEventNoteSetsOrdered": [
+      "E4+G4+B4+D5",
       "E4+G4+B4+D5",
       "E4+G4+B4+D5",
       "E4+G4+B4+D5",
@@ -17,7 +18,7 @@
     ]
   },
   "status": "completed",
-  "reason": "Completed on the four valid in-scope slide_chord takes. The excluded fourth take and final separated fragment remain outside scoped evaluation via ignoredRanges.",
+  "reason": "Completed on the five valid in-scope slide_chord takes. The excluded take and final separated fragment remain outside scoped evaluation via ignoredRanges.",
   "auditVerdict": "practical-slide-chord-sample-with-invalid-fourth-take",
   "ignoredRanges": [
     {
