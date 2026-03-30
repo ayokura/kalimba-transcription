@@ -3287,6 +3287,7 @@ def segment_peaks(
     previous_primary_note_name: str | None = None,
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
+    raw_audio: np.ndarray | None = None,
 ) -> tuple[list[NoteCandidate], dict[str, Any] | None, NoteHypothesis | None]:
     start = int(start_time * sample_rate)
     end = int(end_time * sample_rate)
@@ -3354,7 +3355,7 @@ def segment_peaks(
     if (
         recent_note_names
         and primary.candidate.note_name in recent_note_names
-        and _is_residual_decay(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+        and _is_residual_decay(raw_audio if raw_audio is not None else audio, sample_rate, start_time, end_time, primary.candidate.frequency)
     ):
         return [], None, None
     selected = [primary.candidate]
@@ -6362,6 +6363,7 @@ async def transcribe_audio(
             previous_primary_note_name=previous_primary_note_name,
             previous_primary_frequency=previous_primary_frequency,
             previous_primary_was_singleton=previous_primary_was_singleton,
+            raw_audio=audio,
         )
         if not candidates or primary is None:
             continue
