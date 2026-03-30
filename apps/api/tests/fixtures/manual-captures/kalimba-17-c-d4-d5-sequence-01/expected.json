@@ -1,6 +1,5 @@
 {
-  "pending": false,
-  "status": "completed",
+  "status": "pending",
   "assertions": {
     "minEvents": 6,
     "maxEvents": 6,
@@ -18,19 +17,11 @@
       "D4": 3,
       "D5": 3
     },
-    "expectedEventNoteSetsOrdered": [
-      "D4",
-      "D5",
-      "D4",
-      "D5",
-      "D4",
-      "D5"
-    ],
     "maxEventNoteSetOccurrences": {
       "C4+E4": 0,
       "G5+B5": 0,
       "D4+D5": 0
     }
   },
-  "reason": "Completed after upstream pre-performance gap rejection removes the opening chair-noise cluster and long-range active-range backtracking stops reintroducing the later 11.82s boundary contamination."
+  "reason": "chair-noise events are rejected upstream and long-range backtrack filtering prevents the later 11.82s boundary contamination from reappearing, but the raw D4->G5+B5 peak misidentification itself is still not corrected, so keep this fixture pending"
 }

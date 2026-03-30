@@ -82,6 +82,7 @@ TERMINAL_MULTI_ONSET_TAIL_DURATION = 0.32
 ACTIVE_RANGE_START_CLUSTER_MIN_GAP = 0.45
 ACTIVE_RANGE_START_CLUSTER_MAX_SPAN = 0.09
 ACTIVE_RANGE_START_CLUSTER_MAX_DURATION = 0.35
+LONG_RANGE_BACKTRACK_MIN_DURATION = 0.35
 CLUSTERED_RANGE_HEAD_MIN_DURATION = 0.05
 ACTIVE_RANGE_HEAD_CLUSTER_MAX_OFFSET = 0.3
 ACTIVE_RANGE_HEAD_CLUSTER_MAX_INTERVAL = 0.14
@@ -696,7 +697,7 @@ def collect_range_prior_backtrack_onsets(
     onset_times: list[float],
     filtered_backtrack_onset_times: list[float] | None = None,
 ) -> list[float]:
-    if range_end - range_start <= ACTIVE_RANGE_START_CLUSTER_MAX_DURATION:
+    if range_end - range_start <= LONG_RANGE_BACKTRACK_MIN_DURATION:
         return collect_prior_backtrack_onsets(range_start, previous_range_end, onset_times)
 
     backtrack_source = filtered_backtrack_onset_times if filtered_backtrack_onset_times is not None else onset_times
@@ -6300,7 +6301,6 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
-
 
 
 
