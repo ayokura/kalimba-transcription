@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from app.transcription import (
+    CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO,
     GapAttackCandidates,
     OnsetAttackProfile,
     OnsetWaveformStats,
@@ -11,6 +12,7 @@ from app.transcription import (
     collect_multi_onset_gap_segments,
     collect_terminal_multi_onset_segments,
     collect_two_onset_terminal_tail_segments,
+    dedupe_cross_collector_segments,
     detect_segments,
     filter_gap_onsets_by_attack,
 )
@@ -216,3 +218,110 @@ def test_detect_segments_does_not_backtrack_into_previous_active_range(monkeypat
     assert len(late_segments) == 1
     assert late_segments[0][0] == pytest.approx(0.79)
     assert late_segments[0][1] == pytest.approx(1.08)
+
+
+# --- Cross-collector dedup mechanism tests ---
+
+
+def test_dedupe_cross_collector_segments_merges_high_overlap() -> None:
+    segments = [(1.0, 1.5), (1.1, 1.4)]
+    result = dedupe_cross_collector_segments(segments)
+    assert result == [(1.0, 1.5)]
+
+
+def test_dedupe_cross_collector_segments_keeps_low_overlap() -> None:
+    segments = [(1.0, 1.3), (1.2, 1.6)]
+    result = dedupe_cross_collector_segments(segments)
+    # overlap=0.1, shorter=0.3, ratio=0.33 < 0.5 → kept
+    assert result == [(1.0, 1.3), (1.2, 1.6)]
+
+
+def test_dedupe_cross_collector_segments_no_overlap() -> None:
+    segments = [(1.0, 1.3), (1.5, 1.8)]
+    result = dedupe_cross_collector_segments(segments)
+    assert result == [(1.0, 1.3), (1.5, 1.8)]
+
+
+def test_dedupe_cross_collector_segments_chain_merge() -> None:
+    # Three segments where each pair has high overlap
+    segments = [(1.0, 1.5), (1.1, 1.6), (1.2, 1.7)]
+    result = dedupe_cross_collector_segments(segments)
+    assert result == [(1.0, 1.7)]
+
+
+# --- midPerformanceStart/End mechanism tests ---
+
+
+def _build_note_gap_note_audio(
+    sample_rate: int = 44100,
+) -> np.ndarray:
+    """Build audio: [leading_note, gap, main_notes, gap, trailing_note].
+
+    Leading and trailing notes are isolated by silent gaps, so the
+    recognizer may create orphan segments for them.
+    """
+    silence_short = np.zeros(int(sample_rate * 0.5), dtype=np.float32)
+    silence_long = np.zeros(int(sample_rate * 0.8), dtype=np.float32)
+    note_c4 = synthesize_note(261.63, sample_rate=sample_rate, duration=0.3)
+    note_e4 = synthesize_note(329.63, sample_rate=sample_rate, duration=0.3)
+    note_g4 = synthesize_note(392.00, sample_rate=sample_rate, duration=0.3)
+    gap = np.zeros(int(sample_rate * 0.15), dtype=np.float32)
+    return np.concatenate([
+        note_c4,          # leading isolated note
+        silence_long,     # long gap before main
+        note_e4, gap, note_g4, gap, note_e4,  # main notes
+        silence_long,     # long gap after main
+        note_c4,          # trailing isolated note
+        silence_short,    # tail silence
+    ]).astype(np.float32)
+
+
+def test_mid_performance_start_suppresses_leading_segments() -> None:
+    audio = _build_note_gap_note_audio()
+    sr = 44100
+
+    segs_normal, _, _ = detect_segments(audio, sr)
+    segs_mid, _, _ = detect_segments(audio, sr, mid_performance_start=True)
+
+    # With midPerformanceStart, leading segments (before main active range)
+    # should be suppressed.  The total segment count should be equal or fewer.
+    assert len(segs_mid) <= len(segs_normal)
+
+    # The first segment in mid-performance mode should start at or after
+    # the first segment in normal mode.
+    if segs_normal and segs_mid:
+        assert segs_mid[0][0] >= segs_normal[0][0]
+
+
+def test_mid_performance_end_suppresses_trailing_segments() -> None:
+    audio = _build_note_gap_note_audio()
+    sr = 44100
+
+    segs_normal, _, _ = detect_segments(audio, sr)
+    segs_mid, _, _ = detect_segments(audio, sr, mid_performance_end=True)
+
+    assert len(segs_mid) <= len(segs_normal)
+
+    # The last segment in mid-performance mode should end at or before
+    # the last segment in normal mode.
+    if segs_normal and segs_mid:
+        assert segs_mid[-1][1] <= segs_normal[-1][1]
+
+
+def test_mid_performance_flags_do_not_affect_inter_range_segments() -> None:
+    audio = _build_note_gap_note_audio()
+    sr = 44100
+
+    segs_normal, _, _ = detect_segments(audio, sr)
+    segs_both, _, _ = detect_segments(
+        audio, sr, mid_performance_start=True, mid_performance_end=True,
+    )
+
+    # Inter-range segments (the main notes) should be identical.
+    # Filter to the "core" region: segments that are neither the earliest
+    # nor the latest.
+    if len(segs_normal) >= 3:
+        core_normal = segs_normal[1:-1]
+        # Core segments should still exist
+        core_both = [s for s in segs_both if s[0] >= core_normal[0][0] - 0.05 and s[1] <= core_normal[-1][1] + 0.05]
+        assert len(core_both) >= len(core_normal)

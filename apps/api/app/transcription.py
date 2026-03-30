@@ -1481,7 +1481,13 @@ def build_segment_debug_contexts(
     return segment_contexts
 
 
-def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
+def detect_segments(
+    audio: np.ndarray,
+    sample_rate: int,
+    *,
+    mid_performance_start: bool = False,
+    mid_performance_end: bool = False,
+) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
     max_rms = float(np.max(rms))
@@ -1535,12 +1541,25 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     attack_validated_gap_candidates = collect_attack_validated_gap_candidates(
         active_ranges, gap_onset_times, onset_attack_profiles, audio_duration,
     )
+    if mid_performance_start or mid_performance_end:
+        from dataclasses import replace as _dc_replace
+        attack_validated_gap_candidates = _dc_replace(
+            attack_validated_gap_candidates,
+            **({"leading": []} if mid_performance_start else {}),
+            **({"trailing": []} if mid_performance_end else {}),
+        )
     # Filtered candidates for attack-validated gap collector only
     filtered_gap_candidates = collect_attack_validated_gap_candidates(
         active_ranges, gap_onset_times, onset_attack_profiles, audio_duration,
         waveform_stats=waveform_stats,
     ) if USE_ATTACK_VALIDATED_GAP_COLLECTOR else None
-    leading_orphan_segments = [] if ABLATE_LEADING_ORPHAN else collect_leading_orphan_segments(active_ranges, gap_onset_times, onset_attack_profiles)
+    if filtered_gap_candidates is not None and (mid_performance_start or mid_performance_end):
+        filtered_gap_candidates = _dc_replace(
+            filtered_gap_candidates,
+            **({"leading": []} if mid_performance_start else {}),
+            **({"trailing": []} if mid_performance_end else {}),
+        )
+    leading_orphan_segments = [] if (ABLATE_LEADING_ORPHAN or mid_performance_start) else collect_leading_orphan_segments(active_ranges, gap_onset_times, onset_attack_profiles)
     gap_injected_segments: list[tuple[float, float]] = []
     multi_onset_gap_segments = [] if ABLATE_MULTI_ONSET_GAP else collect_multi_onset_gap_segments(
         active_ranges,
@@ -1578,7 +1597,7 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     terminal_multi_onset_segments: list[tuple[float, float]] = []
     terminal_two_onset_tail_segments: list[tuple[float, float]] = []
     attack_validated_gap_segments: list[tuple[float, float]] = []
-    if active_ranges:
+    if active_ranges and not mid_performance_end:
         audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
         last_range_end = active_ranges[-1][1]
         trailing_onsets = [
@@ -6131,10 +6150,16 @@ async def transcribe_audio(
     *,
     debug: bool = False,
     disabled_repeated_pattern_passes: frozenset[str] | None = None,
+    mid_performance_start: bool = False,
+    mid_performance_end: bool = False,
 ) -> TranscriptionResult:
     audio, sample_rate = await read_audio(upload)
     normalized = normalize_audio(audio)
-    segments, tempo, segment_debug = detect_segments(normalized, sample_rate)
+    segments, tempo, segment_debug = detect_segments(
+        normalized, sample_rate,
+        mid_performance_start=mid_performance_start,
+        mid_performance_end=mid_performance_end,
+    )
 
     raw_events: list[RawEvent] = []
     segment_candidates_debug: list[dict[str, Any]] = []
