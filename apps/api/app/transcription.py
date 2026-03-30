@@ -4196,16 +4196,16 @@ def _is_residual_decay(
     """
     attack_time = _find_amplitude_attack_time(audio, sample_rate, start_time)
 
-    pre_time = attack_time - 0.015  # 15 ms before attack
-    post_time = attack_time + 0.015  # 15 ms after attack
+    pre_time = attack_time - 0.03  # 30 ms before attack
+    post_time = attack_time + 0.03  # 30 ms after attack
 
     if pre_time < 0 or post_time > len(audio) / sample_rate:
         return False
 
     pre_energy = _note_band_energy(audio, sample_rate, pre_time, frequency,
-                                   window_seconds=0.02)
+                                   window_seconds=0.04)
     post_energy = _note_band_energy(audio, sample_rate, post_time, frequency,
-                                    window_seconds=0.02)
+                                    window_seconds=0.04)
 
     if post_energy < 1.0:
         return False  # No meaningful energy; not a residual context.
