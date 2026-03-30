@@ -4177,6 +4177,42 @@ def _find_amplitude_attack_time(
     return best_time
 
 
+def _find_note_attack_time(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    frequency: float,
+    max_lookahead_seconds: float = 0.08,
+) -> float:
+    """Find the attack time for a specific note frequency after the onset.
+
+    Instead of using broadband amplitude, scans the note's frequency band
+    energy to find the steepest increase.  This handles chords where each
+    note attacks at a slightly different time.
+    """
+    hop_seconds = 0.005
+    window_seconds = 0.02
+    t = onset_time
+    end_t = min(onset_time + max_lookahead_seconds, len(audio) / sample_rate - window_seconds)
+
+    best_diff = 0.0
+    best_time = onset_time
+    prev_energy = _note_band_energy(audio, sample_rate, t, frequency,
+                                    window_seconds=window_seconds)
+    t += hop_seconds
+    while t < end_t:
+        energy = _note_band_energy(audio, sample_rate, t, frequency,
+                                   window_seconds=window_seconds)
+        diff = energy - prev_energy
+        if diff > best_diff:
+            best_diff = diff
+            best_time = t
+        prev_energy = energy
+        t += hop_seconds
+
+    return best_time
+
+
 def _is_residual_decay(
     audio: np.ndarray,
     sample_rate: int,
@@ -4186,19 +4222,20 @@ def _is_residual_decay(
 ) -> bool:
     """Check whether a note at *frequency* is residual decay at this onset.
 
-    1. Find the true attack time using broadband amplitude analysis.
-    2. Measure note-band energy just before the true attack.
-    3. If pre-attack note-band energy is high relative to post-attack
-       energy, the note was already ringing → residual decay.
+    1. Find the per-note attack time by scanning the note's frequency band
+       energy for the steepest increase after the detected onset.
+    2. Measure note-band energy before and after the per-note attack.
+    3. If pre-attack energy is high relative to post-attack energy, the
+       note was already ringing → residual decay.
 
     On a kalimba, replucking a tine requires touching it first (mute-dip),
     which drives the pre-attack note-band energy to near zero.  Residual
     decay shows high energy before and after with no sharp increase.
     """
-    attack_time = _find_amplitude_attack_time(audio, sample_rate, start_time)
+    attack_time = _find_note_attack_time(audio, sample_rate, start_time, frequency)
 
-    pre_time = attack_time - 0.03  # 30 ms before attack
-    post_time = attack_time + 0.03  # 30 ms after attack
+    pre_time = attack_time - 0.03
+    post_time = attack_time + 0.03
 
     if pre_time < 0 or post_time > len(audio) / sample_rate:
         return False
