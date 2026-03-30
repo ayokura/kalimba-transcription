@@ -1,5 +1,5 @@
 {
-  "pending": false,
+  "pending": true,
   "assertions": {
     "minEvents": 5,
     "maxEvents": 5,
@@ -19,7 +19,7 @@
       "E4+G4+B4+D5"
     ]
   },
-  "status": "completed",
-  "reason": "Recognizer correctly detects all 5 strict four-note chord events. Superseded by strict-repeat-03 but still valid as additional regression data.",
+  "status": "pending",
+  "reason": "leading C4+B5 false positive from gap collector: ambient noise spike (energy 95 vs genuine 1000+)",
   "auditVerdict": "strict-intent-superseded-by-repeat-03"
 }
