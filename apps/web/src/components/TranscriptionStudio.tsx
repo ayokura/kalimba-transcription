@@ -8,7 +8,8 @@ import { InitialResultSummary } from "@/components/InitialResultSummary";
 import { NotationPanel } from "@/components/NotationPanel";
 import { RecorderPanel } from "@/components/RecorderPanel";
 import { TuningPanel } from "@/components/TuningPanel";
-import { createReviewSession, saveReviewSession } from "@/lib/reviewSession";
+import { removeReviewAudio, saveReviewAudio } from "@/lib/reviewAudioStore";
+import { createReviewSession, removeReviewSession, saveReviewSession } from "@/lib/reviewSession";
 import {
   CaptureAssessmentDetails,
   CaptureIntent,
@@ -796,7 +797,13 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setResult(null);
     setLastCapture(null);
     setActiveEventId(null);
-    setLatestReviewSessionId(null);
+    setLatestReviewSessionId((current) => {
+      if (current) {
+        removeReviewSession(current);
+        removeReviewAudio(current);
+      }
+      return null;
+    });
   }
 
   function confirmTuningDraftDiscard() {
@@ -938,7 +945,14 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
           activeEventId: nextActiveEventId,
         });
         saveReviewSession(reviewSession);
-        setLatestReviewSessionId(reviewSession.sessionId);
+        saveReviewAudio(reviewSession.sessionId, capture.audioWav);
+        setLatestReviewSessionId((current) => {
+          if (current && current !== reviewSession.sessionId) {
+            removeReviewSession(current);
+            removeReviewAudio(current);
+          }
+          return reviewSession.sessionId;
+        });
       }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "解析に失敗しました。");
