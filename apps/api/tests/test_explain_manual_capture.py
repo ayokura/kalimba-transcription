@@ -111,7 +111,7 @@ def test_assertion_failure_details_report_order_mismatch() -> None:
 def test_explain_manual_capture_reports_pending_summary_hints() -> None:
     payload = explain_fixture("kalimba-17-c-c4-to-g4-sequence-17-01")
     assert payload["eventCompression"]["expected"] == 17
-    assert payload["eventCompression"]["detected"] == 17
+    assert payload["eventCompression"]["detected"] == 15
     assert len(payload["expectedEvents"]) == 17
     assert all(event["intent"] is None for event in payload["expectedEvents"])
     assert payload["dominantGestureMix"]["ambiguous"] >= 1

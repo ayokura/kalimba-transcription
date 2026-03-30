@@ -4234,7 +4234,9 @@ def _is_residual_decay(
     """
     attack_time = _find_note_attack_time(audio, sample_rate, start_time, frequency)
 
-    pre_time = attack_time - 0.03
+    # Pre-onset is measured relative to the DETECTED onset, not the
+    # per-note attack time, because the onset time is the reliable anchor.
+    pre_time = start_time - 0.03
     post_time = attack_time + 0.03
 
     if pre_time < 0 or post_time > len(audio) / sample_rate:
