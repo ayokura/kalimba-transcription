@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from math import pow
+from typing import Sequence
 
 from fastapi import HTTPException
 
@@ -102,7 +103,7 @@ def get_default_tunings() -> list[InstrumentTuning]:
     return DEFAULT_TUNINGS
 
 
-def build_custom_tuning(name: str, note_names: list[object]) -> InstrumentTuning:
+def build_custom_tuning(name: str, note_names: Sequence[object]) -> InstrumentTuning:
     if not isinstance(name, str):
         raise HTTPException(status_code=400, detail="Tuning name must be a string.")
 

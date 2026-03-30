@@ -357,7 +357,7 @@ class NoteHypothesis:
 
 def parse_tuning_json(tuning_json: str) -> InstrumentTuning:
     try:
-        payload: dict[str, Any] = json.loads(tuning_json)
+        payload: Any = json.loads(tuning_json)
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="Invalid tuning JSON.") from exc
 
@@ -6167,7 +6167,6 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
-
 
 
 
