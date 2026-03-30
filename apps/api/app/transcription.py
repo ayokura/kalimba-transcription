@@ -1645,6 +1645,7 @@ def detect_segments(
             )
 
     segments: list[tuple[float, float]] = []
+    active_range_segments: list[tuple[float, float]] = []
     for range_index, (range_start, range_end) in enumerate(active_ranges):
         effective_range_start = range_start
         previous_range_end = active_ranges[range_index - 1][1] if range_index > 0 else None
@@ -1700,6 +1701,7 @@ def detect_segments(
             min_duration = CLUSTERED_RANGE_HEAD_MIN_DURATION if relaxed_head_segment and index == 0 else 0.08
             if end_time - start_time >= min_duration:
                 segments.append((start_time, end_time))
+                active_range_segments.append((start_time, end_time))
 
     for start_time, end_time in gap_injected_segments:
         if end_time - start_time >= 0.08:
@@ -1771,6 +1773,7 @@ def detect_segments(
         "activeRanges": [[round(start, 4), round(end, 4)] for start, end in active_ranges],
         "rawActiveRanges": [[round(start, 4), round(end, 4)] for start, end in raw_active_ranges],
         "shortBridgeActiveRanges": [[round(start, 4), round(end, 4)] for start, end in short_bridge_active_ranges],
+        "activeRangeSegments": [[round(start, 4), round(end, 4)] for start, end in active_range_segments],
         "gapInjectedSegments": [[round(start, 4), round(end, 4)] for start, end in gap_injected_segments],
         "leadingOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in leading_orphan_segments],
         "multiOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in multi_onset_gap_segments],
@@ -6191,22 +6194,29 @@ async def transcribe_audio(
         [float(value) for value in segment_debug.get("onsetTimes", [])],
         [float(value) for value in segment_debug.get("gapValidatedOnsetTimes", [])] if segment_debug.get("gapValidatedOnsetTimes") else None,
     ) if debug else {}
-    sparse_gap_tail_segment_keys = {
-        (round(start_time, 4), round(end_time, 4))
-        for start_time, end_time in segment_debug.get("sparseGapTailSegments", [])
-    }
+    def _segment_keys(key: str) -> set[tuple[float, float]]:
+        return {
+            (round(float(s), 4), round(float(e), 4))
+            for s, e in segment_debug.get(key, [])
+        }
+
+    active_range_segment_keys = _segment_keys("activeRangeSegments")
+    sparse_gap_tail_segment_keys = _segment_keys("sparseGapTailSegments")
     multi_onset_gap_segments = [
         (float(start_time), float(end_time))
         for start_time, end_time in segment_debug.get("multiOnsetGapSegments", [])
     ]
-    multi_onset_gap_segment_keys = {
-        (round(start_time, 4), round(end_time, 4))
-        for start_time, end_time in multi_onset_gap_segments
-    }
-    single_onset_gap_head_segment_keys = {
-        (round(start_time, 4), round(end_time, 4))
-        for start_time, end_time in segment_debug.get("singleOnsetGapHeadSegments", [])
-    }
+    multi_onset_gap_segment_keys = _segment_keys("multiOnsetGapSegments")
+    single_onset_gap_head_segment_keys = _segment_keys("singleOnsetGapHeadSegments")
+    gap_injected_segment_keys = _segment_keys("gapInjectedSegments")
+    leading_orphan_segment_keys = _segment_keys("leadingOrphanSegments")
+    post_tail_gap_head_segment_keys = _segment_keys("postTailGapHeadSegments")
+    terminal_orphan_segment_keys = _segment_keys("terminalOrphanSegments")
+    close_terminal_orphan_segment_keys = _segment_keys("closeTerminalOrphanSegments")
+    delayed_terminal_orphan_segment_keys = _segment_keys("delayedTerminalOrphanSegments")
+    terminal_multi_onset_segment_keys = _segment_keys("terminalMultiOnsetSegments")
+    terminal_two_onset_tail_segment_keys = _segment_keys("terminalTwoOnsetTailSegments")
+    attack_validated_gap_segment_keys = _segment_keys("attackValidatedGapSegments")
 
     for start_time, end_time in segments:
         duration = max(end_time - start_time, 0.08)
@@ -6244,12 +6254,23 @@ async def transcribe_audio(
         segment_key = (round(start_time, 4), round(end_time, 4))
         if debug and candidate_debug:
             candidate_debug.update(segment_contexts.get(segment_key, {}))
-            candidate_debug["segmentSource"] = (
-                "single_onset_gap_head" if segment_key in single_onset_gap_head_segment_keys
-                else "multi_onset_gap" if segment_key in multi_onset_gap_segment_keys
-                else "sparse_gap_tail" if segment_key in sparse_gap_tail_segment_keys
-                else "active_or_gap"
-            )
+            _collector_map: list[tuple[str, set[tuple[float, float]]]] = [
+                ("active_range", active_range_segment_keys),
+                ("gap_injected", gap_injected_segment_keys),
+                ("leading_orphan", leading_orphan_segment_keys),
+                ("multi_onset_gap", multi_onset_gap_segment_keys),
+                ("post_tail_gap_head", post_tail_gap_head_segment_keys),
+                ("single_onset_gap_head", single_onset_gap_head_segment_keys),
+                ("sparse_gap_tail", sparse_gap_tail_segment_keys),
+                ("terminal_orphan", terminal_orphan_segment_keys),
+                ("close_terminal_orphan", close_terminal_orphan_segment_keys),
+                ("delayed_terminal_orphan", delayed_terminal_orphan_segment_keys),
+                ("terminal_multi_onset", terminal_multi_onset_segment_keys),
+                ("terminal_two_onset_tail", terminal_two_onset_tail_segment_keys),
+                ("attack_validated_gap", attack_validated_gap_segment_keys),
+            ]
+            matched_sources = [name for name, keys in _collector_map if segment_key in keys]
+            candidate_debug["segmentSource"] = matched_sources if matched_sources else ["deduped"]
         if segment_key in sparse_gap_tail_segment_keys and max(note.octave for note in candidates) < 6:
             keep_gap_run_lead_in = any(
                 later_start >= end_time + GAP_RUN_LEAD_IN_MIN_FOLLOWUP_GAP
