@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { NotationPanel } from "@/components/NotationPanel";
+import { ReviewFocusPanel } from "@/components/ReviewFocusPanel";
 import { loadReviewAudio } from "@/lib/reviewAudioStore";
 import { isReviewSessionStorageAvailable, loadReviewSession } from "@/lib/reviewSession";
 import { NotationMode } from "@/lib/types";
@@ -123,6 +124,7 @@ export function ReviewWorkspace() {
             {session.responseSnapshot.events.map((event) => (
               <button
                 key={event.id}
+                type="button"
                 className={`event-list-item ${event.id === (activeEvent?.id ?? "") ? "selected" : ""}`}
                 onClick={() => setActiveEventId(event.id)}
               >
@@ -156,33 +158,11 @@ export function ReviewWorkspace() {
             activeEventId={activeEvent?.id ?? null}
             onActiveEventIdChange={setActiveEventId}
           />
-          <section className="panel">
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">Active Event</p>
-                <h2>選択中の event</h2>
-              </div>
-            </div>
-            {!activeEvent ? (
-              <p className="empty">event がありません。</p>
-            ) : (
-              <div className="stack">
-                <div className="summary-strip">
-                  <span>{activeEvent.id}</span>
-                  <span>{activeEvent.startBeat}拍</span>
-                  <span>{activeEvent.durationBeat}拍</span>
-                </div>
-                <p className="muted">左の event list と譜面上の selection は同期しています。譜面からも対象 event を選べます。</p>
-                <div className="note-chip-row">
-                  {activeEvent.notes.map((note, index) => (
-                    <span key={`${note.pitchClass}-${index}`} className="note-chip">
-                      {note.labelDoReMi}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
+          <ReviewFocusPanel
+            events={session.responseSnapshot.events}
+            activeEventId={activeEvent?.id ?? null}
+            onActiveEventIdChange={setActiveEventId}
+          />
         </div>
       </div>
     </main>
