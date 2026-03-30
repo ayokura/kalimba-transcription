@@ -4141,6 +4141,41 @@ def _note_band_energy(
     return peak_energy_near(frequencies, spectrum, frequency)
 
 
+def _find_amplitude_attack_time(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    max_lookahead_seconds: float = 0.08,
+) -> float:
+    """Find the actual attack time (amplitude spike) near a detected onset.
+
+    Onset detectors may fire at the mute-dip (energy drop) rather than at
+    the new attack.  This function scans a short window after the detected
+    onset and returns the time of the steepest amplitude increase, which
+    corresponds to the physical moment the tine is plucked.
+    """
+    onset_sample = int(onset_time * sample_rate)
+    lookahead_samples = int(max_lookahead_seconds * sample_rate)
+    end_sample = min(onset_sample + lookahead_samples, len(audio))
+    segment = np.abs(audio[onset_sample:end_sample])
+
+    hop = max(int(sample_rate * 0.005), 1)      # 5 ms hop
+    window = max(int(sample_rate * 0.010), hop)  # 10 ms window
+
+    best_diff = 0.0
+    best_time = onset_time
+    prev_energy = 0.0
+    for i in range(0, len(segment) - window, hop):
+        energy = float(np.mean(segment[i : i + window] ** 2))
+        diff = energy - prev_energy
+        if diff > best_diff:
+            best_diff = diff
+            best_time = onset_time + (i + window) / sample_rate
+        prev_energy = energy
+
+    return best_time
+
+
 def _is_residual_decay(
     audio: np.ndarray,
     sample_rate: int,
@@ -4150,21 +4185,33 @@ def _is_residual_decay(
 ) -> bool:
     """Check whether a note at *frequency* is residual decay at this onset.
 
-    Uses the same 80 ms window as ``onset_energy_gain`` to compare peak
-    energy in the note's frequency band before and after the onset.
+    1. Find the true attack time using broadband amplitude analysis.
+    2. Measure note-band energy just before the true attack.
+    3. If pre-attack note-band energy is high relative to post-attack
+       energy, the note was already ringing → residual decay.
 
     On a kalimba, replucking a tine requires touching it first (mute-dip),
-    which drives the pre-onset energy to near zero.  The resulting
-    note-specific onset gain is high (>> 1).
-
-    Residual decay shows comparable energy before and after the detected
-    onset (gain ≈ 1), because the tine was never muted.
-
-    Returns True when the per-note onset gain is below the threshold,
-    indicating residual decay rather than a genuine new attack.
+    which drives the pre-attack note-band energy to near zero.  Residual
+    decay shows high energy before and after with no sharp increase.
     """
-    gain = onset_energy_gain(audio, sample_rate, start_time, end_time, frequency)
-    return gain < RESIDUAL_DECAY_MIN_ONSET_GAIN
+    attack_time = _find_amplitude_attack_time(audio, sample_rate, start_time)
+
+    pre_time = attack_time - 0.015  # 15 ms before attack
+    post_time = attack_time + 0.015  # 15 ms after attack
+
+    if pre_time < 0 or post_time > len(audio) / sample_rate:
+        return False
+
+    pre_energy = _note_band_energy(audio, sample_rate, pre_time, frequency,
+                                   window_seconds=0.02)
+    post_energy = _note_band_energy(audio, sample_rate, post_time, frequency,
+                                    window_seconds=0.02)
+
+    if post_energy < 1.0:
+        return False  # No meaningful energy; not a residual context.
+
+    note_gain = (post_energy + 1e-6) / (pre_energy + 1e-6)
+    return note_gain < RESIDUAL_DECAY_MIN_ONSET_GAIN
 
 
 def collapse_same_start_primary_singletons(raw_events: list[RawEvent]) -> list[RawEvent]:
