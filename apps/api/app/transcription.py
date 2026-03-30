@@ -4,7 +4,7 @@ import io
 import json
 import math
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace as dataclass_replace
 from functools import lru_cache
 from time import perf_counter
 from typing import Any, Callable
@@ -1542,8 +1542,7 @@ def detect_segments(
         active_ranges, gap_onset_times, onset_attack_profiles, audio_duration,
     )
     if mid_performance_start or mid_performance_end:
-        from dataclasses import replace as _dc_replace
-        attack_validated_gap_candidates = _dc_replace(
+        attack_validated_gap_candidates = dataclass_replace(
             attack_validated_gap_candidates,
             **({"leading": []} if mid_performance_start else {}),
             **({"trailing": []} if mid_performance_end else {}),
@@ -1554,7 +1553,7 @@ def detect_segments(
         waveform_stats=waveform_stats,
     ) if USE_ATTACK_VALIDATED_GAP_COLLECTOR else None
     if filtered_gap_candidates is not None and (mid_performance_start or mid_performance_end):
-        filtered_gap_candidates = _dc_replace(
+        filtered_gap_candidates = dataclass_replace(
             filtered_gap_candidates,
             **({"leading": []} if mid_performance_start else {}),
             **({"trailing": []} if mid_performance_end else {}),

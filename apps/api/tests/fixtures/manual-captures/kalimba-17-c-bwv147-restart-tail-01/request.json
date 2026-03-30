@@ -179,5 +179,7 @@
     "durationSec": 289.74,
     "mimeType": "audio/wav",
     "sizeBytes": 55630124
-  }
+  },
+  "midPerformanceStart": true,
+  "midPerformanceEnd": true
 }

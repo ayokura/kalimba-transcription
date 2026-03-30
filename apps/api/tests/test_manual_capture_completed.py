@@ -57,9 +57,11 @@ def test_completed_manual_capture_regression(fixture_dir: Path) -> None:
     ground_truth = load_ground_truth(fixture_dir)
     if ground_truth is not None:
         # Re-run with debug=true for timing check (uses full audio, not windowed)
+        debug_form_data = build_transcription_form_data(request_payload)
+        debug_form_data["debug"] = "true"
         debug_response = client.post(
             "/api/transcriptions",
-            data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+            data=debug_form_data,
             files={"file": ("audio.wav", (fixture_dir / "audio.wav").read_bytes(), "audio/wav")},
         )
         timing_failures = ground_truth_timing_failures(fixture_dir, debug_response.json(), ground_truth)
