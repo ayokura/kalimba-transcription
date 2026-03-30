@@ -357,19 +357,30 @@ class NoteHypothesis:
 
 def parse_tuning_json(tuning_json: str) -> InstrumentTuning:
     try:
-        payload: dict[str, Any] = json.loads(tuning_json)
+        payload: Any = json.loads(tuning_json)
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="Invalid tuning JSON.") from exc
 
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Tuning JSON must be an object.")
+
     notes = payload.get("notes", [])
-    if not notes:
+    if not isinstance(notes, list) or not notes:
         raise HTTPException(status_code=400, detail="Tuning must contain at least one note.")
 
-    note_names = [note["noteName"] for note in notes if "noteName" in note]
-    if len(note_names) != len(notes):
-        raise HTTPException(status_code=400, detail="Each tuning note must include noteName.")
+    note_names: list[Any] = []
+    for note in notes:
+        if not isinstance(note, dict):
+            raise HTTPException(status_code=400, detail="Each tuning note must be an object.")
+        if "noteName" not in note:
+            raise HTTPException(status_code=400, detail="Each tuning note must include noteName.")
+        note_names.append(note["noteName"])
 
-    return build_custom_tuning(payload.get("name", "Custom Tuning"), note_names)
+    name = payload.get("name", "Custom Tuning")
+    if not isinstance(name, str):
+        raise HTTPException(status_code=400, detail="Tuning name must be a string.")
+
+    return build_custom_tuning(name, note_names)
 
 
 def parse_disabled_repeated_pattern_passes(raw_value: str | None) -> frozenset[str]:
@@ -6156,8 +6167,6 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
-
-
 
 
 
