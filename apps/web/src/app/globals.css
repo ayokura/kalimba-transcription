@@ -360,8 +360,20 @@ button:disabled {
   background: rgba(255, 255, 255, 0.82);
 }
 
+.event-card-button,
+.line-row-button {
+  width: 100%;
+  text-align: left;
+}
+
 .event-card.gliss {
   background: linear-gradient(180deg, rgba(242, 192, 120, 0.22), rgba(255, 255, 255, 0.9));
+}
+
+.event-card.selected,
+.line-row-block.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(23, 126, 137, 0.12);
 }
 
 .vertical-stack {

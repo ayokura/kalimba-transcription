@@ -149,7 +149,13 @@ export function ReviewWorkspace() {
               </div>
             )}
           </section>
-          <NotationPanel result={session.responseSnapshot} mode={notationMode} onModeChange={setNotationMode} />
+          <NotationPanel
+            result={session.responseSnapshot}
+            mode={notationMode}
+            onModeChange={setNotationMode}
+            activeEventId={activeEvent?.id ?? null}
+            onActiveEventIdChange={setActiveEventId}
+          />
           <section className="panel">
             <div className="panel-header">
               <div>
@@ -166,6 +172,7 @@ export function ReviewWorkspace() {
                   <span>{activeEvent.startBeat}拍</span>
                   <span>{activeEvent.durationBeat}拍</span>
                 </div>
+                <p className="muted">左の event list と譜面上の selection は同期しています。譜面からも対象 event を選べます。</p>
                 <div className="note-chip-row">
                   {activeEvent.notes.map((note, index) => (
                     <span key={`${note.pitchClass}-${index}`} className="note-chip">

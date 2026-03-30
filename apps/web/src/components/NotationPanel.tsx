@@ -8,6 +8,8 @@ type NotationPanelProps = {
   mode: NotationMode;
   onModeChange: (mode: NotationMode) => void;
   review?: CaptureAssessmentDetails | null;
+  activeEventId?: string | null;
+  onActiveEventIdChange?: (eventId: string) => void;
 };
 
 function buildGestureLabel(gesture: string) {
@@ -30,7 +32,16 @@ function buildReviewLine(reviewEvent: CaptureAssessmentDetails["events"][number]
   return `expected: ${reviewEvent.expected ?? "-"} / detected: ${reviewEvent.detected ?? "-"}`;
 }
 
-export function NotationPanel({ result, mode, onModeChange, review }: NotationPanelProps) {
+export function NotationPanel({
+  result,
+  mode,
+  onModeChange,
+  review,
+  activeEventId = null,
+  onActiveEventIdChange,
+}: NotationPanelProps) {
+  const isSelectable = typeof onActiveEventIdChange === "function";
+
   return (
     <section className="panel">
       <div className="panel-header">
@@ -92,8 +103,9 @@ export function NotationPanel({ result, mode, onModeChange, review }: NotationPa
               {result.events.map((event, index) => {
                 const reviewEvent = review?.events[index];
                 const reviewLine = buildReviewLine(reviewEvent);
-                return (
-                  <article key={event.id} className={`event-card ${event.isGlissLike ? "gliss" : ""} ${reviewEvent && !reviewEvent.matches ? "mismatch" : ""}`}>
+                const isSelected = event.id === activeEventId;
+                const content = (
+                  <>
                     <small>#{index + 1}</small>
                     <div className="vertical-stack">
                       {result.notationViews.verticalDoReMi[index].map((note) => (
@@ -108,6 +120,25 @@ export function NotationPanel({ result, mode, onModeChange, review }: NotationPa
                       <span>{event.startBeat}拍</span>
                       <span>{event.durationBeat}拍</span>
                     </footer>
+                  </>
+                );
+
+                if (isSelectable) {
+                  return (
+                    <button
+                      key={event.id}
+                      type="button"
+                      className={`event-card event-card-button ${event.isGlissLike ? "gliss" : ""} ${reviewEvent && !reviewEvent.matches ? "mismatch" : ""} ${isSelected ? "selected" : ""}`}
+                      onClick={() => onActiveEventIdChange(event.id)}
+                    >
+                      {content}
+                    </button>
+                  );
+                }
+
+                return (
+                  <article key={event.id} className={`event-card ${event.isGlissLike ? "gliss" : ""} ${reviewEvent && !reviewEvent.matches ? "mismatch" : ""}`}>
+                    {content}
                   </article>
                 );
               })}
@@ -117,8 +148,10 @@ export function NotationPanel({ result, mode, onModeChange, review }: NotationPa
               {(mode === "numbered" ? result.notationViews.numbered : result.notationViews.western).map((entry, index) => {
                 const reviewEvent = review?.events[index];
                 const reviewLine = buildReviewLine(reviewEvent);
-                return (
-                  <div key={`${mode}-${index}`} className={`line-row-block ${reviewEvent && !reviewEvent.matches ? "mismatch" : ""}`}>
+                const eventId = result.events[index]?.id ?? `${mode}-${index}`;
+                const isSelected = eventId === activeEventId;
+                const content = (
+                  <>
                     <div className="line-row">
                       <span className="line-index">{index + 1}</span>
                       <code>{entry}</code>
@@ -127,6 +160,25 @@ export function NotationPanel({ result, mode, onModeChange, review }: NotationPa
                       <span className={`pill gesture-pill gesture-${result.events[index]?.gesture ?? "ambiguous"}`}>{buildGestureLabel(result.events[index]?.gesture ?? "ambiguous")}</span>
                     </div>
                     {reviewLine ? <div className={`event-review line ${reviewEvent?.matches ? "match" : "mismatch"}`}>{reviewLine}</div> : null}
+                  </>
+                );
+
+                if (isSelectable && result.events[index]) {
+                  return (
+                    <button
+                      key={`${mode}-${index}`}
+                      type="button"
+                      className={`line-row-block line-row-button ${reviewEvent && !reviewEvent.matches ? "mismatch" : ""} ${isSelected ? "selected" : ""}`}
+                      onClick={() => onActiveEventIdChange(result.events[index].id)}
+                    >
+                      {content}
+                    </button>
+                  );
+                }
+
+                return (
+                  <div key={`${mode}-${index}`} className={`line-row-block ${reviewEvent && !reviewEvent.matches ? "mismatch" : ""}`}>
+                    {content}
                   </div>
                 );
               })}
