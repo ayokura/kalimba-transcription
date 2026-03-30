@@ -1299,7 +1299,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
 
       {error ? <div className="error-banner">{error}</div> : null}
 
-      <div className={isDebug ? "workspace-grid debug-workspace-grid" : "workspace-grid"}>
+      <div className={isDebug ? "workspace-grid debug-workspace-grid" : result ? "workspace-grid" : "workspace-grid workspace-grid-preanalysis"}>
         {isDebug ? (
           <>
             {debugMain}
@@ -1308,7 +1308,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
         ) : (
           <>
             {userPrimary}
-            {userSecondary}
+            {result ? userSecondary : null}
           </>
         )}
       </div>

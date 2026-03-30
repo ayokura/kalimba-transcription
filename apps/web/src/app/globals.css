@@ -103,6 +103,10 @@ button {
   gap: 24px;
 }
 
+.workspace-grid-preanalysis {
+  grid-template-columns: minmax(320px, 420px);
+}
+
 .panel {
   padding: 22px;
 }
