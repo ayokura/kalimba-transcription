@@ -35,6 +35,7 @@ PYTHONPATH=apps/api uv run python3 scripts/audio-analysis/spectrum_stats.py <fil
 3. Report results with interpretation (see guide below)
 
 ## Computed Features
+- **Spectral Flatness**: geometric mean / arithmetic mean of spectrum (0=tonal, 1=noise). Robust to kalimba's wide harmonic spread.
 - **BW90**: 90% energy bandwidth (Hz) - how spread out the frequency content is
 - **Centroid**: Spectral center of mass (Hz) - "brightness" of the sound
 - **Spread**: Standard deviation from centroid (Hz)
@@ -47,11 +48,14 @@ PYTHONPATH=apps/api uv run python3 scripts/audio-analysis/spectrum_stats.py <fil
 
 | Feature | Noise | Real Kalimba Note |
 |---------|-------|-------------------|
+| Spectral Flatness | >0.3 (uniform energy) | <0.1 (peaked at harmonics) |
 | BW90 | >6000 Hz (broadband) | <2000 Hz (narrow) |
 | Centroid | >3000 Hz | <1500 Hz |
 | HF Ratio | >30% | <10% |
 | VHF Ratio | >2% | <1% |
 | Peak Freq | Often high or erratic | Near kalimba fundamental |
+
+Note: BW90/centroid can misclassify genuine kalimba notes with wide harmonic spread as NOISE. Spectral flatness is more robust in this case because harmonic peaks keep flatness low even with wide bandwidth.
 
 These thresholds are validated against real fixture data (2026-03-30 audit):
 - c4-c5-dyad @ 1.44s: BW90=515, centroid=390 → KALIMBA (genuine, score=0.1)
