@@ -116,6 +116,11 @@ export function saveReviewSession(session: TranscriptionReviewSession) {
   window.sessionStorage.setItem(buildStorageKey(session.sessionId), JSON.stringify(session));
 }
 
+type UpdateReviewSessionUiState = {
+  notationMode?: NotationMode;
+  activeEventId?: string | null;
+};
+
 export function loadReviewSession(sessionId: string) {
   if (typeof window === "undefined") {
     return null;
@@ -132,6 +137,19 @@ export function loadReviewSession(sessionId: string) {
   } catch {
     return null;
   }
+}
+
+export function updateReviewSessionUiState(sessionId: string, nextState: UpdateReviewSessionUiState) {
+  const current = loadReviewSession(sessionId);
+  if (!current) {
+    return;
+  }
+
+  saveReviewSession({
+    ...current,
+    ...(nextState.notationMode !== undefined ? { notationMode: nextState.notationMode } : {}),
+    ...(nextState.activeEventId !== undefined ? { activeEventId: nextState.activeEventId } : {}),
+  });
 }
 
 export function removeReviewSession(sessionId: string) {

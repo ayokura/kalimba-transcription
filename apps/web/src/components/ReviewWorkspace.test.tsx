@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   isReviewSessionStorageAvailable: vi.fn(),
   loadReviewSession: vi.fn(),
   loadReviewAudio: vi.fn(),
+  updateReviewSessionUiState: vi.fn(),
   useSearchParams: vi.fn(),
 }));
 
@@ -19,6 +20,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/reviewSession", () => ({
   isReviewSessionStorageAvailable: mocks.isReviewSessionStorageAvailable,
   loadReviewSession: mocks.loadReviewSession,
+  updateReviewSessionUiState: mocks.updateReviewSessionUiState,
 }));
 
 vi.mock("@/lib/reviewAudioStore", () => ({
@@ -131,6 +133,7 @@ describe("ReviewWorkspace", () => {
     mocks.isReviewSessionStorageAvailable.mockReturnValue(true);
     mocks.loadReviewSession.mockReturnValue(buildSession());
     mocks.loadReviewAudio.mockReturnValue(null);
+    mocks.updateReviewSessionUiState.mockReset();
   });
 
   afterEach(() => {
@@ -169,5 +172,22 @@ describe("ReviewWorkspace", () => {
     expect(screen.getAllByText("evt-2").length).toBeGreaterThan(0);
     expect(screen.getAllByText("ミ").length).toBeGreaterThan(0);
     expect(screen.getByText("この review session には audio が残っていません。same-tab の解析直後に `/review` を開き直してください。")).toBeTruthy();
+    expect(mocks.updateReviewSessionUiState).toHaveBeenCalledWith("review-session-1", {
+      notationMode: "vertical",
+      activeEventId: "evt-2",
+    });
+  });
+
+  it("persists notation mode changes back into the review session", async () => {
+    const user = userEvent.setup();
+
+    render(<ReviewWorkspace />);
+
+    await user.click(screen.getByRole("button", { name: "通常表記" }));
+
+    expect(mocks.updateReviewSessionUiState).toHaveBeenCalledWith("review-session-1", {
+      notationMode: "western",
+      activeEventId: "evt-1",
+    });
   });
 });
