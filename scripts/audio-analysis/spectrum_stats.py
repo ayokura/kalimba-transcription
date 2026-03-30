@@ -59,6 +59,13 @@ def compute_spectral_stats(audio_path: str, onset_time: float, window_ms: float 
     peak_idx = np.argmax(spectrum)
     peak_freq = freqs[peak_idx]
 
+    # Spectral flatness (Wiener entropy)
+    # 0 = tonal (energy concentrated at harmonic peaks)
+    # 1 = noise-like (energy uniformly spread)
+    # Robust to kalimba's wide harmonic spread (peaks keep flatness low)
+    log_spectrum = np.log(spectrum + 1e-10)
+    flatness = float(np.exp(np.mean(log_spectrum)) / (np.mean(spectrum) + 1e-10))
+
     # Classification
     if bandwidth_90 > 6000 or centroid > 3000:
         classification = "NOISE"
@@ -76,6 +83,7 @@ def compute_spectral_stats(audio_path: str, onset_time: float, window_ms: float 
         "hf_ratio_pct": round(hf_ratio * 100, 2),
         "vhf_ratio_pct": round(vhf_ratio * 100, 2),
         "peak_freq_hz": round(peak_freq, 1),
+        "spectral_flatness": round(flatness, 6),
         "classification": classification,
     }
 

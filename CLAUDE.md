@@ -41,5 +41,11 @@ fixture名（例: `d5-repeat-01`）は自動的にフルパスに展開される
 - `analyze_kalimba_signature.py` - カリンバ倍音構造検出
 - `find_real_first_note.py` - 最初の本当のカリンバ音を特定
 - `onset_separation_analysis.py` - onset群の特徴量分離分析
+- `fixture_rejection_sweep.py` - rejection閾値探索（実テストスイート使用）
+
+### Fixture 影響評価の注意
+
+rejection 閾値やフィルタ変更の影響を評価する際は、**必ず実テストスイート（pytest）を使うこと**。
+ad-hoc な event count 比較は evaluation window / ignoredRanges / expectedEventNoteSetsOrdered を無視するため、偽の「回帰」を報告する。`fixture_rejection_sweep.py` はこの教訓から作成されたツール。
 
 詳細は `scripts/audio-analysis/README.md` を参照。
