@@ -1,5 +1,5 @@
 {
-  "pending": true,
+  "pending": false,
   "assertions": {
     "minEvents": 5,
     "maxEvents": 5,
@@ -17,6 +17,6 @@
       "E4+G4+B4"
     ]
   },
-  "status": "pending",
-  "reason": "leading C4+D4 false positive from gap collector: ambient noise (energy 13 vs genuine 21000+)"
+  "status": "completed",
+  "reason": "Recovered by strengthening primary rejection thresholds (score<30 AND FR<0.97). PR #74."
 }
