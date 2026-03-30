@@ -37,20 +37,31 @@ Generate a spectrogram image from an audio file using sox.
 
 2. Generate spectrogram using sox:
 ```bash
-sox "<input>" -n trim <start> <duration> spectrogram -x 800 -y 500 -z 70 -o "<output>" -t "<title>"
+sox "<input>" -n spectrogram -x 1200 -Y 500 -S <start> -d <duration> -t "<title>" -o "<output>"
 ```
+
+Note: Use `-Y` (capital, total height) not `-y` (per-channel). Use `-S` for start position and `-d` for duration.
 
 3. Read and display the generated PNG image using the Read tool
 
 4. Report:
    - File analyzed
    - Time range
-   - Output path
-   - Visual observations (frequency bands, patterns, noise vs harmonic structure)
+   - Visual observations: frequency bands, harmonic structure vs broadband noise, attack transients, resonance tails
+
+## Interpretation Guide
+
+| Pattern | Meaning |
+|---------|---------|
+| Bright vertical line with horizontal harmonics | Genuine kalimba attack |
+| Faint diffuse energy across all frequencies | Broadband noise (click, breath, ambient) |
+| Gradually fading horizontal lines | Sustain/resonance from prior note |
+| Concentrated energy below 2kHz | Typical kalimba fundamental + low harmonics |
+| Energy spread above 4kHz | Noise, transient click, or very high register note |
 
 ## Example Usage
 ```
 /audio-visualize d5-repeat-01
-/audio-visualize d5-repeat-01 0.05 0.1
-/audio-visualize /path/to/audio.wav 0 1 /tmp/my_spectrogram.png
+/audio-visualize d5-repeat-01 0 2
+/audio-visualize a4-d4-f4-triad-repeat-01 0 4 /tmp/triad_leading.png
 ```

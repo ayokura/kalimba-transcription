@@ -21,58 +21,49 @@ Comprehensive diagnosis of an onset to determine if it's noise or a real kalimba
 
 ## Diagnostic Tests Performed
 
-### 1. Spectral Analysis (librosa)
-- BW90 (90% bandwidth)
-- Spectral centroid
-- VHF ratio (>8kHz)
+### 1. Spectral Classification (spectrum_stats.py)
+```bash
+PYTHONPATH=apps/api uv run python3 scripts/audio-analysis/spectrum_stats.py <file> <time>
+```
+Returns KALIMBA / NOISE / UNCLEAR with BW90, centroid, HF ratio.
 
 ### 2. Pitch Detection (praat)
-- Detected frequency
-- Nearest kalimba note
-- Deviation percentage
+```bash
+praat --run scripts/audio-analysis/pitch_detect.praat <file> <start> <duration>
+```
+Detected frequency, nearest kalimba note, deviation percentage.
 
-### 3. Temporal Evolution
-- Fund growth: fundamental energy at 40-60ms / 0-20ms
-- HF decay: high-frequency energy decay pattern
+### 3. Visual Confirmation (sox spectrogram)
+```bash
+sox <file> -n spectrogram -x 1200 -Y 500 -S <start-0.1> -d 0.5 -t "<title>" -o /tmp/diagnose.png
+```
+Then read the PNG with the Read tool to visually confirm.
 
-### 4. Visual Confirmation (sox)
-- Generate spectrogram of onset region
+### 4. Temporal Evolution (optional, for ambiguous cases)
+Use `/audio-energy-trace` to track note-band energy over time around the onset.
 
 ## Classification Criteria
 
 | Test | Noise | Real Note |
 |------|-------|-----------|
 | BW90 | >6000 Hz | <2000 Hz |
-| Centroid | >3000 Hz | <1000 Hz |
+| Centroid | >3000 Hz | <1500 Hz |
+| HF Ratio | >30% | <10% |
 | VHF% | >2% | <1% |
 | Pitch match | >10% deviation | <5% deviation |
-| Fund growth | <1.0 (decreasing) | >1.0 (increasing) |
+| Spectrogram | Diffuse broadband | Clear harmonic lines |
+
+## Decision Logic
+
+1. Run spectrum_stats.py — if KALIMBA or NOISE classification is clear, that's the primary answer
+2. If UNCLEAR, run pitch detection for additional evidence
+3. Generate spectrogram for visual confirmation
+4. Aggregate: majority vote across tests
 
 ## Output
-- **NOISE**: Recording artifact, environmental sound, etc.
+- **NOISE**: Recording artifact, environmental sound, ambient noise
 - **KALIMBA**: Real kalimba note with identified pitch
-- **UNCLEAR**: Ambiguous, requires manual review
-
-## Instructions
-
-1. If no specific time given:
-   - Use aubio to detect onsets in first 0.2 seconds
-   - Analyze each detected onset
-
-2. For each onset:
-   - Run `/audio-spectrum` analysis
-   - Run `/audio-pitch` detection
-   - Generate spectrogram with `/audio-visualize`
-   - Compute temporal evolution metrics
-
-3. Aggregate results and classify:
-   - Count how many tests indicate NOISE vs NOTE
-   - Provide confidence score
-   - Show detailed breakdown
-
-4. Provide recommendation:
-   - Whether this onset should be included in transcription
-   - Suggested threshold adjustments if needed
+- **UNCLEAR**: Ambiguous, requires manual review — show all evidence
 
 ## Example Usage
 ```
@@ -80,9 +71,3 @@ Comprehensive diagnosis of an onset to determine if it's noise or a real kalimba
 /audio-diagnose d5-repeat-01 0.059
 /audio-diagnose c4-e4-g4-triad-repeat-01 0.056
 ```
-
-## Related Skills
-- `/audio-visualize` - Visual spectrogram
-- `/audio-onset` - Onset detection
-- `/audio-pitch` - Pitch detection
-- `/audio-spectrum` - Spectral features
