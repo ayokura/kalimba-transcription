@@ -1,6 +1,5 @@
 {
   "status": "pending",
-  "reason": "passes through pattern normalization masking chair noise misdetection (0-3s) and G5+B5 peak misidentification at 11.82s; requires upstream non-instrument sound rejection to pass cleanly",
   "assertions": {
     "minEvents": 6,
     "maxEvents": 6,
@@ -23,5 +22,6 @@
       "G5+B5": 0,
       "D4+D5": 0
     }
-  }
+  },
+  "reason": "chair-noise events are rejected upstream and long-range backtrack filtering prevents the later 11.82s boundary contamination from reappearing, but the raw D4->G5+B5 peak misidentification itself is still not corrected, so keep this fixture pending"
 }

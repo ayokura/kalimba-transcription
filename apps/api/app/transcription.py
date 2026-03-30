@@ -5,6 +5,7 @@ import json
 import math
 from collections import Counter
 from dataclasses import dataclass
+from functools import lru_cache
 from time import perf_counter
 from typing import Any, Callable
 
@@ -81,6 +82,7 @@ TERMINAL_MULTI_ONSET_TAIL_DURATION = 0.32
 ACTIVE_RANGE_START_CLUSTER_MIN_GAP = 0.45
 ACTIVE_RANGE_START_CLUSTER_MAX_SPAN = 0.09
 ACTIVE_RANGE_START_CLUSTER_MAX_DURATION = 0.35
+LONG_RANGE_BACKTRACK_MIN_DURATION = 0.35
 CLUSTERED_RANGE_HEAD_MIN_DURATION = 0.05
 ACTIVE_RANGE_HEAD_CLUSTER_MAX_OFFSET = 0.3
 ACTIVE_RANGE_HEAD_CLUSTER_MAX_INTERVAL = 0.14
@@ -631,12 +633,18 @@ LEADING_GAP_START_MARGIN = 0.05
 GAP_ONSET_MIN_BROADBAND_GAIN = 0.95
 GAP_ONSET_MAX_KURTOSIS = 2.0
 GAP_ONSET_MAX_POST_CREST = 0.0  # disabled; set to e.g. 3.8 to enable
+PRE_PERFORMANCE_GAP_REJECT_MAX_POST_AUTOCORR = 0.45
+PRE_PERFORMANCE_GAP_REJECT_MIN_DIFF_CENTROID = 1000.0
+ONSET_WAVEFORM_STATS_MIN_FFT = 512
+ONSET_WAVEFORM_STATS_MAX_FFT = 4096
 
 
 @dataclass(frozen=True)
 class OnsetWaveformStats:
     kurtosis: float
     crest: float
+    post_autocorr_20ms: float
+    diff_centroid: float
 
 
 def precompute_onset_waveform_stats(
@@ -644,17 +652,67 @@ def precompute_onset_waveform_stats(
     sample_rate: int,
     onset_times: list[float],
 ) -> dict[float, OnsetWaveformStats]:
-    """Pre-compute kurtosis and crest factor for each onset (20ms post-onset window)."""
+    """Pre-compute simple waveform/spectral diagnostics for each onset."""
     stats: dict[float, OnsetWaveformStats] = {}
     window_samples = int(sample_rate * _KURTOSIS_WINDOW_SECONDS)
+    min_lag = int(sample_rate / 2000)
+    max_lag = int(sample_rate / 150)
     for onset_time in onset_times:
         onset_sample = max(int(onset_time * sample_rate), 0)
+        pre_seg = np.array(audio[max(0, onset_sample - window_samples):onset_sample], copy=True)
         seg = np.array(audio[onset_sample:min(len(audio), onset_sample + window_samples)], copy=True)
+        diff_centroid = 0.0
+        if len(pre_seg) >= 256 and len(seg) >= 256:
+            diff_centroid = _positive_diff_spectral_centroid(pre_seg, seg, sample_rate)
         stats[round(onset_time, 4)] = OnsetWaveformStats(
             kurtosis=_waveform_kurtosis(seg),
             crest=_waveform_crest_factor(seg),
+            post_autocorr_20ms=_normalized_autocorrelation(seg, min_lag, max_lag),
+            diff_centroid=diff_centroid,
         )
     return stats
+
+
+def estimate_pre_performance_start(active_ranges: list[tuple[float, float]]) -> float | None:
+    if not active_ranges:
+        return None
+
+    first_start, first_end = active_ranges[0]
+    if first_end - first_start >= ACTIVE_RANGE_START_CLUSTER_MAX_DURATION:
+        return first_start
+
+    for range_start, range_end in active_ranges[1:]:
+        if range_end - range_start >= ACTIVE_RANGE_START_CLUSTER_MAX_DURATION:
+            return range_start
+
+    return first_start
+
+
+def collect_prior_backtrack_onsets(
+    range_start: float,
+    previous_range_end: float | None,
+    backtrack_onset_times: list[float],
+) -> list[float]:
+    return [
+        time
+        for time in backtrack_onset_times
+        if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005
+        and (previous_range_end is None or time >= previous_range_end + 0.005)
+    ]
+
+
+def collect_range_prior_backtrack_onsets(
+    range_start: float,
+    range_end: float,
+    previous_range_end: float | None,
+    onset_times: list[float],
+    filtered_backtrack_onset_times: list[float] | None = None,
+) -> list[float]:
+    if range_end - range_start <= LONG_RANGE_BACKTRACK_MIN_DURATION:
+        return collect_prior_backtrack_onsets(range_start, previous_range_end, onset_times)
+
+    backtrack_source = filtered_backtrack_onset_times if filtered_backtrack_onset_times is not None else onset_times
+    return collect_prior_backtrack_onsets(range_start, previous_range_end, backtrack_source)
 
 
 def _valid_attack_gap_onsets(
@@ -1317,16 +1375,18 @@ def _active_range_debug_context(
     range_index: int,
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
+    backtrack_onset_times: list[float] | None = None,
 ) -> dict[str, Any]:
     range_start, range_end = active_ranges[range_index]
     effective_range_start = range_start
     previous_range_end = active_ranges[range_index - 1][1] if range_index > 0 else None
-    prior_onsets = [
-        time
-        for time in onset_times
-        if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005
-        and (previous_range_end is None or time >= previous_range_end + 0.005)
-    ]
+    prior_onsets = collect_range_prior_backtrack_onsets(
+        range_start,
+        range_end,
+        previous_range_end,
+        onset_times,
+        backtrack_onset_times,
+    )
     if prior_onsets:
         effective_range_start = prior_onsets[-1]
         if (
@@ -1354,8 +1414,12 @@ def build_segment_debug_contexts(
     segments: list[tuple[float, float]],
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
+    backtrack_onset_times: list[float] | None = None,
 ) -> dict[tuple[float, float], dict[str, Any]]:
-    active_contexts = [_active_range_debug_context(index, active_ranges, onset_times) for index in range(len(active_ranges))]
+    active_contexts = [
+        _active_range_debug_context(index, active_ranges, onset_times, backtrack_onset_times)
+        for index in range(len(active_ranges))
+    ]
     segment_contexts: dict[tuple[float, float], dict[str, Any]] = {}
     for index, (start_time, end_time) in enumerate(segments):
         segment_key = (round(start_time, 4), round(end_time, 4))
@@ -1416,12 +1480,26 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
     onset_attack_profiles = precompute_onset_attack_profiles(audio, sample_rate, onset_times)
     onset_times = refine_onset_times_by_attack_profile(onset_times, onset_attack_profiles)
+    onset_waveform_stats = (
+        precompute_onset_waveform_stats(audio, sample_rate, onset_times)
+        if FILTER_GAP_ONSETS_BY_ATTACK_PROFILE or USE_ATTACK_VALIDATED_GAP_COLLECTOR
+        else {}
+    )
     active_ranges, short_bridge_active_ranges = suppress_short_bridge_active_ranges(active_ranges, onset_times)
-    gap_onset_times = filter_gap_onsets_by_attack(onset_times, active_ranges, onset_attack_profiles) if FILTER_GAP_ONSETS_BY_ATTACK_PROFILE else onset_times
+    gap_onset_times = (
+        filter_gap_onsets_by_attack(onset_times, active_ranges, onset_attack_profiles, onset_waveform_stats)
+        if FILTER_GAP_ONSETS_BY_ATTACK_PROFILE
+        else onset_times
+    )
     gap_ioi_diagnostics = build_gap_ioi_diagnostics(active_ranges, onset_times)
 
     audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
-    waveform_stats = precompute_onset_waveform_stats(audio, sample_rate, gap_onset_times)
+    gap_onset_keys = {round(onset_time, 4) for onset_time in gap_onset_times}
+    waveform_stats = {
+        onset_time: stats
+        for onset_time, stats in onset_waveform_stats.items()
+        if onset_time in gap_onset_keys
+    }
     # Unfiltered candidates for multi_onset_gap_segments (shared path)
     attack_validated_gap_candidates = collect_attack_validated_gap_candidates(
         active_ranges, gap_onset_times, onset_attack_profiles, audio_duration,
@@ -1503,12 +1581,13 @@ def detect_segments(audio: np.ndarray, sample_rate: int) -> tuple[list[tuple[flo
     for range_index, (range_start, range_end) in enumerate(active_ranges):
         effective_range_start = range_start
         previous_range_end = active_ranges[range_index - 1][1] if range_index > 0 else None
-        prior_onsets = [
-            time
-            for time in onset_times
-            if range_start - PRIOR_ONSET_BACKTRACK_SECONDS <= time <= range_start + 0.005
-            and (previous_range_end is None or time >= previous_range_end + 0.005)
-        ]
+        prior_onsets = collect_range_prior_backtrack_onsets(
+            range_start,
+            range_end,
+            previous_range_end,
+            onset_times,
+            gap_onset_times,
+        )
         relaxed_head_segment = False
         if prior_onsets:
             effective_range_start = prior_onsets[-1]
@@ -2121,6 +2200,59 @@ def _waveform_crest_factor(signal: np.ndarray) -> float:
     return float(np.max(np.abs(signal))) / rms
 
 
+def _normalized_autocorrelation(
+    signal: np.ndarray,
+    min_lag: int,
+    max_lag: int,
+) -> float:
+    centered = np.asarray(signal, dtype=np.float64)
+    if centered.size == 0:
+        return 0.0
+    centered = centered - float(np.mean(centered))
+    energy = float(np.sum(centered * centered))
+    if energy < 1e-12:
+        return 0.0
+    max_valid_lag = min(max_lag, len(centered))
+    if min_lag >= max_valid_lag:
+        return 0.0
+
+    full_corr = np.correlate(centered, centered, mode="full")
+    zero_lag_index = len(centered) - 1
+    lag_corr = full_corr[zero_lag_index + min_lag:zero_lag_index + max_valid_lag]
+    if lag_corr.size == 0:
+        return 0.0
+    return float(np.max(lag_corr / energy))
+
+
+def _waveform_stats_n_fft(pre_signal: np.ndarray, post_signal: np.ndarray) -> int:
+    segment_len = max(len(pre_signal), len(post_signal))
+    bounded = max(segment_len, ONSET_WAVEFORM_STATS_MIN_FFT)
+    return min(ONSET_WAVEFORM_STATS_MAX_FFT, 1 << math.ceil(math.log2(bounded)))
+
+
+@lru_cache(maxsize=8)
+def _rfft_frequency_bins(sample_rate: int, n_fft: int) -> np.ndarray:
+    return np.fft.rfftfreq(n_fft, 1 / sample_rate)
+
+
+def _positive_diff_spectral_centroid(
+    pre_signal: np.ndarray,
+    post_signal: np.ndarray,
+    sample_rate: int,
+) -> float:
+    if len(pre_signal) < 256 or len(post_signal) < 256:
+        return 0.0
+    n_fft = _waveform_stats_n_fft(pre_signal, post_signal)
+    pre_spec = np.abs(np.fft.rfft(pre_signal, n=n_fft)) ** 2
+    post_spec = np.abs(np.fft.rfft(post_signal, n=n_fft)) ** 2
+    diff_spec = np.maximum(post_spec - pre_spec, 0.0)
+    diff_energy = float(np.sum(diff_spec))
+    if diff_energy < 1e-10:
+        return 0.0
+    freqs = _rfft_frequency_bins(sample_rate, n_fft)
+    return float(np.sum(freqs * diff_spec)) / diff_energy
+
+
 def compute_onset_attack_profile(
     audio: np.ndarray,
     sample_rate: int,
@@ -2216,18 +2348,22 @@ def filter_gap_onsets_by_attack(
     onset_times: list[float],
     active_ranges: list[tuple[float, float]],
     onset_profiles: dict[float, OnsetAttackProfile],
+    waveform_stats: dict[float, OnsetWaveformStats] | None = None,
 ) -> list[float]:
     """Return onset_times with obvious-noise gap onsets removed.
 
     Onsets inside active ranges are kept unconditionally (used for segment
-    boundary splitting).  Gap-region onsets are rejected only when BOTH
-    broadband gain AND high-band spectral flux are below the reject
-    thresholds — i.e. clearly not a real note attack.  Borderline onsets
-    are kept so that existing timing heuristics can provide the second
-    layer of validation.
+    boundary splitting). Gap-region onsets are rejected when the attack
+    profile is clearly noise-like, and pre-performance gap onsets can be
+    rejected more aggressively when waveform stats also indicate broadband
+    noise rather than a pitched attack. Borderline onsets are kept so that
+    later local timing heuristics can provide the second layer of
+    validation.
     """
     if not active_ranges:
         return onset_times
+
+    pre_performance_start = estimate_pre_performance_start(active_ranges)
 
     def _in_active_range(time: float) -> bool:
         for range_start, range_end in active_ranges:
@@ -2244,6 +2380,14 @@ def filter_gap_onsets_by_attack(
         if profile is None:
             filtered.append(time)
             continue
+        if waveform_stats is not None and pre_performance_start is not None and time < pre_performance_start:
+            stats = waveform_stats.get(round(time, 4))
+            if (
+                stats is not None
+                and stats.post_autocorr_20ms < PRE_PERFORMANCE_GAP_REJECT_MAX_POST_AUTOCORR
+                and stats.diff_centroid > PRE_PERFORMANCE_GAP_REJECT_MIN_DIFF_CENTROID
+            ):
+                continue
         if (
             profile.broadband_onset_gain < GAP_ONSET_REJECT_MAX_BROADBAND_GAIN
             and profile.high_band_spectral_flux < GAP_ONSET_REJECT_MAX_HIGH_BAND_FLUX
@@ -5966,6 +6110,7 @@ async def transcribe_audio(
         segments,
         [tuple(item) for item in segment_debug.get("activeRanges", [])],
         [float(value) for value in segment_debug.get("onsetTimes", [])],
+        [float(value) for value in segment_debug.get("gapValidatedOnsetTimes", [])] if segment_debug.get("gapValidatedOnsetTimes") else None,
     ) if debug else {}
     sparse_gap_tail_segment_keys = {
         (round(start_time, 4), round(end_time, 4))
@@ -6167,10 +6312,6 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
-
-
-
-
 
 
 

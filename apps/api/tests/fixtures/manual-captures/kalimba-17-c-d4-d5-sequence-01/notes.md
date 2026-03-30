@@ -21,11 +21,13 @@
 
 ## Audio Quality
 
-- 0s-3s contains chair noise (not kalimba), which the recognizer detects as D6/C4/E4
+- 0s-3s contains chair noise (not kalimba), now rejected by the upstream pre-performance gap filter
 - actual kalimba performance begins at approximately 3.49s
-- the chair noise has strong attack profiles (gain=28.5, flux=3.1) indistinguishable from kalimba by current thresholds
+- the chair noise attack cluster around 1.81s-1.84s was previously promoted as a false gap event; current upstream gap-onset rejection now removes it
 
 ## Memo
 
-- downgraded to pending: fixture passes through pattern normalization removing chair noise events and a G5+B5 misdetection at 11.82s (actually D4), coincidentally producing the correct 6 events
-- resolution requires: upstream non-instrument sound rejection, and correct peak detection at 11.82s active range boundary
+- remains pending: the merged output is currently the intended 6-event D4/D5 alternation
+- upstream pre-performance gap rejection removes the opening chair-noise cluster before segmentation
+- long-range backtrack filtering no longer reintroduces the later 11.82s boundary contamination into the active range
+- unresolved root cause: the raw 11.82s onset is still misidentified as G5+B5 instead of D4 before later stages suppress it

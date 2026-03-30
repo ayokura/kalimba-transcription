@@ -4,11 +4,15 @@ import pytest
 from app.transcription import (
     GapAttackCandidates,
     OnsetAttackProfile,
+    OnsetWaveformStats,
+    collect_prior_backtrack_onsets,
+    collect_range_prior_backtrack_onsets,
     collect_attack_validated_gap_candidates,
     collect_multi_onset_gap_segments,
     collect_terminal_multi_onset_segments,
     collect_two_onset_terminal_tail_segments,
     detect_segments,
+    filter_gap_onsets_by_attack,
 )
 from conftest import synthesize_note
 
@@ -84,6 +88,68 @@ def test_collect_multi_onset_gap_segments_promotes_attack_validated_run_candidat
         (8.9467, 9.0667),
         (9.0667, 9.3867),
     ]
+
+
+def test_filter_gap_onsets_by_attack_rejects_pre_performance_noise_like_gap_onsets() -> None:
+    active_ranges = [(0.8253, 0.9467), (3.524, 5.288)]
+    onset_times = [0.0613, 0.8453, 1.808, 1.8427, 3.5467, 4.2213, 5.68]
+    onset_profiles = {
+        onset_time: OnsetAttackProfile(onset_time, 5.0, 2.0, 2.0, True)
+        for onset_time in onset_times
+    }
+    waveform_stats = {
+        0.0613: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.31, diff_centroid=2297.5),
+        0.8453: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.7, diff_centroid=400.0),
+        1.808: OnsetWaveformStats(kurtosis=0.3, crest=3.4, post_autocorr_20ms=0.37, diff_centroid=1026.9),
+        1.8427: OnsetWaveformStats(kurtosis=3.2, crest=4.5, post_autocorr_20ms=0.36, diff_centroid=1690.6),
+        3.5467: OnsetWaveformStats(kurtosis=-0.4, crest=2.3, post_autocorr_20ms=0.69, diff_centroid=417.6),
+        4.2213: OnsetWaveformStats(kurtosis=0.1, crest=3.0, post_autocorr_20ms=0.65, diff_centroid=951.3),
+        5.68: OnsetWaveformStats(kurtosis=0.2, crest=3.2, post_autocorr_20ms=0.55, diff_centroid=700.0),
+    }
+
+    filtered = filter_gap_onsets_by_attack(onset_times, active_ranges, onset_profiles, waveform_stats)
+
+    assert filtered == [0.8453, 3.5467, 4.2213, 5.68]
+
+
+def test_filter_gap_onsets_by_attack_keeps_noise_like_gap_onset_after_performance_start() -> None:
+    active_ranges = [(0.0, 0.6), (2.0, 2.4)]
+    onset_times = [0.2, 1.4, 2.1]
+    onset_profiles = {
+        onset_time: OnsetAttackProfile(onset_time, 5.0, 2.0, 2.0, True)
+        for onset_time in onset_times
+    }
+    waveform_stats = {
+        0.2: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.7, diff_centroid=400.0),
+        1.4: OnsetWaveformStats(kurtosis=0.3, crest=3.4, post_autocorr_20ms=0.2, diff_centroid=3000.0),
+        2.1: OnsetWaveformStats(kurtosis=0.0, crest=3.0, post_autocorr_20ms=0.7, diff_centroid=400.0),
+    }
+
+    filtered = filter_gap_onsets_by_attack(onset_times, active_ranges, onset_profiles, waveform_stats)
+
+    assert filtered == onset_times
+
+
+def test_collect_prior_backtrack_onsets_uses_filtered_gap_onsets_contract() -> None:
+    prior_onsets = collect_prior_backtrack_onsets(
+        range_start=12.372,
+        previous_range_end=9.1787,
+        backtrack_onset_times=[10.5787, 12.392],
+    )
+
+    assert prior_onsets == []
+
+
+def test_collect_range_prior_backtrack_onsets_uses_raw_onsets_for_short_ranges() -> None:
+    prior_onsets = collect_range_prior_backtrack_onsets(
+        range_start=21.3027,
+        range_end=21.488,
+        previous_range_end=20.4,
+        onset_times=[20.6213, 20.856, 21.3147],
+        filtered_backtrack_onset_times=[],
+    )
+
+    assert prior_onsets == [20.856]
 
 
 def test_collect_terminal_multi_onset_segments_requires_close_orphan_then_regular_run() -> None:
