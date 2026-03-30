@@ -2,7 +2,13 @@ import numpy as np
 import pytest
 
 from app.tunings import get_default_tunings
-from app.transcription import NoteCandidate, NoteHypothesis, segment_peaks
+from app.transcription import (
+    NoteCandidate,
+    NoteHypothesis,
+    PRIMARY_REJECTION_MAX_SCORE,
+    PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO,
+    segment_peaks,
+)
 from conftest import synthesize_note, synthesize_chord
 
 
@@ -321,3 +327,96 @@ def test_segment_peaks_suppresses_descending_restart_upper_carryover(monkeypatch
         and "descending-restart-upper-carryover" in item.get("reasons", [])
         for item in debug["secondaryDecisionTrail"]
     )
+
+
+def test_segment_peaks_rejects_weak_primary_with_low_score_and_fundamental_ratio(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Primary with both low score and low fundamental ratio is rejected."""
+    import app.transcription as transcription
+
+    tuning = get_default_tunings()[0]
+    e6 = NoteCandidate(key=0, note_name="E6", frequency=1318.5102276514797, pitch_class="E", octave=6)
+
+    def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
+        return [
+            NoteHypothesis(e6, PRIMARY_REJECTION_MAX_SCORE - 1, 0.0, 0.0,
+                           PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO - 0.1, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    monkeypatch.setattr(transcription, "rank_tuning_candidates", fake_rank_tuning_candidates)
+
+    candidates, debug, primary = segment_peaks(
+        synthesize_note(e6.frequency, duration=0.2),
+        44100,
+        0.0,
+        0.2,
+        tuning,
+        debug=True,
+    )
+
+    assert candidates == []
+    assert primary is None
+    assert debug is None
+
+
+def test_segment_peaks_keeps_low_score_primary_with_high_fundamental_ratio(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Low score alone does not trigger rejection when fundamental ratio is adequate."""
+    import app.transcription as transcription
+
+    tuning = get_default_tunings()[0]
+    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
+
+    def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
+        return [
+            NoteHypothesis(c4, PRIMARY_REJECTION_MAX_SCORE - 1, 0.0, 0.0,
+                           0.85, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    monkeypatch.setattr(transcription, "rank_tuning_candidates", fake_rank_tuning_candidates)
+
+    candidates, debug, primary = segment_peaks(
+        synthesize_note(c4.frequency, duration=0.2),
+        44100,
+        0.0,
+        0.2,
+        tuning,
+        debug=True,
+    )
+
+    assert primary is not None
+    assert primary.candidate.note_name == "C4"
+    assert len(candidates) >= 1
+
+
+def test_segment_peaks_keeps_high_score_primary_with_low_fundamental_ratio(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Low fundamental ratio alone does not trigger rejection when score is adequate."""
+    import app.transcription as transcription
+
+    tuning = get_default_tunings()[0]
+    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
+
+    def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
+        return [
+            NoteHypothesis(d4, 50.0, 0.0, 0.0,
+                           PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO - 0.1, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    monkeypatch.setattr(transcription, "rank_tuning_candidates", fake_rank_tuning_candidates)
+
+    candidates, debug, primary = segment_peaks(
+        synthesize_note(d4.frequency, duration=0.2),
+        44100,
+        0.0,
+        0.2,
+        tuning,
+        debug=True,
+    )
+
+    assert primary is not None
+    assert primary.candidate.note_name == "D4"
+    assert len(candidates) >= 1
