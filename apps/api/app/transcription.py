@@ -530,6 +530,8 @@ def dedupe_nested_segments(segments: list[Segment]) -> list[Segment]:
             same_start = abs(seg.start_time - prev.start_time) <= NESTED_SEGMENT_DEDUP_MAX_START_DELTA
             if same_start:
                 if seg.end_time <= prev.end_time:
+                    # seg is fully contained; keep prev's range but merge provenance.
+                    deduped[-1] = _merge_segments(prev, seg, prev.start_time, prev.end_time, reason="nested")
                     continue
                 deduped[-1] = _merge_segments(prev, seg, prev.start_time, seg.end_time, reason="nested")
                 continue
@@ -584,7 +586,7 @@ def trim_small_overlapping_segments(segments: list[Segment]) -> list[Segment]:
         ):
             adjusted_start = prev.end_time
             if seg.end_time - adjusted_start >= 0.08:
-                trimmed.append(Segment(adjusted_start, seg.end_time, sources=seg.sources, merged_from=seg.merged_from))
+                trimmed.append(dataclass_replace(seg, start_time=adjusted_start))
                 continue
         trimmed.append(seg)
 
@@ -1504,7 +1506,7 @@ def _active_range_debug_context(
 
 
 def build_segment_debug_contexts(
-    segments: list[tuple[float, float]],
+    segments: list[Segment],
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
     backtrack_onset_times: list[float] | None = None,
@@ -1549,7 +1551,7 @@ def detect_segments(
     *,
     mid_performance_start: bool = False,
     mid_performance_end: bool = False,
-) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
+) -> tuple[list[Segment], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
     max_rms = float(np.max(rms))
@@ -1687,7 +1689,7 @@ def detect_segments(
                 filtered_gap_candidates,
             )
 
-    segments: list[tuple[float, float]] = []
+    segments: list[Segment] = []
     active_range_segments: list[tuple[float, float]] = []
     for range_index, (range_start, range_end) in enumerate(active_ranges):
         effective_range_start = range_start
