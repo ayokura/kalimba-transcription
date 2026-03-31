@@ -131,6 +131,7 @@ def _normalization_decisions(debug_payload: dict[str, Any]) -> tuple[list[dict[s
         raw_start = float(raw_event["startTime"])
         raw_end = float(raw_event["endTime"])
         raw_note_set = _note_set_from_debug_event(raw_event, "selectedNotes")
+        raw_source = raw_event.get("segmentSource", [])
         overlapping: list[tuple[int, dict[str, Any]]] = []
         for merged_index, merged_event in enumerate(merged_events, start=1):
             merged_start = float(merged_event["startTime"])
@@ -148,6 +149,7 @@ def _normalization_decisions(debug_payload: dict[str, Any]) -> tuple[list[dict[s
                     "noteSet": raw_note_set,
                     "rule": rule,
                     "targetMergedIndices": [],
+                    "segmentSource": raw_source,
                 }
             )
             reason_counts[rule] = reason_counts.get(rule, 0) + 1
@@ -163,6 +165,7 @@ def _normalization_decisions(debug_payload: dict[str, Any]) -> tuple[list[dict[s
                     "noteSet": raw_note_set,
                     "rule": rule,
                     "targetMergedIndices": [merged_index for merged_index, _ in overlapping],
+                    "segmentSource": raw_source,
                 }
             )
             reason_counts[rule] = reason_counts.get(rule, 0) + 1
@@ -193,6 +196,7 @@ def _normalization_decisions(debug_payload: dict[str, Any]) -> tuple[list[dict[s
                 "noteSet": raw_note_set,
                 "rule": rule,
                 "targetMergedIndices": [merged_index],
+                "segmentSource": raw_source,
             }
         )
         reason_counts[rule] = reason_counts.get(rule, 0) + 1

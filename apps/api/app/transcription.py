@@ -4,7 +4,7 @@ import io
 import json
 import math
 from collections import Counter
-from dataclasses import dataclass, replace as dataclass_replace
+from dataclasses import dataclass, field as dataclass_field, replace as dataclass_replace
 from functools import lru_cache
 from time import perf_counter
 from typing import Any, Callable
@@ -463,6 +463,32 @@ def snap_frequency_to_tuning(freq: float, tuning: InstrumentTuning) -> NoteCandi
         octave=octave,
     )
 
+@dataclass(frozen=True)
+class Segment:
+    """A time segment with collector provenance tracking.
+
+    Supports tuple unpacking as ``(start_time, end_time)`` for backward
+    compatibility with code that treats segments as 2-tuples.
+    """
+
+    start_time: float
+    end_time: float
+    sources: frozenset[str] = dataclass_field(default_factory=frozenset)
+    merged_from: tuple[Segment, ...] = ()
+    merge_reason: str = ""
+
+    def __iter__(self):
+        yield self.start_time
+        yield self.end_time
+
+    def __getitem__(self, index: int) -> float:
+        if index == 0:
+            return self.start_time
+        if index == 1:
+            return self.end_time
+        raise IndexError(index)
+
+
 def merge_time_ranges(ranges: list[tuple[float, float]], gap_tolerance: float = 0.06) -> list[tuple[float, float]]:
     if not ranges:
         return []
@@ -477,26 +503,44 @@ def merge_time_ranges(ranges: list[tuple[float, float]], gap_tolerance: float = 
 
     return merged
 
-def dedupe_nested_segments(segments: list[tuple[float, float]]) -> list[tuple[float, float]]:
+def _segment_leaves(seg: Segment) -> tuple[Segment, ...]:
+    """Return leaf segments (originals before any merge)."""
+    return seg.merged_from if seg.merged_from else (seg,)
+
+
+def _merge_segments(a: Segment, b: Segment, start: float, end: float, reason: str = "") -> Segment:
+    """Create a merged segment preserving provenance from both inputs."""
+    return Segment(
+        start_time=start,
+        end_time=end,
+        sources=a.sources | b.sources,
+        merged_from=_segment_leaves(a) + _segment_leaves(b),
+        merge_reason=reason,
+    )
+
+
+def dedupe_nested_segments(segments: list[Segment]) -> list[Segment]:
     if len(segments) < 2:
         return segments
 
-    deduped: list[tuple[float, float]] = []
-    for start_time, end_time in sorted(segments):
+    deduped: list[Segment] = []
+    for seg in sorted(segments, key=lambda s: (s.start_time, s.end_time)):
         if deduped:
-            previous_start, previous_end = deduped[-1]
-            same_start = abs(start_time - previous_start) <= NESTED_SEGMENT_DEDUP_MAX_START_DELTA
+            prev = deduped[-1]
+            same_start = abs(seg.start_time - prev.start_time) <= NESTED_SEGMENT_DEDUP_MAX_START_DELTA
             if same_start:
-                if end_time <= previous_end:
+                if seg.end_time <= prev.end_time:
+                    # seg is fully contained; keep prev's range but merge provenance.
+                    deduped[-1] = _merge_segments(prev, seg, prev.start_time, prev.end_time, reason="nested")
                     continue
-                deduped[-1] = (previous_start, end_time)
+                deduped[-1] = _merge_segments(prev, seg, prev.start_time, seg.end_time, reason="nested")
                 continue
-        deduped.append((start_time, end_time))
+        deduped.append(seg)
 
     return deduped
 
 
-def dedupe_cross_collector_segments(segments: list[tuple[float, float]]) -> list[tuple[float, float]]:
+def dedupe_cross_collector_segments(segments: list[Segment]) -> list[Segment]:
     """Merge segments that overlap significantly, regardless of which collector produced them.
 
     When different collectors (active range, gap injection, terminal orphan, etc.)
@@ -510,41 +554,41 @@ def dedupe_cross_collector_segments(segments: list[tuple[float, float]]) -> list
     if len(segments) < 2:
         return segments
 
-    deduped: list[tuple[float, float]] = [segments[0]]
-    for start_time, end_time in segments[1:]:
-        previous_start, previous_end = deduped[-1]
-        overlap = min(previous_end, end_time) - max(previous_start, start_time)
+    deduped: list[Segment] = [segments[0]]
+    for seg in segments[1:]:
+        prev = deduped[-1]
+        overlap = min(prev.end_time, seg.end_time) - max(prev.start_time, seg.start_time)
         if overlap > 0:
             shorter_duration = min(
-                previous_end - previous_start,
-                end_time - start_time,
+                prev.end_time - prev.start_time,
+                seg.end_time - seg.start_time,
             )
             if shorter_duration > 0 and overlap >= shorter_duration * CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO:
-                deduped[-1] = (min(previous_start, start_time), max(previous_end, end_time))
+                deduped[-1] = _merge_segments(prev, seg, min(prev.start_time, seg.start_time), max(prev.end_time, seg.end_time), reason="cross_collector_overlap")
                 continue
-        deduped.append((start_time, end_time))
+        deduped.append(seg)
     return deduped
 
 
-def trim_small_overlapping_segments(segments: list[tuple[float, float]]) -> list[tuple[float, float]]:
+def trim_small_overlapping_segments(segments: list[Segment]) -> list[Segment]:
     if len(segments) < 2:
         return segments
 
-    trimmed: list[tuple[float, float]] = [segments[0]]
-    for start_time, end_time in segments[1:]:
-        previous_start, previous_end = trimmed[-1]
-        overlap = previous_end - start_time
-        duration = end_time - start_time
+    trimmed: list[Segment] = [segments[0]]
+    for seg in segments[1:]:
+        prev = trimmed[-1]
+        overlap = prev.end_time - seg.start_time
+        duration = seg.end_time - seg.start_time
         if (
             overlap > 0
             and overlap <= SEGMENT_OVERLAP_TRIM_MAX_OVERLAP
             and duration >= SEGMENT_OVERLAP_TRIM_MIN_DURATION
         ):
-            adjusted_start = previous_end
-            if end_time - adjusted_start >= 0.08:
-                trimmed.append((adjusted_start, end_time))
+            adjusted_start = prev.end_time
+            if seg.end_time - adjusted_start >= 0.08:
+                trimmed.append(dataclass_replace(seg, start_time=adjusted_start))
                 continue
-        trimmed.append((start_time, end_time))
+        trimmed.append(seg)
 
     return trimmed
 
@@ -1462,7 +1506,7 @@ def _active_range_debug_context(
 
 
 def build_segment_debug_contexts(
-    segments: list[tuple[float, float]],
+    segments: list[Segment],
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
     backtrack_onset_times: list[float] | None = None,
@@ -1507,7 +1551,7 @@ def detect_segments(
     *,
     mid_performance_start: bool = False,
     mid_performance_end: bool = False,
-) -> tuple[list[tuple[float, float]], float, dict[str, Any]]:
+) -> tuple[list[Segment], float, dict[str, Any]]:
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
     max_rms = float(np.max(rms))
@@ -1645,7 +1689,7 @@ def detect_segments(
                 filtered_gap_candidates,
             )
 
-    segments: list[tuple[float, float]] = []
+    segments: list[Segment] = []
     active_range_segments: list[tuple[float, float]] = []
     for range_index, (range_start, range_end) in enumerate(active_ranges):
         effective_range_start = range_start
@@ -1701,45 +1745,29 @@ def detect_segments(
             end_time = starts[index + 1] if index + 1 < len(starts) else range_end
             min_duration = CLUSTERED_RANGE_HEAD_MIN_DURATION if relaxed_head_segment and index == 0 else 0.08
             if end_time - start_time >= min_duration:
-                segments.append((start_time, end_time))
+                seg = Segment(start_time, end_time, sources=frozenset({"activeRange"}))
+                segments.append(seg)
                 active_range_segments.append((start_time, end_time))
 
-    for start_time, end_time in gap_injected_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in leading_orphan_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in multi_onset_gap_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in post_tail_gap_head_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in single_onset_gap_head_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in sparse_gap_tail_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in terminal_orphan_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in close_terminal_orphan_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in delayed_terminal_orphan_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in terminal_multi_onset_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in terminal_two_onset_tail_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-    for start_time, end_time in attack_validated_gap_segments:
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
+    _collector_sources: list[tuple[list[tuple[float, float]], str]] = [
+        (gap_injected_segments, "gapInjected"),
+        (leading_orphan_segments, "leadingOrphan"),
+        (multi_onset_gap_segments, "multiOnsetGap"),
+        (post_tail_gap_head_segments, "postTailGapHead"),
+        (single_onset_gap_head_segments, "singleOnsetGapHead"),
+        (sparse_gap_tail_segments, "sparseGapTail"),
+        (terminal_orphan_segments, "terminalOrphan"),
+        (close_terminal_orphan_segments, "closeTerminalOrphan"),
+        (delayed_terminal_orphan_segments, "delayedTerminalOrphan"),
+        (terminal_multi_onset_segments, "terminalMultiOnset"),
+        (terminal_two_onset_tail_segments, "terminalTwoOnsetTail"),
+        (attack_validated_gap_segments, "attackValidatedGap"),
+    ]
+    for collector_segments, source_name in _collector_sources:
+        source_tag = frozenset({source_name})
+        for start_time, end_time in collector_segments:
+            if end_time - start_time >= 0.08:
+                segments.append(Segment(start_time, end_time, sources=source_tag))
 
     segments = dedupe_nested_segments(segments)
     segments = dedupe_cross_collector_segments(segments)
@@ -1747,7 +1775,7 @@ def detect_segments(
 
     if not segments:
         duration = librosa.get_duration(y=audio, sr=sample_rate)
-        segments = [(0.0, duration)]
+        segments = [Segment(0.0, duration, sources=frozenset({"fallback"}))]
 
     tempo_audio_duration_sec = float(librosa.get_duration(y=audio, sr=sample_rate))
     tempo_start = perf_counter()
@@ -6438,25 +6466,8 @@ async def transcribe_audio(
     ]
     multi_onset_gap_segment_keys = _segment_keys("multiOnsetGapSegments")
     single_onset_gap_head_segment_keys = _segment_keys("singleOnsetGapHeadSegments")
-    _provenance_collector_map: list[tuple[str, set[tuple[float, float]]]] | None = None
-    if debug:
-        _provenance_collector_map = [
-            ("active_range", _segment_keys("activeRangeSegments")),
-            ("gap_injected", _segment_keys("gapInjectedSegments")),
-            ("leading_orphan", _segment_keys("leadingOrphanSegments")),
-            ("multi_onset_gap", multi_onset_gap_segment_keys),
-            ("post_tail_gap_head", _segment_keys("postTailGapHeadSegments")),
-            ("single_onset_gap_head", single_onset_gap_head_segment_keys),
-            ("sparse_gap_tail", sparse_gap_tail_segment_keys),
-            ("terminal_orphan", _segment_keys("terminalOrphanSegments")),
-            ("close_terminal_orphan", _segment_keys("closeTerminalOrphanSegments")),
-            ("delayed_terminal_orphan", _segment_keys("delayedTerminalOrphanSegments")),
-            ("terminal_multi_onset", _segment_keys("terminalMultiOnsetSegments")),
-            ("terminal_two_onset_tail", _segment_keys("terminalTwoOnsetTailSegments")),
-            ("attack_validated_gap", _segment_keys("attackValidatedGapSegments")),
-        ]
-
-    for start_time, end_time in segments:
+    for segment in segments:
+        start_time, end_time = segment
         duration = max(end_time - start_time, 0.08)
         recent_note_names = build_recent_note_names(raw_events)
         ascending_primary_run_ceiling = build_recent_ascending_primary_run_ceiling(raw_events)
@@ -6495,8 +6506,13 @@ async def transcribe_audio(
         segment_key = (round(start_time, 4), round(end_time, 4))
         if debug and candidate_debug:
             candidate_debug.update(segment_contexts.get(segment_key, {}))
-            matched_sources = [name for name, keys in _provenance_collector_map if segment_key in keys] if _provenance_collector_map else []
-            candidate_debug["segmentSource"] = matched_sources if matched_sources else ["deduped"]
+            candidate_debug["segmentSource"] = sorted(segment.sources) if segment.sources else ["unknown"]
+            if segment.merged_from:
+                candidate_debug["mergeReason"] = segment.merge_reason
+                candidate_debug["mergedFrom"] = [
+                    {"startTime": round(s.start_time, 6), "endTime": round(s.end_time, 6), "sources": sorted(s.sources)}
+                    for s in segment.merged_from
+                ]
         if segment_key in sparse_gap_tail_segment_keys and max(note.octave for note in candidates) < 6:
             keep_gap_run_lead_in = any(
                 later_start >= end_time + GAP_RUN_LEAD_IN_MIN_FOLLOWUP_GAP
