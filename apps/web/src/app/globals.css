@@ -520,6 +520,20 @@ button:disabled {
   background: rgba(255, 255, 255, 0.82);
 }
 
+.event-list-item-header,
+.event-list-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.event-list-index,
+.event-list-meta {
+  color: var(--muted);
+}
+
 .event-list-item.selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(23, 126, 137, 0.12);
