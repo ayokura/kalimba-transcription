@@ -52,7 +52,17 @@ from score_alignment_diagnosis import build_time_converter, match_line, parse_co
 
 
 POOL_LIMITS = (8, 10, 12, 14, 16, 20)
-FORMULA_NAMES = ("sum", "support_alias", "sum_pairpen", "support_pairpen")
+FORMULA_NAMES = (
+    "sum",
+    "support_alias",
+    "sum_pairpen",
+    "support_pairpen",
+    "support_mean_pairpen",
+    "support_balanced_pairpen",
+    "support_density_pairpen",
+    "support_diminishing_pairpen",
+    "support_directed_alias_pairpen",
+)
 POOL_STRATEGIES = (
     "raw20",
     "core12_slots6",
@@ -116,11 +126,65 @@ def score_support_pairpen(combo) -> float:
     return score_support_alias(combo) - pair_penalty(combo)
 
 
+def combo_supports(combo) -> list[float]:
+    return [support_score(item) for item in combo]
+
+
+def score_support_mean_pairpen(combo) -> float:
+    supports = combo_supports(combo)
+    return (sum(supports) / len(supports)) - pair_penalty(combo)
+
+
+def score_support_balanced_pairpen(combo) -> float:
+    supports = combo_supports(combo)
+    return (
+        (sum(supports) / len(supports))
+        + (0.6 * min(supports))
+        - (0.2 * (max(supports) - min(supports)))
+        - pair_penalty(combo)
+    )
+
+
+def score_support_density_pairpen(combo) -> float:
+    supports = combo_supports(combo)
+    return (sum(supports) / (len(supports) ** 0.85)) - pair_penalty(combo)
+
+
+def score_support_diminishing_pairpen(combo) -> float:
+    supports = sorted(combo_supports(combo), reverse=True)
+    weighted = sum((0.65**index) * support for index, support in enumerate(supports))
+    return weighted - pair_penalty(combo)
+
+
+def directed_alias_penalty(combo) -> float:
+    penalty = 0.0
+    hypotheses = sorted(combo, key=lambda item: item.candidate.frequency)
+    supports = {id(item): max(0.0, support_score(item)) for item in hypotheses}
+    for lower_index, lower in enumerate(hypotheses):
+        for upper in hypotheses[lower_index + 1 :]:
+            relation = harmonic_relation_multiple(lower.candidate, upper.candidate)
+            if relation is None:
+                continue
+            aliasiness = max(0.0, 1.0 - upper.fundamental_ratio) + 0.4 * max(0.0, upper.octave_alias_ratio - 1.0)
+            weight = 0.3 if relation == 2.0 else 0.7
+            penalty += weight * min(supports[id(lower)], supports[id(upper)]) * aliasiness
+    return penalty
+
+
+def score_support_directed_alias_pairpen(combo) -> float:
+    return score_support_alias(combo) - pair_penalty(combo) - directed_alias_penalty(combo)
+
+
 SCORERS = {
     "sum": score_sum,
     "support_alias": score_support_alias,
     "sum_pairpen": score_sum_pairpen,
     "support_pairpen": score_support_pairpen,
+    "support_mean_pairpen": score_support_mean_pairpen,
+    "support_balanced_pairpen": score_support_balanced_pairpen,
+    "support_density_pairpen": score_support_density_pairpen,
+    "support_diminishing_pairpen": score_support_diminishing_pairpen,
+    "support_directed_alias_pairpen": score_support_directed_alias_pairpen,
 }
 
 
@@ -365,10 +429,18 @@ def choose_strategy_entries(stage_views: dict[str, dict[str, dict]], strategy: s
     raise ValueError(f"Unknown strategy: {strategy}")
 
 
-def rank_combinations(best_entries: dict[str, dict], target_notes: set[str], tuning, max_polyphony: int) -> dict[str, dict]:
+def rank_combinations(
+    best_entries: dict[str, dict],
+    target_notes: set[str],
+    tuning,
+    max_polyphony: int,
+    fixed_size_only: bool = False,
+) -> dict[str, dict]:
     pool = list(best_entries.values())
     combos = []
-    for size in range(2, min(max_polyphony, len(pool)) + 1):
+    min_size = max(2, len(target_notes)) if fixed_size_only else 2
+    max_size = min(len(target_notes), max_polyphony, len(pool)) if fixed_size_only else min(max_polyphony, len(pool))
+    for size in range(min_size, max_size + 1):
         for subset in itertools.combinations(pool, size):
             hypotheses = [item["hypothesis"] for item in subset]
             keys = [item.candidate.key for item in hypotheses]
@@ -407,6 +479,11 @@ def main() -> None:
         "--pool-strategies",
         default=",".join(POOL_STRATEGIES),
         help="Comma-separated strategy names for bounded combo pools",
+    )
+    parser.add_argument(
+        "--fixed-size-only",
+        action="store_true",
+        help="Only rank combinations with the same cardinality as the expected target",
     )
     args = parser.parse_args()
 
@@ -473,7 +550,13 @@ def main() -> None:
                         playable_counts[size] += 1
             print(f"  playable combos: {playable_counts}")
 
-            combo_results = rank_combinations(best_entries, target_notes, tuning, args.max_polyphony)
+            combo_results = rank_combinations(
+                best_entries,
+                target_notes,
+                tuning,
+                args.max_polyphony,
+                fixed_size_only=args.fixed_size_only,
+            )
             for name in FORMULA_NAMES:
                 result = combo_results[name]
                 print(f"  {name}: target_rank={result['targetRank']}")
