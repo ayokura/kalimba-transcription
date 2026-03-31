@@ -82,11 +82,11 @@ def test_collect_multi_onset_gap_segments_promotes_attack_validated_run_candidat
     segments = collect_multi_onset_gap_segments(active_ranges, onset_times, gap_attack_candidates=gap_attack_candidates)
 
     assert [tuple(round(value, 4) for value in segment) for segment in segments] == [
-        (3.504, 5.0613),
+        (3.504, 4.304),      # capped by CANDIDATE_PROMOTION_MAX_SEGMENT_DURATION
         (5.0613, 5.68),
         (5.68, 6.3013),
-        (6.3013, 7.5467),
-        (7.5467, 8.9467),
+        (6.3013, 7.1013),    # capped from 7.5467
+        (7.5467, 8.3467),    # capped from 8.9467
         (8.9467, 9.0667),
         (9.0667, 9.3867),
     ]
