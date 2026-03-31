@@ -44,5 +44,5 @@
       "G4"
     ]
   },
-  "reason": "D5 onset at 12.67s falls in gap between active ranges (12.57-13.13s) — recognizer detects D5 at 13.45s (residual) instead, swapping events 13-14 vs physical order. expectedEventNoteSetsOrdered reflects correct physical order (C5,D5,C4+E5) per notes.md and energy trace verification"
+  "reason": "Two known gaps: (1) D5 onset at 12.67s — recognizer picks C5 residual as primary, D5 only as secondary. (2) C5 re-attack at ~13.47s — very short re-pluck with clear mute-dip (C5: 11→0.5→13) but onset detector fires during mute (13.448s) when E5 residual dominates spectrum, masking the C5 re-attack that peaks at ~13.51s. Both require forward-scan of per-note re-attack within segment."
 }
