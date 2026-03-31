@@ -1,5 +1,9 @@
 "use client";
 
+// Audio blobs stay in-memory on purpose. The review session JSON goes to
+// sessionStorage, but the raw audio is kept out of that payload to avoid size
+// pressure and serialization issues. This means whole-track playback is
+// same-tab only until a later persistence strategy is introduced.
 const reviewAudioStore = new Map<string, Blob>();
 
 export function saveReviewAudio(sessionId: string, audioBlob: Blob) {
