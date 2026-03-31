@@ -258,6 +258,48 @@ def test_dedupe_cross_collector_segments_chain_merge() -> None:
     assert len(result[0].merged_from) == 3  # all 3 leaf segments preserved
 
 
+def test_dedupe_cross_collector_estimated_yields_to_non_estimated() -> None:
+    """Estimated segment trims its end to make room for non-estimated."""
+    estimated = Segment(1.0, 2.0, sources=frozenset({"avGap"}), end_estimated=True)
+    non_estimated = Segment(1.3, 1.8, sources=frozenset({"multiOnset"}), end_estimated=False)
+    result = dedupe_cross_collector_segments([estimated, non_estimated])
+    assert len(result) == 2
+    # estimated trimmed to end at non_estimated's start
+    assert result[0].start_time == 1.0
+    assert result[0].end_time == 1.3
+    assert result[0].end_estimated is False  # anchored to non-estimated boundary
+    assert result[0].trimmed_from is not None
+    assert result[0].trimmed_from.end_time == 2.0  # original preserved
+    # non-estimated kept intact
+    assert result[1].start_time == 1.3
+    assert result[1].end_time == 1.8
+
+
+def test_dedupe_cross_collector_estimated_dropped_when_too_short() -> None:
+    """Estimated segment replaced when remainder after trim < 0.08s."""
+    estimated = Segment(1.25, 2.0, sources=frozenset({"avGap"}), end_estimated=True)
+    non_estimated = Segment(1.3, 1.8, sources=frozenset({"multiOnset"}), end_estimated=False)
+    result = dedupe_cross_collector_segments([estimated, non_estimated])
+    # 1.3 - 1.25 = 0.05 < 0.08 → too short, estimated replaced
+    assert len(result) == 1
+    assert result[0].sources == {"multiOnset"}
+
+
+def test_dedupe_cross_collector_non_estimated_kept_over_estimated() -> None:
+    """Non-estimated prev keeps its position; estimated seg is trimmed or dropped."""
+    non_estimated = Segment(1.0, 1.5, sources=frozenset({"activeRange"}), end_estimated=False)
+    estimated = Segment(1.1, 2.0, sources=frozenset({"avGap"}), end_estimated=True)
+    result = dedupe_cross_collector_segments([non_estimated, estimated])
+    # non-estimated kept, estimated trimmed start to 1.5
+    assert result[0].start_time == 1.0
+    assert result[0].end_time == 1.5
+    assert result[0].sources == {"activeRange"}
+    if len(result) == 2:
+        # estimated remainder (1.5-2.0 = 0.5s >= 0.08) kept with trimmed start
+        assert result[1].start_time == 1.5
+        assert result[1].trimmed_from is not None
+
+
 # --- midPerformanceStart/End mechanism tests ---
 
 
