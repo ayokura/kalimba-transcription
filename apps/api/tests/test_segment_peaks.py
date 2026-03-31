@@ -203,9 +203,9 @@ def test_segment_peaks_suppresses_descending_stale_upper_adjacent_carryover(monk
             return 0.5
         return 0.0
 
-    monkeypatch.setattr(transcription._legacy, "rank_tuning_candidates", fake_rank_tuning_candidates)
-    monkeypatch.setattr(transcription._legacy, "suppress_harmonics", lambda spectrum, frequencies, _frequency: spectrum)
-    monkeypatch.setattr(transcription._legacy, "onset_energy_gain", fake_onset_energy_gain)
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda spectrum, frequencies, _frequency: spectrum)
+    monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
     candidates, debug, primary = segment_peaks(
         synthesize_note(880.0, duration=0.2),
@@ -250,8 +250,8 @@ def test_segment_peaks_replaces_descending_repeated_stale_primary(monkeypatch: p
             return 10.0
         return 0.0
 
-    monkeypatch.setattr(transcription._legacy, "rank_tuning_candidates", fake_rank_tuning_candidates)
-    monkeypatch.setattr(transcription._legacy, "onset_energy_gain", fake_onset_energy_gain)
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
+    monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
     candidates, debug, primary = segment_peaks(
         synthesize_note(f4.frequency, duration=0.3),
@@ -301,9 +301,9 @@ def test_segment_peaks_suppresses_descending_restart_upper_carryover(monkeypatch
             return 0.8
         return 0.0
 
-    monkeypatch.setattr(transcription._legacy, "rank_tuning_candidates", fake_rank_tuning_candidates)
-    monkeypatch.setattr(transcription._legacy, "suppress_harmonics", lambda spectrum, frequencies, _frequency: spectrum)
-    monkeypatch.setattr(transcription._legacy, "onset_energy_gain", fake_onset_energy_gain)
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda spectrum, frequencies, _frequency: spectrum)
+    monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
     candidates, debug, primary = segment_peaks(
         synthesize_note(g4.frequency, duration=0.24),
@@ -344,7 +344,7 @@ def test_segment_peaks_rejects_weak_primary_with_low_score_and_fundamental_ratio
                            PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO - 0.1, 0.0, 0.0, 0.0, 0.0),
         ]
 
-    monkeypatch.setattr(transcription._legacy, "rank_tuning_candidates", fake_rank_tuning_candidates)
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
 
     candidates, debug, primary = segment_peaks(
         synthesize_note(e6.frequency, duration=0.2),
@@ -375,7 +375,7 @@ def test_segment_peaks_keeps_low_score_primary_with_high_fundamental_ratio(
                            1.0, 0.0, 0.0, 0.0, 0.0),
         ]
 
-    monkeypatch.setattr(transcription._legacy, "rank_tuning_candidates", fake_rank_tuning_candidates)
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
 
     candidates, debug, primary = segment_peaks(
         synthesize_note(c4.frequency, duration=0.2),
@@ -406,7 +406,7 @@ def test_segment_peaks_keeps_high_score_primary_with_low_fundamental_ratio(
                            PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO - 0.1, 0.0, 0.0, 0.0, 0.0),
         ]
 
-    monkeypatch.setattr(transcription._legacy, "rank_tuning_candidates", fake_rank_tuning_candidates)
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
 
     candidates, debug, primary = segment_peaks(
         synthesize_note(d4.frequency, duration=0.2),
