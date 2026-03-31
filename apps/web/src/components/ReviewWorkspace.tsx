@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { NotationPanel } from "@/components/NotationPanel";
+import { ReviewEventListPanel } from "@/components/ReviewEventListPanel";
 import { ReviewFocusPanel } from "@/components/ReviewFocusPanel";
 import { loadReviewAudio } from "@/lib/reviewAudioStore";
 import { isReviewSessionStorageAvailable, loadReviewSession, updateReviewSessionUiState } from "@/lib/reviewSession";
-import { buildGestureLabel } from "@/lib/scoreEventPresentation";
 import { NotationMode } from "@/lib/types";
 
 export function ReviewWorkspace() {
@@ -29,11 +29,9 @@ export function ReviewWorkspace() {
   const [notationMode, setNotationMode] = useState<NotationMode>(session?.notationMode ?? "vertical");
   const [activeEventId, setActiveEventId] = useState<string | null>(session?.activeEventId ?? null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const eventItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const activeEvent = session?.responseSnapshot.events.find((event) => event.id === activeEventId)
     ?? session?.responseSnapshot.events[0]
     ?? null;
-  const events = session?.responseSnapshot.events ?? [];
 
   useEffect(() => {
     if (!audioBlob) {
@@ -67,59 +65,6 @@ export function ReviewWorkspace() {
       activeEventId,
     });
   }, [activeEventId, notationMode, session, sessionId, storageAvailable]);
-
-  useEffect(() => {
-    if (!activeEvent?.id) {
-      return;
-    }
-
-    eventItemRefs.current[activeEvent.id]?.scrollIntoView({
-      block: "nearest",
-      inline: "nearest",
-    });
-  }, [activeEvent?.id]);
-
-  function focusEventByIndex(index: number) {
-    const nextEvent = events[index] ?? null;
-    if (!nextEvent) {
-      return;
-    }
-
-    setActiveEventId(nextEvent.id);
-    eventItemRefs.current[nextEvent.id]?.focus();
-  }
-
-  function handleEventListKeyDown(
-    event: KeyboardEvent<HTMLButtonElement>,
-    index: number,
-  ) {
-    if (event.altKey || event.ctrlKey || event.metaKey) {
-      return;
-    }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      focusEventByIndex(Math.min(index + 1, events.length - 1));
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      focusEventByIndex(Math.max(index - 1, 0));
-      return;
-    }
-
-    if (event.key === "Home") {
-      event.preventDefault();
-      focusEventByIndex(0);
-      return;
-    }
-
-    if (event.key === "End") {
-      event.preventDefault();
-      focusEventByIndex(events.length - 1);
-    }
-  }
 
   if (!storageAvailable) {
     return (
@@ -196,32 +141,11 @@ export function ReviewWorkspace() {
             <span>{sourceProfile}</span>
             <span>{session.responseSnapshot.events.length} events</span>
           </div>
-          <div className="event-list">
-            {session.responseSnapshot.events.map((event, index) => (
-              <button
-                key={event.id}
-                type="button"
-                className={`event-list-item ${event.id === (activeEvent?.id ?? "") ? "selected" : ""}`}
-                aria-current={event.id === (activeEvent?.id ?? "") ? "true" : undefined}
-                ref={(element) => {
-                  eventItemRefs.current[event.id] = element;
-                }}
-                onClick={() => setActiveEventId(event.id)}
-                onKeyDown={(nextEvent) => handleEventListKeyDown(nextEvent, index)}
-              >
-                <div className="event-list-item-header">
-                  <strong>{event.id}</strong>
-                  <span className="event-list-index">#{index + 1}</span>
-                </div>
-                <span>{event.notes.map((note) => note.labelDoReMi).join(" / ")}</span>
-                <div className="event-list-meta">
-                  <span>{event.startBeat}拍</span>
-                  <span>{event.durationBeat}拍</span>
-                  <span>{buildGestureLabel(event.gesture)}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+          <ReviewEventListPanel
+            events={session.responseSnapshot.events}
+            activeEventId={activeEvent?.id ?? null}
+            onActiveEventIdChange={setActiveEventId}
+          />
         </section>
 
         <div className="stack gap-xl">
