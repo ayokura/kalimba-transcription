@@ -45,3 +45,55 @@ export type TranscriptionResult = {
 };
 
 export type NotationMode = "vertical" | "numbered" | "western";
+
+export type AcquisitionMode = "live_mic" | "uploaded_file";
+
+export type InstrumentProfileRef = {
+  id: string | null;
+  name: string | null;
+};
+
+export type RecordingProfileRef = {
+  id: string | null;
+  name: string | null;
+};
+
+export type ReviewRequestSnapshot = {
+  capturedAt: string;
+  scenario: string;
+  expectedNote: string | null;
+  expectedPerformance: unknown;
+  memo: string | null;
+  captureIntent: string | null;
+  sourceProfile: string;
+  midPerformanceStart?: boolean;
+  midPerformanceEnd?: boolean;
+  tuning: InstrumentTuning;
+  audio: {
+    sampleRate: number;
+    channels: number;
+    durationSec: number;
+    mimeType: string;
+    sizeBytes: number;
+  };
+};
+
+export type ReviewEditedDraft = {
+  result: TranscriptionResult;
+  updatedAt: string;
+} | null;
+
+export type TranscriptionReviewSession = {
+  sessionVersion: 1;
+  sessionId: string;
+  createdAt: string;
+  acquisitionMode: AcquisitionMode;
+  tuning: InstrumentTuning;
+  instrumentProfile: InstrumentProfileRef | null;
+  recordingProfile: RecordingProfileRef | null;
+  requestSnapshot: ReviewRequestSnapshot;
+  responseSnapshot: TranscriptionResult;
+  notationMode: NotationMode;
+  activeEventId: string | null;
+  editedDraft: ReviewEditedDraft;
+};

@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
-import { EditorPanel } from "@/components/EditorPanel";
 import { ExpectedKeySelector } from "@/components/ExpectedKeySelector";
+import { InitialResultSummary } from "@/components/InitialResultSummary";
 import { NotationPanel } from "@/components/NotationPanel";
 import { RecorderPanel } from "@/components/RecorderPanel";
 import { TuningPanel } from "@/components/TuningPanel";
+import { removeReviewAudio, saveReviewAudio } from "@/lib/reviewAudioStore";
+import { createReviewSession, removeReviewSession, saveReviewSession } from "@/lib/reviewSession";
 import {
   CaptureAssessmentDetails,
   CaptureIntent,
@@ -684,6 +687,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const [captureMemo, setCaptureMemo] = useState("");
   const [captureIntent, setCaptureIntent] = useState<CaptureIntent>("unknown");
   const [lastCapture, setLastCapture] = useState<TranscriptionCapture | null>(null);
+  const [latestReviewSessionId, setLatestReviewSessionId] = useState<string | null>(null);
   const [isSavingCapture, setIsSavingCapture] = useState(false);
   const [pendingExpectedKeys, setPendingExpectedKeys] = useState<number[]>([]);
   const [expectedRepeatCount, setExpectedRepeatCount] = useState("1");
@@ -793,6 +797,13 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setResult(null);
     setLastCapture(null);
     setActiveEventId(null);
+    setLatestReviewSessionId((current) => {
+      if (current) {
+        removeReviewSession(current);
+        removeReviewAudio(current);
+      }
+      return null;
+    });
   }
 
   function confirmTuningDraftDiscard() {
@@ -923,8 +934,26 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
       });
       setCaptureCaseId(resolvedCaseId);
       setResult(capture.responsePayload);
-      setActiveEventId(capture.responsePayload.events[0]?.id ?? null);
+      const nextActiveEventId = capture.responsePayload.events[0]?.id ?? null;
+      setActiveEventId(nextActiveEventId);
       setLastCapture(capture);
+      if (!isDebug) {
+        const reviewSession = createReviewSession({
+          capture,
+          acquisitionMode: "live_mic",
+          notationMode,
+          activeEventId: nextActiveEventId,
+        });
+        saveReviewSession(reviewSession);
+        saveReviewAudio(reviewSession.sessionId, capture.audioWav);
+        setLatestReviewSessionId((current) => {
+          if (current && current !== reviewSession.sessionId) {
+            removeReviewSession(current);
+            removeReviewAudio(current);
+          }
+          return reviewSession.sessionId;
+        });
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "解析に失敗しました。");
     } finally {
@@ -1230,14 +1259,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
 
   const userSecondary = (
     <div className="stack gap-xl">
-      <NotationPanel result={result} mode={notationMode} onModeChange={setNotationMode} review={activeReview} />
-      <EditorPanel
-        result={result}
-        activeEventId={activeEventId}
-        onActiveEventIdChange={setActiveEventId}
-        tuning={selectedTuning}
-        onResultChange={setResult}
-      />
+      <InitialResultSummary result={result} review={activeReview} reviewSessionId={latestReviewSessionId} />
     </div>
   );
 
@@ -1277,7 +1299,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
 
       {error ? <div className="error-banner">{error}</div> : null}
 
-      <div className={isDebug ? "workspace-grid debug-workspace-grid" : "workspace-grid"}>
+      <div className={isDebug ? "workspace-grid debug-workspace-grid" : result ? "workspace-grid" : "workspace-grid workspace-grid-preanalysis"}>
         {isDebug ? (
           <>
             {debugMain}
@@ -1286,7 +1308,7 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
         ) : (
           <>
             {userPrimary}
-            {userSecondary}
+            {result ? userSecondary : null}
           </>
         )}
       </div>
