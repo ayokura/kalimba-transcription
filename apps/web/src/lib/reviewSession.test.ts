@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createReviewSession, isReviewSessionStorageAvailable, loadReviewSession, removeReviewSession, saveReviewSession } from "@/lib/reviewSession";
+import {
+  createReviewSession,
+  isReviewSessionStorageAvailable,
+  loadReviewSession,
+  removeReviewSession,
+  saveReviewSession,
+  updateReviewSessionUiState,
+} from "@/lib/reviewSession";
 import { TranscriptionCapture } from "@/lib/api";
 import { InstrumentTuning, TranscriptionResult } from "@/lib/types";
 
@@ -170,5 +177,26 @@ describe("reviewSession", () => {
     removeReviewSession(session.sessionId);
 
     expect(loadReviewSession(session.sessionId)).toBeNull();
+  });
+
+  it("updates persisted notation mode and active event without replacing the full snapshot", () => {
+    const session = createReviewSession({
+      capture: buildCapture(),
+      acquisitionMode: "live_mic",
+      notationMode: "vertical",
+      activeEventId: "evt-1",
+    });
+
+    saveReviewSession(session);
+    updateReviewSessionUiState(session.sessionId, {
+      notationMode: "western",
+      activeEventId: null,
+    });
+
+    expect(loadReviewSession(session.sessionId)).toEqual({
+      ...session,
+      notationMode: "western",
+      activeEventId: null,
+    });
   });
 });
