@@ -43,6 +43,12 @@ from .events import (
     suppress_resonant_carryover,
     suppress_short_descending_return_singletons,
     suppress_short_residual_tails,
+    build_recent_ascending_primary_run_ceiling,
+    build_recent_ascending_singleton_suffix,
+    build_recent_descending_primary_suffix,
+    build_recent_note_names,
+    classify_event_gesture,
+    contiguous_note_cluster,
     suppress_subset_decay_events,
 )
 
@@ -839,196 +845,11 @@ def format_number(candidate: NoteCandidate) -> str:
         return f"..{base}"
     return base
 
-def contiguous_note_cluster(raw_event: RawEvent) -> bool:
-    keys = sorted(note.key for note in raw_event.notes)
-    if len(keys) < 2:
-        return False
-    return keys[-1] - keys[0] + 1 == len(keys)
-def classify_event_gesture(event: RawEvent, index: int, raw_events: list[RawEvent], merged_events: list[RawEvent]) -> str:
-    if len(event.notes) <= 1:
-        return "ambiguous"
-
-    support_events = [
-        raw_event
-        for raw_event in raw_events
-        if raw_event.start_time <= event.end_time + 0.03 and raw_event.end_time >= event.start_time - 0.03
-    ]
-    support_count = len(support_events)
-    event_note_names = {note.note_name for note in event.notes}
-    support_subsets = [
-        {note.note_name for note in raw_event.notes}
-        for raw_event in support_events
-        if {note.note_name for note in raw_event.notes} < event_note_names
-    ]
-    all_support_gliss_like = bool(support_events) and all(raw_event.is_gliss_like for raw_event in support_events)
-    support_key_ranges = [
-        (min(note.key for note in raw_event.notes), max(note.key for note in raw_event.notes), raw_event.start_time)
-        for raw_event in support_events
-        if raw_event.notes
-    ]
-    support_key_ranges.sort(key=lambda item: item[2])
-
-    previous_event = merged_events[index - 1] if index > 0 else None
-    next_event = merged_events[index + 1] if index + 1 < len(merged_events) else None
-    neighbor_progression = False
-    for neighbor in (previous_event, next_event):
-        if neighbor is None or len(neighbor.notes) != len(event.notes):
-            continue
-        if not contiguous_note_cluster(event) or not contiguous_note_cluster(neighbor):
-            continue
-        event_keys = sorted(note.key for note in event.notes)
-        neighbor_keys = sorted(note.key for note in neighbor.notes)
-        average_shift = float(np.mean([abs(a - b) for a, b in zip(event_keys, neighbor_keys)]))
-        if 0.4 <= average_shift <= 3.5 and set(event_keys) != set(neighbor_keys):
-            neighbor_progression = True
-            break
-
-    if event.is_gliss_like and contiguous_note_cluster(event) and neighbor_progression:
-        return "slide_chord"
-
-    if event.is_gliss_like and contiguous_note_cluster(event) and support_subsets:
-        event_keys = sorted(note.key for note in event.notes)
-        event_max_key = event_keys[-1]
-        if support_key_ranges:
-            first_min_key, first_max_key, _ = support_key_ranges[0]
-            last_min_key, last_max_key, _ = support_key_ranges[-1]
-            has_ascending_support_progression = (
-                support_count >= 3
-                and first_max_key < event_max_key
-                and last_max_key >= event_max_key
-                and last_min_key > first_min_key
-            )
-            if has_ascending_support_progression:
-                return "slide_chord"
-        if all_support_gliss_like:
-            return "slide_chord"
-
-    if support_count >= 2 and support_subsets:
-        return "slide_chord"
-
-    if not event.is_gliss_like:
-        return "strict_chord"
-
-    return "ambiguous"
-
 def build_notation_views(events: list[ScoreEvent]) -> NotationViews:
     western = [" | ".join(note.pitch_class + str(note.octave) for note in event.notes) for event in events]
     numbered = [" ".join(note.label_number for note in event.notes) for event in events]
     vertical = [[note.label_doremi for note in event.notes] for event in events]
     return NotationViews(western=western, numbered=numbered, verticalDoReMi=vertical)
-
-def build_recent_note_names(raw_events: list[RawEvent]) -> set[str] | None:
-    if not raw_events:
-        return None
-
-    deduped_recent_events: list[RawEvent] = []
-    last_note_set: tuple[str, ...] | None = None
-    for recent_event in reversed(raw_events):
-        note_set = tuple(note.note_name for note in recent_event.notes)
-        if note_set == last_note_set:
-            continue
-        deduped_recent_events.append(recent_event)
-        last_note_set = note_set
-        if len(deduped_recent_events) >= 4:
-            break
-
-    recent_note_names: set[str] = set()
-    for recent_event in deduped_recent_events:
-        recent_note_names |= {note.note_name for note in recent_event.notes}
-    return recent_note_names
-
-def build_recent_ascending_primary_run_ceiling(raw_events: list[RawEvent]) -> float | None:
-    if not raw_events:
-        return None
-
-    recent_primary_frequencies: list[float] = []
-    for recent_event in reversed(raw_events):
-        if recent_event.is_gliss_like or len(recent_event.notes) > 2 or recent_event.primary_note_name is None:
-            break
-        primary_note = next((note for note in recent_event.notes if note.note_name == recent_event.primary_note_name), None)
-        if primary_note is None:
-            break
-        if recent_primary_frequencies and primary_note.frequency > recent_primary_frequencies[-1]:
-            break
-        recent_primary_frequencies.append(primary_note.frequency)
-        if len(recent_primary_frequencies) >= 4:
-            break
-
-    if len(recent_primary_frequencies) < ASCENDING_PRIMARY_RUN_MIN_LENGTH:
-        return None
-
-    recent_primary_frequencies.reverse()
-    if any(current < previous for previous, current in zip(recent_primary_frequencies, recent_primary_frequencies[1:])):
-        return None
-    if recent_primary_frequencies[-1] <= recent_primary_frequencies[0]:
-        return None
-    return recent_primary_frequencies[-1]
-
-
-
-def build_recent_ascending_singleton_suffix(raw_events: list[RawEvent]) -> tuple[float | None, set[str]]:
-    if not raw_events:
-        return None, set()
-
-    recent_primary_notes: list[NoteCandidate] = []
-    for recent_event in reversed(raw_events):
-        if len(recent_event.notes) != 1 or recent_event.primary_note_name is None:
-            break
-        primary_note = recent_event.notes[0]
-        if primary_note.note_name != recent_event.primary_note_name:
-            break
-        if recent_primary_notes and primary_note.frequency > recent_primary_notes[-1].frequency:
-            break
-        recent_primary_notes.append(primary_note)
-        if len(recent_primary_notes) >= 4:
-            break
-
-    if len(recent_primary_notes) < ASCENDING_PRIMARY_RUN_MIN_LENGTH:
-        return None, set()
-
-    recent_primary_notes.reverse()
-    recent_primary_frequencies = [note.frequency for note in recent_primary_notes]
-    if any(current < previous for previous, current in zip(recent_primary_frequencies, recent_primary_frequencies[1:])):
-        return None, set()
-    if recent_primary_frequencies[-1] <= recent_primary_frequencies[0]:
-        return None, set()
-
-    return recent_primary_frequencies[-1], {note.note_name for note in recent_primary_notes}
-
-
-def build_recent_descending_primary_suffix(raw_events: list[RawEvent]) -> tuple[float | None, float | None, set[str]]:
-    if not raw_events:
-        return None, None, set()
-
-    recent_primary_notes: list[NoteCandidate] = []
-    for recent_event in reversed(raw_events):
-        if recent_event.is_gliss_like or len(recent_event.notes) > 2 or recent_event.primary_note_name is None:
-            break
-        primary_note = next((note for note in recent_event.notes if note.note_name == recent_event.primary_note_name), None)
-        if primary_note is None:
-            break
-        if recent_primary_notes and primary_note.frequency < recent_primary_notes[-1].frequency:
-            break
-        recent_primary_notes.append(primary_note)
-        if len(recent_primary_notes) >= 4:
-            break
-
-    if len(recent_primary_notes) < DESCENDING_PRIMARY_SUFFIX_MIN_LENGTH:
-        return None, None, set()
-
-    recent_primary_notes.reverse()
-    recent_primary_frequencies = [note.frequency for note in recent_primary_notes]
-    if any(current > previous for previous, current in zip(recent_primary_frequencies, recent_primary_frequencies[1:])):
-        return None, None, set()
-    if recent_primary_frequencies[-1] >= recent_primary_frequencies[0]:
-        return None, None, set()
-
-    return (
-        recent_primary_frequencies[-1],
-        recent_primary_frequencies[0],
-        {note.note_name for note in recent_primary_notes},
-    )
-
 
 async def transcribe_audio(
     upload: UploadFile,
