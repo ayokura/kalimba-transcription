@@ -2568,6 +2568,7 @@ def maybe_replace_stale_recent_primary(
     previous_primary_note_name: str | None = None,
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
+    raw_audio: np.ndarray | None = None,
 ) -> tuple[NoteHypothesis, float | None, dict[str, Any] | None]:
     if not recent_note_names or primary.candidate.note_name not in recent_note_names:
         return primary, None, None
@@ -2578,6 +2579,13 @@ def maybe_replace_stale_recent_primary(
 
     primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
     if primary_onset_gain >= MIN_RECENT_NOTE_ONSET_GAIN:
+        return primary, primary_onset_gain, None
+
+    # If the primary shows a genuine mute-dip re-attack, keep it even though
+    # the broadband onset_gain is low — the per-note frequency band confirms
+    # the tine was touched and replucked.
+    _mute_dip_audio = raw_audio if raw_audio is not None else audio
+    if _has_mute_dip_reattack(_mute_dip_audio, sample_rate, start_time, primary.candidate.frequency):
         return primary, primary_onset_gain, None
 
     for hypothesis in ranked[1:6]:
@@ -3324,6 +3332,7 @@ def segment_peaks(
         previous_primary_note_name=previous_primary_note_name,
         previous_primary_frequency=previous_primary_frequency,
         previous_primary_was_singleton=previous_primary_was_singleton,
+        raw_audio=raw_audio,
     )
     primary, stale_upper_promotion_debug = maybe_promote_stale_primary_to_upper_octave(
         primary,
