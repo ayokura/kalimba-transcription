@@ -3388,6 +3388,16 @@ def segment_peaks(
                 if alternative_primary is None or hyp.score > alternative_primary.score:
                     alternative_primary = hyp
         if alternative_primary is None:
+            if debug:
+                _residual_debug: dict[str, Any] = {
+                    "startTime": round(start_time, 6),
+                    "endTime": round(end_time, 6),
+                    "durationSec": round(end_time - start_time, 6),
+                    "selectedNotes": [],
+                    "primaryNote": primary.candidate.note_name,
+                    "droppedBy": "residual-decay-no-reattack",
+                }
+                return [], _residual_debug, None
             return [], None, None
         primary = alternative_primary
         # Recalculate primary-dependent state after forward-scan replacement
@@ -6478,6 +6488,8 @@ async def transcribe_audio(
             raw_audio=audio,
         )
         if not candidates or primary is None:
+            if debug and candidate_debug:
+                segment_candidates_debug.append(candidate_debug)
             continue
 
         segment_key = (round(start_time, 4), round(end_time, 4))
