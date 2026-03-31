@@ -65,7 +65,6 @@ export function ReviewWorkspace() {
       activeEventId,
     });
   }, [activeEventId, notationMode, session, sessionId, storageAvailable]);
-
   if (!storageAvailable) {
     return (
       <main className="shell">
