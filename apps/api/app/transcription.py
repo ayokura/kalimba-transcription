@@ -112,6 +112,7 @@ ABLATE_TWO_ONSET_TERMINAL_TAIL = False
 ABLATE_COLLAPSE_ACTIVE_RANGE_HEAD = False
 ABLATE_SNAP_RANGE_START_TO_ONSET = False
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
+RESIDUAL_DECAY_MIN_ONSET_GAIN = 1.5
 RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO = 0.18
 RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO = 0.6
 RECENT_PRIMARY_REPLACEMENT_RELAXED_FUNDAMENTAL_RATIO = 0.45
@@ -2567,6 +2568,7 @@ def maybe_replace_stale_recent_primary(
     previous_primary_note_name: str | None = None,
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
+    raw_audio: np.ndarray | None = None,
 ) -> tuple[NoteHypothesis, float | None, dict[str, Any] | None]:
     if not recent_note_names or primary.candidate.note_name not in recent_note_names:
         return primary, None, None
@@ -2577,6 +2579,13 @@ def maybe_replace_stale_recent_primary(
 
     primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
     if primary_onset_gain >= MIN_RECENT_NOTE_ONSET_GAIN:
+        return primary, primary_onset_gain, None
+
+    # If the primary shows a genuine mute-dip re-attack, keep it even though
+    # the broadband onset_gain is low — the per-note frequency band confirms
+    # the tine was touched and replucked.
+    _mute_dip_audio = raw_audio if raw_audio is not None else audio
+    if _has_mute_dip_reattack(_mute_dip_audio, sample_rate, start_time, primary.candidate.frequency):
         return primary, primary_onset_gain, None
 
     for hypothesis in ranked[1:6]:
@@ -3286,6 +3295,7 @@ def segment_peaks(
     previous_primary_note_name: str | None = None,
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
+    raw_audio: np.ndarray | None = None,
 ) -> tuple[list[NoteCandidate], dict[str, Any] | None, NoteHypothesis | None]:
     start = int(start_time * sample_rate)
     end = int(end_time * sample_rate)
@@ -3322,6 +3332,7 @@ def segment_peaks(
         previous_primary_note_name=previous_primary_note_name,
         previous_primary_frequency=previous_primary_frequency,
         previous_primary_was_singleton=previous_primary_was_singleton,
+        raw_audio=raw_audio,
     )
     primary, stale_upper_promotion_debug = maybe_promote_stale_primary_to_upper_octave(
         primary,
@@ -3345,6 +3356,58 @@ def segment_peaks(
         and primary.fundamental_ratio < PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
     ):
         return [], None, None
+    # Suppress residual-decay segments: if the primary is a recent note and
+    # shows no mute-dip (smooth decay rather than finger-touch-then-repluck),
+    # the segment is likely resonance from a previous event, not a genuine
+    # new attack.  On a kalimba, replucking requires touching the tine first,
+    # which causes the note-band energy to drop before the new onset.
+    _residual_check_audio = raw_audio if raw_audio is not None else audio
+    if (
+        recent_note_names
+        and primary.candidate.note_name in recent_note_names
+        and _is_residual_decay(_residual_check_audio, sample_rate, start_time, primary.candidate.frequency)
+        and not _has_mute_dip_reattack(_residual_check_audio, sample_rate, start_time, primary.candidate.frequency)
+    ):
+        # Forward-scan: the top-ranked candidate is residual, but a recent note
+        # may show a genuine re-attack (mute-dip).  The re-attack note can rank
+        # very low in the FFT because the mute period dilutes its spectral
+        # energy — so we check all recent notes by frequency-band energy
+        # rather than relying on FFT rank.
+        _residual_audio = raw_audio if raw_audio is not None else audio
+        # Build {note_name: NoteHypothesis} lookup from ranked for quick access.
+        _ranked_by_name: dict[str, NoteHypothesis] = {}
+        for h in ranked:
+            if h.candidate.note_name not in _ranked_by_name:
+                _ranked_by_name[h.candidate.note_name] = h
+        alternative_primary = None
+        for note_name in recent_note_names:
+            hyp = _ranked_by_name.get(note_name)
+            if hyp is None:
+                continue  # note not present in spectrum at all
+            if _has_mute_dip_reattack(_residual_audio, sample_rate, start_time, hyp.candidate.frequency):
+                if alternative_primary is None or hyp.score > alternative_primary.score:
+                    alternative_primary = hyp
+        if alternative_primary is None:
+            if debug:
+                _residual_debug: dict[str, Any] = {
+                    "startTime": round(start_time, 6),
+                    "endTime": round(end_time, 6),
+                    "durationSec": round(end_time - start_time, 6),
+                    "selectedNotes": [],
+                    "primaryNote": primary.candidate.note_name,
+                    "droppedBy": "residual-decay-no-reattack",
+                }
+                return [], _residual_debug, None
+            return [], None, None
+        primary = alternative_primary
+        # Recalculate primary-dependent state after forward-scan replacement
+        # so downstream secondary gates use the new primary's context.
+        primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+        primary_promotion_debug = {
+            "reason": "residual-forward-scan",
+            "replacedPrimaryNote": ranked[0].candidate.note_name,
+            "replacementNote": primary.candidate.note_name,
+        }
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     promoted_secondary_to_recent_upper_octave = False
@@ -3423,6 +3486,7 @@ def segment_peaks(
                 reasons.append("harmonic-related-to-selected")
             if recent_note_names and hypothesis.candidate.note_name in recent_note_names:
                 onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                _secondary_mute_dip_audio = raw_audio if raw_audio is not None else audio
                 if hypothesis.candidate.frequency < primary.candidate.frequency:
                     if (
                         onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
@@ -3434,7 +3498,8 @@ def segment_peaks(
                             and onset_gain < ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN
                         )
                     ):
-                        reasons.append("recent-carryover-candidate")
+                        if not _has_mute_dip_reattack(_secondary_mute_dip_audio, sample_rate, start_time, hypothesis.candidate.frequency):
+                            reasons.append("recent-carryover-candidate")
                 else:
                     if primary_onset_gain is None:
                         primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
@@ -3442,6 +3507,7 @@ def segment_peaks(
                         primary_onset_gain >= RECENT_UPPER_SECONDARY_PRIMARY_ONSET_GAIN
                         and segment_duration >= RECENT_UPPER_SECONDARY_MIN_DURATION
                         and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
+                        and not _has_mute_dip_reattack(_secondary_mute_dip_audio, sample_rate, start_time, hypothesis.candidate.frequency)
                     ):
                         reasons.append("recent-carryover-candidate")
             if (
@@ -4105,6 +4171,171 @@ def suppress_resonant_carryover(raw_events: list[RawEvent], tuning: InstrumentTu
         cleaned.append(updated_event)
 
     return cleaned
+
+
+def _note_band_energy(
+    audio: np.ndarray,
+    sample_rate: int,
+    center_time: float,
+    frequency: float,
+    window_seconds: float = ONSET_ENERGY_WINDOW_SECONDS,
+) -> float:
+    """Compute peak energy near *frequency* in a short window centred on *center_time*."""
+    window_samples = max(int(sample_rate * window_seconds), 512)
+    center_sample = int(center_time * sample_rate)
+    half = window_samples // 2
+    start = max(center_sample - half, 0)
+    end = min(start + window_samples, len(audio))
+    chunk = audio[start:end]
+    if len(chunk) < 256:
+        return 0.0
+    n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))
+    spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
+    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    return peak_energy_near(frequencies, spectrum, frequency)
+
+
+def _find_note_attack_time(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    frequency: float,
+    max_lookahead_seconds: float = 0.08,
+) -> float:
+    """Find the attack time for a specific note frequency after the onset.
+
+    Instead of using broadband amplitude, scans the note's frequency band
+    energy to find the steepest increase.  This handles chords where each
+    note attacks at a slightly different time.
+    """
+    hop_seconds = 0.005
+    window_seconds = 0.02
+    t = onset_time
+    end_t = min(onset_time + max_lookahead_seconds, len(audio) / sample_rate - window_seconds)
+
+    best_diff = 0.0
+    best_time = onset_time
+    prev_energy = _note_band_energy(audio, sample_rate, t, frequency,
+                                    window_seconds=window_seconds)
+    t += hop_seconds
+    while t < end_t:
+        energy = _note_band_energy(audio, sample_rate, t, frequency,
+                                   window_seconds=window_seconds)
+        diff = energy - prev_energy
+        if diff > best_diff:
+            best_diff = diff
+            best_time = t
+        prev_energy = energy
+        t += hop_seconds
+
+    return best_time
+
+
+MUTE_DIP_REATTACK_MIN_PRE_ENERGY = 3.0
+MUTE_DIP_REATTACK_MIN_POST_ENERGY = 3.0
+MUTE_DIP_REATTACK_MAX_DIP_RATIO = 0.1
+MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO = 0.9
+
+
+def _has_mute_dip_reattack(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    frequency: float,
+) -> bool:
+    """Check if a recently-played note shows a mute-dip re-attack pattern.
+
+    On a kalimba, replucking a ringing tine requires touching it first,
+    which causes a characteristic energy profile in the note's frequency band:
+        high (ringing) → low (finger mute) → high (re-attack)
+
+    Unlike ``_is_residual_decay`` (which compares pre vs post energy), this
+    function explicitly looks for the energy *dip* near the onset time.
+    """
+    # Pre-onset: the note must have been ringing before the onset.
+    pre_time = onset_time - 0.04
+    if pre_time < 0:
+        return False
+    pre_energy = _note_band_energy(audio, sample_rate, pre_time, frequency,
+                                   window_seconds=0.02)
+    if pre_energy < MUTE_DIP_REATTACK_MIN_PRE_ENERGY:
+        return False  # Note wasn't ringing; can't be a re-attack.
+
+    # Scan for minimum energy around the onset (the mute dip).
+    # The dip sits between pre-onset and the new attack, typically ±30ms of
+    # the detected onset.
+    min_energy = float("inf")
+    scan_start = max(onset_time - 0.01, 0.0)
+    scan_end = min(onset_time + 0.05, len(audio) / sample_rate - 0.015)
+    t = scan_start
+    while t < scan_end:
+        energy = _note_band_energy(audio, sample_rate, t, frequency,
+                                   window_seconds=0.015)
+        if energy < min_energy:
+            min_energy = energy
+        t += 0.005
+
+    # Post-attack: find the per-note attack time and measure energy after.
+    attack_time = _find_note_attack_time(audio, sample_rate, onset_time, frequency)
+    post_time = attack_time + 0.02
+    if post_time > len(audio) / sample_rate - 0.02:
+        return False
+    post_energy = _note_band_energy(audio, sample_rate, post_time, frequency,
+                                    window_seconds=0.02)
+    if post_energy < MUTE_DIP_REATTACK_MIN_POST_ENERGY:
+        return False  # No meaningful re-attack energy.
+
+    dip_ratio = (min_energy + 1e-6) / (pre_energy + 1e-6)
+    if dip_ratio >= MUTE_DIP_REATTACK_MAX_DIP_RATIO:
+        return False
+
+    # Recovery check: a genuine re-attack restores the note's energy to near
+    # its pre-onset level.  Sympathetic interference from plucking a neighboring
+    # tine can cause a brief energy dip, but the note continues to decay
+    # afterwards (recovery < 1.0).
+    recovery_ratio = post_energy / (pre_energy + 1e-6)
+    return recovery_ratio >= MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO
+
+
+def _is_residual_decay(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    frequency: float,
+) -> bool:
+    """Check whether a note at *frequency* is residual decay at this onset.
+
+    1. Find the per-note attack time by scanning the note's frequency band
+       energy for the steepest increase after the detected onset.
+    2. Measure note-band energy before and after the per-note attack.
+    3. If pre-attack energy is high relative to post-attack energy, the
+       note was already ringing → residual decay.
+
+    On a kalimba, replucking a tine requires touching it first (mute-dip),
+    which drives the pre-attack note-band energy to near zero.  Residual
+    decay shows high energy before and after with no sharp increase.
+    """
+    attack_time = _find_note_attack_time(audio, sample_rate, start_time, frequency)
+
+    # Pre-onset is measured relative to the DETECTED onset, not the
+    # per-note attack time, because the onset time is the reliable anchor.
+    pre_time = start_time - 0.03
+    post_time = attack_time + 0.03
+
+    if pre_time < 0 or post_time > len(audio) / sample_rate:
+        return False
+
+    pre_energy = _note_band_energy(audio, sample_rate, pre_time, frequency,
+                                   window_seconds=0.04)
+    post_energy = _note_band_energy(audio, sample_rate, post_time, frequency,
+                                    window_seconds=0.04)
+
+    if post_energy < 1.0:
+        return False  # No meaningful energy; not a residual context.
+
+    note_gain = (post_energy + 1e-6) / (pre_energy + 1e-6)
+    return note_gain < RESIDUAL_DECAY_MIN_ONSET_GAIN
+
 
 def collapse_same_start_primary_singletons(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 2:
@@ -6254,8 +6485,11 @@ async def transcribe_audio(
             previous_primary_note_name=previous_primary_note_name,
             previous_primary_frequency=previous_primary_frequency,
             previous_primary_was_singleton=previous_primary_was_singleton,
+            raw_audio=audio,
         )
         if not candidates or primary is None:
+            if debug and candidate_debug:
+                segment_candidates_debug.append(candidate_debug)
             continue
 
         segment_key = (round(start_time, 4), round(end_time, 4))

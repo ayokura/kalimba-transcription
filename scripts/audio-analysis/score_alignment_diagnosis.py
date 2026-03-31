@@ -263,7 +263,10 @@ def main():
             print(f"  {sym} E{exp['num']:3d} {exp['content']:30s} → {'+'.join(sorted(det_notes)):15s}{miss_str}{extra_str}{trail_str}")
 
         if unmatched:
-            print(f"  +{len(unmatched)} extra segments")
+            print(f"  +{len(unmatched)} extra segments:")
+            for u in unmatched:
+                notes_str = '+'.join(sorted(u['notes'])) if u['notes'] else '(empty)'
+                print(f"    t={u['time']:.3f}s {notes_str}")
 
     print(f"\n{'='*60}")
     print(f"SUMMARY: {total_events} expected events, {len(segments)} segments")
