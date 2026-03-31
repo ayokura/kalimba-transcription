@@ -18,7 +18,7 @@ sys.path.insert(0, str(REPO_ROOT / "apps/api"))
 def get_onset_profiles(fixture_name: str) -> tuple:
     """APIを呼んでonset_attack_profilesを取得"""
     import app.transcription as mod
-    mod.USE_ATTACK_VALIDATED_GAP_COLLECTOR = True
+    mod.segments.USE_ATTACK_VALIDATED_GAP_COLLECTOR = True
 
     from fastapi.testclient import TestClient
     from app.main import app

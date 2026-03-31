@@ -43,7 +43,7 @@ ABLATION_FLAGS = [
 def ablated_flag(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> str:
     import app.transcription as mod
     flag_name = request.param
-    monkeypatch.setattr(mod, flag_name, True)
+    monkeypatch.setattr(mod.segments, flag_name, True)
     return flag_name
 
 
