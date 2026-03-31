@@ -512,13 +512,20 @@ def _segment_leaves(seg: Segment) -> tuple[Segment, ...]:
 
 def _merge_segments(a: Segment, b: Segment, start: float, end: float, reason: str = "") -> Segment:
     """Create a merged segment preserving provenance from both inputs."""
+    # end_estimated derives from whichever segment supplies the merged end.
+    if end == a.end_time and end != b.end_time:
+        merged_end_estimated = a.end_estimated
+    elif end == b.end_time and end != a.end_time:
+        merged_end_estimated = b.end_estimated
+    else:
+        merged_end_estimated = a.end_estimated or b.end_estimated
     return Segment(
         start_time=start,
         end_time=end,
         sources=a.sources | b.sources,
         merged_from=_segment_leaves(a) + _segment_leaves(b),
         merge_reason=reason,
-        end_estimated=a.end_estimated or b.end_estimated,
+        end_estimated=merged_end_estimated,
     )
 
 
@@ -579,7 +586,7 @@ def dedupe_cross_collector_segments(segments: list[Segment]) -> list[Segment]:
                 if prev.end_estimated and not seg.end_estimated:
                     trimmed_end = seg.start_time
                     if trimmed_end - prev.start_time >= 0.08:
-                        deduped[-1] = dataclass_replace(prev, end_time=trimmed_end, trimmed_from=prev)
+                        deduped[-1] = dataclass_replace(prev, end_time=trimmed_end, end_estimated=False, trimmed_from=prev)
                         deduped.append(seg)
                     else:
                         deduped[-1] = seg  # too short after trim, just replace
@@ -1779,7 +1786,7 @@ def detect_segments(
         (gap_injected_segments, "gapInjected", False),
         (leading_orphan_segments, "leadingOrphan", False),
         (multi_onset_gap_segments, "multiOnsetGap", False),
-        (post_tail_gap_head_segments, "postTailGapHead", True),
+        (post_tail_gap_head_segments, "postTailGapHead", False),
         (single_onset_gap_head_segments, "singleOnsetGapHead", True),
         (sparse_gap_tail_segments, "sparseGapTail", True),
         (terminal_orphan_segments, "terminalOrphan", True),
