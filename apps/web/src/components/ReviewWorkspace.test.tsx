@@ -1,0 +1,173 @@
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ReviewWorkspace } from "@/components/ReviewWorkspace";
+import { TranscriptionReviewSession } from "@/lib/types";
+
+const mocks = vi.hoisted(() => ({
+  isReviewSessionStorageAvailable: vi.fn(),
+  loadReviewSession: vi.fn(),
+  loadReviewAudio: vi.fn(),
+  useSearchParams: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: mocks.useSearchParams,
+}));
+
+vi.mock("@/lib/reviewSession", () => ({
+  isReviewSessionStorageAvailable: mocks.isReviewSessionStorageAvailable,
+  loadReviewSession: mocks.loadReviewSession,
+}));
+
+vi.mock("@/lib/reviewAudioStore", () => ({
+  loadReviewAudio: mocks.loadReviewAudio,
+}));
+
+function buildSession(): TranscriptionReviewSession {
+  return {
+    sessionVersion: 1,
+    sessionId: "review-session-1",
+    createdAt: "2026-03-31T00:00:00.000Z",
+    acquisitionMode: "live_mic",
+    tuning: {
+      id: "kalimba-17-c",
+      name: "17 Key C Major",
+      keyCount: 17,
+      notes: [
+        { key: 1, noteName: "C4", frequency: 261.63 },
+        { key: 2, noteName: "E4", frequency: 329.63 },
+        { key: 3, noteName: "G4", frequency: 392 },
+      ],
+    },
+    instrumentProfile: null,
+    recordingProfile: null,
+    requestSnapshot: {
+      sourceProfile: "acoustic_real",
+    },
+    responseSnapshot: {
+      instrumentTuning: {
+        id: "kalimba-17-c",
+        name: "17 Key C Major",
+        keyCount: 17,
+        notes: [
+          { key: 1, noteName: "C4", frequency: 261.63 },
+          { key: 2, noteName: "E4", frequency: 329.63 },
+          { key: 3, noteName: "G4", frequency: 392 },
+        ],
+      },
+      tempo: 90,
+      warnings: [],
+      notationViews: {
+        western: ["C4", "E4", "G4"],
+        numbered: ["1", "3", "5"],
+        verticalDoReMi: [["ド"], ["ミ"], ["ソ"]],
+      },
+      events: [
+        {
+          id: "evt-1",
+          startBeat: 1,
+          durationBeat: 1,
+          notes: [
+            {
+              key: 1,
+              pitchClass: "C",
+              octave: 4,
+              labelDoReMi: "ド",
+              labelNumber: "1",
+              frequency: 261.63,
+            },
+          ],
+          isGlissLike: false,
+          gesture: "strict_chord",
+        },
+        {
+          id: "evt-2",
+          startBeat: 2,
+          durationBeat: 1,
+          notes: [
+            {
+              key: 2,
+              pitchClass: "E",
+              octave: 4,
+              labelDoReMi: "ミ",
+              labelNumber: "3",
+              frequency: 329.63,
+            },
+          ],
+          isGlissLike: false,
+          gesture: "strict_chord",
+        },
+        {
+          id: "evt-3",
+          startBeat: 3,
+          durationBeat: 1,
+          notes: [
+            {
+              key: 3,
+              pitchClass: "G",
+              octave: 4,
+              labelDoReMi: "ソ",
+              labelNumber: "5",
+              frequency: 392,
+            },
+          ],
+          isGlissLike: false,
+          gesture: "strict_chord",
+        },
+      ],
+      debug: null,
+    },
+    notationMode: "vertical",
+    activeEventId: "evt-1",
+    editedDraft: null,
+  };
+}
+
+describe("ReviewWorkspace", () => {
+  beforeEach(() => {
+    mocks.useSearchParams.mockReturnValue(new URLSearchParams("session=review-session-1"));
+    mocks.isReviewSessionStorageAvailable.mockReturnValue(true);
+    mocks.loadReviewSession.mockReturnValue(buildSession());
+    mocks.loadReviewAudio.mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("shows a fallback message when storage is unavailable", () => {
+    mocks.isReviewSessionStorageAvailable.mockReturnValue(false);
+
+    render(<ReviewWorkspace />);
+
+    expect(screen.getByText("この環境では review session を開けません。")).toBeTruthy();
+  });
+
+  it("shows a fallback message when the session is missing", () => {
+    mocks.loadReviewSession.mockReturnValue(null);
+
+    render(<ReviewWorkspace />);
+
+    expect(screen.getByText("review session が見つかりません。")).toBeTruthy();
+  });
+
+  it("updates the active event when focus navigation moves to the next event", async () => {
+    const user = userEvent.setup();
+
+    render(<ReviewWorkspace />);
+
+    expect(screen.getByText("1 / 3")).toBeTruthy();
+    expect(screen.getAllByText("evt-1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("ド").length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: "次の event へ移動" }));
+
+    expect(screen.getByText("2 / 3")).toBeTruthy();
+    expect(screen.getAllByText("evt-2").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("ミ").length).toBeGreaterThan(0);
+    expect(screen.getByText("この review session には audio が残っていません。same-tab の解析直後に `/review` を開き直してください。")).toBeTruthy();
+  });
+});

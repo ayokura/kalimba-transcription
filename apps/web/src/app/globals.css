@@ -525,6 +525,10 @@ button:disabled {
   box-shadow: 0 0 0 2px rgba(23, 126, 137, 0.12);
 }
 
+.review-focus-nav {
+  justify-content: flex-end;
+}
+
 .note-chip-row {
   display: flex;
   gap: 10px;
@@ -537,6 +541,39 @@ button:disabled {
   background: rgba(23, 126, 137, 0.12);
   color: var(--accent-strong);
   font-weight: 700;
+}
+
+.review-context-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.review-context-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  text-align: left;
+  min-height: 128px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.review-context-card.current {
+  border-color: rgba(23, 126, 137, 0.28);
+  background: linear-gradient(180deg, rgba(23, 126, 137, 0.12), rgba(255, 255, 255, 0.9));
+}
+
+.review-context-card.empty {
+  opacity: 0.68;
+}
+
+.review-context-card strong {
+  font-size: 1rem;
+}
+
+.review-context-card span,
+.review-context-card small {
+  color: var(--muted);
 }
 
 .workflow-panel {
@@ -893,7 +930,8 @@ button:disabled {
 @media (max-width: 960px) {
   .hero,
   .workspace-grid,
-  .workflow-composer-grid {
+  .workflow-composer-grid,
+  .review-context-grid {
     grid-template-columns: 1fr;
   }
 
