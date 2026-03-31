@@ -69,6 +69,10 @@ POOL_STRATEGIES = (
     "core12_corrob_slots6",
     "core12_octave_safe_slots6",
     "per_stage_12_4_4",
+    "core12_stage3_slots4",
+    "core12_typed_slots4",
+    "core12_edge_slots4",
+    "core12_octave_slots4",
 )
 
 
@@ -327,6 +331,8 @@ def summarize_note(stage_views: dict[str, dict[str, dict]], note_name: str) -> d
             best = {"source": stage_name, **entry}
     assert best is not None
     stages_present = len(per_stage)
+    candidate = best["hypothesis"].candidate
+    source_stage_priority = {"initial": 0, "residual1": 1, "residual2": 2}[best["source"]]
     return {
         "note_name": note_name,
         "entry": {"hypothesis": best["hypothesis"], "source": best["source"]},
@@ -335,6 +341,12 @@ def summarize_note(stage_views: dict[str, dict[str, dict]], note_name: str) -> d
         "tail_presence": sum(1 for item in per_stage.values() if item["rank"] > 12),
         "support": support_score(best["hypothesis"]),
         "fundamental_ratio": best["hypothesis"].fundamental_ratio,
+        "octave_alias_ratio": best["hypothesis"].octave_alias_ratio,
+        "pitch_class": candidate.pitch_class,
+        "octave": candidate.octave,
+        "key": candidate.key,
+        "source_stage": best["source"],
+        "source_stage_priority": source_stage_priority,
     }
 
 
@@ -368,41 +380,41 @@ def choose_strategy_entries(stage_views: dict[str, dict[str, dict]], strategy: s
         for note_name, summary in summaries.items()
         if summary["best_rank"] <= 12
     }
+    tail = [summary for summary in summaries.values() if summary["best_rank"] > 12]
     if strategy == "raw20":
         return {note_name: summary["entry"] for note_name, summary in summaries.items()}
     if strategy == "core12_slots6":
         selected = dict(core)
-        tail = sorted(
-            (summary for summary in summaries.values() if summary["best_rank"] > 12),
+        ordered_tail = sorted(
+            tail,
             key=lambda item: (item["support"], item["fundamental_ratio"], item["stages_present"]),
             reverse=True,
         )
-        for summary in tail[:6]:
+        for summary in ordered_tail[:6]:
             selected[summary["note_name"]] = summary
         return {note_name: summary["entry"] for note_name, summary in selected.items()}
     if strategy == "core12_corrob_slots6":
         selected = dict(core)
-        tail = sorted(
+        ordered_tail = sorted(
             (
-                summary
-                for summary in summaries.values()
+                summary for summary in tail
                 if summary["best_rank"] > 12
                 and (summary["stages_present"] >= 2 or summary["fundamental_ratio"] >= 0.95)
             ),
             key=lambda item: (item["stages_present"], item["support"], item["fundamental_ratio"]),
             reverse=True,
         )
-        for summary in tail[:6]:
+        for summary in ordered_tail[:6]:
             selected[summary["note_name"]] = summary
         return {note_name: summary["entry"] for note_name, summary in selected.items()}
     if strategy == "core12_octave_safe_slots6":
         selected = list(core.values())
-        tail = sorted(
-            (summary for summary in summaries.values() if summary["best_rank"] > 12),
+        ordered_tail = sorted(
+            tail,
             key=lambda item: (item["support"], item["stages_present"], item["fundamental_ratio"]),
             reverse=True,
         )
-        for summary in tail:
+        for summary in ordered_tail:
             if len(selected) >= len(core) + 6:
                 break
             if conflicts_with_selected(summary["entry"]["hypothesis"].candidate, selected):
@@ -426,6 +438,153 @@ def choose_strategy_entries(stage_views: dict[str, dict[str, dict]], strategy: s
                 if current is None or entry["hypothesis"].score > current["hypothesis"].score:
                     selected[note_name] = {"hypothesis": entry["hypothesis"], "source": stage_name}
         return selected
+    if strategy == "core12_stage3_slots4":
+        selected = dict(core)
+        ordered_tail = sorted(
+            tail,
+            key=lambda item: (item["stages_present"], item["best_rank"], item["support"]),
+            reverse=True,
+        )
+        for summary in ordered_tail:
+            if len(selected) >= len(core) + 4:
+                break
+            selected[summary["note_name"]] = summary
+        return {note_name: summary["entry"] for note_name, summary in selected.items()}
+    if strategy == "core12_typed_slots4":
+        selected = dict(core)
+        selected_summaries = list(core.values())
+
+        def add_summary(summary: dict | None) -> None:
+            if summary is None:
+                return
+            if summary["note_name"] in selected:
+                return
+            if len(selected) >= len(core) + 4:
+                return
+            selected[summary["note_name"]] = summary
+            selected_summaries.append(summary)
+
+        def rank_key(summary: dict) -> tuple:
+            return (
+                summary["best_rank"],
+                -summary["stages_present"],
+                summary["source_stage_priority"],
+                -summary["support"],
+                summary["octave_alias_ratio"],
+            )
+
+        core_keys = sorted(item["key"] for item in core.values())
+        selected_pitch_classes = {item["pitch_class"] for item in core.values()}
+        selected_octaves = {item["octave"] for item in core.values()}
+
+        low_anchor = None
+        if core_keys:
+            low_threshold = core_keys[max(0, len(core_keys) // 3 - 1)]
+            low_candidates = sorted(
+                (
+                    summary
+                    for summary in tail
+                    if summary["key"] < low_threshold
+                ),
+                key=rank_key,
+            )
+            low_anchor = low_candidates[0] if low_candidates else None
+        add_summary(low_anchor)
+
+        octave_companion_candidates = sorted(
+            (
+                summary
+                for summary in tail
+                if summary["pitch_class"] in selected_pitch_classes
+                and summary["octave"] not in selected_octaves
+            ),
+            key=rank_key,
+        )
+        add_summary(octave_companion_candidates[0] if octave_companion_candidates else None)
+
+        current_keys = sorted(item["key"] for item in selected_summaries)
+        bridge = None
+        if len(current_keys) >= 2:
+            bridge_candidates = sorted(
+                (
+                    summary
+                    for summary in tail
+                    if current_keys[0] < summary["key"] < current_keys[-1]
+                    and summary["octave"] in {item["octave"] for item in selected_summaries}
+                ),
+                key=rank_key,
+            )
+            bridge = bridge_candidates[0] if bridge_candidates else None
+        add_summary(bridge)
+
+        corroborated_escape_candidates = sorted(
+            (
+                summary
+                for summary in tail
+                if summary["best_rank"] <= 18
+                and summary["stages_present"] >= 2
+                and summary["source_stage"] != "residual2"
+                and summary["octave"] not in {item["octave"] for item in selected_summaries}
+            ),
+            key=rank_key,
+        )
+        add_summary(corroborated_escape_candidates[0] if corroborated_escape_candidates else None)
+
+        fallback_candidates = sorted(tail, key=rank_key)
+        for summary in fallback_candidates:
+            if len(selected) >= len(core) + 4:
+                break
+            add_summary(summary)
+
+        return {note_name: summary["entry"] for note_name, summary in selected.items()}
+    if strategy == "core12_edge_slots4":
+        selected = dict(core)
+        hypotheses = [summary["entry"]["hypothesis"] for summary in core.values()]
+        if hypotheses:
+            core_keys = sorted(h.candidate.key for h in hypotheses)
+            low_anchor = core_keys[len(core_keys) // 3]
+            high_anchor = core_keys[-(len(core_keys) // 3 + 1)]
+        else:
+            low_anchor = 0
+            high_anchor = 999
+        low_tail = sorted(
+            (summary for summary in tail if summary["entry"]["hypothesis"].candidate.key < low_anchor),
+            key=lambda item: (item["best_rank"], item["stages_present"], item["support"]),
+        )
+        high_tail = sorted(
+            (summary for summary in tail if summary["entry"]["hypothesis"].candidate.key > high_anchor),
+            key=lambda item: (item["best_rank"], item["stages_present"], item["support"]),
+        )
+        middle_tail = sorted(
+            (
+                summary for summary in tail
+                if low_anchor <= summary["entry"]["hypothesis"].candidate.key <= high_anchor
+            ),
+            key=lambda item: (item["stages_present"], item["best_rank"], item["support"]),
+            reverse=True,
+        )
+        for pool in (low_tail[:2], high_tail[:2], middle_tail):
+            for summary in pool:
+                if len(selected) >= len(core) + 4:
+                    break
+                selected[summary["note_name"]] = summary
+        return {note_name: summary["entry"] for note_name, summary in selected.items()}
+    if strategy == "core12_octave_slots4":
+        selected = dict(core)
+        by_octave: dict[int, list[dict]] = {}
+        for summary in tail:
+            octave = summary["entry"]["hypothesis"].candidate.octave
+            by_octave.setdefault(octave, []).append(summary)
+        octave_order = sorted(
+            by_octave.items(),
+            key=lambda item: min(summary["best_rank"] for summary in item[1]),
+        )
+        for _, items in octave_order:
+            best = sorted(items, key=lambda item: (item["best_rank"], item["stages_present"], item["support"]))[0]
+            selected[best["note_name"]] = best
+            if len(selected) >= len(core) + 4:
+                break
+        return {note_name: summary["entry"] for note_name, summary in selected.items()}
     raise ValueError(f"Unknown strategy: {strategy}")
 
 
