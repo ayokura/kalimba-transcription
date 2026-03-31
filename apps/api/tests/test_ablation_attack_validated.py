@@ -40,14 +40,14 @@ ABLATION_FLAGS = [
 @pytest.fixture()
 def _enable_attack_validated(monkeypatch: pytest.MonkeyPatch) -> None:
     import app.transcription as mod
-    monkeypatch.setattr(mod, "USE_ATTACK_VALIDATED_GAP_COLLECTOR", True)
+    monkeypatch.setattr(mod._legacy, "USE_ATTACK_VALIDATED_GAP_COLLECTOR", True)
 
 
 @pytest.fixture(params=ABLATION_FLAGS)
 def ablated_flag(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, _enable_attack_validated: None) -> str:
     import app.transcription as mod
     flag_name = request.param
-    monkeypatch.setattr(mod, flag_name, True)
+    monkeypatch.setattr(mod._legacy, flag_name, True)
     return flag_name
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import math
+import sys as _sys
 from collections import Counter
 from dataclasses import dataclass, field as dataclass_field, replace as dataclass_replace
 from functools import lru_cache
@@ -14,8 +15,10 @@ import numpy as np
 import soundfile as sf
 from fastapi import HTTPException, UploadFile
 
-from .models import InstrumentTuning, NotationViews, ScoreEvent, ScoreNote, TranscriptionResult
-from .tunings import build_custom_tuning, parse_note_name
+from ..models import InstrumentTuning, NotationViews, ScoreEvent, ScoreNote, TranscriptionResult
+from ..tunings import build_custom_tuning, parse_note_name
+
+_legacy = _sys.modules[__name__]
 
 FRAME_LENGTH = 2048
 HOP_LENGTH = 256
@@ -6655,8 +6658,6 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
-
-
 
 
 
