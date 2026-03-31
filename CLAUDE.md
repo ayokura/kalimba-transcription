@@ -17,6 +17,7 @@
 | `/audio-spectrum` | librosa | スペクトル特徴量（BW90, centroid等） |
 | `/audio-diagnose` | 統合 | onset判定（ノイズ vs カリンバ音） |
 | `/audio-separate` | librosa | onset群の特徴量分離分析（Cohen's d） |
+| `/audio-peak-track` | numpy | ノート帯域ピーク周波数・centsずれ追跡 |
 
 ### 使用例
 
@@ -27,6 +28,7 @@
 /audio-spectrum d5-repeat-01 0.059
 /audio-diagnose d5-repeat-01
 /audio-separate bwv147-restart-prefix-01 --real 1.87,3.15,5.06 --compare 4.16
+/audio-peak-track bwv147-sequence-163-01 40.5 1.5 --notes D4,B4,G4
 ```
 
 fixture名（例: `d5-repeat-01`）は自動的にフルパスに展開される。
@@ -41,6 +43,7 @@ fixture名（例: `d5-repeat-01`）は自動的にフルパスに展開される
 - `analyze_kalimba_signature.py` - カリンバ倍音構造検出
 - `find_real_first_note.py` - 最初の本当のカリンバ音を特定
 - `onset_separation_analysis.py` - onset群の特徴量分離分析
+- `note_peak_track.py` - ノート帯域ピーク周波数・centsずれ追跡
 - `fixture_rejection_sweep.py` - rejection閾値探索（実テストスイート使用）
 
 ### Fixture 影響評価の注意
