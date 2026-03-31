@@ -477,6 +477,7 @@ class Segment:
     merged_from: tuple[Segment, ...] = ()
     merge_reason: str = ""
     end_estimated: bool = False
+    trimmed_from: Segment | None = None
 
     def __iter__(self):
         yield self.start_time
@@ -573,11 +574,20 @@ def dedupe_cross_collector_segments(segments: list[Segment]) -> list[Segment]:
             )
             if shorter_duration > 0 and overlap >= shorter_duration * CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO:
                 # When one side has an estimated end and the other doesn't,
-                # prefer the non-estimated (more precise) segment.
+                # trim the estimated segment's end to the non-estimated
+                # segment's start, preserving the onset portion.
                 if prev.end_estimated and not seg.end_estimated:
-                    deduped[-1] = seg
+                    trimmed_end = seg.start_time
+                    if trimmed_end - prev.start_time >= 0.08:
+                        deduped[-1] = dataclass_replace(prev, end_time=trimmed_end, trimmed_from=prev)
+                        deduped.append(seg)
+                    else:
+                        deduped[-1] = seg  # too short after trim, just replace
                 elif seg.end_estimated and not prev.end_estimated:
-                    pass  # keep prev, drop seg
+                    trimmed_start_for_seg = prev.end_time
+                    if seg.end_time - trimmed_start_for_seg >= 0.08:
+                        deduped.append(dataclass_replace(seg, start_time=trimmed_start_for_seg, trimmed_from=seg))
+                    # else: remaining portion too short, drop seg
                 else:
                     deduped[-1] = _merge_segments(prev, seg, min(prev.start_time, seg.start_time), max(prev.end_time, seg.end_time), reason="cross_collector_overlap")
                 continue
@@ -6525,6 +6535,12 @@ async def transcribe_audio(
             candidate_debug["segmentSource"] = sorted(segment.sources) if segment.sources else ["unknown"]
             if segment.end_estimated:
                 candidate_debug["endEstimated"] = True
+            if segment.trimmed_from:
+                candidate_debug["trimmedFrom"] = {
+                    "startTime": round(segment.trimmed_from.start_time, 6),
+                    "endTime": round(segment.trimmed_from.end_time, 6),
+                    "sources": sorted(segment.trimmed_from.sources),
+                }
             if segment.merged_from:
                 candidate_debug["mergeReason"] = segment.merge_reason
                 candidate_debug["mergedFrom"] = [
