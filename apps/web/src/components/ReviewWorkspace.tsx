@@ -93,7 +93,7 @@ export function ReviewWorkspace() {
     event: KeyboardEvent<HTMLButtonElement>,
     index: number,
   ) {
-    if (event.altKey || event.ctrlKey || event.metaKey) {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
       return;
     }
 
