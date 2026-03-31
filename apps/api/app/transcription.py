@@ -3365,7 +3365,7 @@ def segment_peaks(
     if (
         recent_note_names
         and primary.candidate.note_name in recent_note_names
-        and _is_residual_decay(_residual_check_audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+        and _is_residual_decay(_residual_check_audio, sample_rate, start_time, primary.candidate.frequency)
         and not _has_mute_dip_reattack(_residual_check_audio, sample_rate, start_time, primary.candidate.frequency)
     ):
         # Forward-scan: the top-ranked candidate is residual, but a recent note
@@ -4185,41 +4185,6 @@ def _note_band_energy(
     return peak_energy_near(frequencies, spectrum, frequency)
 
 
-def _find_amplitude_attack_time(
-    audio: np.ndarray,
-    sample_rate: int,
-    onset_time: float,
-    max_lookahead_seconds: float = 0.08,
-) -> float:
-    """Find the actual attack time (amplitude spike) near a detected onset.
-
-    Onset detectors may fire at the mute-dip (energy drop) rather than at
-    the new attack.  This function scans a short window after the detected
-    onset and returns the time of the steepest amplitude increase, which
-    corresponds to the physical moment the tine is plucked.
-    """
-    onset_sample = int(onset_time * sample_rate)
-    lookahead_samples = int(max_lookahead_seconds * sample_rate)
-    end_sample = min(onset_sample + lookahead_samples, len(audio))
-    segment = np.abs(audio[onset_sample:end_sample])
-
-    hop = max(int(sample_rate * 0.005), 1)      # 5 ms hop
-    window = max(int(sample_rate * 0.010), hop)  # 10 ms window
-
-    best_diff = 0.0
-    best_time = onset_time
-    prev_energy = 0.0
-    for i in range(0, len(segment) - window, hop):
-        energy = float(np.mean(segment[i : i + window] ** 2))
-        diff = energy - prev_energy
-        if diff > best_diff:
-            best_diff = diff
-            best_time = onset_time + (i + window) / sample_rate
-        prev_energy = energy
-
-    return best_time
-
-
 def _find_note_attack_time(
     audio: np.ndarray,
     sample_rate: int,
@@ -4326,7 +4291,6 @@ def _is_residual_decay(
     audio: np.ndarray,
     sample_rate: int,
     start_time: float,
-    end_time: float,
     frequency: float,
 ) -> bool:
     """Check whether a note at *frequency* is residual decay at this onset.

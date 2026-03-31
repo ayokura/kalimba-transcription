@@ -145,7 +145,7 @@ class TestIsResidualDecay:
         freq = 523.251
         audio, onset = _build_residual_signal(freq, duration=0.30, decay_rate=1.5)
         end_time = onset + 0.10
-        assert _is_residual_decay(audio, SR, onset, end_time, freq) is True
+        assert _is_residual_decay(audio, SR, onset, freq) is True
 
     def test_fresh_attack_is_not_residual(self) -> None:
         """A note with strong onset energy should not be classified as residual."""
@@ -155,8 +155,7 @@ class TestIsResidualDecay:
         attack = _sine(freq, 0.15, amplitude=0.9)
         audio = np.concatenate([silence, attack])
         onset_time = 0.08
-        end_time = 0.20
-        assert _is_residual_decay(audio, SR, onset_time, end_time, freq) is False
+        assert _is_residual_decay(audio, SR, onset_time, freq) is False
 
 
 # --- forward-scan integration test via segment_peaks ---
