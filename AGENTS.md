@@ -37,6 +37,13 @@
   - `review_needed`: metadata or interpretation still unclear
   - `reference_only`: retain for reference, not active regression
 
+## Alignment Overrides
+
+- `alignment_overrides.json` は、score_structure が楽譜として正しいが録音上の演奏が楽譜と異なる場合に、特定イベントの「この録音での正解」をパッチするための仕組みである。
+- score_structure.json は楽譜の意図を表すものであり、変更しない。override は録音固有の事実を記録する。
+- `ignoredRanges` と同様、**ユーザーからの明示的な許可または指示がある場合に限り**追加・変更できる。エージェントが独自判断で追加してはならない。
+- 各 override には `reason` フィールドで根拠（耳確認、スペクトル分析等）を記録すること。
+
 ## Spike / Rollback Policy
 
 - Main-agent-only rule: for promising but not-yet-mergeable recognizer changes, use a dedicated `codex/...` branch.
