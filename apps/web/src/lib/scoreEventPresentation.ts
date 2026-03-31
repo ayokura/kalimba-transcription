@@ -3,5 +3,5 @@ export function buildGestureLabel(gesture: string) {
   if (gesture === "slide_chord") return "スライド和音";
   if (gesture === "arpeggio") return "アルペジオ";
   if (gesture === "separated_notes") return "単音列";
-  return "要確認";
+  return gesture;
 }
