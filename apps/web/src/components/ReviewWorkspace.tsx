@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { NotationPanel } from "@/components/NotationPanel";
@@ -9,6 +9,14 @@ import { ReviewFocusPanel } from "@/components/ReviewFocusPanel";
 import { loadReviewAudio } from "@/lib/reviewAudioStore";
 import { isReviewSessionStorageAvailable, loadReviewSession, updateReviewSessionUiState } from "@/lib/reviewSession";
 import { NotationMode } from "@/lib/types";
+
+function buildGestureLabel(gesture: string) {
+  if (gesture === "strict_chord") return "同時和音";
+  if (gesture === "slide_chord") return "スライド和音";
+  if (gesture === "arpeggio") return "アルペジオ";
+  if (gesture === "separated_notes") return "単音列";
+  return "要確認";
+}
 
 export function ReviewWorkspace() {
   const searchParams = useSearchParams();
@@ -28,6 +36,7 @@ export function ReviewWorkspace() {
   const [notationMode, setNotationMode] = useState<NotationMode>(session?.notationMode ?? "vertical");
   const [activeEventId, setActiveEventId] = useState<string | null>(session?.activeEventId ?? null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const eventItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const activeEvent = session?.responseSnapshot.events.find((event) => event.id === activeEventId)
     ?? session?.responseSnapshot.events[0]
     ?? null;
@@ -64,6 +73,17 @@ export function ReviewWorkspace() {
       activeEventId,
     });
   }, [activeEventId, notationMode, session, sessionId, storageAvailable]);
+
+  useEffect(() => {
+    if (!activeEvent?.id) {
+      return;
+    }
+
+    eventItemRefs.current[activeEvent.id]?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
+  }, [activeEvent?.id]);
 
   if (!storageAvailable) {
     return (
@@ -141,15 +161,27 @@ export function ReviewWorkspace() {
             <span>{session.responseSnapshot.events.length} events</span>
           </div>
           <div className="event-list">
-            {session.responseSnapshot.events.map((event) => (
+            {session.responseSnapshot.events.map((event, index) => (
               <button
                 key={event.id}
                 type="button"
                 className={`event-list-item ${event.id === (activeEvent?.id ?? "") ? "selected" : ""}`}
+                aria-current={event.id === (activeEvent?.id ?? "") ? "true" : undefined}
+                ref={(element) => {
+                  eventItemRefs.current[event.id] = element;
+                }}
                 onClick={() => setActiveEventId(event.id)}
               >
-                <strong>{event.id}</strong>
+                <div className="event-list-item-header">
+                  <strong>{event.id}</strong>
+                  <span className="event-list-index">#{index + 1}</span>
+                </div>
                 <span>{event.notes.map((note) => note.labelDoReMi).join(" / ")}</span>
+                <div className="event-list-meta">
+                  <span>{event.startBeat}拍</span>
+                  <span>{event.durationBeat}拍</span>
+                  <span>{buildGestureLabel(event.gesture)}</span>
+                </div>
               </button>
             ))}
           </div>

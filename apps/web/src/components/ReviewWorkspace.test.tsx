@@ -129,6 +129,11 @@ function buildSession(): TranscriptionReviewSession {
 
 describe("ReviewWorkspace", () => {
   beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      value: vi.fn(),
+      configurable: true,
+      writable: true,
+    });
     mocks.useSearchParams.mockReturnValue(new URLSearchParams("session=review-session-1"));
     mocks.isReviewSessionStorageAvailable.mockReturnValue(true);
     mocks.loadReviewSession.mockReturnValue(buildSession());
@@ -171,6 +176,7 @@ describe("ReviewWorkspace", () => {
     expect(screen.getByText("2 / 3")).toBeTruthy();
     expect(screen.getAllByText("evt-2").length).toBeGreaterThan(0);
     expect(screen.getAllByText("ミ").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("同時和音").length).toBeGreaterThan(0);
     expect(screen.getByText("この review session には audio が残っていません。same-tab の解析直後に `/review` を開き直してください。")).toBeTruthy();
     expect(mocks.updateReviewSessionUiState).toHaveBeenCalledWith("review-session-1", {
       notationMode: "vertical",
@@ -189,5 +195,14 @@ describe("ReviewWorkspace", () => {
       notationMode: "western",
       activeEventId: "evt-1",
     });
+  });
+
+  it("marks the selected event in the sidebar and keeps event metadata visible", () => {
+    render(<ReviewWorkspace />);
+
+    const selectedEvent = screen.getByRole("button", { name: /evt-1/i });
+    expect(selectedEvent.getAttribute("aria-current")).toBe("true");
+    expect(screen.getAllByText("#1").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1拍").length).toBeGreaterThan(0);
   });
 });
