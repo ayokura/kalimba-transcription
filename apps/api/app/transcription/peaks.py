@@ -1330,6 +1330,84 @@ def segment_peaks(
                 if len(selected) >= MAX_POLYPHONY:
                     break
 
+        # --- Iterative harmonic suppression: second pass for tertiary ---
+        # After the first pass selects primary+secondary on the primary-only
+        # residual, suppress ALL accepted notes' harmonics and re-rank.
+        # Candidates that the first pass rejected (harmonic-related, inflated
+        # fundamental-ratio) get a fresh evaluation on the cleaner residual.
+        # Each round accepts at most one candidate, then re-suppresses and
+        # re-ranks before the next round (true iterative suppression).
+        while (
+            USE_ITERATIVE_HARMONIC_SUPPRESSION
+            and len(selected) >= 2
+            and len(selected) < MAX_POLYPHONY
+        ):
+            _iter_residual = spectrum
+            for _sel_note in selected:
+                _iter_residual = suppress_harmonics(_iter_residual, frequencies, _sel_note.frequency)
+            _iter_ranked = rank_tuning_candidates(frequencies, _iter_residual, tuning, debug=debug)
+            _already_selected = {n.note_name for n in selected}
+            _iter_round_accepted = False
+            for _iter_hyp in _iter_ranked[:8]:
+                if _iter_hyp.candidate.note_name in _already_selected:
+                    continue
+                # Only consider octave-related candidates (the specific
+                # pattern where harmonic-related binary check over-rejects).
+                _iter_is_octave = any(
+                    harmonic_relation_multiple(_iter_hyp.candidate, existing) == 2.0
+                    for existing in selected
+                )
+                if not _iter_is_octave:
+                    continue
+                _iter_reasons: list[str] = []
+                _iter_onset_gain: float | None = None
+                _test_keys = [n.key for n in selected] + [_iter_hyp.candidate.key]
+                if not is_physically_playable_chord(_test_keys):
+                    _iter_reasons.append("iterative-tertiary-physically-impossible")
+                elif (
+                    _iter_hyp.score < primary.score * TERTIARY_MIN_SCORE_RATIO
+                    or _iter_hyp.score < TERTIARY_MIN_SCORE
+                ):
+                    _iter_reasons.append("iterative-tertiary-score-below-threshold")
+                else:
+                    # All candidates reaching here are octave-related
+                    # (non-octave filtered by _iter_is_octave above).
+                    _iter_fr_threshold = ITERATIVE_TERTIARY_OCTAVE_MIN_FUNDAMENTAL_RATIO
+                    if _iter_hyp.fundamental_ratio < _iter_fr_threshold:
+                        _iter_reasons.append("iterative-tertiary-fundamental-ratio-too-low")
+                if not _iter_reasons:
+                    _iter_onset_gain = onset_energy_gain(
+                        audio, sample_rate, start_time, end_time,
+                        _iter_hyp.candidate.frequency,
+                    )
+                    if _iter_onset_gain < TERTIARY_MIN_ONSET_GAIN:
+                        _iter_reasons.append("iterative-tertiary-weak-onset")
+                if not _iter_reasons:
+                    _iter_backward_gain = onset_backward_attack_gain(
+                        audio, sample_rate, start_time,
+                        _iter_hyp.candidate.frequency,
+                    )
+                    if _iter_backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
+                        _iter_reasons.append("iterative-tertiary-weak-backward-attack")
+                _iter_accepted = len(_iter_reasons) == 0
+                secondary_decision_trail.append(
+                    {
+                        "noteName": _iter_hyp.candidate.note_name,
+                        "score": round(_iter_hyp.score, 6),
+                        "fundamentalRatio": round(_iter_hyp.fundamental_ratio, 6),
+                        "onsetGain": None if _iter_onset_gain is None else round(_iter_onset_gain, 6),
+                        "accepted": _iter_accepted,
+                        "reasons": _iter_reasons if _iter_reasons else ["iterative-suppression-tertiary"],
+                        "octaveDyadAllowed": False,
+                    }
+                )
+                if _iter_accepted:
+                    selected.append(_iter_hyp.candidate)
+                    _iter_round_accepted = True
+                    break  # re-suppress and re-rank in next while iteration
+            if not _iter_round_accepted:
+                break  # no more candidates to recover
+
     if (
         len(selected) == 2
         and not promoted_secondary_to_recent_upper_octave

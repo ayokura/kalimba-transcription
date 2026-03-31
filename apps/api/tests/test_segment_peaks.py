@@ -469,3 +469,110 @@ def test_segment_peaks_keeps_high_score_primary_with_low_fundamental_ratio(
     assert primary is not None
     assert primary.candidate.note_name == "D4"
     assert len(candidates) >= 1
+
+
+# --- Iterative harmonic suppression mechanism tests ---
+
+
+def _build_iterative_suppression_fakes():
+    """Build fake functions for iterative suppression tests.
+
+    Scenario: primary=C5, secondary=A4, tertiary candidate=C4 (octave of C5).
+    C4 is rejected in the 1st pass for harmonic-related but should be
+    recovered by the 2nd pass with iterative suppression.
+    """
+    c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511, pitch_class="C", octave=5)
+    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6256, pitch_class="C", octave=4)
+
+    rank_calls = 0
+
+    def fake_rank(frequencies, spectrum, tuning, debug=False):
+        nonlocal rank_calls
+        rank_calls += 1
+        if rank_calls == 1:
+            # Original ranking: C5 dominant
+            return [
+                NoteHypothesis(c5, 800.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(a4, 200.0, 0.0, 0.0, 0.98, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(c4, 150.0, 0.0, 0.0, 0.40, 0.0, 0.0, 0.0, 0.0),
+            ]
+        if rank_calls == 2:
+            # Residual after C5 suppression: A4 dominates, C4 has low FR
+            return [
+                NoteHypothesis(a4, 180.0, 0.0, 0.0, 0.98, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(c4, 120.0, 0.0, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0),
+            ]
+        # Iterative residual (C5+A4 suppressed): C4 fundamental stands out
+        return [
+            NoteHypothesis(c4, 110.0, 0.0, 0.0, 0.80, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    def fake_onset_gain(_audio, _sr, _start, _end, freq):
+        return 5.0  # all notes have genuine onset
+
+    def fake_backward_gain(_audio, _sr, _start, freq):
+        return 50.0  # all notes are fresh attacks
+
+    return c4, a4, c5, fake_rank, fake_onset_gain, fake_backward_gain
+
+
+def test_iterative_suppression_recovers_octave_tertiary(monkeypatch: pytest.MonkeyPatch) -> None:
+    """2nd pass recovers C4 in C5+A4+C4 chord (C4 is octave of C5)."""
+    import app.transcription as transcription
+
+    c4, a4, c5, fake_rank, fake_onset, fake_backward = _build_iterative_suppression_fakes()
+    tuning = get_default_tunings()[0]
+
+    monkeypatch.setattr(transcription.peaks, "USE_ITERATIVE_HARMONIC_SUPPRESSION", True)
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _: s)
+    monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
+    monkeypatch.setattr(transcription.peaks, "onset_backward_attack_gain", fake_backward)
+
+    candidates, debug, primary = segment_peaks(
+        synthesize_note(523.2511, duration=0.4), 44100, 0.0, 0.4, tuning, debug=True,
+    )
+
+    note_names = {c.note_name for c in candidates}
+    assert "C5" in note_names, f"expected C5 in {note_names}"
+    assert "A4" in note_names, f"expected A4 in {note_names}"
+    assert "C4" in note_names, f"expected C4 in {note_names} (iterative suppression recovery)"
+
+    trail = debug["secondaryDecisionTrail"]
+    iter_accepted = [
+        e for e in trail
+        if e["accepted"] and "iterative-suppression-tertiary" in e.get("reasons", [])
+    ]
+    assert len(iter_accepted) == 1
+    assert iter_accepted[0]["noteName"] == "C4"
+
+
+def test_iterative_suppression_ablation_flag_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """With USE_ITERATIVE_HARMONIC_SUPPRESSION=False, 2nd pass does not run."""
+    import app.transcription as transcription
+
+    c4, a4, c5, fake_rank, fake_onset, fake_backward = _build_iterative_suppression_fakes()
+    tuning = get_default_tunings()[0]
+
+    monkeypatch.setattr(transcription.peaks, "USE_ITERATIVE_HARMONIC_SUPPRESSION", False)
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _: s)
+    monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
+    monkeypatch.setattr(transcription.peaks, "onset_backward_attack_gain", fake_backward)
+
+    candidates, debug, primary = segment_peaks(
+        synthesize_note(523.2511, duration=0.4), 44100, 0.0, 0.4, tuning, debug=True,
+    )
+
+    note_names = {c.note_name for c in candidates}
+    assert "C5" in note_names
+    assert "A4" in note_names
+    assert "C4" not in note_names, "C4 should NOT be recovered with flag off"
+
+    trail = debug["secondaryDecisionTrail"]
+    iter_entries = [
+        e for e in trail
+        if any("iterative" in r for r in e.get("reasons", []))
+    ]
+    assert len(iter_entries) == 0, "no iterative trail entries when flag is off"

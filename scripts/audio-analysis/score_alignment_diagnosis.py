@@ -206,6 +206,14 @@ def main():
     score_data = json.loads(score_path.read_text())
     lines = score_data["lines"]
 
+    # Load alignment overrides (patches for events where recording differs from score)
+    overrides_path = fixture_dir / "alignment_overrides.json"
+    event_overrides: dict[int, set[str]] = {}
+    if overrides_path.exists():
+        overrides_data = json.loads(overrides_path.read_text())
+        for ov in overrides_data.get("overrides", []):
+            event_overrides[ov["eventIndex"]] = set(ov["expectedNotes"])
+
     orig_to_eval = build_time_converter(expected)
 
     # Classify segments by line time boundaries
@@ -240,6 +248,9 @@ def main():
         expected_events = parse_content(line["content"])
         for i, evt in enumerate(expected_events):
             evt["num"] = line["eventRange"][0] + i
+            if evt["num"] in event_overrides:
+                evt["notes"] = event_overrides[evt["num"]]
+                evt["overridden"] = True
 
         detected = seg_by_line.get(line_id, [])
         results, unmatched = match_line(expected_events, detected)
@@ -271,7 +282,11 @@ def main():
 
             if exp_notes == det_notes:
                 if args.verbose:
-                    print(f"  ✓ E{exp['num']:3d} {exp['content']}")
+                    if exp.get("overridden"):
+                        ov_notes = "+".join(sorted(exp_notes))
+                        print(f"  ✓ E{exp['num']:3d} {exp['content']:30s} (override: {ov_notes})")
+                    else:
+                        print(f"  ✓ E{exp['num']:3d} {exp['content']}")
                 continue
 
             missing = exp_notes - det_notes
