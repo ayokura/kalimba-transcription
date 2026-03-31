@@ -3357,7 +3357,30 @@ def segment_peaks(
         and primary.candidate.note_name in recent_note_names
         and _is_residual_decay(raw_audio if raw_audio is not None else audio, sample_rate, start_time, end_time, primary.candidate.frequency)
     ):
-        return [], None, None
+        # Forward-scan: the top-ranked candidate is residual, but a recent note
+        # may show a genuine re-attack (mute-dip).  The re-attack note can rank
+        # very low in the FFT because the mute period dilutes its spectral
+        # energy — so we check all recent notes by frequency-band energy
+        # rather than relying on FFT rank.
+        _residual_audio = raw_audio if raw_audio is not None else audio
+        # Build {note_name: NoteHypothesis} lookup from ranked for quick access.
+        _ranked_by_name: dict[str, NoteHypothesis] = {}
+        for h in ranked:
+            if h.candidate.note_name not in _ranked_by_name:
+                _ranked_by_name[h.candidate.note_name] = h
+        alternative_primary = None
+        for note_name in recent_note_names:
+            if note_name == primary.candidate.note_name:
+                continue  # already rejected as residual
+            hyp = _ranked_by_name.get(note_name)
+            if hyp is None:
+                continue  # note not present in spectrum at all
+            if _has_mute_dip_reattack(_residual_audio, sample_rate, start_time, hyp.candidate.frequency):
+                if alternative_primary is None or hyp.score > alternative_primary.score:
+                    alternative_primary = hyp
+        if alternative_primary is None:
+            return [], None, None
+        primary = alternative_primary
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     promoted_secondary_to_recent_upper_octave = False
@@ -4211,6 +4234,63 @@ def _find_note_attack_time(
         t += hop_seconds
 
     return best_time
+
+
+MUTE_DIP_REATTACK_MIN_PRE_ENERGY = 3.0
+MUTE_DIP_REATTACK_MIN_POST_ENERGY = 3.0
+MUTE_DIP_REATTACK_MAX_DIP_RATIO = 0.1
+
+
+def _has_mute_dip_reattack(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    frequency: float,
+) -> bool:
+    """Check if a recently-played note shows a mute-dip re-attack pattern.
+
+    On a kalimba, replucking a ringing tine requires touching it first,
+    which causes a characteristic energy profile in the note's frequency band:
+        high (ringing) → low (finger mute) → high (re-attack)
+
+    Unlike ``_is_residual_decay`` (which compares pre vs post energy), this
+    function explicitly looks for the energy *dip* near the onset time.
+    """
+    # Pre-onset: the note must have been ringing before the onset.
+    pre_time = onset_time - 0.04
+    if pre_time < 0:
+        return False
+    pre_energy = _note_band_energy(audio, sample_rate, pre_time, frequency,
+                                   window_seconds=0.02)
+    if pre_energy < MUTE_DIP_REATTACK_MIN_PRE_ENERGY:
+        return False  # Note wasn't ringing; can't be a re-attack.
+
+    # Scan for minimum energy around the onset (the mute dip).
+    # The dip sits between pre-onset and the new attack, typically ±30ms of
+    # the detected onset.
+    min_energy = float("inf")
+    scan_start = max(onset_time - 0.01, 0.0)
+    scan_end = min(onset_time + 0.05, len(audio) / sample_rate - 0.015)
+    t = scan_start
+    while t < scan_end:
+        energy = _note_band_energy(audio, sample_rate, t, frequency,
+                                   window_seconds=0.015)
+        if energy < min_energy:
+            min_energy = energy
+        t += 0.005
+
+    # Post-attack: find the per-note attack time and measure energy after.
+    attack_time = _find_note_attack_time(audio, sample_rate, onset_time, frequency)
+    post_time = attack_time + 0.02
+    if post_time > len(audio) / sample_rate - 0.02:
+        return False
+    post_energy = _note_band_energy(audio, sample_rate, post_time, frequency,
+                                    window_seconds=0.02)
+    if post_energy < MUTE_DIP_REATTACK_MIN_POST_ENERGY:
+        return False  # No meaningful re-attack energy.
+
+    dip_ratio = (min_energy + 1e-6) / (pre_energy + 1e-6)
+    return dip_ratio < MUTE_DIP_REATTACK_MAX_DIP_RATIO
 
 
 def _is_residual_decay(
