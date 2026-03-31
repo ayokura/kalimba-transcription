@@ -873,6 +873,7 @@ CANDIDATE_PROMOTION_MIN_CANDIDATES = 1
 CANDIDATE_PROMOTION_MIN_EDGE_DISTANCE = 0.3
 CANDIDATE_PROMOTION_MIN_SEGMENT_DURATION = 0.08
 CANDIDATE_PROMOTION_SEGMENT_DURATION = 0.32
+CANDIDATE_PROMOTION_MAX_SEGMENT_DURATION = 0.8
 CANDIDATE_PROMOTION_CLUSTER_MAX_INTERVAL = 0.1
 
 
@@ -908,7 +909,7 @@ def _promote_gap_candidates_by_structure(
     segments: list[tuple[float, float]] = []
     for i, onset_time in enumerate(eligible):
         if i + 1 < len(eligible):
-            end_time = eligible[i + 1]
+            end_time = min(eligible[i + 1], onset_time + CANDIDATE_PROMOTION_MAX_SEGMENT_DURATION)
         else:
             end_time = min(onset_time + CANDIDATE_PROMOTION_SEGMENT_DURATION, gap_end - 0.08)
         if end_time - onset_time >= CANDIDATE_PROMOTION_MIN_SEGMENT_DURATION:
