@@ -51,6 +51,7 @@ def main():
         start_t = seg.get("startTime", 0)
         selected = seg.get("selectedNotes", [])
         primary = selected[0] if selected else "?"
+        source = seg.get("segmentSource", [])
 
         for entry in trail:
             if not entry.get("accepted", False):
@@ -70,6 +71,7 @@ def main():
                     "onsetGain": og,
                     "scoreRatio": score / max(seg.get("secondaryDecisionTrail", [{}])[0].get("score", 1) if trail else 1, 0.001),
                     "primaryScore": next((c.get("score", 0) for c in seg.get("rankedCandidates", []) if c.get("noteName") == primary), 0),
+                    "source": source,
                 })
 
     print(f"\n=== Rejection Reason Summary ===")
@@ -95,8 +97,9 @@ def main():
         print(f"\n=== {' + '.join(key)} ({len(details)} cases) ===")
         for d in details[:10]:
             og_str = f", onsetGain={d['onsetGain']:.1f}" if d['onsetGain'] is not None else ""
+            src_str = f" [{','.join(d['source'])}]" if d.get('source') else ""
             print(f"  @{d['time']:.1f}s: primary={d['primary']}, rejected={d['rejected']}, "
-                  f"score={d['score']:.0f}, FR={d['fundamentalRatio']:.3f}{og_str}")
+                  f"score={d['score']:.0f}, FR={d['fundamentalRatio']:.3f}{og_str}{src_str}")
 
     # Show all segments where we got only 1 note but might expect more
     print(f"\n=== Single-note segments with strong rejected candidates ===")
@@ -121,9 +124,11 @@ def main():
                 reasons = entry.get("reasons", [])
                 og = entry.get("onsetGain")
                 og_str = f", onsetGain={og:.1f}" if og is not None else ""
+                source = seg.get("segmentSource", [])
+                src_str = f" [{','.join(source)}]" if source else ""
                 print(f"  @{start_t:.1f}s: primary={selected[0]}(score={primary_score:.0f}), "
                       f"rejected={entry['noteName']}(score={score:.0f}, FR={fr:.3f}{og_str}), "
-                      f"reasons={reasons}")
+                      f"reasons={reasons}{src_str}")
 
 
 if __name__ == "__main__":

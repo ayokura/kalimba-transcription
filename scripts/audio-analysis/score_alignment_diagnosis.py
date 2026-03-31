@@ -187,7 +187,9 @@ def main():
     for name, start, end in line_bounds:
         seg_by_line[name] = [
             {"notes": set(s.get("selectedNotes", [])), "time": s["startTime"],
-             "trail": s.get("secondaryDecisionTrail", []), "duration": s.get("durationSec", 0)}
+             "trail": s.get("secondaryDecisionTrail", []), "duration": s.get("durationSec", 0),
+             "source": s.get("segmentSource", []), "mergeReason": s.get("mergeReason", ""),
+             "mergedFrom": s.get("mergedFrom")}
             for s in segments if start <= s["startTime"] < end
         ]
 
@@ -260,13 +262,16 @@ def main():
             else:
                 sym = "✗"
 
-            print(f"  {sym} E{exp['num']:3d} {exp['content']:30s} → {'+'.join(sorted(det_notes)):15s}{miss_str}{extra_str}{trail_str}")
+            src_str = f" [{','.join(seg['source'])}]" if seg.get('source') else ""
+            print(f"  {sym} E{exp['num']:3d} {exp['content']:30s} → {'+'.join(sorted(det_notes)):15s}{miss_str}{extra_str}{trail_str}{src_str}")
 
         if unmatched:
             print(f"  +{len(unmatched)} extra segments:")
             for u in unmatched:
                 notes_str = '+'.join(sorted(u['notes'])) if u['notes'] else '(empty)'
-                print(f"    t={u['time']:.3f}s {notes_str}")
+                src_str = f" [{','.join(u['source'])}]" if u.get('source') else ""
+                merge_str = f" ({u['mergeReason']})" if u.get('mergeReason') else ""
+                print(f"    t={u['time']:.3f}s {notes_str}{src_str}{merge_str}")
 
     print(f"\n{'='*60}")
     print(f"SUMMARY: {total_events} expected events, {len(segments)} segments")
