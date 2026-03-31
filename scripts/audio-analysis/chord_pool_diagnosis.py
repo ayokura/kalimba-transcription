@@ -58,6 +58,7 @@ FORMULA_NAMES = (
     "sum_pairpen",
     "support_pairpen",
     "support_mean_pairpen",
+    "support_mean_sizepen_pairpen",
     "support_balanced_pairpen",
     "support_density_pairpen",
     "support_diminishing_pairpen",
@@ -139,6 +140,12 @@ def score_support_mean_pairpen(combo) -> float:
     return (sum(supports) / len(supports)) - pair_penalty(combo)
 
 
+def score_support_mean_sizepen_pairpen(combo) -> float:
+    supports = combo_supports(combo)
+    # Penalize unrestricted bundle growth while preserving the mean-based shape.
+    return (sum(supports) / len(supports)) - pair_penalty(combo) - (20.0 * (len(supports) - 2))
+
+
 def score_support_balanced_pairpen(combo) -> float:
     supports = combo_supports(combo)
     return (
@@ -185,6 +192,7 @@ SCORERS = {
     "sum_pairpen": score_sum_pairpen,
     "support_pairpen": score_support_pairpen,
     "support_mean_pairpen": score_support_mean_pairpen,
+    "support_mean_sizepen_pairpen": score_support_mean_sizepen_pairpen,
     "support_balanced_pairpen": score_support_balanced_pairpen,
     "support_density_pairpen": score_support_density_pairpen,
     "support_diminishing_pairpen": score_support_diminishing_pairpen,
