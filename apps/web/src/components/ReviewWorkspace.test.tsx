@@ -205,4 +205,29 @@ describe("ReviewWorkspace", () => {
     expect(screen.getAllByText("#1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("1拍").length).toBeGreaterThan(0);
   });
+
+  it("supports keyboard navigation in the event list", async () => {
+    const user = userEvent.setup();
+
+    render(<ReviewWorkspace />);
+
+    const firstEvent = screen.getByRole("button", { name: /evt-1/i });
+    firstEvent.focus();
+
+    await user.keyboard("{ArrowDown}");
+
+    expect(screen.getByText("2 / 3")).toBeTruthy();
+    expect(mocks.updateReviewSessionUiState).toHaveBeenLastCalledWith("review-session-1", {
+      notationMode: "vertical",
+      activeEventId: "evt-2",
+    });
+
+    await user.keyboard("{End}");
+
+    expect(screen.getByText("3 / 3")).toBeTruthy();
+    expect(mocks.updateReviewSessionUiState).toHaveBeenLastCalledWith("review-session-1", {
+      notationMode: "vertical",
+      activeEventId: "evt-3",
+    });
+  });
 });
