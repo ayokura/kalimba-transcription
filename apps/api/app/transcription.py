@@ -3459,6 +3459,7 @@ def segment_peaks(
                 reasons.append("harmonic-related-to-selected")
             if recent_note_names and hypothesis.candidate.note_name in recent_note_names:
                 onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                _secondary_mute_dip_audio = raw_audio if raw_audio is not None else audio
                 if hypothesis.candidate.frequency < primary.candidate.frequency:
                     if (
                         onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
@@ -3470,7 +3471,8 @@ def segment_peaks(
                             and onset_gain < ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN
                         )
                     ):
-                        reasons.append("recent-carryover-candidate")
+                        if not _has_mute_dip_reattack(_secondary_mute_dip_audio, sample_rate, start_time, hypothesis.candidate.frequency):
+                            reasons.append("recent-carryover-candidate")
                 else:
                     if primary_onset_gain is None:
                         primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
@@ -3478,6 +3480,7 @@ def segment_peaks(
                         primary_onset_gain >= RECENT_UPPER_SECONDARY_PRIMARY_ONSET_GAIN
                         and segment_duration >= RECENT_UPPER_SECONDARY_MIN_DURATION
                         and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
+                        and not _has_mute_dip_reattack(_secondary_mute_dip_audio, sample_rate, start_time, hypothesis.candidate.frequency)
                     ):
                         reasons.append("recent-carryover-candidate")
             if (
@@ -4239,6 +4242,7 @@ def _find_note_attack_time(
 MUTE_DIP_REATTACK_MIN_PRE_ENERGY = 3.0
 MUTE_DIP_REATTACK_MIN_POST_ENERGY = 3.0
 MUTE_DIP_REATTACK_MAX_DIP_RATIO = 0.1
+MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO = 0.9
 
 
 def _has_mute_dip_reattack(
@@ -4290,7 +4294,15 @@ def _has_mute_dip_reattack(
         return False  # No meaningful re-attack energy.
 
     dip_ratio = (min_energy + 1e-6) / (pre_energy + 1e-6)
-    return dip_ratio < MUTE_DIP_REATTACK_MAX_DIP_RATIO
+    if dip_ratio >= MUTE_DIP_REATTACK_MAX_DIP_RATIO:
+        return False
+
+    # Recovery check: a genuine re-attack restores the note's energy to near
+    # its pre-onset level.  Sympathetic interference from plucking a neighboring
+    # tine can cause a brief energy dip, but the note continues to decay
+    # afterwards (recovery < 1.0).
+    recovery_ratio = post_energy / (pre_energy + 1e-6)
+    return recovery_ratio >= MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO
 
 
 def _is_residual_decay(
