@@ -1342,7 +1342,7 @@ def segment_peaks(
             and len(selected) >= 2
             and len(selected) < MAX_POLYPHONY
         ):
-            _iter_residual = spectrum.copy()
+            _iter_residual = spectrum
             for _sel_note in selected:
                 _iter_residual = suppress_harmonics(_iter_residual, frequencies, _sel_note.frequency)
             _iter_ranked = rank_tuning_candidates(frequencies, _iter_residual, tuning, debug=debug)
@@ -1370,19 +1370,11 @@ def segment_peaks(
                 ):
                     _iter_reasons.append("iterative-tertiary-score-below-threshold")
                 else:
-                    _iter_fr_threshold = TERTIARY_MIN_FUNDAMENTAL_RATIO
-                    if any(
-                        harmonic_relation_multiple(_iter_hyp.candidate, existing) == 2.0
-                        for existing in selected
-                    ):
-                        _iter_fr_threshold = ITERATIVE_TERTIARY_OCTAVE_MIN_FUNDAMENTAL_RATIO
+                    # All candidates reaching here are octave-related
+                    # (non-octave filtered by _iter_is_octave above).
+                    _iter_fr_threshold = ITERATIVE_TERTIARY_OCTAVE_MIN_FUNDAMENTAL_RATIO
                     if _iter_hyp.fundamental_ratio < _iter_fr_threshold:
                         _iter_reasons.append("iterative-tertiary-fundamental-ratio-too-low")
-                if any(
-                    _iter_hyp.candidate.note_name == existing.note_name
-                    for existing in selected
-                ):
-                    _iter_reasons.append("iterative-tertiary-duplicate-note")
                 if not _iter_reasons:
                     _iter_onset_gain = onset_energy_gain(
                         audio, sample_rate, start_time, end_time,

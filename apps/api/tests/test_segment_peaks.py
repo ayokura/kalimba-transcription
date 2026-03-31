@@ -524,6 +524,7 @@ def test_iterative_suppression_recovers_octave_tertiary(monkeypatch: pytest.Monk
     c4, a4, c5, fake_rank, fake_onset, fake_backward = _build_iterative_suppression_fakes()
     tuning = get_default_tunings()[0]
 
+    monkeypatch.setattr(transcription.peaks, "USE_ITERATIVE_HARMONIC_SUPPRESSION", True)
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
     monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
