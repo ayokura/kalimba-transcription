@@ -1194,7 +1194,7 @@ def collect_attack_validated_gap_segments(
         valid_onsets = candidates.inter_ranges[index] if index < len(candidates.inter_ranges) else []
         for onset_index, onset_time in enumerate(valid_onsets):
             if onset_index + 1 < len(valid_onsets):
-                end_time = valid_onsets[onset_index + 1]
+                end_time = min(valid_onsets[onset_index + 1], onset_time + CANDIDATE_PROMOTION_MAX_SEGMENT_DURATION)
             else:
                 end_time = min(onset_time + ATTACK_VALIDATED_GAP_SEGMENT_DURATION, next_start)
             if end_time - onset_time >= 0.08:
@@ -1205,7 +1205,7 @@ def collect_attack_validated_gap_segments(
         first_start = active_ranges[0][0]
         for onset_index, onset_time in enumerate(candidates.leading):
             if onset_index + 1 < len(candidates.leading):
-                end_time = candidates.leading[onset_index + 1]
+                end_time = min(candidates.leading[onset_index + 1], onset_time + CANDIDATE_PROMOTION_MAX_SEGMENT_DURATION)
             else:
                 end_time = min(onset_time + ATTACK_VALIDATED_GAP_SEGMENT_DURATION, first_start)
             if end_time - onset_time >= 0.08:
@@ -1215,7 +1215,7 @@ def collect_attack_validated_gap_segments(
     if active_ranges:
         for onset_index, onset_time in enumerate(candidates.trailing):
             if onset_index + 1 < len(candidates.trailing):
-                end_time = candidates.trailing[onset_index + 1]
+                end_time = min(candidates.trailing[onset_index + 1], onset_time + CANDIDATE_PROMOTION_MAX_SEGMENT_DURATION)
             else:
                 end_time = min(onset_time + ATTACK_VALIDATED_GAP_SEGMENT_DURATION, audio_duration)
             if end_time - onset_time >= 0.08:
