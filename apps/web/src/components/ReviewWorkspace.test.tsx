@@ -46,7 +46,30 @@ function buildSession(): TranscriptionReviewSession {
     instrumentProfile: null,
     recordingProfile: null,
     requestSnapshot: {
+      capturedAt: "2026-03-31T00:00:00.000Z",
+      scenario: "default",
+      expectedNote: null,
+      expectedPerformance: null,
+      memo: "",
+      captureIntent: null,
       sourceProfile: "acoustic_real",
+      tuning: {
+        id: "kalimba-17-c",
+        name: "17 Key C Major",
+        keyCount: 17,
+        notes: [
+          { key: 1, noteName: "C4", frequency: 261.63 },
+          { key: 2, noteName: "E4", frequency: 329.63 },
+          { key: 3, noteName: "G4", frequency: 392 },
+        ],
+      },
+      audio: {
+        sampleRate: 44100,
+        channels: 1,
+        durationSec: 4.2,
+        mimeType: "audio/wav",
+        sizeBytes: 2048,
+      },
     },
     responseSnapshot: {
       instrumentTuning: {
