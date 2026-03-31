@@ -1363,7 +1363,7 @@ def segment_peaks(
                     _iter_reasons.append("iterative-tertiary-physically-impossible")
                 elif (
                     _iter_hyp.score < primary.score * TERTIARY_MIN_SCORE_RATIO
-                    and _iter_hyp.score < ITERATIVE_TERTIARY_MIN_ABSOLUTE_SCORE
+                    or _iter_hyp.score < TERTIARY_MIN_SCORE
                 ):
                     _iter_reasons.append("iterative-tertiary-score-below-threshold")
                 else:
