@@ -189,8 +189,9 @@ def main():
             {"notes": set(s.get("selectedNotes", [])), "time": s["startTime"],
              "trail": s.get("secondaryDecisionTrail", []), "duration": s.get("durationSec", 0),
              "source": s.get("segmentSource", []), "mergeReason": s.get("mergeReason", ""),
-             "mergedFrom": s.get("mergedFrom")}
-            for s in segments if start <= s["startTime"] < end
+             "mergedFrom": s.get("mergedFrom"),
+             "droppedBy": s.get("droppedBy", "")}
+            for s in segments if start <= s["startTime"] < end and s.get("selectedNotes")
         ]
 
     total_exact = 0
@@ -273,8 +274,10 @@ def main():
                 merge_str = f" ({u['mergeReason']})" if u.get('mergeReason') else ""
                 print(f"    t={u['time']:.3f}s {notes_str}{src_str}{merge_str}")
 
+    active_segment_count = sum(1 for s in segments if s.get("selectedNotes"))
+    dropped_segment_count = len(segments) - active_segment_count
     print(f"\n{'='*60}")
-    print(f"SUMMARY: {total_events} expected events, {len(segments)} segments")
+    print(f"SUMMARY: {total_events} expected events, {active_segment_count} active segments ({dropped_segment_count} dropped)")
     print(f"  Exact match:   {total_exact:3d}/{total_events} ({100*total_exact/total_events:.0f}%)")
     print(f"  Subset match:  {total_subset:3d}/{total_events} ({100*total_subset/total_events:.0f}%)")
     print(f"  Partial match: {total_partial:3d}/{total_events} ({100*total_partial/total_events:.0f}%)")

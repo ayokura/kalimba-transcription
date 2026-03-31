@@ -476,6 +476,8 @@ class Segment:
     sources: frozenset[str] = dataclass_field(default_factory=frozenset)
     merged_from: tuple[Segment, ...] = ()
     merge_reason: str = ""
+    end_estimated: bool = False
+    trimmed_from: Segment | None = None
 
     def __iter__(self):
         yield self.start_time
@@ -516,6 +518,7 @@ def _merge_segments(a: Segment, b: Segment, start: float, end: float, reason: st
         sources=a.sources | b.sources,
         merged_from=_segment_leaves(a) + _segment_leaves(b),
         merge_reason=reason,
+        end_estimated=a.end_estimated or b.end_estimated,
     )
 
 
@@ -549,6 +552,12 @@ def dedupe_cross_collector_segments(segments: list[Segment]) -> list[Segment]:
     whether the overlap is at least CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO of
     the shorter segment's duration.
 
+    When an ``end_estimated`` segment overlaps with a non-estimated segment,
+    the estimated segment yields to the more precise one instead of absorbing
+    it.  This prevents coarse segments (e.g. attackValidatedGap spanning
+    onset-to-next-onset) from swallowing fine-grained splits produced by
+    other collectors.
+
     Input must be sorted by start time (guaranteed by dedupe_nested_segments).
     """
     if len(segments) < 2:
@@ -564,7 +573,23 @@ def dedupe_cross_collector_segments(segments: list[Segment]) -> list[Segment]:
                 seg.end_time - seg.start_time,
             )
             if shorter_duration > 0 and overlap >= shorter_duration * CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO:
-                deduped[-1] = _merge_segments(prev, seg, min(prev.start_time, seg.start_time), max(prev.end_time, seg.end_time), reason="cross_collector_overlap")
+                # When one side has an estimated end and the other doesn't,
+                # trim the estimated segment's end to the non-estimated
+                # segment's start, preserving the onset portion.
+                if prev.end_estimated and not seg.end_estimated:
+                    trimmed_end = seg.start_time
+                    if trimmed_end - prev.start_time >= 0.08:
+                        deduped[-1] = dataclass_replace(prev, end_time=trimmed_end, trimmed_from=prev)
+                        deduped.append(seg)
+                    else:
+                        deduped[-1] = seg  # too short after trim, just replace
+                elif seg.end_estimated and not prev.end_estimated:
+                    trimmed_start_for_seg = prev.end_time
+                    if seg.end_time - trimmed_start_for_seg >= 0.08:
+                        deduped.append(dataclass_replace(seg, start_time=trimmed_start_for_seg, trimmed_from=seg))
+                    # else: remaining portion too short, drop seg
+                else:
+                    deduped[-1] = _merge_segments(prev, seg, min(prev.start_time, seg.start_time), max(prev.end_time, seg.end_time), reason="cross_collector_overlap")
                 continue
         deduped.append(seg)
     return deduped
@@ -1194,7 +1219,7 @@ def collect_attack_validated_gap_segments(
         valid_onsets = candidates.inter_ranges[index] if index < len(candidates.inter_ranges) else []
         for onset_index, onset_time in enumerate(valid_onsets):
             if onset_index + 1 < len(valid_onsets):
-                end_time = valid_onsets[onset_index + 1]
+                end_time = min(valid_onsets[onset_index + 1], onset_time + CANDIDATE_PROMOTION_MAX_SEGMENT_DURATION)
             else:
                 end_time = min(onset_time + ATTACK_VALIDATED_GAP_SEGMENT_DURATION, next_start)
             if end_time - onset_time >= 0.08:
@@ -1205,7 +1230,7 @@ def collect_attack_validated_gap_segments(
         first_start = active_ranges[0][0]
         for onset_index, onset_time in enumerate(candidates.leading):
             if onset_index + 1 < len(candidates.leading):
-                end_time = candidates.leading[onset_index + 1]
+                end_time = min(candidates.leading[onset_index + 1], onset_time + CANDIDATE_PROMOTION_MAX_SEGMENT_DURATION)
             else:
                 end_time = min(onset_time + ATTACK_VALIDATED_GAP_SEGMENT_DURATION, first_start)
             if end_time - onset_time >= 0.08:
@@ -1215,7 +1240,7 @@ def collect_attack_validated_gap_segments(
     if active_ranges:
         for onset_index, onset_time in enumerate(candidates.trailing):
             if onset_index + 1 < len(candidates.trailing):
-                end_time = candidates.trailing[onset_index + 1]
+                end_time = min(candidates.trailing[onset_index + 1], onset_time + CANDIDATE_PROMOTION_MAX_SEGMENT_DURATION)
             else:
                 end_time = min(onset_time + ATTACK_VALIDATED_GAP_SEGMENT_DURATION, audio_duration)
             if end_time - onset_time >= 0.08:
@@ -1750,25 +1775,25 @@ def detect_segments(
                 segments.append(seg)
                 active_range_segments.append((start_time, end_time))
 
-    _collector_sources: list[tuple[list[tuple[float, float]], str]] = [
-        (gap_injected_segments, "gapInjected"),
-        (leading_orphan_segments, "leadingOrphan"),
-        (multi_onset_gap_segments, "multiOnsetGap"),
-        (post_tail_gap_head_segments, "postTailGapHead"),
-        (single_onset_gap_head_segments, "singleOnsetGapHead"),
-        (sparse_gap_tail_segments, "sparseGapTail"),
-        (terminal_orphan_segments, "terminalOrphan"),
-        (close_terminal_orphan_segments, "closeTerminalOrphan"),
-        (delayed_terminal_orphan_segments, "delayedTerminalOrphan"),
-        (terminal_multi_onset_segments, "terminalMultiOnset"),
-        (terminal_two_onset_tail_segments, "terminalTwoOnsetTail"),
-        (attack_validated_gap_segments, "attackValidatedGap"),
+    _collector_sources: list[tuple[list[tuple[float, float]], str, bool]] = [
+        (gap_injected_segments, "gapInjected", False),
+        (leading_orphan_segments, "leadingOrphan", False),
+        (multi_onset_gap_segments, "multiOnsetGap", False),
+        (post_tail_gap_head_segments, "postTailGapHead", True),
+        (single_onset_gap_head_segments, "singleOnsetGapHead", True),
+        (sparse_gap_tail_segments, "sparseGapTail", True),
+        (terminal_orphan_segments, "terminalOrphan", True),
+        (close_terminal_orphan_segments, "closeTerminalOrphan", True),
+        (delayed_terminal_orphan_segments, "delayedTerminalOrphan", True),
+        (terminal_multi_onset_segments, "terminalMultiOnset", False),
+        (terminal_two_onset_tail_segments, "terminalTwoOnsetTail", True),
+        (attack_validated_gap_segments, "attackValidatedGap", True),
     ]
-    for collector_segments, source_name in _collector_sources:
+    for collector_segments, source_name, estimated in _collector_sources:
         source_tag = frozenset({source_name})
         for start_time, end_time in collector_segments:
             if end_time - start_time >= 0.08:
-                segments.append(Segment(start_time, end_time, sources=source_tag))
+                segments.append(Segment(start_time, end_time, sources=source_tag, end_estimated=estimated))
 
     segments = dedupe_nested_segments(segments)
     segments = dedupe_cross_collector_segments(segments)
@@ -6508,6 +6533,14 @@ async def transcribe_audio(
         if debug and candidate_debug:
             candidate_debug.update(segment_contexts.get(segment_key, {}))
             candidate_debug["segmentSource"] = sorted(segment.sources) if segment.sources else ["unknown"]
+            if segment.end_estimated:
+                candidate_debug["endEstimated"] = True
+            if segment.trimmed_from:
+                candidate_debug["trimmedFrom"] = {
+                    "startTime": round(segment.trimmed_from.start_time, 6),
+                    "endTime": round(segment.trimmed_from.end_time, 6),
+                    "sources": sorted(segment.trimmed_from.sources),
+                }
             if segment.merged_from:
                 candidate_debug["mergeReason"] = segment.merge_reason
                 candidate_debug["mergedFrom"] = [
