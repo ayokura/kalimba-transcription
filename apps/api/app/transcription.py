@@ -476,6 +476,7 @@ class Segment:
     sources: frozenset[str] = dataclass_field(default_factory=frozenset)
     merged_from: tuple[Segment, ...] = ()
     merge_reason: str = ""
+    end_estimated: bool = False
 
     def __iter__(self):
         yield self.start_time
@@ -516,6 +517,7 @@ def _merge_segments(a: Segment, b: Segment, start: float, end: float, reason: st
         sources=a.sources | b.sources,
         merged_from=_segment_leaves(a) + _segment_leaves(b),
         merge_reason=reason,
+        end_estimated=a.end_estimated or b.end_estimated,
     )
 
 
@@ -549,6 +551,12 @@ def dedupe_cross_collector_segments(segments: list[Segment]) -> list[Segment]:
     whether the overlap is at least CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO of
     the shorter segment's duration.
 
+    When an ``end_estimated`` segment overlaps with a non-estimated segment,
+    the estimated segment yields to the more precise one instead of absorbing
+    it.  This prevents coarse segments (e.g. attackValidatedGap spanning
+    onset-to-next-onset) from swallowing fine-grained splits produced by
+    other collectors.
+
     Input must be sorted by start time (guaranteed by dedupe_nested_segments).
     """
     if len(segments) < 2:
@@ -564,7 +572,14 @@ def dedupe_cross_collector_segments(segments: list[Segment]) -> list[Segment]:
                 seg.end_time - seg.start_time,
             )
             if shorter_duration > 0 and overlap >= shorter_duration * CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO:
-                deduped[-1] = _merge_segments(prev, seg, min(prev.start_time, seg.start_time), max(prev.end_time, seg.end_time), reason="cross_collector_overlap")
+                # When one side has an estimated end and the other doesn't,
+                # prefer the non-estimated (more precise) segment.
+                if prev.end_estimated and not seg.end_estimated:
+                    deduped[-1] = seg
+                elif seg.end_estimated and not prev.end_estimated:
+                    pass  # keep prev, drop seg
+                else:
+                    deduped[-1] = _merge_segments(prev, seg, min(prev.start_time, seg.start_time), max(prev.end_time, seg.end_time), reason="cross_collector_overlap")
                 continue
         deduped.append(seg)
     return deduped
@@ -1750,25 +1765,25 @@ def detect_segments(
                 segments.append(seg)
                 active_range_segments.append((start_time, end_time))
 
-    _collector_sources: list[tuple[list[tuple[float, float]], str]] = [
-        (gap_injected_segments, "gapInjected"),
-        (leading_orphan_segments, "leadingOrphan"),
-        (multi_onset_gap_segments, "multiOnsetGap"),
-        (post_tail_gap_head_segments, "postTailGapHead"),
-        (single_onset_gap_head_segments, "singleOnsetGapHead"),
-        (sparse_gap_tail_segments, "sparseGapTail"),
-        (terminal_orphan_segments, "terminalOrphan"),
-        (close_terminal_orphan_segments, "closeTerminalOrphan"),
-        (delayed_terminal_orphan_segments, "delayedTerminalOrphan"),
-        (terminal_multi_onset_segments, "terminalMultiOnset"),
-        (terminal_two_onset_tail_segments, "terminalTwoOnsetTail"),
-        (attack_validated_gap_segments, "attackValidatedGap"),
+    _collector_sources: list[tuple[list[tuple[float, float]], str, bool]] = [
+        (gap_injected_segments, "gapInjected", False),
+        (leading_orphan_segments, "leadingOrphan", False),
+        (multi_onset_gap_segments, "multiOnsetGap", False),
+        (post_tail_gap_head_segments, "postTailGapHead", True),
+        (single_onset_gap_head_segments, "singleOnsetGapHead", True),
+        (sparse_gap_tail_segments, "sparseGapTail", True),
+        (terminal_orphan_segments, "terminalOrphan", True),
+        (close_terminal_orphan_segments, "closeTerminalOrphan", True),
+        (delayed_terminal_orphan_segments, "delayedTerminalOrphan", True),
+        (terminal_multi_onset_segments, "terminalMultiOnset", False),
+        (terminal_two_onset_tail_segments, "terminalTwoOnsetTail", True),
+        (attack_validated_gap_segments, "attackValidatedGap", True),
     ]
-    for collector_segments, source_name in _collector_sources:
+    for collector_segments, source_name, estimated in _collector_sources:
         source_tag = frozenset({source_name})
         for start_time, end_time in collector_segments:
             if end_time - start_time >= 0.08:
-                segments.append(Segment(start_time, end_time, sources=source_tag))
+                segments.append(Segment(start_time, end_time, sources=source_tag, end_estimated=estimated))
 
     segments = dedupe_nested_segments(segments)
     segments = dedupe_cross_collector_segments(segments)
@@ -6508,6 +6523,8 @@ async def transcribe_audio(
         if debug and candidate_debug:
             candidate_debug.update(segment_contexts.get(segment_key, {}))
             candidate_debug["segmentSource"] = sorted(segment.sources) if segment.sources else ["unknown"]
+            if segment.end_estimated:
+                candidate_debug["endEstimated"] = True
             if segment.merged_from:
                 candidate_debug["mergeReason"] = segment.merge_reason
                 candidate_debug["mergedFrom"] = [
