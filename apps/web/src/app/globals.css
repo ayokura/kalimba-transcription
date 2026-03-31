@@ -563,6 +563,26 @@ button:disabled {
   gap: 12px;
 }
 
+.review-focus-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.review-focus-detail-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(30, 31, 31, 0.1);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.review-focus-detail-card span,
+.review-focus-detail-card small {
+  color: var(--muted);
+}
+
 .review-context-card {
   display: grid;
   gap: 6px;
