@@ -1408,8 +1408,7 @@ def segment_peaks(
                 )
                 if _iter_accepted:
                     selected.append(_iter_hyp.candidate)
-                    if len(selected) >= MAX_POLYPHONY:
-                        break
+                    break  # one acceptance per 2nd pass to avoid stale residual
 
     if (
         len(selected) == 2
