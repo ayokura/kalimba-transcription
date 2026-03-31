@@ -1335,7 +1335,9 @@ def segment_peaks(
         # residual, suppress ALL accepted notes' harmonics and re-rank.
         # Candidates that the first pass rejected (harmonic-related, inflated
         # fundamental-ratio) get a fresh evaluation on the cleaner residual.
-        if (
+        # Each round accepts at most one candidate, then re-suppresses and
+        # re-ranks before the next round (true iterative suppression).
+        while (
             USE_ITERATIVE_HARMONIC_SUPPRESSION
             and len(selected) >= 2
             and len(selected) < MAX_POLYPHONY
@@ -1345,6 +1347,7 @@ def segment_peaks(
                 _iter_residual = suppress_harmonics(_iter_residual, frequencies, _sel_note.frequency)
             _iter_ranked = rank_tuning_candidates(frequencies, _iter_residual, tuning, debug=debug)
             _already_selected = {n.note_name for n in selected}
+            _iter_round_accepted = False
             for _iter_hyp in _iter_ranked[:8]:
                 if _iter_hyp.candidate.note_name in _already_selected:
                     continue
@@ -1408,7 +1411,10 @@ def segment_peaks(
                 )
                 if _iter_accepted:
                     selected.append(_iter_hyp.candidate)
-                    break  # one acceptance per 2nd pass to avoid stale residual
+                    _iter_round_accepted = True
+                    break  # re-suppress and re-rank in next while iteration
+            if not _iter_round_accepted:
+                break  # no more candidates to recover
 
     if (
         len(selected) == 2
