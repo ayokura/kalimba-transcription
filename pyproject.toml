@@ -20,3 +20,8 @@ dev = [
     "httpx>=0.28.1",
     "pytest>=9.0.2",
 ]
+
+[[tool.uv.index]]
+name = "takumi-guard"
+url = "https://pypi.flatt.tech/simple/"
+default = true
