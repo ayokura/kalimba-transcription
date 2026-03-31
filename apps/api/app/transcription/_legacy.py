@@ -16,6 +16,17 @@ from fastapi import HTTPException, UploadFile
 
 from ..models import InstrumentTuning, NotationViews, ScoreEvent, ScoreNote, TranscriptionResult
 from ..tunings import build_custom_tuning, parse_note_name
+from .audio import cents_distance, normalize_audio, parse_tuning_json, read_audio, snap_frequency_to_tuning
+from .models import (
+    GapAttackCandidates,
+    NoteCandidate,
+    NoteHypothesis,
+    OnsetAttackProfile,
+    OnsetWaveformStats,
+    RawEvent,
+    RepeatedPatternPass,
+    Segment,
+)
 
 FRAME_LENGTH = 2048
 HOP_LENGTH = 256
@@ -321,74 +332,6 @@ PITCH_CLASS_TO_NUMBER = {
     "B": "7",
 }
 
-@dataclass
-class NoteCandidate:
-    key: int
-    note_name: str
-    frequency: float
-    pitch_class: str
-    octave: int
-
-@dataclass
-class RawEvent:
-    start_time: float
-    end_time: float
-    notes: list[NoteCandidate]
-    is_gliss_like: bool
-    primary_note_name: str = ""
-    primary_score: float = 0.0
-
-
-@dataclass(frozen=True, slots=True)
-class RepeatedPatternPass:
-    name: str
-    fn: Callable[[list["RawEvent"]], list["RawEvent"]]
-    merge_after: bool = True
-
-
-@dataclass(slots=True)
-class NoteHypothesis:
-    candidate: NoteCandidate
-    score: float
-    fundamental_energy: float
-    overtone_energy: float
-    fundamental_ratio: float
-    subharmonic_alias_energy: float
-    octave_alias_energy: float
-    octave_alias_ratio: float
-    octave_alias_penalty: float
-    second_harmonic_energy: float = 0.0
-    harmonics: list[dict[str, float]] | None = None
-    subharmonics: list[dict[str, float]] | None = None
-
-def parse_tuning_json(tuning_json: str) -> InstrumentTuning:
-    try:
-        payload: Any = json.loads(tuning_json)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=400, detail="Invalid tuning JSON.") from exc
-
-    if not isinstance(payload, dict):
-        raise HTTPException(status_code=400, detail="Tuning JSON must be an object.")
-
-    notes = payload.get("notes", [])
-    if not isinstance(notes, list) or not notes:
-        raise HTTPException(status_code=400, detail="Tuning must contain at least one note.")
-
-    note_names: list[Any] = []
-    for note in notes:
-        if not isinstance(note, dict):
-            raise HTTPException(status_code=400, detail="Each tuning note must be an object.")
-        if "noteName" not in note:
-            raise HTTPException(status_code=400, detail="Each tuning note must include noteName.")
-        note_names.append(note["noteName"])
-
-    name = payload.get("name", "Custom Tuning")
-    if not isinstance(name, str):
-        raise HTTPException(status_code=400, detail="Tuning name must be a string.")
-
-    return build_custom_tuning(name, note_names)
-
-
 def parse_disabled_repeated_pattern_passes(raw_value: str | None) -> frozenset[str]:
     if raw_value is None or not raw_value.strip():
         return frozenset()
@@ -408,87 +351,6 @@ def parse_disabled_repeated_pattern_passes(raw_value: str | None) -> frozenset[s
     if unknown:
         raise HTTPException(status_code=400, detail=f"Unknown repeated-pattern pass ids: {', '.join(unknown)}")
     return disabled
-
-
-async def read_audio(upload: UploadFile) -> tuple[np.ndarray, int]:
-    if not upload.filename:
-        raise HTTPException(status_code=400, detail="Audio file is required.")
-
-    raw = await upload.read()
-    if not raw:
-        raise HTTPException(status_code=400, detail="Uploaded audio is empty.")
-
-    try:
-        audio, sample_rate = sf.read(io.BytesIO(raw), dtype="float32")
-    except RuntimeError as exc:
-        raise HTTPException(status_code=400, detail="Unsupported audio format. Send WAV audio from the web client.") from exc
-
-    if audio.ndim > 1:
-        audio = audio[:, 0]
-
-    if float(np.max(np.abs(audio))) < 1e-4:
-        raise HTTPException(status_code=422, detail="Audio appears to be silent.")
-
-    return audio.astype(np.float32), sample_rate
-
-def normalize_audio(audio: np.ndarray) -> np.ndarray:
-    centered = audio - np.mean(audio)
-    peak = np.max(np.abs(centered))
-    if peak < 1e-6:
-        return centered
-    return centered / peak
-
-def cents_distance(freq_a: float, freq_b: float) -> float:
-    return abs(1200.0 * math.log2(freq_a / freq_b))
-
-def snap_frequency_to_tuning(freq: float, tuning: InstrumentTuning) -> NoteCandidate | None:
-    best_note = None
-    best_distance = float("inf")
-
-    for note in tuning.notes:
-        distance = cents_distance(freq, note.frequency)
-        if distance < best_distance:
-            best_note = note
-            best_distance = distance
-
-    if best_note is None or best_distance > 80:
-        return None
-
-    pitch_class, octave = parse_note_name(best_note.note_name)
-    return NoteCandidate(
-        key=best_note.key,
-        note_name=best_note.note_name,
-        frequency=best_note.frequency,
-        pitch_class=pitch_class,
-        octave=octave,
-    )
-
-@dataclass(frozen=True)
-class Segment:
-    """A time segment with collector provenance tracking.
-
-    Supports tuple unpacking as ``(start_time, end_time)`` for backward
-    compatibility with code that treats segments as 2-tuples.
-    """
-
-    start_time: float
-    end_time: float
-    sources: frozenset[str] = dataclass_field(default_factory=frozenset)
-    merged_from: tuple[Segment, ...] = ()
-    merge_reason: str = ""
-    end_estimated: bool = False
-    trimmed_from: Segment | None = None
-
-    def __iter__(self):
-        yield self.start_time
-        yield self.end_time
-
-    def __getitem__(self, index: int) -> float:
-        if index == 0:
-            return self.start_time
-        if index == 1:
-            return self.end_time
-        raise IndexError(index)
 
 
 def merge_time_ranges(ranges: list[tuple[float, float]], gap_tolerance: float = 0.06) -> list[tuple[float, float]]:
@@ -732,13 +594,6 @@ def collapse_active_range_head_onsets(
     head_cluster_set = {round(onset_time, 4) for onset_time in head_cluster}
     return [onset_time for onset_time in range_onsets if round(onset_time, 4) not in head_cluster_set]
 
-@dataclass(frozen=True)
-class GapAttackCandidates:
-    inter_ranges: list[list[float]]
-    leading: list[float]
-    trailing: list[float]
-
-
 LEADING_GAP_START_MARGIN = 0.05
 GAP_ONSET_MIN_BROADBAND_GAIN = 0.95
 GAP_ONSET_MAX_KURTOSIS = 2.15
@@ -748,15 +603,6 @@ PRE_PERFORMANCE_GAP_REJECT_MAX_POST_AUTOCORR = 0.45
 PRE_PERFORMANCE_GAP_REJECT_MIN_DIFF_CENTROID = 1000.0
 ONSET_WAVEFORM_STATS_MIN_FFT = 512
 ONSET_WAVEFORM_STATS_MAX_FFT = 4096
-
-
-@dataclass(frozen=True)
-class OnsetWaveformStats:
-    kurtosis: float
-    crest: float
-    post_autocorr_20ms: float
-    diff_centroid: float
-    post_sustain_ratio: float
 
 
 def precompute_onset_waveform_stats(
@@ -2300,15 +2146,6 @@ def _positive_spectral_flux(
         target = target_spectrum
     positive_delta = np.maximum(target - reference, 0.0)
     return float(np.sum(positive_delta) / (np.sum(reference) + 1e-6))
-
-
-@dataclass
-class OnsetAttackProfile:
-    onset_time: float
-    broadband_onset_gain: float
-    high_band_spectral_flux: float
-    broadband_spectral_flux: float
-    is_valid_attack: bool
 
 
 _KURTOSIS_WINDOW_SECONDS = 0.02
@@ -6695,8 +6532,6 @@ async def transcribe_audio(
         warnings=warnings,
         debug=result_debug,
     )
-
-
 
 
 
