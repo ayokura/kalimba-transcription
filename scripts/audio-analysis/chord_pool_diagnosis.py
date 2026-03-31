@@ -53,6 +53,13 @@ from score_alignment_diagnosis import build_time_converter, match_line, parse_co
 
 POOL_LIMITS = (8, 10, 12, 14, 16, 20)
 FORMULA_NAMES = ("sum", "support_alias", "sum_pairpen", "support_pairpen")
+POOL_STRATEGIES = (
+    "raw20",
+    "core12_slots6",
+    "core12_corrob_slots6",
+    "core12_octave_safe_slots6",
+    "per_stage_12_4_4",
+)
 
 
 def load_alignment_overrides(fixture_dir: Path) -> dict[int, set[str]]:
@@ -217,6 +224,147 @@ def best_entries_for_limit(ranked, residual1, residual2, limit: int) -> dict[str
     return best
 
 
+def stage_entries_with_rank(hypotheses, limit: int) -> dict[str, dict]:
+    best: dict[str, dict] = {}
+    for index, hypothesis in enumerate(hypotheses[:limit], start=1):
+        note_name = hypothesis.candidate.note_name
+        current = best.get(note_name)
+        if current is None or hypothesis.score > current["hypothesis"].score:
+            best[note_name] = {"hypothesis": hypothesis, "rank": index}
+    return best
+
+
+def build_stage_views(ranked, residual1, residual2, limit: int = 20) -> dict[str, dict[str, dict]]:
+    return {
+        "initial": stage_entries_with_rank(ranked, limit),
+        "residual1": stage_entries_with_rank(residual1, limit),
+        "residual2": stage_entries_with_rank(residual2, limit),
+    }
+
+
+def support_score(hypothesis) -> float:
+    return (
+        (hypothesis.fundamental_energy + 0.5 * hypothesis.overtone_energy)
+        * (0.25 + 0.75 * hypothesis.fundamental_ratio)
+        - 0.7 * hypothesis.subharmonic_alias_energy
+        - hypothesis.octave_alias_penalty
+    )
+
+
+def summarize_note(stage_views: dict[str, dict[str, dict]], note_name: str) -> dict:
+    per_stage = {}
+    best = None
+    for stage_name, entries in stage_views.items():
+        entry = entries.get(note_name)
+        if entry is None:
+            continue
+        per_stage[stage_name] = entry
+        if best is None or entry["hypothesis"].score > best["hypothesis"].score:
+            best = {"source": stage_name, **entry}
+    assert best is not None
+    stages_present = len(per_stage)
+    return {
+        "note_name": note_name,
+        "entry": {"hypothesis": best["hypothesis"], "source": best["source"]},
+        "stages_present": stages_present,
+        "best_rank": min(item["rank"] for item in per_stage.values()),
+        "tail_presence": sum(1 for item in per_stage.values() if item["rank"] > 12),
+        "support": support_score(best["hypothesis"]),
+        "fundamental_ratio": best["hypothesis"].fundamental_ratio,
+    }
+
+
+def build_note_summaries(stage_views: dict[str, dict[str, dict]]) -> dict[str, dict]:
+    note_names = set()
+    for entries in stage_views.values():
+        note_names |= set(entries.keys())
+    return {note_name: summarize_note(stage_views, note_name) for note_name in note_names}
+
+
+def conflicts_with_selected(candidate, selected: list[dict]) -> bool:
+    for picked in selected:
+        relation = harmonic_relation_multiple(candidate, picked["entry"]["hypothesis"].candidate)
+        if relation is None:
+            continue
+        if relation == 2.0:
+            if (
+                candidate.note_name == picked["note_name"]
+                or picked["entry"]["hypothesis"].fundamental_ratio < 0.85
+            ):
+                return True
+            continue
+        return True
+    return False
+
+
+def choose_strategy_entries(stage_views: dict[str, dict[str, dict]], strategy: str) -> dict[str, dict]:
+    summaries = build_note_summaries(stage_views)
+    core = {
+        note_name: summary
+        for note_name, summary in summaries.items()
+        if summary["best_rank"] <= 12
+    }
+    if strategy == "raw20":
+        return {note_name: summary["entry"] for note_name, summary in summaries.items()}
+    if strategy == "core12_slots6":
+        selected = dict(core)
+        tail = sorted(
+            (summary for summary in summaries.values() if summary["best_rank"] > 12),
+            key=lambda item: (item["support"], item["fundamental_ratio"], item["stages_present"]),
+            reverse=True,
+        )
+        for summary in tail[:6]:
+            selected[summary["note_name"]] = summary
+        return {note_name: summary["entry"] for note_name, summary in selected.items()}
+    if strategy == "core12_corrob_slots6":
+        selected = dict(core)
+        tail = sorted(
+            (
+                summary
+                for summary in summaries.values()
+                if summary["best_rank"] > 12
+                and (summary["stages_present"] >= 2 or summary["fundamental_ratio"] >= 0.95)
+            ),
+            key=lambda item: (item["stages_present"], item["support"], item["fundamental_ratio"]),
+            reverse=True,
+        )
+        for summary in tail[:6]:
+            selected[summary["note_name"]] = summary
+        return {note_name: summary["entry"] for note_name, summary in selected.items()}
+    if strategy == "core12_octave_safe_slots6":
+        selected = list(core.values())
+        tail = sorted(
+            (summary for summary in summaries.values() if summary["best_rank"] > 12),
+            key=lambda item: (item["support"], item["stages_present"], item["fundamental_ratio"]),
+            reverse=True,
+        )
+        for summary in tail:
+            if len(selected) >= len(core) + 6:
+                break
+            if conflicts_with_selected(summary["entry"]["hypothesis"].candidate, selected):
+                continue
+            selected.append(summary)
+        return {summary["note_name"]: summary["entry"] for summary in selected}
+    if strategy == "per_stage_12_4_4":
+        selected: dict[str, dict] = {}
+        for stage_name, core_limit, tail_limit in (
+            ("initial", 12, 0),
+            ("residual1", 12, 4),
+            ("residual2", 12, 4),
+        ):
+            for note_name, entry in stage_views[stage_name].items():
+                rank = entry["rank"]
+                if rank > core_limit + tail_limit:
+                    continue
+                if rank > core_limit and note_name in selected:
+                    continue
+                current = selected.get(note_name)
+                if current is None or entry["hypothesis"].score > current["hypothesis"].score:
+                    selected[note_name] = {"hypothesis": entry["hypothesis"], "source": stage_name}
+        return selected
+    raise ValueError(f"Unknown strategy: {strategy}")
+
+
 def rank_combinations(best_entries: dict[str, dict], target_notes: set[str], tuning, max_polyphony: int) -> dict[str, dict]:
     pool = list(best_entries.values())
     combos = []
@@ -255,6 +403,11 @@ def main() -> None:
     parser.add_argument("--combo-limit", type=int, default=20, help="Bounded pool limit used for combo ranking")
     parser.add_argument("--max-polyphony", type=int, default=4, help="Maximum combo size to enumerate")
     parser.add_argument("--skip-combos", action="store_true", help="Only report pool completeness")
+    parser.add_argument(
+        "--pool-strategies",
+        default=",".join(POOL_STRATEGIES),
+        help="Comma-separated strategy names for bounded combo pools",
+    )
     args = parser.parse_args()
 
     fixture_dir = resolve_fixture(args.fixture)
@@ -282,8 +435,10 @@ def main() -> None:
         secondary = residual1[0]
         residual2_spec = suppress_harmonics(residual1_spec, frequencies, secondary.candidate.frequency)
         residual2 = rank_tuning_candidates(residual2_spec, frequencies, tuning, debug=False)
+        stage_views = build_stage_views(ranked, residual1, residual2, limit=max(POOL_LIMITS))
 
         pools = pool_by_limit(ranked, residual1, residual2)
+        strategies = [item.strip() for item in args.pool_strategies.split(",") if item.strip()]
 
         print(f"=== E{event_num}")
         print(f"expected={item['expectedNotes']} detected={item['detectedNotes']}")
@@ -293,28 +448,37 @@ def main() -> None:
             print(f"  top{limit}: missing={missing}")
 
         if args.skip_combos:
+            print("bounded strategies:")
+            for strategy in strategies:
+                entries = choose_strategy_entries(stage_views, strategy)
+                missing = [note for note in item["expectedNotes"] if note not in entries]
+                print(f"  {strategy}: unique_notes={len(entries)} missing={missing}")
             print()
             continue
 
-        best_entries = best_entries_for_limit(ranked, residual1, residual2, args.combo_limit)
         target_notes = set(item["expectedNotes"])
-        target_present = target_notes <= set(best_entries.keys())
-        print(f"combo pool: limit=top{args.combo_limit}, unique_notes={len(best_entries)}, target_present={target_present}")
+        for strategy in strategies:
+            best_entries = choose_strategy_entries(stage_views, strategy)
+            target_present = target_notes <= set(best_entries.keys())
+            print(
+                f"strategy={strategy}: unique_notes={len(best_entries)} "
+                f"target_present={target_present}"
+            )
 
-        playable_counts = {2: 0, 3: 0, 4: 0}
-        note_lookup = {note.note_name: note for note in tuning.notes}
-        for size in range(2, min(args.max_polyphony, len(best_entries)) + 1):
-            for subset in itertools.combinations(best_entries.keys(), size):
-                if is_physically_playable_chord([note_lookup[name].key for name in subset]):
-                    playable_counts[size] += 1
-        print(f"playable combos: {playable_counts}")
+            playable_counts = {2: 0, 3: 0, 4: 0}
+            note_lookup = {note.note_name: note for note in tuning.notes}
+            for size in range(2, min(args.max_polyphony, len(best_entries)) + 1):
+                for subset in itertools.combinations(best_entries.keys(), size):
+                    if is_physically_playable_chord([note_lookup[name].key for name in subset]):
+                        playable_counts[size] += 1
+            print(f"  playable combos: {playable_counts}")
 
-        combo_results = rank_combinations(best_entries, target_notes, tuning, args.max_polyphony)
-        for name in FORMULA_NAMES:
-            result = combo_results[name]
-            print(f"  {name}: target_rank={result['targetRank']}")
-            for top_item in result["top"]:
-                print(f"    {top_item['rank']}. {top_item['notes']} score={top_item['score']}")
+            combo_results = rank_combinations(best_entries, target_notes, tuning, args.max_polyphony)
+            for name in FORMULA_NAMES:
+                result = combo_results[name]
+                print(f"  {name}: target_rank={result['targetRank']}")
+                for top_item in result["top"]:
+                    print(f"    {top_item['rank']}. {top_item['notes']} score={top_item['score']}")
         print()
 
 
