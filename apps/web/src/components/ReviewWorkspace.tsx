@@ -23,7 +23,6 @@ export function ReviewWorkspace() {
     setActiveEventId,
     setNotationMode,
   } = useReviewWorkspaceSession(sessionId);
-
   if (!storageAvailable) {
     return (
       <main className="shell">
