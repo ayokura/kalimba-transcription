@@ -5,6 +5,7 @@ from app.transcription import (
     GapAttackCandidates,
     OnsetAttackProfile,
     OnsetWaveformStats,
+    Segment,
     collect_prior_backtrack_onsets,
     collect_range_prior_backtrack_onsets,
     collect_attack_validated_gap_candidates,
@@ -222,30 +223,39 @@ def test_detect_segments_does_not_backtrack_into_previous_active_range(monkeypat
 # --- Cross-collector dedup mechanism tests ---
 
 
+def _seg(start: float, end: float, source: str = "test") -> Segment:
+    return Segment(start, end, sources=frozenset({source}))
+
+
 def test_dedupe_cross_collector_segments_merges_high_overlap() -> None:
-    segments = [(1.0, 1.5), (1.1, 1.4)]
+    segments = [_seg(1.0, 1.5, "a"), _seg(1.1, 1.4, "b")]
     result = dedupe_cross_collector_segments(segments)
-    assert result == [(1.0, 1.5)]
+    assert len(result) == 1
+    assert (result[0].start_time, result[0].end_time) == (1.0, 1.5)
+    assert result[0].sources == {"a", "b"}
 
 
 def test_dedupe_cross_collector_segments_keeps_low_overlap() -> None:
-    segments = [(1.0, 1.3), (1.2, 1.6)]
+    segments = [_seg(1.0, 1.3), _seg(1.2, 1.6)]
     result = dedupe_cross_collector_segments(segments)
     # overlap=0.1, shorter=0.3, ratio=0.33 < 0.5 → kept
-    assert result == [(1.0, 1.3), (1.2, 1.6)]
+    assert len(result) == 2
 
 
 def test_dedupe_cross_collector_segments_no_overlap() -> None:
-    segments = [(1.0, 1.3), (1.5, 1.8)]
+    segments = [_seg(1.0, 1.3), _seg(1.5, 1.8)]
     result = dedupe_cross_collector_segments(segments)
-    assert result == [(1.0, 1.3), (1.5, 1.8)]
+    assert len(result) == 2
 
 
 def test_dedupe_cross_collector_segments_chain_merge() -> None:
     # Three segments where each pair has high overlap
-    segments = [(1.0, 1.5), (1.1, 1.6), (1.2, 1.7)]
+    segments = [_seg(1.0, 1.5, "a"), _seg(1.1, 1.6, "b"), _seg(1.2, 1.7, "c")]
     result = dedupe_cross_collector_segments(segments)
-    assert result == [(1.0, 1.7)]
+    assert len(result) == 1
+    assert (result[0].start_time, result[0].end_time) == (1.0, 1.7)
+    assert result[0].sources == {"a", "b", "c"}
+    assert len(result[0].merged_from) == 3  # all 3 leaf segments preserved
 
 
 # --- midPerformanceStart/End mechanism tests ---
