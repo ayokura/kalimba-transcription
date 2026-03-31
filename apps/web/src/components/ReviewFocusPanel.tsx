@@ -17,6 +17,15 @@ function buildEventLine(event: ScoreEvent | null) {
   return event.notes.map((note) => note.labelDoReMi).join(" / ");
 }
 
+function buildNoteDetailLine(event: ScoreEvent, index: number) {
+  const note = event.notes[index];
+  if (!note) {
+    return "";
+  }
+
+  return `Key ${note.key} · ${note.pitchClass}${note.octave} · ${note.labelDoReMi}`;
+}
+
 function buildContextButtonLabel(position: "前" | "次", event: ScoreEvent | null) {
   if (!event) {
     return `${position}の文脈 event はありません`;
@@ -96,6 +105,20 @@ export function ReviewFocusPanel({
             {note.labelDoReMi}
           </span>
         ))}
+      </div>
+      <div className="review-focus-detail-grid">
+        <div className="review-focus-detail-card">
+          <small>Event</small>
+          <strong>{activeEvent.id}</strong>
+          <span>{activeEvent.startBeat}拍目から {activeEvent.durationBeat}拍</span>
+          <span>{buildGestureLabel(activeEvent.gesture)}</span>
+        </div>
+        <div className="review-focus-detail-card">
+          <small>Notes</small>
+          {activeEvent.notes.map((_, index) => (
+            <span key={`${activeEvent.id}-detail-${index}`}>{buildNoteDetailLine(activeEvent, index)}</span>
+          ))}
+        </div>
       </div>
       <div className="review-context-grid">
         <button

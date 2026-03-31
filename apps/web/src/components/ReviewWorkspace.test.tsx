@@ -157,6 +157,10 @@ describe("ReviewWorkspace", () => {
       configurable: true,
       writable: true,
     });
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn(() => "blob:review-audio"),
+      revokeObjectURL: vi.fn(),
+    });
     mocks.useSearchParams.mockReturnValue(new URLSearchParams("session=review-session-1"));
     mocks.isReviewSessionStorageAvailable.mockReturnValue(true);
     mocks.loadReviewSession.mockReturnValue(buildSession());
@@ -167,6 +171,7 @@ describe("ReviewWorkspace", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("shows a fallback message when storage is unavailable", () => {
@@ -252,5 +257,35 @@ describe("ReviewWorkspace", () => {
       notationMode: "vertical",
       activeEventId: "evt-3",
     });
+  });
+
+  it("renders whole-track playback when audio is available and revokes the object URL on unmount", () => {
+    mocks.loadReviewAudio.mockReturnValue(new Blob(["audio"], { type: "audio/wav" }));
+
+    const { container, unmount } = render(<ReviewWorkspace />);
+
+    expect(container.querySelector("audio")).toBeTruthy();
+
+    unmount();
+
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:review-audio");
+  });
+
+  it("handles empty events without crashing", () => {
+    const emptySession = buildSession();
+    emptySession.responseSnapshot.events = [];
+    emptySession.responseSnapshot.notationViews = {
+      western: [],
+      numbered: [],
+      verticalDoReMi: [],
+    };
+    emptySession.activeEventId = null;
+    mocks.loadReviewSession.mockReturnValue(emptySession);
+
+    render(<ReviewWorkspace />);
+
+    expect(screen.getAllByText("0 events").length).toBeGreaterThan(0);
+    expect(screen.getByText("event がありません。")).toBeTruthy();
   });
 });
