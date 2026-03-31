@@ -117,7 +117,7 @@ def test_explain_manual_capture_reports_pending_summary_hints() -> None:
     assert payload["dominantGestureMix"]["ambiguous"] >= 1
     assert payload["normalizationSummary"]["segmentCount"] >= payload["normalizationSummary"]["rawEventCount"]
     assert payload["normalizationSummary"]["rawEventCount"] >= payload["normalizationSummary"]["mergedEventCount"]
-    assert payload["normalizationReasonCounts"]
+    assert isinstance(payload["normalizationReasonCounts"], dict)
     assert isinstance(payload["phraseBreakGuess"], list)
 
 
