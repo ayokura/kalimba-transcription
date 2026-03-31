@@ -1,5 +1,6 @@
 "use client";
 
+import { buildGestureLabel } from "@/lib/scoreEventPresentation";
 import { ScoreEvent } from "@/lib/types";
 
 type ReviewFocusPanelProps = {
@@ -7,14 +8,6 @@ type ReviewFocusPanelProps = {
   activeEventId: string | null;
   onActiveEventIdChange: (eventId: string) => void;
 };
-
-function buildGestureLabel(gesture: string) {
-  if (gesture === "strict_chord") return "同時和音";
-  if (gesture === "slide_chord") return "スライド和音";
-  if (gesture === "arpeggio") return "アルペジオ";
-  if (gesture === "separated_notes") return "単音列";
-  return "要確認";
-}
 
 function buildEventLine(event: ScoreEvent | null) {
   if (!event) {

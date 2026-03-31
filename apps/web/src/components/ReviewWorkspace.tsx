@@ -1,22 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { NotationPanel } from "@/components/NotationPanel";
 import { ReviewFocusPanel } from "@/components/ReviewFocusPanel";
 import { loadReviewAudio } from "@/lib/reviewAudioStore";
 import { isReviewSessionStorageAvailable, loadReviewSession, updateReviewSessionUiState } from "@/lib/reviewSession";
+import { buildGestureLabel } from "@/lib/scoreEventPresentation";
 import { NotationMode } from "@/lib/types";
-
-function buildGestureLabel(gesture: string) {
-  if (gesture === "strict_chord") return "同時和音";
-  if (gesture === "slide_chord") return "スライド和音";
-  if (gesture === "arpeggio") return "アルペジオ";
-  if (gesture === "separated_notes") return "単音列";
-  return "要確認";
-}
 
 export function ReviewWorkspace() {
   const searchParams = useSearchParams();
@@ -40,6 +33,7 @@ export function ReviewWorkspace() {
   const activeEvent = session?.responseSnapshot.events.find((event) => event.id === activeEventId)
     ?? session?.responseSnapshot.events[0]
     ?? null;
+  const events = session?.responseSnapshot.events ?? [];
 
   useEffect(() => {
     if (!audioBlob) {
@@ -84,6 +78,48 @@ export function ReviewWorkspace() {
       inline: "nearest",
     });
   }, [activeEvent?.id]);
+
+  function focusEventByIndex(index: number) {
+    const nextEvent = events[index] ?? null;
+    if (!nextEvent) {
+      return;
+    }
+
+    setActiveEventId(nextEvent.id);
+    eventItemRefs.current[nextEvent.id]?.focus();
+  }
+
+  function handleEventListKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      focusEventByIndex(Math.min(index + 1, events.length - 1));
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      focusEventByIndex(Math.max(index - 1, 0));
+      return;
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      focusEventByIndex(0);
+      return;
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      focusEventByIndex(events.length - 1);
+    }
+  }
 
   if (!storageAvailable) {
     return (
@@ -171,6 +207,7 @@ export function ReviewWorkspace() {
                   eventItemRefs.current[event.id] = element;
                 }}
                 onClick={() => setActiveEventId(event.id)}
+                onKeyDown={(nextEvent) => handleEventListKeyDown(nextEvent, index)}
               >
                 <div className="event-list-item-header">
                   <strong>{event.id}</strong>
