@@ -3361,10 +3361,12 @@ def segment_peaks(
     # the segment is likely resonance from a previous event, not a genuine
     # new attack.  On a kalimba, replucking requires touching the tine first,
     # which causes the note-band energy to drop before the new onset.
+    _residual_check_audio = raw_audio if raw_audio is not None else audio
     if (
         recent_note_names
         and primary.candidate.note_name in recent_note_names
-        and _is_residual_decay(raw_audio if raw_audio is not None else audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+        and _is_residual_decay(_residual_check_audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+        and not _has_mute_dip_reattack(_residual_check_audio, sample_rate, start_time, primary.candidate.frequency)
     ):
         # Forward-scan: the top-ranked candidate is residual, but a recent note
         # may show a genuine re-attack (mute-dip).  The re-attack note can rank
@@ -3379,8 +3381,6 @@ def segment_peaks(
                 _ranked_by_name[h.candidate.note_name] = h
         alternative_primary = None
         for note_name in recent_note_names:
-            if note_name == primary.candidate.note_name:
-                continue  # already rejected as residual
             hyp = _ranked_by_name.get(note_name)
             if hyp is None:
                 continue  # note not present in spectrum at all
@@ -3390,6 +3390,14 @@ def segment_peaks(
         if alternative_primary is None:
             return [], None, None
         primary = alternative_primary
+        # Recalculate primary-dependent state after forward-scan replacement
+        # so downstream secondary gates use the new primary's context.
+        primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+        primary_promotion_debug = {
+            "reason": "residual-forward-scan",
+            "replacedPrimaryNote": ranked[0].candidate.note_name,
+            "replacementNote": primary.candidate.note_name,
+        }
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     promoted_secondary_to_recent_upper_octave = False
