@@ -1,11 +1,11 @@
 {
   "capturedAt": "2026-03-23T16:25:51.289Z",
   "scenario": "2026-03-23-c4-to-g4-sequence-17-kalimba-17-c",
-  "expectedNote": "C4 x 4 / G4 x 5 / E5 + C5 x 3 / C5 x 2 / D5 / E5 + C4 / G5 + E5",
+  "expectedNote": "C4 x 4 / G4 x 5 / E5 + C5 x 3 / C5 x 2 / D5 / E5 + C4 / E4 + G5",
   "expectedPerformance": {
     "source": "clickable-kalimba-ui",
     "version": 1,
-    "summary": "C4 x 4 / G4 x 5 / E5 + C5 x 3 / C5 x 2 / D5 / E5 + C4 / G5 + E5",
+    "summary": "C4 x 4 / G4 x 5 / E5 + C5 x 3 / C5 x 2 / D5 / E5 + C4 / E4 + G5",
     "defaultCaptureIntent": "unknown",
     "events": [
       {
@@ -193,15 +193,15 @@
         "index": 16,
         "keys": [
           {
-            "key": 3,
-            "noteName": "G5"
+            "key": 10,
+            "noteName": "E4"
           },
           {
-            "key": 4,
-            "noteName": "E5"
+            "key": 3,
+            "noteName": "G5"
           }
         ],
-        "display": "G5 + E5",
+        "display": "E4 + G5",
         "intent": null
       },
       {
