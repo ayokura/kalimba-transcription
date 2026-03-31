@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 import json
-import math
-from collections import Counter
 from typing import Any
 
 import numpy as np
 from fastapi import HTTPException, UploadFile
 
 from ..models import InstrumentTuning, NotationViews, ScoreEvent, ScoreNote, TranscriptionResult
-from .audio import cents_distance, normalize_audio, read_audio
+from .audio import normalize_audio, read_audio
 from .constants import *
-from .models import NoteCandidate, RawEvent, RepeatedPatternPass
-from .peaks import are_harmonic_related, harmonic_relation_multiple, is_adjacent_tuning_step, segment_peaks
+from .models import NoteCandidate, RawEvent
+from .peaks import segment_peaks
 from .segments import build_segment_debug_contexts, detect_segments, should_keep_low_register_sparse_gap_tail, simplify_sparse_gap_tail_high_octave_dyad
 from .events import (
     collapse_ascending_restart_lower_residue_singletons,

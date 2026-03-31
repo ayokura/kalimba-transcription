@@ -27,7 +27,7 @@ KALIMBA_FUNDAMENTALS = {
 
 def get_onset_profiles(fixture_name: str) -> tuple:
     import app.transcription as mod
-    mod._legacy.USE_ATTACK_VALIDATED_GAP_COLLECTOR = True
+    mod.segments.USE_ATTACK_VALIDATED_GAP_COLLECTOR = True
 
     from fastapi.testclient import TestClient
     from app.main import app
