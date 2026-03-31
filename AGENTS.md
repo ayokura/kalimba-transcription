@@ -90,6 +90,17 @@
 - Dedicated worktree setup, integration, and cleanup should be handled by the primary agent unless the active toolset provides equivalent isolation automatically.
 - If a subagent is only doing inspection or debugging, prefer `explorer` plus no file edits over creating a worktree.
 
+## Issue Labeling
+
+- GitHub Issues use a three-layer label taxonomy:
+  - `area:*` for broad product surface
+  - `type:*` for the nature of the work
+  - optional `component:*` for a concrete code or ownership slice
+- New issues should normally get one `area:*` label and one `type:*` label.
+- Add `component:*` only when the implementation target is already clear enough to be useful for routing or filtering.
+- When package-boundary or cross-module work does not fit a narrower component cleanly, prefer a broader component label rather than forcing a misleading one.
+- See [`docs/task-management.md`](/mnt/c/src/calimba-score/docs/task-management.md) for the current label set and examples.
+
 ## Test Architecture
 
 テストは3層モデルに従う:

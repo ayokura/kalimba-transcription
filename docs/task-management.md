@@ -29,15 +29,67 @@ Examples:
 - test infrastructure work
 - performance and deployment milestones
 
-Recommended labels:
+Issue labels now use the shared taxonomy below instead of older ad-hoc labels.
 
-- `dsp`
-- `fixture`
-- `rerecord`
-- `debug-ui`
-- `editor`
-- `test-infra`
-- `research`
+## Current GitHub Label Taxonomy
+
+Use labels in three layers.
+
+- `area:*`
+  - broad product surface
+  - choose exactly one when possible
+- `type:*`
+  - the kind of work being tracked
+  - choose exactly one when possible
+- `component:*`
+  - concrete code or ownership slice
+  - use only when the target is clear; it is optional
+
+Current `area:*` labels:
+
+- `area:recognizer`
+- `area:web`
+- `area:fixture`
+- `area:docs`
+- `area:infra`
+
+Current `type:*` labels:
+
+- `type:analysis`
+- `type:design`
+- `type:implementation`
+- `type:refactor`
+- `type:research`
+- `type:docs`
+- `type:perf`
+
+Current `component:*` labels:
+
+- `component:transcription-package`
+- `component:transcription-segments`
+- `component:transcription-peaks`
+- `component:transcription-patterns`
+- `component:fixture-metadata`
+- `component:web-review-workspace`
+- `component:dependency-management`
+
+Practical rules:
+
+- `area:*` and `type:*` are the default minimum set for every issue, including closed issues kept for history.
+- Add `component:*` only when it helps route work or filter related issues. Leave it unset if the issue spans multiple layers or the target is still ambiguous.
+- Prefer the narrowest component that is still stable across refactors. For example, use `component:transcription-peaks` for `segment_peaks` work, but use `component:transcription-package` for package-boundary work such as module splits or `_legacy.py` cleanup.
+- When an issue clearly spans two concrete components, multiple `component:*` labels are acceptable, but keep that exceptional.
+
+Examples:
+
+- residual-decay rejection in `segment_peaks`
+  - `area:recognizer`, `type:implementation`, `component:transcription-peaks`
+- fixture audit of `expected.json`
+  - `area:fixture`, `type:analysis`, `component:fixture-metadata`
+- review workspace playback UI
+  - `area:web`, `type:implementation`, `component:web-review-workspace`
+- dependency registry / lockfile work
+  - `area:infra`, `type:implementation`, `component:dependency-management`
 
 Recommended Project columns:
 
