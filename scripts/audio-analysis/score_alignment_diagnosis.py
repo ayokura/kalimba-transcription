@@ -101,39 +101,74 @@ def build_time_converter(expected: dict):
 
 
 def match_line(expected_events, detected_segs):
-    """Ordered greedy matching: for each expected event, find best overlapping segment."""
-    used_det = set()
-    results = []
+    """Optimal ordered matching using dynamic programming.
 
-    for exp in expected_events:
+    Finds the assignment of expected events to detected segments that
+    maximizes total match score, subject to:
+    - Each detected segment used at most once
+    - Matched segment indices are strictly increasing (monotonic in time)
+    - Expected events can be skipped (NO MATCH, score 0)
+
+    This avoids the greedy pitfall where an early partial match consumes
+    a segment that would have been an exact match for a later event.
+    """
+    n_exp = len(expected_events)
+    n_det = len(detected_segs)
+
+    def _score(exp, det):
+        if exp["notes"] == det["notes"]:
+            return 2
+        if exp["notes"] & det["notes"]:
+            return 1
+        return 0
+
+    from functools import lru_cache
+
+    @lru_cache(maxsize=None)
+    def dp(ei, min_di):
+        """Best total score for matching expected[ei:] using detected[min_di:]."""
+        if ei >= n_exp:
+            return 0
+        # Option: skip this expected event
+        best = dp(ei + 1, min_di)
+        # Option: match to some detected[di]
+        for di in range(min_di, n_det):
+            s = _score(expected_events[ei], detected_segs[di])
+            if s > 0:
+                total = s + dp(ei + 1, di + 1)
+                if total > best:
+                    best = total
+        return best
+
+    def reconstruct(ei, min_di):
+        if ei >= n_exp:
+            return []
+        skip_score = dp(ei + 1, min_di)
+        best_total = skip_score
         best_di = None
-        best_score = -1
+        for di in range(min_di, n_det):
+            s = _score(expected_events[ei], detected_segs[di])
+            if s > 0:
+                total = s + dp(ei + 1, di + 1)
+                if total > best_total:
+                    best_total = total
+                    best_di = di
+        if best_di is not None:
+            return [(ei, best_di)] + reconstruct(ei + 1, best_di + 1)
+        return [(ei, None)] + reconstruct(ei + 1, min_di)
 
-        for di, det in enumerate(detected_segs):
-            if di in used_det:
-                continue
-            if exp["notes"] == det["notes"]:
-                score = 2
-            elif exp["notes"] & det["notes"]:
-                score = 1
-            else:
-                score = 0
+    assignment = reconstruct(0, 0)
 
-            if score > best_score:
-                best_score = score
-                best_di = di
-
-            furthest = max(used_det) if used_det else -1
-            if di > furthest + len(expected_events) + 3:
-                break
-
-        if best_di is not None and best_score > 0:
-            used_det.add(best_di)
-            results.append((exp, detected_segs[best_di]))
+    results = []
+    used_det = set()
+    for ei, di in assignment:
+        if di is not None:
+            results.append((expected_events[ei], detected_segs[di]))
+            used_det.add(di)
         else:
-            results.append((exp, None))
+            results.append((expected_events[ei], None))
 
-    unmatched_det = [detected_segs[di] for di in range(len(detected_segs)) if di not in used_det]
+    unmatched_det = [detected_segs[di] for di in range(n_det) if di not in used_det]
     return results, unmatched_det
 
 
