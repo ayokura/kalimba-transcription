@@ -1107,7 +1107,11 @@ def segment_peaks(
                             and onset_gain < ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN
                         )
                     ):
-                        if not _has_mute_dip_reattack(_secondary_mute_dip_audio, sample_rate, start_time, hypothesis.candidate.frequency):
+                        if _has_mute_dip_reattack(_secondary_mute_dip_audio, sample_rate, start_time, hypothesis.candidate.frequency):
+                            _mute_dip_bwg = onset_backward_attack_gain(audio, sample_rate, start_time, hypothesis.candidate.frequency)
+                            if _mute_dip_bwg < CARRYOVER_MUTE_DIP_MIN_BACKWARD_ATTACK_GAIN:
+                                reasons.append("recent-carryover-candidate")
+                        else:
                             reasons.append("recent-carryover-candidate")
                 else:
                     if primary_onset_gain is None:
