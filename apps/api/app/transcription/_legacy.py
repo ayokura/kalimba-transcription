@@ -7,7 +7,7 @@ import numpy as np
 from fastapi import HTTPException, UploadFile
 
 from ..models import InstrumentTuning, NotationViews, ScoreEvent, ScoreNote, TranscriptionResult
-from .audio import normalize_audio, read_audio
+from .audio import read_audio
 from .constants import *
 from .models import NoteCandidate, RawEvent
 from .peaks import segment_peaks
@@ -120,9 +120,8 @@ async def transcribe_audio(
     mid_performance_end: bool = False,
 ) -> TranscriptionResult:
     audio, sample_rate = await read_audio(upload)
-    normalized = normalize_audio(audio)
     segments, tempo, segment_debug = detect_segments(
-        normalized, sample_rate,
+        audio, sample_rate,
         mid_performance_start=mid_performance_start,
         mid_performance_end=mid_performance_end,
     )
@@ -162,7 +161,7 @@ async def transcribe_audio(
             previous_primary_frequency = previous_primary.frequency if previous_primary is not None else None
         previous_primary_was_singleton = bool(raw_events and len(raw_events[-1].notes) == 1)
         candidates, candidate_debug, primary = segment_peaks(
-            normalized,
+            audio,
             sample_rate,
             start_time,
             end_time,

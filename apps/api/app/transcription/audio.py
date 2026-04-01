@@ -64,14 +64,6 @@ async def read_audio(upload: UploadFile) -> tuple[np.ndarray, int]:
     return audio.astype(np.float32), sample_rate
 
 
-def normalize_audio(audio: np.ndarray) -> np.ndarray:
-    centered = audio - np.mean(audio)
-    peak = np.max(np.abs(centered))
-    if peak < 1e-6:
-        return centered
-    return centered / peak
-
-
 def cents_distance(freq_a: float, freq_b: float) -> float:
     return abs(1200.0 * math.log2(freq_a / freq_b))
 
