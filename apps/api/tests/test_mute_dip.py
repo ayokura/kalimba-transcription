@@ -31,9 +31,9 @@ def _sine(frequency: float, duration: float, amplitude: float = 1.0) -> np.ndarr
 def _build_mute_dip_signal(
     frequency: float,
     *,
-    pre_duration: float = 0.10,
-    mute_duration: float = 0.03,
-    post_duration: float = 0.10,
+    pre_duration: float = 0.15,
+    mute_duration: float = 0.04,
+    post_duration: float = 0.15,
     pre_amplitude: float = 0.8,
     mute_amplitude: float = 0.01,
     post_amplitude: float = 0.8,
@@ -41,6 +41,7 @@ def _build_mute_dip_signal(
     """Build a signal with high → mute → re-attack pattern.
 
     Returns (audio, onset_time) where onset_time is the start of the mute.
+    Mute duration (40ms) matches measured kalimba mute-dip width.
     """
     pre = _sine(frequency, pre_duration, pre_amplitude)
     mute = _sine(frequency, mute_duration, mute_amplitude)

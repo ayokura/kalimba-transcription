@@ -1107,11 +1107,7 @@ def segment_peaks(
                             and onset_gain < ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN
                         )
                     ):
-                        if _has_mute_dip_reattack(_secondary_mute_dip_audio, sample_rate, start_time, hypothesis.candidate.frequency):
-                            _mute_dip_bwg = onset_backward_attack_gain(audio, sample_rate, start_time, hypothesis.candidate.frequency)
-                            if _mute_dip_bwg < CARRYOVER_MUTE_DIP_MIN_BACKWARD_ATTACK_GAIN:
-                                reasons.append("recent-carryover-candidate")
-                        else:
+                        if not _has_mute_dip_reattack(_secondary_mute_dip_audio, sample_rate, start_time, hypothesis.candidate.frequency):
                             reasons.append("recent-carryover-candidate")
                 else:
                     if primary_onset_gain is None:
@@ -1704,6 +1700,7 @@ def _find_note_attack_time(
     return best_time
 
 
+MUTE_DIP_ENERGY_WINDOW = 0.05
 MUTE_DIP_REATTACK_MIN_PRE_ENERGY = 3.0
 MUTE_DIP_REATTACK_MIN_POST_ENERGY = 3.0
 MUTE_DIP_REATTACK_MAX_DIP_RATIO = 0.1
@@ -1730,20 +1727,22 @@ def _has_mute_dip_reattack(
     if pre_time < 0:
         return False
     pre_energy = _note_band_energy(audio, sample_rate, pre_time, frequency,
-                                   window_seconds=0.02)
+                                   window_seconds=MUTE_DIP_ENERGY_WINDOW)
     if pre_energy < MUTE_DIP_REATTACK_MIN_PRE_ENERGY:
         return False  # Note wasn't ringing; can't be a re-attack.
 
     # Scan for minimum energy around the onset (the mute dip).
     # The dip sits between pre-onset and the new attack, typically ±30ms of
-    # the detected onset.
+    # the detected onset.  Window (50ms) exceeds the physical dip (~40ms)
+    # but fine-step scanning still detects deep genuine dips while smoothing
+    # out narrow noise artifacts.
     min_energy = float("inf")
     scan_start = max(onset_time - 0.01, 0.0)
-    scan_end = min(onset_time + 0.05, len(audio) / sample_rate - 0.015)
+    scan_end = min(onset_time + 0.05, len(audio) / sample_rate - MUTE_DIP_ENERGY_WINDOW)
     t = scan_start
     while t < scan_end:
         energy = _note_band_energy(audio, sample_rate, t, frequency,
-                                   window_seconds=0.015)
+                                   window_seconds=MUTE_DIP_ENERGY_WINDOW)
         if energy < min_energy:
             min_energy = energy
         t += 0.005
@@ -1751,10 +1750,10 @@ def _has_mute_dip_reattack(
     # Post-attack: find the per-note attack time and measure energy after.
     attack_time = _find_note_attack_time(audio, sample_rate, onset_time, frequency)
     post_time = attack_time + 0.02
-    if post_time > len(audio) / sample_rate - 0.02:
+    if post_time > len(audio) / sample_rate - MUTE_DIP_ENERGY_WINDOW:
         return False
     post_energy = _note_band_energy(audio, sample_rate, post_time, frequency,
-                                    window_seconds=0.02)
+                                    window_seconds=MUTE_DIP_ENERGY_WINDOW)
     if post_energy < MUTE_DIP_REATTACK_MIN_POST_ENERGY:
         return False  # No meaningful re-attack energy.
 
