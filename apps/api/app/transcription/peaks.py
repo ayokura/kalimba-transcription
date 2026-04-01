@@ -1659,7 +1659,10 @@ def _note_band_energy(
     chunk = audio[start:end]
     if len(chunk) < 256:
         return 0.0
-    n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))
+    band_hz = frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
+    min_n_fft = int(np.ceil(sample_rate / band_hz)) * 2 if band_hz > 0 else 4096
+    n_fft = max(min_n_fft, len(chunk))
+    n_fft = 1 << int(np.ceil(np.log2(n_fft)))
     spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
     frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
     return peak_energy_near(frequencies, spectrum, frequency)
