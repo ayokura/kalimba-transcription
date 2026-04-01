@@ -124,8 +124,8 @@ class TestHasMuteDipReattack:
             audio, onset = _build_mute_dip_signal(freq)
             assert _has_mute_dip_reattack(audio, SR, onset, freq) is True, f"Failed for {freq}Hz"
 
-    def test_uses_raw_audio_not_normalized(self) -> None:
-        """Verify the function works correctly with unnormalized audio."""
+    def test_works_with_varying_amplitude(self) -> None:
+        """Verify the function works with both low and full-scale audio."""
         freq = 523.251
         # Build a mute-dip signal with low overall amplitude
         audio, onset = _build_mute_dip_signal(
@@ -199,7 +199,6 @@ class TestForwardScanRecovery:
             audio, SR, start_time, end_time, tuning,
             debug=True,
             recent_note_names={"E5", "C5"},
-            raw_audio=audio,
         )
 
         # The segment should NOT be dropped (forward-scan should recover C5)

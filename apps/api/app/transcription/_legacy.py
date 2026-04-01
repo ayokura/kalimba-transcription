@@ -177,7 +177,6 @@ async def transcribe_audio(
             previous_primary_note_name=previous_primary_note_name,
             previous_primary_frequency=previous_primary_frequency,
             previous_primary_was_singleton=previous_primary_was_singleton,
-            raw_audio=audio,
         )
         if not candidates or primary is None:
             if debug and candidate_debug:
