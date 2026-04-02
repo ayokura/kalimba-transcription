@@ -40,3 +40,22 @@
 - **動機**: FFT の n_fft / zero-padding / spectral leakage 問題を根本的に回避。ブラウザ移植 (WebAudio) に最適
 - **不採用理由**: 変更規模が大きく、現状の dynamic n_fft + 50ms window で十分な安定性が得られている
 - **再検討条件**: ブラウザサイド実装フェーズ、またはリアルタイム処理でのパフォーマンス最適化が必要になった場合
+
+## Subband onset detection for narrowband attacks
+
+- **Issue**: #117 (closed — 前提の誤診)
+- **日付**: 2026-04-02
+- **概要**: mel spectrogram を 8 帯域に分割し、各帯域で独立に onset peak-picking → consensus voting (min_votes=6) で union
+- **動機**: E143 A5 / E163 chord が broadband onset detection で検出されないと考えた
+- **不採用理由**: 調査の結果、broadband onset は両方とも検出済み。E163 は waveform_stats kurtosis filter (#118)、E143 は octave alias + residual-decay (#119) が原因。subband detection は E163 を偶然的に改善（5ms 近接 onset 追加で AVC collector trigger）したが根本解決ではない
+- **実験結果**: 8-band 全バンド → 2949 onset (14x増)、consensus min_votes=6 → 85 novel onset。gap-only filter で回帰なし (305 passed) だが E143 は改善せず
+- **再検討条件**: genuine な narrowband onset 未検出が確認された場合（今回は broadband で検出済みだった）
+
+## Short segment extension for octave-alias resolution
+
+- **Issue**: #119
+- **日付**: 2026-04-02
+- **概要**: 0.5s 未満の短い segment を 0.5s まで延長（次 segment とぶつかる場合を除く）して FFT データ量を増やす
+- **動機**: E143 A5 の segment が 141ms で短く、spectral resolution 不足で A4 octave alias が発生
+- **不採用理由**: 0.32s / 0.5s いずれに延長しても primary は A4 のまま (residual-decay-no-reattack で棄却)。A4 の倍音構造 (440+880+1320...) が A5 (880+1760...) を必然的に上回るため、segment 長に関わらず octave alias は解消しない。0.5s では 15 regressions。
+- **再検討条件**: `trimmed_from` と統合した形で、segment 管理の一般的改善として再設計する場合。octave alias 自体は別のアプローチ（residual-decay での octave 候補チェック等）が必要

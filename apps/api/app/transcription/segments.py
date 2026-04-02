@@ -11,6 +11,7 @@ from ..models import InstrumentTuning
 from .constants import *
 from .models import GapAttackCandidates, NoteCandidate, OnsetAttackProfile, OnsetWaveformStats, Segment
 from .profiles import (
+    GAP_ONSET_KURTOSIS_OVERRIDE_MIN_GAIN,
     GAP_ONSET_MAX_KURTOSIS,
     GAP_ONSET_MAX_POST_CREST,
     GAP_ONSET_MIN_BROADBAND_GAIN,
@@ -283,7 +284,8 @@ def _valid_attack_gap_onsets(
         if waveform_stats is not None:
             ws = waveform_stats.get(round(time, 4))
             if ws is not None:
-                if GAP_ONSET_MAX_KURTOSIS > 0 and ws.kurtosis > GAP_ONSET_MAX_KURTOSIS:
+                strong_attack = profile.broadband_onset_gain >= GAP_ONSET_KURTOSIS_OVERRIDE_MIN_GAIN
+                if GAP_ONSET_MAX_KURTOSIS > 0 and ws.kurtosis > GAP_ONSET_MAX_KURTOSIS and not strong_attack:
                     continue
                 if GAP_ONSET_MAX_POST_CREST > 0 and ws.crest > GAP_ONSET_MAX_POST_CREST:
                     continue
