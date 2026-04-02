@@ -17,17 +17,13 @@
       "E4+G4+B4+D5"
     ]
   },
-  "status": "completed",
-  "reason": "Completed on the five valid in-scope slide_chord takes. The excluded take and final separated fragment remain outside scoped evaluation via ignoredRanges.",
+  "status": "pending",
+  "reason": "ignoredRanges [17.3-21.4] is correct (take 4 failed + take 5 is mid-correction retry), but splice-based implementation distorts recognition at boundaries. Blocked on #120 (zero-fill). Raw audio gives 4x E4+G4+B4+D5 (take 1,6,7 + partial take 2,3).",
   "auditVerdict": "practical-slide-chord-sample-with-invalid-fourth-take",
   "ignoredRanges": [
     {
       "startSec": 17.3,
-      "endSec": 19.0
-    },
-    {
-      "startSec": 24.5,
-      "endSec": 34.14
+      "endSec": 21.4
     }
   ]
 }
