@@ -411,17 +411,19 @@ def _build_evaluation_audio_bytes_cached(
     audio, sample_rate = sf.read(fixture_dir / "audio.wav", always_2d=True)
     total_duration = audio.shape[0] / sample_rate
 
-    if windows:
-        segments = [{"startSec": start, "endSec": end} for start, end in windows]
-    else:
-        cursor = 0.0
-        segments = []
+    if ignored and not windows:
+        # Zero-fill ignored ranges in place (preserves timing, avoids splice artifacts).
+        result = audio.copy()
         for start, end in ignored:
-            if cursor < start:
-                segments.append({"startSec": cursor, "endSec": start})
-            cursor = max(cursor, end)
-        if cursor < total_duration:
-            segments.append({"startSec": cursor, "endSec": total_duration})
+            s = max(0, int(round(start * sample_rate)))
+            e = min(result.shape[0], int(round(end * sample_rate)))
+            result[s:e] = 0.0
+        buffer = io.BytesIO()
+        sf.write(buffer, result, sample_rate, format="WAV")
+        return buffer.getvalue()
+
+    # evaluationWindows: extract and concatenate specified ranges.
+    segments = [{"startSec": start, "endSec": end} for start, end in windows]
 
     clips = []
     for entry in segments:

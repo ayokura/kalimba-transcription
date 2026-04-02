@@ -1,0 +1,13 @@
+{
+  "pending": true,
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  },
+  "status": "pending",
+  "reason": "New 34-key fixture, not yet evaluated"
+}
