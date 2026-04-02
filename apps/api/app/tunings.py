@@ -70,6 +70,20 @@ DEFAULT_TUNINGS = [
         ["A6", "F#6", "D6", "B5", "G5", "E5", "C5", "A4", "G4", "B4", "D5", "F#5", "A5", "C6", "E6", "G6", "B6"],
     ),
     build_tuning(
+        "kalimba-34l-c",
+        "34 Key Lingting C Major",
+        [
+            # Lower layer (17-key C layout)
+            "D6", "B5", "G5", "E5", "C5", "A4", "F4", "D4",
+            "C4",
+            "E4", "G4", "B4", "D5", "F5", "A5", "C6", "E6",
+            # Upper layer (each +1 semitone)
+            "D#6", "C6", "G#5", "F5", "C#5", "A#4", "F#4", "D#4",
+            "C#4",
+            "F4", "G#4", "C5", "D#5", "F#5", "A#5", "C#6", "F6",
+        ],
+    ),
+    build_tuning(
         "kalimba-21-c",
         "21 Key C Major",
         [

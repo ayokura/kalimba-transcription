@@ -1,5 +1,6 @@
 {
   "pending": true,
+  "status": "pending",
   "assertions": {
     "minEvents": null,
     "maxEvents": null,
@@ -8,6 +9,5 @@
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "status": "pending",
-  "reason": "New 34-key fixture, not yet evaluated"
+  "reason": "BWV147 163-event sequence on 34-key Lingting C Major. No performance mistakes. First multi-layer kalimba fixture."
 }
