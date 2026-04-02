@@ -11,8 +11,8 @@
         15
       ],
       "content": "C4 / C5 / D5 / [E5,C4] / G5 / F5 / [F5,A4] / A5 / G5 / [G5,E4] / C6 / B5 / [C6,A4] / G5 / E5",
-      "estimatedStartSec": 2.8,
-      "verifiedStartSec": 2.78,
+      "estimatedStartSec": 0.7,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -23,8 +23,8 @@
         30
       ],
       "content": "<C5,A4> / D5 / E5 / [F5,D4] / G5 / A5 / [G5,E4] / F5 / E5 / [D5,F4] / E5 / C5 / <B4,G4> / C5 / D5",
-      "estimatedStartSec": 16.7,
-      "verifiedStartSec": 16.67,
+      "estimatedStartSec": 7.8,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -35,8 +35,8 @@
         45
       ],
       "content": "[G4,D4] / B4 / D5 / F5 / E5 / D5 / [E5,C4] / C5 / D5 / <E5,C5> / G5 / F5 / [F5,A4] / A5 / G5",
-      "estimatedStartSec": 43.3,
-      "verifiedStartSec": 39.8,
+      "estimatedStartSec": 15.0,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -47,8 +47,8 @@
         60
       ],
       "content": "[G5,E4] / C6 / B5 / [C6,A4] / G5 / E5 / [C5,G4] / D5 / E5 / <A4,F4> / G5 / F5 / [E5,G4] / D5 / C5",
-      "estimatedStartSec": 62.0,
-      "verifiedStartSec": 60.45,
+      "estimatedStartSec": 22.3,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -59,8 +59,8 @@
         72
       ],
       "content": "[G4,D4] / C5 / B4 / [C5,<G4,E4,C4>] / E5 / G5 / C6 / G5 / E5 / C5 / E5 / [G5,E4]",
-      "estimatedStartSec": 79.1,
-      "verifiedStartSec": 84.6,
+      "estimatedStartSec": 29.8,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -71,8 +71,8 @@
         82
       ],
       "content": "[E5,C4] / B4 / [F5,A4] / [G5,B4] / A4 / [G5,G4] / [F5,A4] / B4 / <E5,C5> / <D5,B4,G4>",
-      "estimatedStartSec": 120.9,
-      "verifiedStartSec": 125.32,
+      "estimatedStartSec": 36.2,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -83,8 +83,8 @@
         99
       ],
       "content": "G4 / A4 / B4 / D5 / C5 / D5 / F5 / E5 / [F5,D4] / D5 / B4 / G4 / B4 / D5 / <F5,D5,B4,G4> / E5 / D5",
-      "estimatedStartSec": 140.9,
-      "verifiedStartSec": 147.9,
+      "estimatedStartSec": 47.5,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -95,8 +95,8 @@
         114
       ],
       "content": "[E5,<G4,E4,C4>] / C5 / D5 / [E5,C5] / G5 / F5 / [F5,<A4,F4>] / A5 / G5 / [G5,<G4,E4>] / C6 / B5 / [C6,<C5,A4>] / G5 / E5",
-      "estimatedStartSec": 166.3,
-      "verifiedStartSec": 173.87,
+      "estimatedStartSec": 56.3,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -107,8 +107,8 @@
         129
       ],
       "content": "<C5,A4> / D5 / E5 / [F5,<F5,D4>] / G5 / A5 / [G5,<G4,E4>] / F5 / E5 / [D5,<A4,F4>] / E5 / C5 / [<B4,G4>,D4] / C5 / D5",
-      "estimatedStartSec": 191.7,
-      "verifiedStartSec": 195.76,
+      "estimatedStartSec": 64.4,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -119,8 +119,8 @@
         144
       ],
       "content": "[G4,D4] / B4 / D5 / <F5,D5,B4,G4> / E5 / D5 / [E5,<G4,E4,C4>] / C5 / D5 / <E5,C5> / G5 / F5 / [F5,<A4,F4>] / A5 / G5",
-      "estimatedStartSec": 221.3,
-      "verifiedStartSec": 237.05,
+      "estimatedStartSec": 72.5,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -131,8 +131,8 @@
         159
       ],
       "content": "[G5,<G4,E4>] / C6 / B5 / [C6,<C5,A4>] / G5 / E5 / <C5,A4> / D5 / E5 / <A4,F4> / G5 / F5 / [E5,G4] / D5 / C5",
-      "estimatedStartSec": 241.1,
-      "verifiedStartSec": 257.03,
+      "estimatedStartSec": 80.8,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     },
     {
@@ -143,18 +143,10 @@
         163
       ],
       "content": "[G4,D4] / C5 / B4 / [C5,<G4,E4,C4>]",
-      "estimatedStartSec": 260.6,
-      "verifiedStartSec": 278.3,
+      "estimatedStartSec": 89.4,
+      "verifiedStartSec": null,
       "verificationMethod": "ear_verified"
     }
   ],
-  "knownIssues": [
-    {
-      "nearEvent": 116,
-      "line": "R3",
-      "description": "演奏ミス: R3の2音目のD5が欠落しE5を弾く。R3の2番目のD5から弾き直し（3:21.52 = 201.52s）",
-      "errorStartSec": 195.78,
-      "restartTimeSec": 201.52
-    }
-  ]
+  "knownIssues": []
 }
