@@ -991,6 +991,21 @@ def segment_peaks(
                 if alternative_primary is None or hyp.score > alternative_primary.score:
                     alternative_primary = hyp
         if alternative_primary is None:
+            # Octave-up rescue: the primary (e.g. A4) is residual, but an
+            # octave-related note above (A5, A6, …) may be a genuine new
+            # attack whose fundamental overlaps with a harmonic of the
+            # residual note.  Check 1 and 2 octaves above.
+            for octave_mult in (2, 4):
+                target_freq = primary.candidate.frequency * octave_mult
+                for h in ranked:
+                    if abs(h.candidate.frequency - target_freq) / target_freq < 0.03:
+                        octave_gain = _note_onset_energy_gain(audio, sample_rate, start_time, h.candidate.frequency)
+                        if octave_gain is not None and octave_gain >= RESIDUAL_DECAY_MIN_ONSET_GAIN:
+                            alternative_primary = h
+                        break
+                if alternative_primary is not None:
+                    break
+        if alternative_primary is None:
             if debug:
                 _residual_debug: dict[str, Any] = {
                     "startTime": round(start_time, 6),
@@ -1762,33 +1777,26 @@ def _has_mute_dip_reattack(
     return recovery_ratio >= MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO
 
 
-def _is_residual_decay(
+def _note_onset_energy_gain(
     audio: np.ndarray,
     sample_rate: int,
     start_time: float,
     frequency: float,
-) -> bool:
-    """Check whether a note at *frequency* is residual decay at this onset.
+) -> float | None:
+    """Return post/pre note-band energy gain at *frequency*, or None.
 
-    1. Find the per-note attack time by scanning the note's frequency band
-       energy for the steepest increase after the detected onset.
-    2. Measure note-band energy before and after the per-note attack.
-    3. If pre-attack energy is high relative to post-attack energy, the
-       note was already ringing → residual decay.
-
-    On a kalimba, replucking a tine requires touching it first (mute-dip),
-    which drives the pre-attack note-band energy to near zero.  Residual
-    decay shows high energy before and after with no sharp increase.
+    Returns ``None`` when post-attack energy is too low to make a reliable
+    determination (noise floor).  A positive return means a meaningful
+    signal is present; values below ``RESIDUAL_DECAY_MIN_ONSET_GAIN``
+    indicate residual decay while higher values indicate a genuine attack.
     """
     attack_time = _find_note_attack_time(audio, sample_rate, start_time, frequency)
 
-    # Pre-onset is measured relative to the DETECTED onset, not the
-    # per-note attack time, because the onset time is the reliable anchor.
     pre_time = start_time - 0.03
     post_time = attack_time + 0.03
 
     if pre_time < 0 or post_time > len(audio) / sample_rate:
-        return False
+        return None
 
     pre_energy = _note_band_energy(audio, sample_rate, pre_time, frequency,
                                    window_seconds=0.04)
@@ -1796,7 +1804,19 @@ def _is_residual_decay(
                                     window_seconds=0.04)
 
     if post_energy < 1.0:
-        return False  # No meaningful energy; not a residual context.
+        return None  # Below noise floor; cannot determine.
 
-    note_gain = (post_energy + 1e-6) / (pre_energy + 1e-6)
-    return note_gain < RESIDUAL_DECAY_MIN_ONSET_GAIN
+    return (post_energy + 1e-6) / (pre_energy + 1e-6)
+
+
+def _is_residual_decay(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    frequency: float,
+) -> bool:
+    """Check whether a note at *frequency* is residual decay at this onset."""
+    gain = _note_onset_energy_gain(audio, sample_rate, start_time, frequency)
+    if gain is None:
+        return False  # No meaningful energy; not a residual context.
+    return gain < RESIDUAL_DECAY_MIN_ONSET_GAIN
