@@ -176,6 +176,7 @@ def main():
     parser = argparse.ArgumentParser(description="Score structure alignment diagnosis")
     parser.add_argument("fixture", help="Fixture name or path")
     parser.add_argument("--verbose", action="store_true", help="Show exact matches too")
+    parser.add_argument("--line", type=str, default=None, help="Show only this line (e.g., R6)")
     args = parser.parse_args()
 
     fixture_dir = resolve_fixture(args.fixture)
@@ -243,8 +244,12 @@ def main():
     total_miss = 0
     total_events = 0
 
+    filter_line = args.line.upper() if args.line else None
+
     for line in lines:
         line_id = line["id"]
+        if filter_line and line_id != filter_line:
+            continue
         expected_events = parse_content(line["content"])
         for i, evt in enumerate(expected_events):
             evt["num"] = line["eventRange"][0] + i
@@ -272,21 +277,23 @@ def main():
 
         print(f"\n=== {line_id} ({n} exp, {len(detected)} det) exact={exact} subset={subset} partial={partial} miss={miss} ({pct:.0f}% exact, {pct2:.0f}% +sub) ===")
 
+        _blank_time = " " * 8
         for exp, seg in results:
             if seg is None:
-                print(f"  ∅ E{exp['num']:3d} {exp['content']:30s} → NO MATCH")
+                print(f"  ∅ {_blank_time} E{exp['num']:3d} {exp['content']:30s} → NO MATCH")
                 continue
 
             det_notes = seg["notes"]
             exp_notes = exp["notes"]
+            time_str = f"{seg['time']:7.2f}s"
 
             if exp_notes == det_notes:
                 if args.verbose:
                     if exp.get("overridden"):
                         ov_notes = "+".join(sorted(exp_notes))
-                        print(f"  ✓ E{exp['num']:3d} {exp['content']:30s} (override: {ov_notes})")
+                        print(f"  ✓ {time_str} E{exp['num']:3d} {exp['content']:30s} (override: {ov_notes})")
                     else:
-                        print(f"  ✓ E{exp['num']:3d} {exp['content']}")
+                        print(f"  ✓ {time_str} E{exp['num']:3d} {exp['content']}")
                 continue
 
             missing = exp_notes - det_notes
@@ -314,7 +321,7 @@ def main():
                 sym = "✗"
 
             src_str = f" [{','.join(seg['source'])}]" if seg.get('source') else ""
-            print(f"  {sym} E{exp['num']:3d} {exp['content']:30s} → {'+'.join(sorted(det_notes)):15s}{miss_str}{extra_str}{trail_str}{src_str}")
+            print(f"  {sym} {time_str} E{exp['num']:3d} {exp['content']:30s}→ {'+'.join(sorted(det_notes)):15s}{miss_str}{extra_str}{trail_str}{src_str}")
 
         if unmatched:
             print(f"  +{len(unmatched)} extra segments:")
@@ -327,11 +334,13 @@ def main():
     active_segment_count = sum(1 for s in segments if s.get("selectedNotes"))
     dropped_segment_count = len(segments) - active_segment_count
     print(f"\n{'='*60}")
-    print(f"SUMMARY: {total_events} expected events, {active_segment_count} active segments ({dropped_segment_count} dropped)")
-    print(f"  Exact match:   {total_exact:3d}/{total_events} ({100*total_exact/total_events:.0f}%)")
-    print(f"  Subset match:  {total_subset:3d}/{total_events} ({100*total_subset/total_events:.0f}%)")
-    print(f"  Partial match: {total_partial:3d}/{total_events} ({100*total_partial/total_events:.0f}%)")
-    print(f"  No match:      {total_miss:3d}/{total_events} ({100*total_miss/total_events:.0f}%)")
+    line_note = f" (filtered: {filter_line})" if filter_line else ""
+    print(f"SUMMARY{line_note}: {total_events} expected events, {active_segment_count} active segments ({dropped_segment_count} dropped)")
+    if total_events:
+        print(f"  Exact match:   {total_exact:3d}/{total_events} ({100*total_exact/total_events:.0f}%)")
+        print(f"  Subset match:  {total_subset:3d}/{total_events} ({100*total_subset/total_events:.0f}%)")
+        print(f"  Partial match: {total_partial:3d}/{total_events} ({100*total_partial/total_events:.0f}%)")
+        print(f"  No match:      {total_miss:3d}/{total_events} ({100*total_miss/total_events:.0f}%)")
 
 
 if __name__ == "__main__":
