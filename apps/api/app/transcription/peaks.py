@@ -761,6 +761,62 @@ def maybe_promote_recent_upper_octave_alias_primary(
     }
 
 
+def _try_gap_fill(
+    test_keys: list[int],
+    selected: list[NoteCandidate],
+    hypothesis: "NoteHypothesis",
+    residual_ranked: list["NoteHypothesis"],
+    primary: "NoteHypothesis",
+    audio: "np.ndarray",
+    sample_rate: int,
+    start_time: float,
+    end_time: float,
+) -> list[NoteCandidate] | None:
+    """Find gap-filling candidates that make a chord physically playable.
+
+    When adding *hypothesis* to *selected* creates a physically impossible
+    chord, look for candidates whose keys fill the gaps between existing
+    keys.  Returns the list of gap-fill candidates to insert, or None.
+    """
+    sorted_keys = sorted(set(test_keys))
+    if len(sorted_keys) + 1 > MAX_POLYPHONY:
+        return None  # no room for gap-fill
+
+    selected_names = {n.note_name for n in selected} | {hypothesis.candidate.note_name}
+    gap_keys: set[int] = set()
+    for i in range(len(sorted_keys) - 1):
+        lo, hi = sorted_keys[i], sorted_keys[i + 1]
+        if hi - lo == 2:
+            gap_keys.add(lo + 1)
+
+    if not gap_keys:
+        return None
+
+    gap_candidates: list[NoteCandidate] = []
+    for gk in gap_keys:
+        for h in residual_ranked:
+            if h.candidate.key == gk and h.candidate.note_name not in selected_names:
+                if (
+                    h.score >= primary.score * TERTIARY_MIN_SCORE_RATIO
+                    and h.score >= TERTIARY_MIN_SCORE
+                    and h.fundamental_ratio >= TERTIARY_MIN_FUNDAMENTAL_RATIO
+                    and onset_energy_gain(audio, sample_rate, start_time, end_time, h.candidate.frequency) >= TERTIARY_MIN_ONSET_GAIN
+                ):
+                    gap_candidates.append(h.candidate)
+                break
+
+    if len(gap_candidates) != len(gap_keys):
+        return None
+
+    filled_keys = test_keys + [c.key for c in gap_candidates]
+    if not is_physically_playable_chord(filled_keys):
+        return None
+    if len(set(filled_keys)) > MAX_POLYPHONY:
+        return None
+
+    return gap_candidates
+
+
 def is_physically_playable_chord(keys: list[int]) -> bool:
     """Check if a set of keys can be played simultaneously on a kalimba.
 
@@ -1068,7 +1124,26 @@ def segment_peaks(
             if is_tertiary_or_beyond:
                 test_keys = [n.key for n in selected] + [hypothesis.candidate.key]
                 if not is_physically_playable_chord(test_keys):
-                    reasons.append("tertiary-physically-impossible")
+                    # Gap-fill lookahead: check if a candidate in the gap
+                    # between existing keys would make the chord playable.
+                    gap_filled = _try_gap_fill(
+                        test_keys, selected, hypothesis, residual_ranked,
+                        primary, audio, sample_rate, start_time, end_time,
+                    )
+                    if gap_filled:
+                        for gf_candidate in gap_filled:
+                            selected.append(gf_candidate)
+                            secondary_decision_trail.append({
+                                "noteName": gf_candidate.note_name,
+                                "score": 0.0,
+                                "fundamentalRatio": 0.0,
+                                "onsetGain": None,
+                                "accepted": True,
+                                "reasons": ["gap-fill-for-physical-playability"],
+                                "octaveDyadAllowed": False,
+                            })
+                    else:
+                        reasons.append("tertiary-physically-impossible")
                 elif hypothesis.score < primary.score * TERTIARY_MIN_SCORE_RATIO or hypothesis.score < TERTIARY_MIN_SCORE:
                     reasons.append("tertiary-score-below-threshold")
                 elif hypothesis.fundamental_ratio < TERTIARY_MIN_FUNDAMENTAL_RATIO:
