@@ -391,35 +391,83 @@ def build_transcription_form_data(request_payload: dict[str, Any]) -> dict[str, 
 
 def build_evaluation_audio_bytes(fixture_dir: Path, expected: dict[str, Any]) -> bytes:
     windows = parse_ranges(expected, "evaluationWindows")
-    ignored = parse_ranges(expected, "ignoredRanges")
+    raw_ignored = expected.get("ignoredRanges") or []
+    ignored_with_method = tuple(
+        (float(entry["startSec"]), float(entry["endSec"]), entry.get("method", "zerofill"))
+        for entry in raw_ignored
+    )
     return _build_evaluation_audio_bytes_cached(
         fixture_dir,
         tuple((entry["startSec"], entry["endSec"]) for entry in windows),
-        tuple((entry["startSec"], entry["endSec"]) for entry in ignored),
+        ignored_with_method,
     )
+
+
+_CROSSFADE_SECONDS = 0.05
 
 
 @lru_cache(maxsize=32)
 def _build_evaluation_audio_bytes_cached(
     fixture_dir: Path,
     windows: tuple[tuple[float, float], ...],
-    ignored: tuple[tuple[float, float], ...],
+    ignored: tuple[tuple[float, float, str], ...],
 ) -> bytes:
     if not windows and not ignored:
         return (fixture_dir / "audio.wav").read_bytes()
 
     audio, sample_rate = sf.read(fixture_dir / "audio.wav", always_2d=True)
     total_duration = audio.shape[0] / sample_rate
+    crossfade_samples = int(_CROSSFADE_SECONDS * sample_rate)
 
     if ignored and not windows:
-        # Zero-fill ignored ranges in place (preserves timing, avoids splice artifacts).
+        zerofill_ranges = [(s, e) for s, e, m in ignored if m == "zerofill"]
+        splice_ranges = [(s, e) for s, e, m in ignored if m == "splice"]
+
         result = audio.copy()
-        for start, end in ignored:
+
+        # Zero-fill with crossfade (preserves timing).
+        for start, end in zerofill_ranges:
             s = max(0, int(round(start * sample_rate)))
             e = min(result.shape[0], int(round(end * sample_rate)))
-            result[s:e] = 0.0
+            # Fade out before silence
+            fade_out_end = min(s + crossfade_samples, e)
+            if fade_out_end > s:
+                fade_len = fade_out_end - s
+                result[s:fade_out_end] *= np.linspace(1.0, 0.0, fade_len).reshape(-1, 1)
+            result[fade_out_end:e] = 0.0
+            # Fade in after silence
+            fade_in_start = max(e - crossfade_samples, fade_out_end)
+            if e > fade_in_start:
+                fade_len = e - fade_in_start
+                result[fade_in_start:e] *= np.linspace(0.0, 1.0, fade_len).reshape(-1, 1)
+
+        if not splice_ranges:
+            buffer = io.BytesIO()
+            sf.write(buffer, result, sample_rate, format="WAV")
+            return buffer.getvalue()
+
+        # Splice: build segments from the zero-filled result, excluding splice ranges.
+        splice_ranges_sorted = sorted(splice_ranges)
+        cursor = 0.0
+        segments: list[dict[str, float]] = []
+        for start, end in splice_ranges_sorted:
+            if cursor < start:
+                segments.append({"startSec": cursor, "endSec": start})
+            cursor = max(cursor, end)
+        if cursor < total_duration:
+            segments.append({"startSec": cursor, "endSec": total_duration})
+
+        clips = []
+        for entry in segments:
+            si = max(0, int(round(entry["startSec"] * sample_rate)))
+            ei = min(result.shape[0], int(round(entry["endSec"] * sample_rate)))
+            if ei > si:
+                clips.append(result[si:ei])
+        if not clips:
+            raise AssertionError(f"No audio remained after applying ignored ranges for {fixture_dir.name}")
+        combined = np.concatenate(clips, axis=0)
         buffer = io.BytesIO()
-        sf.write(buffer, result, sample_rate, format="WAV")
+        sf.write(buffer, combined, sample_rate, format="WAV")
         return buffer.getvalue()
 
     # evaluationWindows: extract and concatenate specified ranges.

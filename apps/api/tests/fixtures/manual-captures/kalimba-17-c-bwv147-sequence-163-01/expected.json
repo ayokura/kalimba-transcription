@@ -14,6 +14,7 @@
     {
       "startSec": 197.2,
       "endSec": 201.5,
+      "method": "splice",
       "reason": "R3 playing error: 2nd D5 missed (E5 played), restarted from D5"
     }
   ]
