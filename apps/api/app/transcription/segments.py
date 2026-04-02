@@ -595,42 +595,6 @@ def collect_single_onset_gap_head_segments(
     return segments
 
 
-def collect_two_onset_terminal_tail_segments(
-    active_ranges: list[tuple[float, float]],
-    onset_times: list[float],
-    audio_duration: float,
-    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
-) -> list[tuple[float, float]]:
-    if not active_ranges:
-        return []
-
-    last_range_end = active_ranges[-1][1]
-    trailing_onsets = [
-        onset_time
-        for onset_time in onset_times
-        if last_range_end + TERMINAL_TWO_ONSET_TAIL_MIN_GAP_AFTER_ACTIVE <= onset_time <= audio_duration - 0.08
-    ]
-    if len(trailing_onsets) != 2:
-        return []
-
-    first_onset, second_onset = trailing_onsets
-    if first_onset > last_range_end + TERMINAL_TWO_ONSET_TAIL_MAX_GAP_AFTER_ACTIVE:
-        return []
-    if not (TERMINAL_TWO_ONSET_TAIL_MIN_INTERVAL <= second_onset - first_onset <= TERMINAL_TWO_ONSET_TAIL_MAX_INTERVAL):
-        return []
-
-    segments: list[tuple[float, float]] = []
-    first_end = min(first_onset + TERMINAL_TWO_ONSET_TAIL_SEGMENT_DURATION, second_onset - 0.08)
-    if first_end - first_onset >= 0.08:
-        segments.append((first_onset, first_end))
-
-    second_end = min(second_onset + TERMINAL_TWO_ONSET_TAIL_SEGMENT_DURATION, audio_duration)
-    if second_end - second_onset >= 0.08:
-        segments.append((second_onset, second_end))
-
-    return segments
-
-
 def collect_attack_validated_gap_segments(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
@@ -710,107 +674,6 @@ def build_gap_ioi_diagnostics(
             }
         )
     return diagnostics
-
-
-def collect_close_terminal_orphan_segments(
-    active_ranges: list[tuple[float, float]],
-    onset_times: list[float],
-    audio_duration: float,
-    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
-) -> list[tuple[float, float]]:
-    if not active_ranges:
-        return []
-
-    last_range_end = active_ranges[-1][1]
-    trailing_onsets = [
-        onset_time
-        for onset_time in onset_times
-        if last_range_end + CLOSE_TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE
-        <= onset_time
-        <= min(last_range_end + CLOSE_TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE, audio_duration - 0.08)
-    ]
-    if len(trailing_onsets) != 1:
-        return []
-
-    orphan_start = trailing_onsets[0]
-    orphan_end = min(orphan_start + CLOSE_TERMINAL_ORPHAN_SEGMENT_DURATION, audio_duration)
-    if orphan_end - orphan_start < 0.08:
-        return []
-    return [(orphan_start, orphan_end)]
-
-
-def collect_delayed_terminal_orphan_segments(
-    base_segment: tuple[float, float] | None,
-    onset_times: list[float],
-    audio_duration: float,
-    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
-) -> list[tuple[float, float]]:
-    if base_segment is None:
-        return []
-
-    base_start, base_end = base_segment
-    base_duration = base_end - base_start
-    if not (DELAYED_TERMINAL_ORPHAN_MIN_BASE_DURATION <= base_duration <= DELAYED_TERMINAL_ORPHAN_MAX_BASE_DURATION):
-        return []
-
-    trailing_onsets = [
-        onset_time
-        for onset_time in onset_times
-        if base_end + DELAYED_TERMINAL_ORPHAN_MIN_GAP_AFTER_ACTIVE
-        <= onset_time
-        <= min(base_end + DELAYED_TERMINAL_ORPHAN_MAX_GAP_AFTER_ACTIVE, audio_duration - 0.08)
-    ]
-    if len(trailing_onsets) != 1:
-        return []
-
-    orphan_start = trailing_onsets[0]
-    orphan_end = min(orphan_start + DELAYED_TERMINAL_ORPHAN_SEGMENT_DURATION, audio_duration)
-    if orphan_end - orphan_start < 0.08:
-        return []
-    return [(orphan_start, orphan_end)]
-
-
-def collect_terminal_multi_onset_segments(
-    active_ranges: list[tuple[float, float]],
-    onset_times: list[float],
-    audio_duration: float,
-    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
-) -> list[tuple[float, float]]:
-    if not active_ranges:
-        return []
-
-    last_range_end = active_ranges[-1][1]
-    trailing_onsets = [
-        onset_time
-        for onset_time in onset_times
-        if onset_time >= last_range_end + CLOSE_TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE
-        and onset_time <= audio_duration - 0.08
-    ]
-    if len(trailing_onsets) < TERMINAL_MULTI_ONSET_MIN_COUNT:
-        return []
-    if trailing_onsets[0] > last_range_end + CLOSE_TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE:
-        return []
-
-    run_onsets = trailing_onsets[1:]
-    if len(run_onsets) < 3:
-        return []
-
-    intervals = [run_onsets[i + 1] - run_onsets[i] for i in range(len(run_onsets) - 1)]
-    if not intervals:
-        return []
-    if not all(TERMINAL_MULTI_ONSET_MIN_INTERVAL <= interval <= TERMINAL_MULTI_ONSET_MAX_INTERVAL for interval in intervals):
-        return []
-
-    segments: list[tuple[float, float]] = []
-    for start_time, end_time in zip(run_onsets, run_onsets[1:]):
-        if end_time - start_time >= 0.08:
-            segments.append((start_time, end_time))
-
-    tail_start = run_onsets[-1]
-    tail_end = min(tail_start + TERMINAL_MULTI_ONSET_TAIL_DURATION, audio_duration)
-    if tail_end - tail_start >= 0.08:
-        segments.append((tail_start, tail_end))
-    return segments
 
 
 def simplify_sparse_gap_tail_high_octave_dyad(candidates: list[NoteCandidate]) -> list[NoteCandidate]:
@@ -1126,44 +989,8 @@ def detect_segments(
         if len(qualifying_gap_run) >= 3:
             gap_injected_segments.extend(qualifying_gap_run)
 
-    terminal_orphan_segments: list[tuple[float, float]] = []
-    close_terminal_orphan_segments: list[tuple[float, float]] = []
-    delayed_terminal_orphan_segments: list[tuple[float, float]] = []
-    terminal_multi_onset_segments: list[tuple[float, float]] = []
-    terminal_two_onset_tail_segments: list[tuple[float, float]] = []
     attack_validated_gap_segments: list[tuple[float, float]] = []
     if active_ranges and not mid_performance_end:
-        last_range_end = active_ranges[-1][1]
-        trailing_onsets = [
-            onset_time
-            for onset_time in gap_onset_times
-            if last_range_end + TERMINAL_ORPHAN_ONSET_MIN_GAP_AFTER_ACTIVE
-            <= onset_time
-            <= min(last_range_end + TERMINAL_ORPHAN_ONSET_MAX_GAP_AFTER_ACTIVE, audio_duration - 0.08)
-        ]
-        if len(trailing_onsets) == 1:
-            orphan_start = trailing_onsets[0]
-            orphan_end = min(orphan_start + TERMINAL_ORPHAN_SEGMENT_DURATION, audio_duration)
-            if orphan_end - orphan_start >= 0.08:
-                terminal_orphan_segments.append((orphan_start, orphan_end))
-        close_terminal_orphan_segments = (
-            [] if ABLATE_CLOSE_TERMINAL_ORPHAN else collect_close_terminal_orphan_segments(active_ranges, gap_onset_times, audio_duration, onset_attack_profiles)
-        )
-        delayed_base_segment = (
-            close_terminal_orphan_segments[-1]
-            if close_terminal_orphan_segments
-            else (terminal_orphan_segments[-1] if terminal_orphan_segments else None)
-        )
-        delayed_terminal_orphan_segments = (
-            [] if ABLATE_DELAYED_TERMINAL_ORPHAN else collect_delayed_terminal_orphan_segments(delayed_base_segment, gap_onset_times, audio_duration, onset_attack_profiles)
-        )
-        terminal_multi_onset_segments = (
-            [] if ABLATE_TERMINAL_MULTI_ONSET else collect_terminal_multi_onset_segments(active_ranges, gap_onset_times, audio_duration, onset_attack_profiles)
-        )
-        if not terminal_orphan_segments and not close_terminal_orphan_segments and not delayed_terminal_orphan_segments and not terminal_multi_onset_segments:
-            terminal_two_onset_tail_segments = (
-                [] if ABLATE_TWO_ONSET_TERMINAL_TAIL else collect_two_onset_terminal_tail_segments(active_ranges, gap_onset_times, audio_duration, onset_attack_profiles)
-            )
         if USE_ATTACK_VALIDATED_GAP_COLLECTOR:
             attack_validated_gap_segments = collect_attack_validated_gap_segments(
                 active_ranges,
@@ -1244,11 +1071,6 @@ def detect_segments(
         (post_tail_gap_head_segments, "postTailGapHead", False),
         (single_onset_gap_head_segments, "singleOnsetGapHead", True),
         (sparse_gap_tail_segments, "sparseGapTail", True),
-        (terminal_orphan_segments, "terminalOrphan", True),
-        (close_terminal_orphan_segments, "closeTerminalOrphan", True),
-        (delayed_terminal_orphan_segments, "delayedTerminalOrphan", True),
-        (terminal_multi_onset_segments, "terminalMultiOnset", False),
-        (terminal_two_onset_tail_segments, "terminalTwoOnsetTail", True),
         (attack_validated_gap_segments, "attackValidatedGap", True),
     ]
     for collector_segments, source_name, estimated in collector_sources:
@@ -1297,11 +1119,6 @@ def detect_segments(
         "postTailGapHeadSegments": [[round(start, 4), round(end, 4)] for start, end in post_tail_gap_head_segments],
         "singleOnsetGapHeadSegments": [[round(start, 4), round(end, 4)] for start, end in single_onset_gap_head_segments],
         "sparseGapTailSegments": [[round(start, 4), round(end, 4)] for start, end in sparse_gap_tail_segments],
-        "terminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_orphan_segments],
-        "closeTerminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in close_terminal_orphan_segments],
-        "delayedTerminalOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in delayed_terminal_orphan_segments],
-        "terminalMultiOnsetSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_multi_onset_segments],
-        "terminalTwoOnsetTailSegments": [[round(start, 4), round(end, 4)] for start, end in terminal_two_onset_tail_segments],
         "attackValidatedGapSegments": [[round(start, 4), round(end, 4)] for start, end in attack_validated_gap_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),

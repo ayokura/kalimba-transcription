@@ -10,8 +10,6 @@ from app.transcription import (
     collect_range_prior_backtrack_onsets,
     collect_attack_validated_gap_candidates,
     collect_multi_onset_gap_segments,
-    collect_terminal_multi_onset_segments,
-    collect_two_onset_terminal_tail_segments,
     dedupe_cross_collector_segments,
     detect_segments,
     filter_gap_onsets_by_attack,
@@ -152,24 +150,6 @@ def test_collect_range_prior_backtrack_onsets_uses_raw_onsets_for_short_ranges()
     )
 
     assert prior_onsets == [20.856]
-
-
-def test_collect_terminal_multi_onset_segments_requires_close_orphan_then_regular_run() -> None:
-    active_ranges = [(21.692, 21.968)]
-    onset_times = [22.112, 23.088, 23.5307, 23.96, 24.3627]
-
-    segments = collect_terminal_multi_onset_segments(active_ranges, onset_times, 24.9)
-
-    assert segments == [(23.088, 23.5307), (23.5307, 23.96), (23.96, 24.3627), (24.3627, 24.6827)]
-
-
-def test_collect_two_onset_terminal_tail_segments_requires_sparse_two_hit_tail() -> None:
-    active_ranges = [(4.2013, 4.6533)]
-    onset_times = [2.032, 3.0853, 4.2027, 5.9147, 7.0]
-
-    segments = collect_two_onset_terminal_tail_segments(active_ranges, onset_times, 7.8)
-
-    assert segments == [(5.9147, 6.2347), (7.0, 7.32)]
 
 
 def test_detect_segments_collapses_redundant_same_start_segments() -> None:
