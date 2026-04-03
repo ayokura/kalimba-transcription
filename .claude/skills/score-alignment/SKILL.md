@@ -6,8 +6,8 @@ arguments:
   - name: fixture
     description: Fixture name (e.g., bwv147-sequence-163-01)
     required: true
-  - name: verbose
-    description: Show exact matches too (default false)
+  - name: options
+    description: "Options: --verbose, --mode events|segments, --line L1"
     required: false
 ---
 
@@ -22,8 +22,15 @@ Compare expected events from score_structure.json with recognizer output using o
 
 Run the alignment diagnosis script:
 ```bash
-uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--verbose]
+uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--verbose] [--mode events|segments] [--line L1]
 ```
+
+## Modes
+
+| Mode | Description |
+|------|-------------|
+| `events` (default) | Post-processed final output (mergedEvents). Reflects all event-level corrections. |
+| `segments` | Raw segmentCandidates before event post-processing. Shows segment_peaks output directly. |
 
 ## Output symbols
 | Symbol | Meaning |
@@ -35,11 +42,11 @@ uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--v
 | ✗ | Mismatch — no note overlap |
 | ∅ | No matching segment found (onset missing) |
 
-Rejection reasons for missing notes are shown in `[note→reason]` format.
+Rejection reasons for missing notes are shown in `[note→reason]` format (cross-referenced from segmentCandidates trail in both modes).
 
 ## Known Limitations
 
-**個別イベントの failure 分析には使わないこと。** greedy ordered matching はセグメント数と期待イベント数が一致しない場合にアライメントがずれ、誤った failure 原因を報告する。例: multi-note セグメントが直前の single-note イベントに割り当てられ、本来の multi-note イベントに別セグメントが当たるケース（2026-03-29 bwv147-163 R4 E142 で確認）。
+**個別イベントの failure 分析には使わないこと。** ordered matching はセグメント/イベント数と期待イベント数が一致しない場合にアライメントがずれ、誤った failure 原因を報告する。
 
 - **全体精度（exact %）と failure カテゴリの大局把握には有効**
 - **個別イベントの原因分析には `/audio-energy-trace` + debug 出力の手動確認を推奨**
@@ -48,4 +55,6 @@ Rejection reasons for missing notes are shown in `[note→reason]` format.
 ```
 /score-alignment bwv147-sequence-163-01
 /score-alignment bwv147-sequence-163-01 --verbose
+/score-alignment bwv147-sequence-163-01 --mode segments
+/score-alignment bwv147-sequence-163-01 --line R4
 ```
