@@ -59,3 +59,33 @@
 - **動機**: E143 A5 の segment が 141ms で短く、spectral resolution 不足で A4 octave alias が発生
 - **不採用理由**: 0.32s / 0.5s いずれに延長しても primary は A4 のまま (residual-decay-no-reattack で棄却)。A4 の倍音構造 (440+880+1320...) が A5 (880+1760...) を必然的に上回るため、segment 長に関わらず octave alias は解消しない。0.5s では 15 regressions。
 - **再検討条件**: `trimmed_from` と統合した形で、segment 管理の一般的改善として再設計する場合。octave alias 自体は別のアプローチ（residual-decay での octave 候補チェック等）が必要
+
+## Terminal collector 5種 (closeTerminalOrphan, delayedTerminalOrphan, terminalMultiOnset, twoOnsetTerminalTail, trailingTerminalOrphan)
+
+- **Issue**: #122
+- **日付**: 2026-04-02
+- **概要**: active range 末尾に向かって onset を拾う 5種の terminal collector。各自固有の定数セット（計21定数）を持つ
+- **動機**: active range 末尾の残存 onset を segment 化する
+- **不採用理由**: 42 fixture 中 6 でしか使用されず、使用されていた 90% のケースが AVC trailing で既にカバー。全 ablate で回帰ゼロ。非因果的（末尾の確定を待つ必要がある）で streaming 不適
+- **削除**: `3809993`, `6077be8` (-228行, 21定数, 5関数, 5 ablation フラグ)
+- **再検討条件**: AVC trailing がカバーしない terminal onset パターンが実用 fixture で確認された場合
+
+## Gap collector 3種 (gapInjected, singleOnsetGapHead, postTailGapHead)
+
+- **Issue**: #129
+- **日付**: 2026-04-03
+- **概要**: gap 内の onset パターンを特定条件で segment 化する 3種の collector（計13定数）
+- **動機**: active range 間の gap に存在する音を拾う
+- **不採用理由**: completed fixture で使用ゼロ。全 ablate で回帰ゼロ。AVC inter-range が同等のカバーを提供
+- **削除**: `bc529cd` (-150行, 13定数, 2関数+1 inline, 3 ablation フラグ)
+- **再検討条件**: なし（使用実績ゼロのため、再検討より新設計が妥当）
+
+## leadingOrphan collector
+
+- **Issue**: #130
+- **日付**: 2026-04-03
+- **概要**: 最初の active range 直前の孤立 onset を segment 化する collector（3定数）
+- **動機**: 演奏開始前の 1 ノートを拾う
+- **不採用理由**: 全 4 fixture の使用が AVC leading で完全カバーされていることを ablation で確認（全テスト pass）。AVC 自体が因果的（onset の attack profile で判定）であり、leadingOrphan を残す streaming 上の理由もない
+- **削除**: `feeb054` (-36行, 3定数, 1関数, 1 ablation フラグ)
+- **再検討条件**: AVC leading が mid_performance_start 等の条件で無効化される場面で leading onset が失われる場合
