@@ -1451,7 +1451,20 @@ def segment_peaks(
                     _iter_hyp.score < primary.score * TERTIARY_MIN_SCORE_RATIO
                     or _iter_hyp.score < TERTIARY_MIN_SCORE
                 ):
-                    _iter_reasons.append("iterative-tertiary-score-below-threshold")
+                    # Rescue: if the candidate was strong pre-suppression and
+                    # retains high fundamentalRatio in the residual, the low
+                    # score is explained by harmonic overlap, not missing energy.
+                    _pre_sup = next(
+                        (r for r in ranked if r.candidate.note_name == _iter_hyp.candidate.note_name),
+                        None,
+                    )
+                    if not (
+                        _pre_sup is not None
+                        and _pre_sup.score >= primary.score * TERTIARY_MIN_SCORE_RATIO
+                        and _pre_sup.score >= TERTIARY_MIN_SCORE
+                        and _iter_hyp.fundamental_ratio >= ITERATIVE_RESCUE_MIN_FUNDAMENTAL_RATIO
+                    ):
+                        _iter_reasons.append("iterative-tertiary-score-below-threshold")
                 else:
                     # All candidates reaching here are octave-related
                     # (non-octave filtered by _iter_is_octave above).
