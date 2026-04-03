@@ -1018,6 +1018,61 @@ class _CandidateDecision:
             "octaveDyadAllowed": self.octave_dyad_allowed,
         }
 
+    @property
+    def reason_categories(self) -> set[str]:
+        """Categories of gates that produced the rejection reasons."""
+        return {GATE_CATEGORIES.get(r, "unknown") for r in self.reasons} if not self.accepted else set()
+
+
+# Gate classification for 5-layer architecture planning.
+# "structural": no audio needed, always run — stay in selection layer
+# "evidence": uses onset/backward/mute-dip from cache — candidate for final-decision layer
+# "context": depends on previous event state — candidate for final-decision layer
+# "iterative": iterative harmonic suppression pass
+# "extension": pattern extension phases
+# "promotion": secondary-to-upper-octave promotion
+GATE_CATEGORIES: dict[str, str] = {
+    # Structural (Layer 3: selection, stay here)
+    "tertiary-physically-impossible": "structural",
+    "tertiary-score-below-threshold": "structural",
+    "tertiary-fundamental-ratio-too-low": "structural",
+    "tertiary-duplicate-note": "structural",
+    "same-as-primary": "structural",
+    "recent-upper-octave-alias-secondary-blocked": "structural",
+    "score-below-threshold": "structural",
+    "fundamental-ratio-too-low": "structural",
+    "harmonic-related-to-selected": "structural",
+    # Evidence (candidate for Layer 4: final decision)
+    "tertiary-weak-onset": "evidence",
+    "tertiary-weak-backward-attack": "evidence",
+    "recent-carryover-candidate": "evidence",
+    "weak-upper-secondary": "evidence",
+    "weak-secondary-onset": "evidence",
+    "weak-lower-secondary": "evidence",
+    # Context (candidate for Layer 4: final decision)
+    "descending-adjacent-upper-carryover": "context",
+    "descending-restart-upper-carryover": "context",
+    "descending-primary-suffix-upper-carryover": "context",
+    "descending-repeated-primary-stale-upper": "context",
+    "ascending-singleton-carryover": "context",
+    "repeated-primary-carryover": "context",
+    # Iterative suppression
+    "iterative-tertiary-physically-impossible": "iterative",
+    "iterative-tertiary-score-below-threshold": "iterative",
+    "iterative-tertiary-fundamental-ratio-too-low": "iterative",
+    "iterative-tertiary-weak-onset": "iterative",
+    "iterative-tertiary-weak-backward-attack": "iterative",
+    "iterative-suppression-tertiary": "iterative",
+    # Extension
+    "contiguous-four-note-cluster": "extension",
+    "gap-fill-for-physical-playability": "extension",
+    "contiguous-tertiary-extension": "extension",
+    "non-slide-playable-contiguous-cluster": "extension",
+    "descending-repeated-primary-tertiary-blocked": "extension",
+    "lower-mixed-roll-extension": "extension",
+    "lower-roll-tail-extension": "extension",
+}
+
 
 @dataclass(slots=True)
 class SegmentDecisionTrace:
@@ -1522,6 +1577,7 @@ def _select_candidates(
     if ctx.duration <= 0.14:
         secondary_score_ratio = SHORT_SEGMENT_SECONDARY_SCORE_RATIO
     secondary_min_fundamental_ratio = SECONDARY_MIN_FUNDAMENTAL_RATIO
+    _disabled = settings.get().disabled_gates
 
     if MAX_POLYPHONY > 1 and contiguous_four_note_cluster is None:
         residual_spectrum = suppress_harmonics(spectral.spectrum, spectral.frequencies, primary.candidate.frequency)
@@ -1535,6 +1591,7 @@ def _select_candidates(
             if octave_dyad_allowed and hypothesis.candidate.frequency > primary.candidate.frequency:
                 score_ratio = min(score_ratio, OCTAVE_DYAD_UPPER_SCORE_RATIO)
             is_tertiary_or_beyond = len(selected) >= 2
+            # ── Structural gates (no audio, always run) ──────────────
             if is_tertiary_or_beyond:
                 test_keys = [n.key for n in selected] + [hypothesis.candidate.key]
                 if not is_physically_playable_chord(test_keys):
@@ -1566,29 +1623,38 @@ def _select_candidates(
                     reasons.append("tertiary-fundamental-ratio-too-low")
                 elif any(hypothesis.candidate.note_name == existing.note_name for existing in selected):
                     reasons.append("tertiary-duplicate-note")
+                # ── Evidence gates (cache, candidate for final-decision layer) ──
                 if not reasons and is_tertiary_or_beyond:
                     onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                     if onset_gain < TERTIARY_MIN_ONSET_GAIN:
-                        reasons.append("tertiary-weak-onset")
+                        if "tertiary-weak-onset" not in _disabled:
+                            reasons.append("tertiary-weak-onset")
                 if not reasons and is_tertiary_or_beyond:
                     backward_gain = evidence.backward_attack_gain(hypothesis.candidate.frequency)
                     if backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
-                        reasons.append("tertiary-weak-backward-attack")
+                        if "tertiary-weak-backward-attack" not in _disabled:
+                            reasons.append("tertiary-weak-backward-attack")
             if hypothesis.candidate.note_name == primary.candidate.note_name:
-                reasons.append("same-as-primary")
+                if "same-as-primary" not in _disabled:
+                    reasons.append("same-as-primary")
             if (
                 primary_promotion_debug is not None
                 and primary_promotion_debug.get("reason") == "recent-upper-octave-alias-primary"
                 and hypothesis.candidate.pitch_class == primary.candidate.pitch_class
                 and hypothesis.candidate.octave == primary.candidate.octave - 1
             ):
-                reasons.append("recent-upper-octave-alias-secondary-blocked")
+                if "recent-upper-octave-alias-secondary-blocked" not in _disabled:
+                    reasons.append("recent-upper-octave-alias-secondary-blocked")
             if hypothesis.score < primary.score * score_ratio and not octave_dyad_allowed and not is_tertiary_or_beyond:
-                reasons.append("score-below-threshold")
+                if "score-below-threshold" not in _disabled:
+                    reasons.append("score-below-threshold")
             if hypothesis.fundamental_ratio < secondary_min_fundamental_ratio:
-                reasons.append("fundamental-ratio-too-low")
+                if "fundamental-ratio-too-low" not in _disabled:
+                    reasons.append("fundamental-ratio-too-low")
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not octave_dyad_allowed:
-                reasons.append("harmonic-related-to-selected")
+                if "harmonic-related-to-selected" not in _disabled:
+                    reasons.append("harmonic-related-to-selected")
+            # ── Evidence + Context gates (candidate for final-decision layer) ──
             if ctx.recent_note_names and hypothesis.candidate.note_name in ctx.recent_note_names:
                 onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if hypothesis.candidate.frequency < primary.candidate.frequency:
@@ -1603,7 +1669,8 @@ def _select_candidates(
                         )
                     ):
                         if not evidence.has_mute_dip_reattack(hypothesis.candidate.frequency):
-                            reasons.append("recent-carryover-candidate")
+                            if "recent-carryover-candidate" not in _disabled:
+                                reasons.append("recent-carryover-candidate")
                 else:
                     primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
                     if (
@@ -1612,7 +1679,9 @@ def _select_candidates(
                         and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
                         and not evidence.has_mute_dip_reattack(hypothesis.candidate.frequency)
                     ):
-                        reasons.append("recent-carryover-candidate")
+                        if "recent-carryover-candidate" not in _disabled:
+                            reasons.append("recent-carryover-candidate")
+            # ── Context gates (previous event dependent, not-reasons guard) ──
             if (
                 not reasons
                 and ctx.previous_primary_was_singleton
@@ -1630,7 +1699,8 @@ def _select_candidates(
                     and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
                     and hypothesis.score < primary.score * DESCENDING_ADJACENT_UPPER_SCORE_RATIO
                 ):
-                    reasons.append("descending-adjacent-upper-carryover")
+                    if "descending-adjacent-upper-carryover" not in _disabled:
+                        reasons.append("descending-adjacent-upper-carryover")
             if (
                 not reasons
                 and ctx.previous_primary_was_singleton
@@ -1648,7 +1718,8 @@ def _select_candidates(
                     and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
                     and hypothesis.score < primary.score * DESCENDING_RESTART_UPPER_SCORE_RATIO
                 ):
-                    reasons.append("descending-restart-upper-carryover")
+                    if "descending-restart-upper-carryover" not in _disabled:
+                        reasons.append("descending-restart-upper-carryover")
             if (
                 not reasons
                 and hypothesis.candidate.frequency > primary.candidate.frequency
@@ -1670,7 +1741,8 @@ def _select_candidates(
                     and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
                     and hypothesis.score < primary.score * DESCENDING_PRIMARY_SUFFIX_UPPER_SCORE_RATIO
                 ):
-                    reasons.append("descending-primary-suffix-upper-carryover")
+                    if "descending-primary-suffix-upper-carryover" not in _disabled:
+                        reasons.append("descending-primary-suffix-upper-carryover")
             if (
                 not reasons
                 and primary_promotion_debug is not None
@@ -1691,7 +1763,9 @@ def _select_candidates(
                         )
                     )
                 ):
-                    reasons.append("descending-repeated-primary-stale-upper")
+                    if "descending-repeated-primary-stale-upper" not in _disabled:
+                        reasons.append("descending-repeated-primary-stale-upper")
+            # ── Weak-onset evidence gates (not-reasons guard) ──────────
             if (
                 not reasons
                 and hypothesis.candidate.frequency > primary.candidate.frequency
@@ -1704,7 +1778,8 @@ def _select_candidates(
                         onset_gain < UPPER_SECONDARY_WEAK_ONSET_MAX_GAIN
                         and hypothesis.score < primary.score * UPPER_SECONDARY_WEAK_ONSET_SCORE_RATIO
                     ):
-                        reasons.append("weak-upper-secondary")
+                        if "weak-upper-secondary" not in _disabled:
+                            reasons.append("weak-upper-secondary")
             if (
                 not reasons
                 and segment_duration <= SHORT_SECONDARY_WEAK_ONSET_MAX_DURATION
@@ -1718,7 +1793,8 @@ def _select_candidates(
                         and onset_gain < primary_onset_gain * SHORT_SECONDARY_WEAK_ONSET_MAX_RATIO
                         and hypothesis.score < primary.score * SHORT_SECONDARY_WEAK_ONSET_SCORE_RATIO
                     ):
-                        reasons.append("weak-secondary-onset")
+                        if "weak-secondary-onset" not in _disabled:
+                            reasons.append("weak-secondary-onset")
             if (
                 not reasons
                 and segment_duration <= LOWER_SECONDARY_WEAK_ONSET_MAX_DURATION
@@ -1733,7 +1809,9 @@ def _select_candidates(
                         and onset_gain < primary_onset_gain * LOWER_SECONDARY_WEAK_ONSET_MAX_RATIO
                         and hypothesis.score < primary.score * LOWER_SECONDARY_WEAK_ONSET_SCORE_RATIO
                     ):
-                        reasons.append("weak-lower-secondary")
+                        if "weak-lower-secondary" not in _disabled:
+                            reasons.append("weak-lower-secondary")
+            # ── Score rescue (clears structural rejection) ─────────────
             if (
                 reasons == ["score-below-threshold"]
                 and segment_duration >= 0.75
@@ -1746,6 +1824,7 @@ def _select_candidates(
                 if 250.0 <= interval_cents <= 550.0:
                     reasons = []
 
+            # ── Run-pattern context gates ──────────────────────────────
             if (
                 not reasons
                 and ctx.ascending_primary_run_ceiling is not None
@@ -1760,7 +1839,8 @@ def _select_candidates(
             ):
                 onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if onset_gain < MIN_RECENT_NOTE_ONSET_GAIN:
-                    reasons.append("ascending-singleton-carryover")
+                    if "ascending-singleton-carryover" not in _disabled:
+                        reasons.append("ascending-singleton-carryover")
             if (
                 not reasons
                 and segment_duration <= 0.22
@@ -1777,7 +1857,8 @@ def _select_candidates(
                 primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
                 onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if primary_onset_gain < MIN_RECENT_NOTE_ONSET_GAIN and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN:
-                    reasons.append("repeated-primary-carryover")
+                    if "repeated-primary-carryover" not in _disabled:
+                        reasons.append("repeated-primary-carryover")
             accepted = len(reasons) == 0
             accepted_hypothesis = hypothesis
             debug_reasons = reasons

@@ -44,6 +44,11 @@ class RecognizerSettings:
     ablate_collapse_active_range_head: bool = False
     ablate_snap_range_start_to_onset: bool = False
 
+    # Gate-level ablation: set of gate reason strings to skip.
+    # See GATE_CATEGORIES in peaks.py for the full list.
+    # Example: frozenset({"recent-carryover-candidate", "weak-upper-secondary"})
+    disabled_gates: frozenset[str] = frozenset()
+
 
 _DEFAULTS = RecognizerSettings()
 _current: RecognizerSettings = _DEFAULTS
