@@ -1451,17 +1451,15 @@ def segment_peaks(
                     _iter_hyp.score < primary.score * TERTIARY_MIN_SCORE_RATIO
                     or _iter_hyp.score < TERTIARY_MIN_SCORE
                 ):
-                    # Rescue: if the candidate was strong pre-suppression and
+                    # Rescue: if the candidate has a genuine attack and
                     # retains high fundamentalRatio in the residual, the low
                     # score is explained by harmonic overlap, not missing energy.
-                    _pre_sup = next(
-                        (r for r in ranked if r.candidate.note_name == _iter_hyp.candidate.note_name),
-                        None,
+                    _iter_onset_gain = onset_energy_gain(
+                        audio, sample_rate, start_time, end_time,
+                        _iter_hyp.candidate.frequency,
                     )
                     if not (
-                        _pre_sup is not None
-                        and _pre_sup.score >= primary.score * TERTIARY_MIN_SCORE_RATIO
-                        and _pre_sup.score >= TERTIARY_MIN_SCORE
+                        _iter_onset_gain >= TERTIARY_MIN_ONSET_GAIN
                         and _iter_hyp.fundamental_ratio >= ITERATIVE_RESCUE_MIN_FUNDAMENTAL_RATIO
                     ):
                         _iter_reasons.append("iterative-tertiary-score-below-threshold")
@@ -1472,10 +1470,11 @@ def segment_peaks(
                     if _iter_hyp.fundamental_ratio < _iter_fr_threshold:
                         _iter_reasons.append("iterative-tertiary-fundamental-ratio-too-low")
                 if not _iter_reasons:
-                    _iter_onset_gain = onset_energy_gain(
-                        audio, sample_rate, start_time, end_time,
-                        _iter_hyp.candidate.frequency,
-                    )
+                    if _iter_onset_gain is None:
+                        _iter_onset_gain = onset_energy_gain(
+                            audio, sample_rate, start_time, end_time,
+                            _iter_hyp.candidate.frequency,
+                        )
                     if _iter_onset_gain < TERTIARY_MIN_ONSET_GAIN:
                         _iter_reasons.append("iterative-tertiary-weak-onset")
                 if not _iter_reasons:
