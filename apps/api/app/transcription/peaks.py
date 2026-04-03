@@ -1306,15 +1306,11 @@ def segment_peaks(
                 elif any(hypothesis.candidate.note_name == existing.note_name for existing in selected):
                     reasons.append("tertiary-duplicate-note")
                 if not reasons and is_tertiary_or_beyond:
-                    if onset_gain is None:
-                        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                    onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                     if onset_gain < TERTIARY_MIN_ONSET_GAIN:
                         reasons.append("tertiary-weak-onset")
                 if not reasons and is_tertiary_or_beyond:
-                    backward_gain = onset_backward_attack_gain(
-                        audio, sample_rate, start_time,
-                        hypothesis.candidate.frequency,
-                    )
+                    backward_gain = evidence.backward_attack_gain(hypothesis.candidate.frequency)
                     if backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
                         reasons.append("tertiary-weak-backward-attack")
             if hypothesis.candidate.note_name == primary.candidate.note_name:
@@ -1333,7 +1329,7 @@ def segment_peaks(
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not octave_dyad_allowed:
                 reasons.append("harmonic-related-to-selected")
             if recent_note_names and hypothesis.candidate.note_name in recent_note_names:
-                onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if hypothesis.candidate.frequency < primary.candidate.frequency:
                     if (
                         onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
@@ -1345,16 +1341,15 @@ def segment_peaks(
                             and onset_gain < ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN
                         )
                     ):
-                        if not _has_mute_dip_reattack(audio, sample_rate, start_time, hypothesis.candidate.frequency):
+                        if not evidence.has_mute_dip_reattack(hypothesis.candidate.frequency):
                             reasons.append("recent-carryover-candidate")
                 else:
-                    if primary_onset_gain is None:
-                        primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                    primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
                     if (
                         primary_onset_gain >= RECENT_UPPER_SECONDARY_PRIMARY_ONSET_GAIN
                         and segment_duration >= RECENT_UPPER_SECONDARY_MIN_DURATION
                         and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
-                        and not _has_mute_dip_reattack(audio, sample_rate, start_time, hypothesis.candidate.frequency)
+                        and not evidence.has_mute_dip_reattack(hypothesis.candidate.frequency)
                     ):
                         reasons.append("recent-carryover-candidate")
             if (
@@ -1367,10 +1362,8 @@ def segment_peaks(
                 <= cents_distance(primary.candidate.frequency, hypothesis.candidate.frequency)
                 <= ADJACENT_RUN_STRIP_MAX_INTERVAL_CENTS
             ):
-                if primary_onset_gain is None:
-                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
-                if onset_gain is None:
-                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
+                onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if (
                     primary_onset_gain >= DESCENDING_ADJACENT_UPPER_PRIMARY_ONSET_GAIN
                     and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
@@ -1387,10 +1380,8 @@ def segment_peaks(
                 and segment_duration <= DESCENDING_RESTART_UPPER_CARRYOVER_MAX_DURATION
                 and not octave_dyad_allowed
             ):
-                if primary_onset_gain is None:
-                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
-                if onset_gain is None:
-                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
+                onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if (
                     primary_onset_gain >= DESCENDING_RESTART_UPPER_PRIMARY_ONSET_GAIN
                     and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
@@ -1411,10 +1402,8 @@ def segment_peaks(
                     or hypothesis.candidate.frequency > descending_primary_suffix_ceiling
                 )
             ):
-                if primary_onset_gain is None:
-                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
-                if onset_gain is None:
-                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
+                onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if (
                     primary_onset_gain >= DESCENDING_PRIMARY_SUFFIX_PRIMARY_ONSET_GAIN
                     and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
@@ -1429,8 +1418,7 @@ def segment_peaks(
                 and not octave_dyad_allowed
             ):
                 replaced_primary_note = primary_promotion_debug.get("replacedPrimaryNote")
-                if onset_gain is None:
-                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if (
                     onset_gain < DESCENDING_REPEATED_PRIMARY_STALE_UPPER_MAX_ONSET_GAIN
                     and hypothesis.score < primary.score * DESCENDING_REPEATED_PRIMARY_STALE_UPPER_SCORE_RATIO
@@ -1448,11 +1436,9 @@ def segment_peaks(
                 and hypothesis.candidate.frequency > primary.candidate.frequency
                 and segment_duration >= UPPER_SECONDARY_WEAK_ONSET_MIN_DURATION
             ):
-                if primary_onset_gain is None:
-                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
                 if primary_onset_gain >= RECENT_UPPER_SECONDARY_PRIMARY_ONSET_GAIN:
-                    if onset_gain is None:
-                        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                    onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                     if (
                         onset_gain < UPPER_SECONDARY_WEAK_ONSET_MAX_GAIN
                         and hypothesis.score < primary.score * UPPER_SECONDARY_WEAK_ONSET_SCORE_RATIO
@@ -1463,11 +1449,9 @@ def segment_peaks(
                 and segment_duration <= SHORT_SECONDARY_WEAK_ONSET_MAX_DURATION
                 and not octave_dyad_allowed
             ):
-                if primary_onset_gain is None:
-                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
                 if primary_onset_gain >= SHORT_SECONDARY_WEAK_ONSET_MIN_PRIMARY_GAIN:
-                    if onset_gain is None:
-                        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                    onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                     if (
                         onset_gain < SHORT_SECONDARY_WEAK_ONSET_MAX_GAIN
                         and onset_gain < primary_onset_gain * SHORT_SECONDARY_WEAK_ONSET_MAX_RATIO
@@ -1480,11 +1464,9 @@ def segment_peaks(
                 and hypothesis.candidate.frequency < primary.candidate.frequency
                 and not octave_dyad_allowed
             ):
-                if primary_onset_gain is None:
-                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+                primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
                 if primary_onset_gain >= LOWER_SECONDARY_WEAK_ONSET_MIN_PRIMARY_GAIN:
-                    if onset_gain is None:
-                        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                    onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                     if (
                         onset_gain < LOWER_SECONDARY_WEAK_ONSET_MAX_GAIN
                         and onset_gain < primary_onset_gain * LOWER_SECONDARY_WEAK_ONSET_MAX_RATIO
@@ -1515,8 +1497,7 @@ def segment_peaks(
                 and primary.candidate.note_name not in (recent_note_names or set())
                 and not octave_dyad_allowed
             ):
-                if onset_gain is None:
-                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if onset_gain < MIN_RECENT_NOTE_ONSET_GAIN:
                     reasons.append("ascending-singleton-carryover")
             if (
@@ -1532,10 +1513,8 @@ def segment_peaks(
                 and hypothesis.candidate.note_name not in (ascending_singleton_suffix_note_names or set())
                 and not octave_dyad_allowed
             ):
-                if primary_onset_gain is None:
-                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
-                if onset_gain is None:
-                    onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+                primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
+                onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if primary_onset_gain < MIN_RECENT_NOTE_ONSET_GAIN and onset_gain < MIN_RECENT_NOTE_ONSET_GAIN:
                     reasons.append("repeated-primary-carryover")
             accepted = len(reasons) == 0
@@ -1564,7 +1543,7 @@ def segment_peaks(
                 }
             )
             if accepted:
-                accepted_hypothesis.candidate.onset_gain = onset_gain
+                accepted_hypothesis.candidate.onset_gain = evidence.get_onset_gain_if_cached(accepted_hypothesis.candidate.frequency)
                 selected.append(accepted_hypothesis.candidate)
                 if len(selected) >= MAX_POLYPHONY:
                     break
@@ -1610,10 +1589,7 @@ def segment_peaks(
                     # Rescue: if the candidate has a genuine attack and
                     # retains high fundamentalRatio in the residual, the low
                     # score is explained by harmonic overlap, not missing energy.
-                    _iter_onset_gain = onset_energy_gain(
-                        audio, sample_rate, start_time, end_time,
-                        _iter_hyp.candidate.frequency,
-                    )
+                    _iter_onset_gain = evidence.onset_gain(_iter_hyp.candidate.frequency)
                     if not (
                         _iter_onset_gain >= TERTIARY_MIN_ONSET_GAIN
                         and _iter_hyp.fundamental_ratio >= ITERATIVE_RESCUE_MIN_FUNDAMENTAL_RATIO
@@ -1626,34 +1602,28 @@ def segment_peaks(
                     if _iter_hyp.fundamental_ratio < _iter_fr_threshold:
                         _iter_reasons.append("iterative-tertiary-fundamental-ratio-too-low")
                 if not _iter_reasons:
-                    if _iter_onset_gain is None:
-                        _iter_onset_gain = onset_energy_gain(
-                            audio, sample_rate, start_time, end_time,
-                            _iter_hyp.candidate.frequency,
-                        )
+                    _iter_onset_gain = evidence.onset_gain(_iter_hyp.candidate.frequency)
                     if _iter_onset_gain < TERTIARY_MIN_ONSET_GAIN:
                         _iter_reasons.append("iterative-tertiary-weak-onset")
                 if not _iter_reasons:
-                    _iter_backward_gain = onset_backward_attack_gain(
-                        audio, sample_rate, start_time,
-                        _iter_hyp.candidate.frequency,
-                    )
+                    _iter_backward_gain = evidence.backward_attack_gain(_iter_hyp.candidate.frequency)
                     if _iter_backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
                         _iter_reasons.append("iterative-tertiary-weak-backward-attack")
                 _iter_accepted = len(_iter_reasons) == 0
+                _iter_cached_og = evidence.get_onset_gain_if_cached(_iter_hyp.candidate.frequency)
                 secondary_decision_trail.append(
                     {
                         "noteName": _iter_hyp.candidate.note_name,
                         "score": round(_iter_hyp.score, 6),
                         "fundamentalRatio": round(_iter_hyp.fundamental_ratio, 6),
-                        "onsetGain": None if _iter_onset_gain is None else round(_iter_onset_gain, 6),
+                        "onsetGain": None if _iter_cached_og is None else round(_iter_cached_og, 6),
                         "accepted": _iter_accepted,
                         "reasons": _iter_reasons if _iter_reasons else ["iterative-suppression-tertiary"],
                         "octaveDyadAllowed": False,
                     }
                 )
                 if _iter_accepted:
-                    _iter_hyp.candidate.onset_gain = _iter_onset_gain
+                    _iter_hyp.candidate.onset_gain = _iter_cached_og
                     selected.append(_iter_hyp.candidate)
                     _iter_round_accepted = True
                     break  # re-suppress and re-rank in next while iteration
