@@ -434,31 +434,6 @@ def collect_multi_onset_gap_segments(
 
 
 
-def collect_leading_orphan_segments(
-    active_ranges: list[tuple[float, float]],
-    onset_times: list[float],
-    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
-) -> list[tuple[float, float]]:
-    if not active_ranges:
-        return []
-
-    first_range_start = active_ranges[0][0]
-    leading_onsets = [
-        onset_time
-        for onset_time in onset_times
-        if first_range_start - LEADING_ORPHAN_ONSET_MAX_GAP_BEFORE_ACTIVE
-        <= onset_time
-        <= first_range_start - LEADING_ORPHAN_ONSET_MIN_GAP_BEFORE_ACTIVE
-    ]
-    if len(leading_onsets) != 1:
-        return []
-
-    orphan_start = leading_onsets[0]
-    orphan_end = min(orphan_start + LEADING_ORPHAN_SEGMENT_DURATION, first_range_start - 0.08)
-    if orphan_end - orphan_start < 0.08:
-        return []
-    return [(orphan_start, orphan_end)]
-
 
 def collect_sparse_gap_tail_segments(
     active_ranges: list[tuple[float, float]],
@@ -867,9 +842,6 @@ def detect_segments(
             **({"trailing": []} if mid_performance_end else {}),
         )
 
-    leading_orphan_segments = (
-        [] if (ABLATE_LEADING_ORPHAN or mid_performance_start) else collect_leading_orphan_segments(active_ranges, gap_onset_times, onset_attack_profiles)
-    )
     multi_onset_gap_segments = (
         [] if ABLATE_MULTI_ONSET_GAP else collect_multi_onset_gap_segments(active_ranges, gap_onset_times, onset_attack_profiles, attack_validated_gap_candidates)
     )
@@ -952,7 +924,6 @@ def detect_segments(
                 active_range_segments.append((start_time, end_time))
 
     collector_sources: list[tuple[list[tuple[float, float]], str, bool]] = [
-        (leading_orphan_segments, "leadingOrphan", False),
         (multi_onset_gap_segments, "multiOnsetGap", False),
         (sparse_gap_tail_segments, "sparseGapTail", True),
         (attack_validated_gap_segments, "attackValidatedGap", True),
@@ -997,7 +968,6 @@ def detect_segments(
         "rawActiveRanges": [[round(start, 4), round(end, 4)] for start, end in raw_active_ranges],
         "shortBridgeActiveRanges": [[round(start, 4), round(end, 4)] for start, end in short_bridge_active_ranges],
         "activeRangeSegments": [[round(start, 4), round(end, 4)] for start, end in active_range_segments],
-        "leadingOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in leading_orphan_segments],
         "multiOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in multi_onset_gap_segments],
         "sparseGapTailSegments": [[round(start, 4), round(end, 4)] for start, end in sparse_gap_tail_segments],
         "attackValidatedGapSegments": [[round(start, 4), round(end, 4)] for start, end in attack_validated_gap_segments],

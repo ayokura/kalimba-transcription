@@ -24,7 +24,6 @@ pytestmark = [pytest.mark.manual_capture, pytest.mark.slow, pytest.mark.ablation
 COMPLETED_FIXTURES = fixture_dirs_for_status("completed")
 
 ABLATION_FLAGS = [
-    "ABLATE_LEADING_ORPHAN",
     "ABLATE_SPARSE_GAP_TAIL",
     "ABLATE_MULTI_ONSET_GAP",
     "ABLATE_COLLAPSE_ACTIVE_RANGE_HEAD",
