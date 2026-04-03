@@ -392,6 +392,55 @@ def split_ambiguous_upper_octave_pairs(raw_events: list[RawEvent]) -> list[RawEv
 
     return split_events
 
+def suppress_onset_decaying_carryover(raw_events: list[RawEvent]) -> list[RawEvent]:
+    """Remove secondary notes whose energy is decaying from the previous primary.
+
+    When a note appears as a non-primary secondary with onset_gain < 1.0
+    (energy strictly decreasing at the segment onset) and matches the
+    previous event's primary, it is residual resonance rather than a new
+    attack.  Removing it here avoids the cascade risk of rejecting inside
+    segment_peaks (see #107 analysis).
+    """
+    if not raw_events:
+        return []
+
+    result = [raw_events[0]]
+    for event in raw_events[1:]:
+        prev_primary = result[-1].primary_note_name
+        prev_note_names = {n.note_name for n in result[-1].notes}
+        curr_primary = event.primary_note_name
+
+        # If current primary was also in the previous event, this looks like
+        # a chord re-attack / continuation — don't strip secondaries.
+        if curr_primary in prev_note_names:
+            result.append(event)
+            continue
+
+        filtered = [
+            note for note in event.notes
+            if not (
+                note.note_name != curr_primary
+                and note.note_name == prev_primary
+                and note.onset_gain is not None
+                and note.onset_gain < 1.0
+            )
+        ]
+
+        if len(filtered) == len(event.notes) or len(filtered) == 0:
+            result.append(event)
+        else:
+            result.append(RawEvent(
+                start_time=event.start_time,
+                end_time=event.end_time,
+                notes=filtered,
+                is_gliss_like=event.is_gliss_like,
+                primary_note_name=event.primary_note_name,
+                primary_score=event.primary_score,
+            ))
+
+    return result
+
+
 def suppress_resonant_carryover(raw_events: list[RawEvent], tuning: InstrumentTuning | None = None) -> list[RawEvent]:
     if not raw_events:
         return []

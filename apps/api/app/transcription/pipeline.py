@@ -37,6 +37,7 @@ from .events import (
     suppress_leading_gliss_subset_transients,
     suppress_leading_single_transient,
     suppress_low_confidence_dyad_transients,
+    suppress_onset_decaying_carryover,
     suppress_post_tail_gap_bridge_dyads,
     suppress_resonant_carryover,
     suppress_short_descending_return_singletons,
@@ -188,6 +189,7 @@ async def transcribe_audio(
             segment_candidates_debug.append(candidate_debug)
 
     processed_events = suppress_low_confidence_dyad_transients(raw_events)
+    processed_events = suppress_onset_decaying_carryover(processed_events)
     processed_events = suppress_resonant_carryover(processed_events, tuning)
     processed_events = collapse_restart_tail_subset_into_following_chord(processed_events, tuning)
     processed_events = collapse_same_start_primary_singletons(processed_events)
