@@ -1,11 +1,13 @@
 """Compare expected events from score_structure with recognizer output using ordered matching.
 
 Usage:
-    uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose]
+    uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose] [--mode events|segments]
 
 Arguments:
     fixture-name    Fixture name (e.g., bwv147-sequence-163-01)
     --verbose       Show exact matches too (default: failures only)
+    --mode          Data source: 'events' (default, post-processed final output)
+                    or 'segments' (raw segmentCandidates before event post-processing)
 """
 import argparse
 import json
@@ -176,6 +178,8 @@ def main():
     parser = argparse.ArgumentParser(description="Score structure alignment diagnosis")
     parser.add_argument("fixture", help="Fixture name or path")
     parser.add_argument("--verbose", action="store_true", help="Show exact matches too")
+    parser.add_argument("--mode", choices=["events", "segments"], default="events",
+                        help="Data source: 'events' (post-processed, default) or 'segments' (raw segmentCandidates)")
     parser.add_argument("--line", type=str, default=None, help="Show only this line (e.g., R6)")
     args = parser.parse_args()
 
@@ -204,6 +208,8 @@ def main():
         print(f"Error: response missing debug.segmentCandidates (keys: {list(payload.keys())})", file=sys.stderr)
         sys.exit(1)
     segments = debug["segmentCandidates"]
+    merged_events = debug.get("mergedEvents", [])
+    use_events_mode = args.mode == "events"
     score_data = json.loads(score_path.read_text())
     lines = score_data["lines"]
 
@@ -217,6 +223,23 @@ def main():
 
     orig_to_eval = build_time_converter(expected)
 
+    # Build per-segment trail lookup for rejection reason cross-referencing
+    seg_trail_by_time: list[tuple[float, list[dict]]] = [
+        (s["startTime"], s.get("secondaryDecisionTrail", []))
+        for s in segments if s.get("selectedNotes")
+    ]
+
+    def find_trail_for_time(t: float) -> list[dict]:
+        """Find the segment trail closest in time to *t*."""
+        best_trail: list[dict] = []
+        best_dist = float("inf")
+        for seg_t, trail in seg_trail_by_time:
+            d = abs(seg_t - t)
+            if d < best_dist:
+                best_dist = d
+                best_trail = trail
+        return best_trail if best_dist < 0.1 else []
+
     # Classify segments by line time boundaries
     line_bounds = []
     for i, line in enumerate(lines):
@@ -227,16 +250,30 @@ def main():
             end = 999.0
         line_bounds.append((line["id"], start, end))
 
-    seg_by_line = {}
-    for name, start, end in line_bounds:
-        seg_by_line[name] = [
-            {"notes": set(s.get("selectedNotes", [])), "time": s["startTime"],
-             "trail": s.get("secondaryDecisionTrail", []), "duration": s.get("durationSec", 0),
-             "source": s.get("segmentSource", []), "mergeReason": s.get("mergeReason", ""),
-             "mergedFrom": s.get("mergedFrom"),
-             "droppedBy": s.get("droppedBy", "")}
-            for s in segments if start <= s["startTime"] < end and s.get("selectedNotes")
-        ]
+    if use_events_mode:
+        # Build detected list from final post-processed events
+        seg_by_line = {}
+        for name, start, end in line_bounds:
+            seg_by_line[name] = [
+                {"notes": set(e["notes"]), "time": e["startTime"],
+                 "trail": find_trail_for_time(e["startTime"]),
+                 "duration": round(e["endTime"] - e["startTime"], 6),
+                 "source": [], "mergeReason": "", "mergedFrom": None,
+                 "droppedBy": ""}
+                for e in merged_events if start <= e["startTime"] < end
+            ]
+    else:
+        # Build detected list from raw segment candidates (pre-post-processing)
+        seg_by_line = {}
+        for name, start, end in line_bounds:
+            seg_by_line[name] = [
+                {"notes": set(s.get("selectedNotes", [])), "time": s["startTime"],
+                 "trail": s.get("secondaryDecisionTrail", []), "duration": s.get("durationSec", 0),
+                 "source": s.get("segmentSource", []), "mergeReason": s.get("mergeReason", ""),
+                 "mergedFrom": s.get("mergedFrom"),
+                 "droppedBy": s.get("droppedBy", "")}
+                for s in segments if start <= s["startTime"] < end and s.get("selectedNotes")
+            ]
 
     total_exact = 0
     total_subset = 0
@@ -331,11 +368,16 @@ def main():
                 merge_str = f" ({u['mergeReason']})" if u.get('mergeReason') else ""
                 print(f"    t={u['time']:.3f}s {notes_str}{src_str}{merge_str}")
 
-    active_segment_count = sum(1 for s in segments if s.get("selectedNotes"))
-    dropped_segment_count = len(segments) - active_segment_count
+    if use_events_mode:
+        det_count = len(merged_events)
+        det_label = "final events"
+    else:
+        det_count = sum(1 for s in segments if s.get("selectedNotes"))
+        det_label = f"active segments ({len(segments) - det_count} dropped)"
     print(f"\n{'='*60}")
+    mode_note = f" [mode={args.mode}]"
     line_note = f" (filtered: {filter_line})" if filter_line else ""
-    print(f"SUMMARY{line_note}: {total_events} expected events, {active_segment_count} active segments ({dropped_segment_count} dropped)")
+    print(f"SUMMARY{mode_note}{line_note}: {total_events} expected events, {det_count} {det_label}")
     if total_events:
         print(f"  Exact match:   {total_exact:3d}/{total_events} ({100*total_exact/total_events:.0f}%)")
         print(f"  Subset match:  {total_subset:3d}/{total_events} ({100*total_subset/total_events:.0f}%)")
