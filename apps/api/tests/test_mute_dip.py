@@ -195,7 +195,7 @@ class TestForwardScanRecovery:
         start_time = pre_context
         end_time = pre_context + seg_duration
 
-        candidates, debug, primary_hyp = segment_peaks(
+        candidates, debug, primary_hyp, _trace = segment_peaks(
             audio, SR, start_time, end_time, tuning,
             debug=True,
             recent_note_names={"E5", "C5"},

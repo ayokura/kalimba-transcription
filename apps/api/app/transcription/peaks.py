@@ -947,6 +947,7 @@ class SegmentPeaksResult(NamedTuple):
     candidates: list[NoteCandidate]
     debug: dict[str, Any] | None
     primary: NoteHypothesis | None
+    trace: SegmentDecisionTrace | None = None
 
 
 @dataclass(slots=True)
@@ -983,11 +984,55 @@ class _SpectralData:
 
 
 @dataclass(slots=True)
+class _PrimaryDecision:
+    """Record of primary note resolution decisions."""
+    initial_primary: str
+    final_primary: str
+    onset_gain: float | None
+    promotions: list[str]
+    rejected: bool
+    rejection_reason: str | None
+
+
+@dataclass(slots=True)
+class _CandidateDecision:
+    """Record of a single candidate evaluation."""
+    note_name: str
+    frequency: float
+    score: float
+    fundamental_ratio: float
+    onset_gain: float | None
+    accepted: bool
+    reasons: list[str]
+    octave_dyad_allowed: bool
+    source: str
+
+    def to_debug_dict(self) -> dict[str, Any]:
+        return {
+            "noteName": self.note_name,
+            "score": round(self.score, 6),
+            "fundamentalRatio": round(self.fundamental_ratio, 6),
+            "onsetGain": None if self.onset_gain is None else round(self.onset_gain, 6),
+            "accepted": self.accepted,
+            "reasons": self.reasons,
+            "octaveDyadAllowed": self.octave_dyad_allowed,
+        }
+
+
+@dataclass(slots=True)
+class SegmentDecisionTrace:
+    """Complete record of all decisions made for a segment."""
+    primary: _PrimaryDecision
+    candidates: list[_CandidateDecision]
+
+
+@dataclass(slots=True)
 class _PrimaryResult:
     """Output of the primary promotion gauntlet."""
     primary: NoteHypothesis
     primary_onset_gain: float | None
     promotion_debug: dict[str, Any] | None
+    decision: _PrimaryDecision
 
 
 @dataclass(slots=True)
@@ -995,7 +1040,7 @@ class _SelectionState:
     """Mutable accumulator for secondary selection and extension phases."""
     selected: list[NoteCandidate]
     residual_ranked: list[NoteHypothesis]
-    secondary_decision_trail: list[dict[str, Any]]
+    candidate_decisions: list[_CandidateDecision]
     promoted_secondary_to_recent_upper_octave: bool
 
 
@@ -1094,12 +1139,14 @@ def _resolve_primary(
     ctx: _SegmentContext,
     spectral: _SpectralData,
     evidence: _NoteEvidenceCache,
-) -> tuple[_PrimaryResult | None, dict[str, Any] | None]:
+) -> _PrimaryResult:
     """Layer 2: Primary promotion gauntlet + residual decay check.
 
-    Returns (result, None) on success, or (None, debug_dict_or_None) on rejection.
+    Always returns a _PrimaryResult. Check result.decision.rejected for rejections.
     """
     ranked = spectral.ranked
+    initial_primary_name = ranked[0].candidate.note_name
+    promotions: list[str] = []
     primary = ranked[0]
     primary, primary_onset_gain, primary_promotion_debug = maybe_replace_stale_recent_primary(
         ctx.audio,
@@ -1113,6 +1160,8 @@ def _resolve_primary(
         previous_primary_frequency=ctx.previous_primary_frequency,
         previous_primary_was_singleton=ctx.previous_primary_was_singleton,
     )
+    if primary_promotion_debug is not None:
+        promotions.append(primary_promotion_debug.get("reason", "stale-recent-primary"))
     primary, stale_upper_promotion_debug = maybe_promote_stale_primary_to_upper_octave(
         primary,
         ranked,
@@ -1122,6 +1171,7 @@ def _resolve_primary(
     )
     if stale_upper_promotion_debug is not None:
         primary_promotion_debug = stale_upper_promotion_debug
+        promotions.append(stale_upper_promotion_debug.get("reason", "stale-upper-octave"))
     primary, recent_upper_alias_promotion_debug = maybe_promote_recent_upper_octave_alias_primary(
         primary,
         ranked,
@@ -1130,11 +1180,17 @@ def _resolve_primary(
     )
     if recent_upper_alias_promotion_debug is not None:
         primary_promotion_debug = recent_upper_alias_promotion_debug
+        promotions.append(recent_upper_alias_promotion_debug.get("reason", "recent-upper-octave-alias"))
     if (
         primary.score < PRIMARY_REJECTION_MAX_SCORE
         and primary.fundamental_ratio < PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
     ):
-        return None, None
+        decision = _PrimaryDecision(
+            initial_primary=initial_primary_name, final_primary=primary.candidate.note_name,
+            onset_gain=primary_onset_gain, promotions=promotions,
+            rejected=True, rejection_reason="primary-score-too-low",
+        )
+        return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug, decision)
     # Suppress residual-decay segments: if the primary is a recent note and
     # shows no mute-dip (smooth decay rather than finger-touch-then-repluck),
     # the segment is likely resonance from a previous event, not a genuine
@@ -1171,17 +1227,12 @@ def _resolve_primary(
                 if alternative_primary is not None:
                     break
         if alternative_primary is None:
-            rejection_debug = None
-            if ctx.debug:
-                rejection_debug = {
-                    "startTime": round(ctx.start_time, 6),
-                    "endTime": round(ctx.end_time, 6),
-                    "durationSec": round(ctx.duration, 6),
-                    "selectedNotes": [],
-                    "primaryNote": primary.candidate.note_name,
-                    "droppedBy": "residual-decay-no-reattack",
-                }
-            return None, rejection_debug
+            decision = _PrimaryDecision(
+                initial_primary=initial_primary_name, final_primary=primary.candidate.note_name,
+                onset_gain=primary_onset_gain, promotions=promotions,
+                rejected=True, rejection_reason="residual-decay-no-reattack",
+            )
+            return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug, decision)
         primary = alternative_primary
         primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
         primary_promotion_debug = {
@@ -1189,7 +1240,13 @@ def _resolve_primary(
             "replacedPrimaryNote": ranked[0].candidate.note_name,
             "replacementNote": primary.candidate.note_name,
         }
-    return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug), None
+        promotions.append("residual-forward-scan")
+    decision = _PrimaryDecision(
+        initial_primary=initial_primary_name, final_primary=primary.candidate.note_name,
+        onset_gain=primary_onset_gain, promotions=promotions,
+        rejected=False, rejection_reason=None,
+    )
+    return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug, decision)
 
 
 def _extend_gliss_tertiary(
@@ -1258,25 +1315,43 @@ def _extend_gliss_tertiary(
         descending_primary_suffix_note_names=ctx.descending_primary_suffix_note_names,
     )
     if extension_blocked:
-        state.secondary_decision_trail.append(
-            {"noteName": hypothesis.candidate.note_name, "score": round(hypothesis.score, 6),
-             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6), "onsetGain": round(og, 6),
-             "accepted": False, "reasons": ["descending-repeated-primary-tertiary-blocked"], "octaveDyadAllowed": False}
-        )
+        state.candidate_decisions.append(_CandidateDecision(
+            note_name=hypothesis.candidate.note_name,
+            frequency=hypothesis.candidate.frequency,
+            score=hypothesis.score,
+            fundamental_ratio=hypothesis.fundamental_ratio,
+            onset_gain=og,
+            accepted=False,
+            reasons=["descending-repeated-primary-tertiary-blocked"],
+            octave_dyad_allowed=False,
+            source="extension-gliss",
+        ))
     elif is_slide_playable_contiguous_cluster(extended_cluster, ctx.tuning):
         hypothesis.candidate.onset_gain = og
         state.selected.append(hypothesis.candidate)
-        state.secondary_decision_trail.append(
-            {"noteName": hypothesis.candidate.note_name, "score": round(hypothesis.score, 6),
-             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6), "onsetGain": round(og, 6),
-             "accepted": True, "reasons": ["contiguous-tertiary-extension"], "octaveDyadAllowed": False}
-        )
+        state.candidate_decisions.append(_CandidateDecision(
+            note_name=hypothesis.candidate.note_name,
+            frequency=hypothesis.candidate.frequency,
+            score=hypothesis.score,
+            fundamental_ratio=hypothesis.fundamental_ratio,
+            onset_gain=og,
+            accepted=True,
+            reasons=["contiguous-tertiary-extension"],
+            octave_dyad_allowed=False,
+            source="extension-gliss",
+        ))
     else:
-        state.secondary_decision_trail.append(
-            {"noteName": hypothesis.candidate.note_name, "score": round(hypothesis.score, 6),
-             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6), "onsetGain": round(og, 6),
-             "accepted": False, "reasons": ["non-slide-playable-contiguous-cluster"], "octaveDyadAllowed": False}
-        )
+        state.candidate_decisions.append(_CandidateDecision(
+            note_name=hypothesis.candidate.note_name,
+            frequency=hypothesis.candidate.frequency,
+            score=hypothesis.score,
+            fundamental_ratio=hypothesis.fundamental_ratio,
+            onset_gain=og,
+            accepted=False,
+            reasons=["non-slide-playable-contiguous-cluster"],
+            octave_dyad_allowed=False,
+            source="extension-gliss",
+        ))
 
 
 def _extend_lower_mixed_roll(
@@ -1336,11 +1411,17 @@ def _extend_lower_mixed_roll(
         hypothesis, og = extension_candidate
         hypothesis.candidate.onset_gain = og
         state.selected.append(hypothesis.candidate)
-        state.secondary_decision_trail.append(
-            {"noteName": hypothesis.candidate.note_name, "score": round(hypothesis.score, 6),
-             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6), "onsetGain": round(og, 6),
-             "accepted": True, "reasons": ["lower-mixed-roll-extension"], "octaveDyadAllowed": False}
-        )
+        state.candidate_decisions.append(_CandidateDecision(
+            note_name=hypothesis.candidate.note_name,
+            frequency=hypothesis.candidate.frequency,
+            score=hypothesis.score,
+            fundamental_ratio=hypothesis.fundamental_ratio,
+            onset_gain=og,
+            accepted=True,
+            reasons=["lower-mixed-roll-extension"],
+            octave_dyad_allowed=False,
+            source="extension-mixed-roll",
+        ))
 
 
 def _extend_lower_roll_tail(
@@ -1391,11 +1472,17 @@ def _extend_lower_roll_tail(
         hypothesis, og = extension_candidate
         hypothesis.candidate.onset_gain = og
         state.selected.append(hypothesis.candidate)
-        state.secondary_decision_trail.append(
-            {"noteName": hypothesis.candidate.note_name, "score": round(hypothesis.score, 6),
-             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6), "onsetGain": round(og, 6),
-             "accepted": True, "reasons": ["lower-roll-tail-extension"], "octaveDyadAllowed": False}
-        )
+        state.candidate_decisions.append(_CandidateDecision(
+            note_name=hypothesis.candidate.note_name,
+            frequency=hypothesis.candidate.frequency,
+            score=hypothesis.score,
+            fundamental_ratio=hypothesis.fundamental_ratio,
+            onset_gain=og,
+            accepted=True,
+            reasons=["lower-roll-tail-extension"],
+            octave_dyad_allowed=False,
+            source="extension-roll-tail",
+        ))
 
 
 
@@ -1412,7 +1499,7 @@ def _select_candidates(
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     promoted_secondary_to_recent_upper_octave = False
-    secondary_decision_trail: list[dict[str, Any]] = []
+    candidate_decisions: list[_CandidateDecision] = []
     contiguous_four_note_cluster = select_contiguous_four_note_cluster(primary, spectral.ranked, ctx.duration)
     if contiguous_four_note_cluster is not None:
         selected = contiguous_four_note_cluster
@@ -1420,17 +1507,17 @@ def _select_candidates(
             if candidate.note_name == primary.candidate.note_name:
                 continue
             matching = next(hypothesis for hypothesis in spectral.ranked[:4] if hypothesis.candidate.note_name == candidate.note_name)
-            secondary_decision_trail.append(
-                {
-                    "noteName": matching.candidate.note_name,
-                    "score": round(matching.score, 6),
-                    "fundamentalRatio": round(matching.fundamental_ratio, 6),
-                    "onsetGain": None,
-                    "accepted": True,
-                    "reasons": ["contiguous-four-note-cluster"],
-                    "octaveDyadAllowed": False,
-                }
-            )
+            candidate_decisions.append(_CandidateDecision(
+                note_name=matching.candidate.note_name,
+                frequency=matching.candidate.frequency,
+                score=matching.score,
+                fundamental_ratio=matching.fundamental_ratio,
+                onset_gain=None,
+                accepted=True,
+                reasons=["contiguous-four-note-cluster"],
+                octave_dyad_allowed=False,
+                source="cluster",
+            ))
     secondary_score_ratio = SECONDARY_SCORE_RATIO
     if ctx.duration <= 0.14:
         secondary_score_ratio = SHORT_SEGMENT_SECONDARY_SCORE_RATIO
@@ -1460,15 +1547,17 @@ def _select_candidates(
                     if gap_filled:
                         for gf_candidate in gap_filled:
                             selected.append(gf_candidate)
-                            secondary_decision_trail.append({
-                                "noteName": gf_candidate.note_name,
-                                "score": 0.0,
-                                "fundamentalRatio": 0.0,
-                                "onsetGain": None,
-                                "accepted": True,
-                                "reasons": ["gap-fill-for-physical-playability"],
-                                "octaveDyadAllowed": False,
-                            })
+                            candidate_decisions.append(_CandidateDecision(
+                                note_name=gf_candidate.note_name,
+                                frequency=gf_candidate.frequency,
+                                score=0.0,
+                                fundamental_ratio=0.0,
+                                onset_gain=None,
+                                accepted=True,
+                                reasons=["gap-fill-for-physical-playability"],
+                                octave_dyad_allowed=False,
+                                source="gap-fill",
+                            ))
                     else:
                         reasons.append("tertiary-physically-impossible")
                 elif hypothesis.score < primary.score * TERTIARY_MIN_SCORE_RATIO or hypothesis.score < TERTIARY_MIN_SCORE:
@@ -1703,17 +1792,18 @@ def _select_candidates(
                 if promoted_from is not None:
                     promoted_secondary_to_recent_upper_octave = True
                     debug_reasons = [f"promoted-from-{promoted_from}"]
-            secondary_decision_trail.append(
-                {
-                    "noteName": accepted_hypothesis.candidate.note_name if accepted else hypothesis.candidate.note_name,
-                    "score": round(accepted_hypothesis.score if accepted else hypothesis.score, 6),
-                    "fundamentalRatio": round(accepted_hypothesis.fundamental_ratio if accepted else hypothesis.fundamental_ratio, 6),
-                    "onsetGain": None if onset_gain is None else round(onset_gain, 6),
-                    "accepted": accepted,
-                    "reasons": debug_reasons,
-                    "octaveDyadAllowed": octave_dyad_allowed,
-                }
-            )
+            _hyp = accepted_hypothesis if accepted else hypothesis
+            candidate_decisions.append(_CandidateDecision(
+                note_name=_hyp.candidate.note_name,
+                frequency=_hyp.candidate.frequency,
+                score=_hyp.score,
+                fundamental_ratio=_hyp.fundamental_ratio,
+                onset_gain=onset_gain,
+                accepted=accepted,
+                reasons=debug_reasons,
+                octave_dyad_allowed=octave_dyad_allowed,
+                source="secondary",
+            ))
             if accepted:
                 accepted_hypothesis.candidate.onset_gain = evidence.get_onset_gain_if_cached(accepted_hypothesis.candidate.frequency)
                 selected.append(accepted_hypothesis.candidate)
@@ -1783,17 +1873,17 @@ def _select_candidates(
                         _iter_reasons.append("iterative-tertiary-weak-backward-attack")
                 _iter_accepted = len(_iter_reasons) == 0
                 _iter_cached_og = evidence.get_onset_gain_if_cached(_iter_hyp.candidate.frequency)
-                secondary_decision_trail.append(
-                    {
-                        "noteName": _iter_hyp.candidate.note_name,
-                        "score": round(_iter_hyp.score, 6),
-                        "fundamentalRatio": round(_iter_hyp.fundamental_ratio, 6),
-                        "onsetGain": None if _iter_cached_og is None else round(_iter_cached_og, 6),
-                        "accepted": _iter_accepted,
-                        "reasons": _iter_reasons if _iter_reasons else ["iterative-suppression-tertiary"],
-                        "octaveDyadAllowed": False,
-                    }
-                )
+                candidate_decisions.append(_CandidateDecision(
+                    note_name=_iter_hyp.candidate.note_name,
+                    frequency=_iter_hyp.candidate.frequency,
+                    score=_iter_hyp.score,
+                    fundamental_ratio=_iter_hyp.fundamental_ratio,
+                    onset_gain=_iter_cached_og,
+                    accepted=_iter_accepted,
+                    reasons=_iter_reasons if _iter_reasons else ["iterative-suppression-tertiary"],
+                    octave_dyad_allowed=False,
+                    source="iterative",
+                ))
                 if _iter_accepted:
                     _iter_hyp.candidate.onset_gain = _iter_cached_og
                     selected.append(_iter_hyp.candidate)
@@ -1806,7 +1896,7 @@ def _select_candidates(
     return _SelectionState(
         selected=selected,
         residual_ranked=residual_ranked,
-        secondary_decision_trail=secondary_decision_trail,
+        candidate_decisions=candidate_decisions,
         promoted_secondary_to_recent_upper_octave=promoted_secondary_to_recent_upper_octave,
     )
 
@@ -1840,7 +1930,7 @@ def _build_segment_debug(
         "primaryPromotion": primary_result.promotion_debug,
         "rankedCandidates": build_debug_candidates(spectral.ranked, attack_profiles=attack_profiles),
         "residualCandidates": build_debug_candidates(selection.residual_ranked, attack_profiles=attack_profiles),
-        "secondaryDecisionTrail": selection.secondary_decision_trail,
+        "secondaryDecisionTrail": [d.to_debug_dict() for d in selection.candidate_decisions],
         "rawPeaks": build_raw_peaks(spectral.frequencies, spectral.spectrum, ctx.tuning),
     }
 
@@ -1887,9 +1977,20 @@ def segment_peaks(
     spectral, evidence = acquired
 
     # Layer 2: Primary resolution
-    primary_result, rejection_debug = _resolve_primary(ctx, spectral, evidence)
-    if primary_result is None:
-        return SegmentPeaksResult([], rejection_debug if ctx.debug else None, None)
+    primary_result = _resolve_primary(ctx, spectral, evidence)
+    if primary_result.decision.rejected:
+        rejection_trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=[])
+        rejection_debug = None
+        if ctx.debug and primary_result.decision.rejection_reason == "residual-decay-no-reattack":
+            rejection_debug = {
+                "startTime": round(ctx.start_time, 6),
+                "endTime": round(ctx.end_time, 6),
+                "durationSec": round(ctx.duration, 6),
+                "selectedNotes": [],
+                "primaryNote": primary_result.primary.candidate.note_name,
+                "droppedBy": primary_result.decision.rejection_reason,
+            }
+        return SegmentPeaksResult([], rejection_debug, None, rejection_trace)
     primary = primary_result.primary
     primary.candidate.onset_gain = primary_result.primary_onset_gain
 
@@ -1901,11 +2002,13 @@ def segment_peaks(
     _extend_lower_mixed_roll(ctx, primary, selection, evidence)
     _extend_lower_roll_tail(ctx, primary, selection, evidence)
 
-    # Layer 5: Evidence freeze + debug assembly
+    # Layer 5: Evidence freeze + trace assembly + debug
     for note in selection.selected:
         cached_og = evidence.get_onset_gain_if_cached(note.frequency)
         if cached_og is not None and note.onset_gain is None:
             note.onset_gain = cached_og
+
+    trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=selection.candidate_decisions)
 
     debug_payload = None
     if ctx.debug:
@@ -1915,6 +2018,7 @@ def segment_peaks(
         sorted(selection.selected, key=lambda item: item.frequency),
         debug_payload,
         primary,
+        trace,
     )
 
 def _note_band_energy(

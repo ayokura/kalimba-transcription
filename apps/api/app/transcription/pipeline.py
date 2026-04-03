@@ -105,7 +105,7 @@ async def transcribe_audio(
             previous_primary = next((note for note in raw_events[-1].notes if note.note_name == raw_events[-1].primary_note_name), None)
             previous_primary_frequency = previous_primary.frequency if previous_primary is not None else None
         previous_primary_was_singleton = bool(raw_events and len(raw_events[-1].notes) == 1)
-        candidates, candidate_debug, primary = segment_peaks(
+        candidates, candidate_debug, primary, _trace = segment_peaks(
             audio,
             sample_rate,
             start_time,
