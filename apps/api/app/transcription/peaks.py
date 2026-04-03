@@ -990,6 +990,15 @@ class _PrimaryResult:
     promotion_debug: dict[str, Any] | None
 
 
+@dataclass(slots=True)
+class _SelectionState:
+    """Mutable accumulator for secondary selection and extension phases."""
+    selected: list[NoteCandidate]
+    residual_ranked: list[NoteHypothesis]
+    secondary_decision_trail: list[dict[str, Any]]
+    promoted_secondary_to_recent_upper_octave: bool
+
+
 class _NoteEvidenceCache:
     """Lazy, cached per-note evidence for a single segment.
 
@@ -1181,6 +1190,212 @@ def _resolve_primary(
             "replacementNote": primary.candidate.note_name,
         }
     return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug), None
+
+
+def _extend_gliss_tertiary(
+    ctx: _SegmentContext,
+    primary: NoteHypothesis,
+    state: _SelectionState,
+    evidence: _NoteEvidenceCache,
+) -> None:
+    """Layer 4a: Contiguous gliss tertiary extension."""
+    if (
+        len(state.selected) != 2
+        or state.promoted_secondary_to_recent_upper_octave
+        or ctx.duration > GLISS_TERTIARY_MAX_DURATION
+    ):
+        return
+    selected_keys = sorted(note.key for note in state.selected)
+    if selected_keys[-1] - selected_keys[0] != 1:
+        return
+    extension_keys = {selected_keys[0] - 1, selected_keys[-1] + 1}
+    selected_names = {note.note_name for note in state.selected}
+    viable_extensions: list[tuple[NoteHypothesis, float]] = []
+    for hypothesis in state.residual_ranked[:6]:
+        candidate = hypothesis.candidate
+        if candidate.note_name in selected_names:
+            continue
+        if candidate.key not in extension_keys:
+            continue
+        if hypothesis.score < primary.score * GLISS_TERTIARY_SCORE_RATIO:
+            continue
+        if hypothesis.score < GLISS_TERTIARY_MIN_SCORE:
+            continue
+        if hypothesis.fundamental_ratio < GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO:
+            continue
+        if any(are_harmonic_related(candidate, existing) for existing in state.selected):
+            continue
+        og = evidence.onset_gain(candidate.frequency)
+        bg = evidence.backward_attack_gain(candidate.frequency)
+        if bg < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
+            continue
+        viable_extensions.append((hypothesis, og))
+
+    chosen_extension: tuple[NoteHypothesis, float] | None = None
+    if viable_extensions:
+        strongest_by_score = max(viable_extensions, key=lambda item: item[0].score)
+        strong_onset_candidates = [
+            item
+            for item in viable_extensions
+            if item[1] >= GLISS_TERTIARY_STRONG_ONSET_GAIN and item[0].score >= GLISS_TERTIARY_MIN_SCORE
+        ]
+        if strong_onset_candidates and strongest_by_score[1] < GLISS_TERTIARY_WEAK_ONSET_GAIN:
+            chosen_extension = max(strong_onset_candidates, key=lambda item: item[1])
+        else:
+            chosen_extension = strongest_by_score
+
+    if chosen_extension is None:
+        return
+    hypothesis, og = chosen_extension
+    extended_cluster = [*state.selected, hypothesis.candidate]
+    extension_blocked = should_block_descending_repeated_primary_tertiary_extension(
+        selected=state.selected,
+        extension=hypothesis.candidate,
+        segment_duration=ctx.duration,
+        previous_primary_was_singleton=ctx.previous_primary_was_singleton,
+        descending_primary_suffix_floor=ctx.descending_primary_suffix_floor,
+        descending_primary_suffix_ceiling=ctx.descending_primary_suffix_ceiling,
+        descending_primary_suffix_note_names=ctx.descending_primary_suffix_note_names,
+    )
+    if extension_blocked:
+        state.secondary_decision_trail.append(
+            {"noteName": hypothesis.candidate.note_name, "score": round(hypothesis.score, 6),
+             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6), "onsetGain": round(og, 6),
+             "accepted": False, "reasons": ["descending-repeated-primary-tertiary-blocked"], "octaveDyadAllowed": False}
+        )
+    elif is_slide_playable_contiguous_cluster(extended_cluster, ctx.tuning):
+        hypothesis.candidate.onset_gain = og
+        state.selected.append(hypothesis.candidate)
+        state.secondary_decision_trail.append(
+            {"noteName": hypothesis.candidate.note_name, "score": round(hypothesis.score, 6),
+             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6), "onsetGain": round(og, 6),
+             "accepted": True, "reasons": ["contiguous-tertiary-extension"], "octaveDyadAllowed": False}
+        )
+    else:
+        state.secondary_decision_trail.append(
+            {"noteName": hypothesis.candidate.note_name, "score": round(hypothesis.score, 6),
+             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6), "onsetGain": round(og, 6),
+             "accepted": False, "reasons": ["non-slide-playable-contiguous-cluster"], "octaveDyadAllowed": False}
+        )
+
+
+def _extend_lower_mixed_roll(
+    ctx: _SegmentContext,
+    primary: NoteHypothesis,
+    state: _SelectionState,
+    evidence: _NoteEvidenceCache,
+) -> None:
+    """Layer 4b: Lower mixed-roll extension."""
+    if (
+        len(state.selected) != 2
+        or ctx.duration > LOWER_MIXED_ROLL_EXTENSION_MAX_DURATION
+        or primary.candidate.frequency != min(note.frequency for note in state.selected)
+        or primary.candidate.octave > 4
+    ):
+        return
+    upper_note = max(state.selected, key=lambda note: note.frequency)
+    selected_names = {note.note_name for note in state.selected}
+    if upper_note.key - primary.candidate.key < 3:
+        return
+    selected_secondary_scores = [
+        secondary.score
+        for secondary in state.residual_ranked[:4]
+        if secondary.candidate.note_name in selected_names
+    ]
+    extension_candidate: tuple[NoteHypothesis, float] | None = None
+    for hypothesis in state.residual_ranked[:8]:
+        candidate = hypothesis.candidate
+        if candidate.note_name in selected_names:
+            continue
+        if not (primary.candidate.frequency < candidate.frequency < upper_note.frequency):
+            continue
+        if upper_note.key - candidate.key > 1:
+            continue
+        if candidate.key - primary.candidate.key < 2:
+            continue
+        if hypothesis.score < primary.score * LOWER_MIXED_ROLL_EXTENSION_MIN_EXTENSION_SCORE_RATIO:
+            continue
+        if hypothesis.score < GLISS_TERTIARY_MIN_SCORE:
+            continue
+        if hypothesis.fundamental_ratio < LOWER_MIXED_ROLL_EXTENSION_MIN_FUNDAMENTAL_RATIO:
+            continue
+        if any(are_harmonic_related(candidate, existing) for existing in state.selected):
+            continue
+        if selected_secondary_scores and hypothesis.score < max(selected_secondary_scores) * LOWER_MIXED_ROLL_EXTENSION_MIN_UPPER_SCORE_RATIO:
+            continue
+        pog = evidence.onset_gain(primary.candidate.frequency)
+        if pog < LOWER_MIXED_ROLL_EXTENSION_MIN_PRIMARY_ONSET_GAIN:
+            continue
+        og = evidence.onset_gain(candidate.frequency)
+        if og < LOWER_MIXED_ROLL_EXTENSION_MIN_EXTENSION_ONSET_GAIN:
+            continue
+        extension_candidate = (hypothesis, og)
+        break
+
+    if extension_candidate is not None:
+        hypothesis, og = extension_candidate
+        hypothesis.candidate.onset_gain = og
+        state.selected.append(hypothesis.candidate)
+        state.secondary_decision_trail.append(
+            {"noteName": hypothesis.candidate.note_name, "score": round(hypothesis.score, 6),
+             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6), "onsetGain": round(og, 6),
+             "accepted": True, "reasons": ["lower-mixed-roll-extension"], "octaveDyadAllowed": False}
+        )
+
+
+def _extend_lower_roll_tail(
+    ctx: _SegmentContext,
+    primary: NoteHypothesis,
+    state: _SelectionState,
+    evidence: _NoteEvidenceCache,
+) -> None:
+    """Layer 4c: Lower roll-tail extension."""
+    if (
+        len(state.selected) != 3
+        or ctx.duration > LOWER_ROLL_TAIL_EXTENSION_MAX_DURATION
+        or primary.candidate.frequency != max(note.frequency for note in state.selected)
+    ):
+        return
+    selected_keys = sorted(note.key for note in state.selected)
+    if selected_keys[-1] - selected_keys[0] != 2:
+        return
+    selected_names = {note.note_name for note in state.selected}
+    lowest_selected = min(state.selected, key=lambda note: note.frequency)
+    extension_key = selected_keys[0] - 1
+    extension_candidate: tuple[NoteHypothesis, float] | None = None
+    for hypothesis in state.residual_ranked[:8]:
+        candidate = hypothesis.candidate
+        if candidate.note_name in selected_names:
+            continue
+        if candidate.key != extension_key:
+            continue
+        if hypothesis.fundamental_ratio < LOWER_ROLL_TAIL_EXTENSION_MIN_FUNDAMENTAL_RATIO:
+            continue
+        if hypothesis.score < GLISS_TERTIARY_MIN_SCORE:
+            continue
+        if any(are_harmonic_related(candidate, existing) for existing in state.selected):
+            continue
+        lowest_selected_score = next((item.score for item in state.residual_ranked[:8] if item.candidate.note_name == lowest_selected.note_name), None)
+        if lowest_selected_score is not None and hypothesis.score < lowest_selected_score * LOWER_ROLL_TAIL_EXTENSION_MIN_SCORE_RATIO:
+            continue
+        pog = evidence.onset_gain(primary.candidate.frequency)
+        if pog < LOWER_ROLL_TAIL_EXTENSION_MIN_PRIMARY_ONSET_GAIN:
+            continue
+        og = evidence.onset_gain(candidate.frequency)
+        if og > LOWER_ROLL_TAIL_EXTENSION_MAX_ONSET_GAIN:
+            continue
+        extension_candidate = (hypothesis, og)
+        break
+
+    if extension_candidate is not None:
+        hypothesis, og = extension_candidate
+        hypothesis.candidate.onset_gain = og
+        state.selected.append(hypothesis.candidate)
+        state.secondary_decision_trail.append(
+            {"noteName": hypothesis.candidate.note_name, "score": round(hypothesis.score, 6),
+             "fundamentalRatio": round(hypothesis.fundamental_ratio, 6), "onsetGain": round(og, 6),
+             "accepted": True, "reasons": ["lower-roll-tail-extension"], "octaveDyadAllowed": False}
+        )
 
 
 def segment_peaks(
@@ -1630,212 +1845,18 @@ def segment_peaks(
             if not _iter_round_accepted:
                 break  # no more candidates to recover
 
-    if (
-        len(selected) == 2
-        and not promoted_secondary_to_recent_upper_octave
-        and end_time - start_time <= GLISS_TERTIARY_MAX_DURATION
-    ):
-        selected_keys = sorted(note.key for note in selected)
-        if selected_keys[-1] - selected_keys[0] == 1:
-            extension_keys = {selected_keys[0] - 1, selected_keys[-1] + 1}
-            selected_names = {note.note_name for note in selected}
-            viable_extensions: list[tuple[NoteHypothesis, float]] = []
-            for hypothesis in residual_ranked[:6]:
-                candidate = hypothesis.candidate
-                if candidate.note_name in selected_names:
-                    continue
-                if candidate.key not in extension_keys:
-                    continue
-                if hypothesis.score < primary.score * GLISS_TERTIARY_SCORE_RATIO:
-                    continue
-                if hypothesis.score < GLISS_TERTIARY_MIN_SCORE:
-                    continue
-                if hypothesis.fundamental_ratio < GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO:
-                    continue
-                if any(are_harmonic_related(candidate, existing) for existing in selected):
-                    continue
-                onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, candidate.frequency)
-                backward_gain = onset_backward_attack_gain(audio, sample_rate, start_time, candidate.frequency)
-                if backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
-                    continue
-                viable_extensions.append((hypothesis, onset_gain))
-
-            chosen_extension: tuple[NoteHypothesis, float] | None = None
-            if viable_extensions:
-                strongest_by_score = max(viable_extensions, key=lambda item: item[0].score)
-                strong_onset_candidates = [
-                    item
-                    for item in viable_extensions
-                    if item[1] >= GLISS_TERTIARY_STRONG_ONSET_GAIN and item[0].score >= GLISS_TERTIARY_MIN_SCORE
-                ]
-                if strong_onset_candidates and strongest_by_score[1] < GLISS_TERTIARY_WEAK_ONSET_GAIN:
-                    chosen_extension = max(strong_onset_candidates, key=lambda item: item[1])
-                else:
-                    chosen_extension = strongest_by_score
-
-            if chosen_extension is not None:
-                hypothesis, onset_gain = chosen_extension
-                extended_cluster = [*selected, hypothesis.candidate]
-                extension_blocked = should_block_descending_repeated_primary_tertiary_extension(
-                    selected=selected,
-                    extension=hypothesis.candidate,
-                    segment_duration=end_time - start_time,
-                    previous_primary_was_singleton=previous_primary_was_singleton,
-                    descending_primary_suffix_floor=descending_primary_suffix_floor,
-                    descending_primary_suffix_ceiling=descending_primary_suffix_ceiling,
-                    descending_primary_suffix_note_names=descending_primary_suffix_note_names,
-                )
-                if extension_blocked:
-                    secondary_decision_trail.append(
-                        {
-                            "noteName": hypothesis.candidate.note_name,
-                            "score": round(hypothesis.score, 6),
-                            "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
-                            "onsetGain": round(onset_gain, 6),
-                            "accepted": False,
-                            "reasons": ["descending-repeated-primary-tertiary-blocked"],
-                            "octaveDyadAllowed": False,
-                        }
-                    )
-                elif is_slide_playable_contiguous_cluster(extended_cluster, tuning):
-                    hypothesis.candidate.onset_gain = onset_gain
-                    selected.append(hypothesis.candidate)
-                    secondary_decision_trail.append(
-                        {
-                            "noteName": hypothesis.candidate.note_name,
-                            "score": round(hypothesis.score, 6),
-                            "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
-                            "onsetGain": round(onset_gain, 6),
-                            "accepted": True,
-                            "reasons": ["contiguous-tertiary-extension"],
-                            "octaveDyadAllowed": False,
-                        }
-                    )
-                else:
-                    secondary_decision_trail.append(
-                        {
-                            "noteName": hypothesis.candidate.note_name,
-                            "score": round(hypothesis.score, 6),
-                            "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
-                            "onsetGain": round(onset_gain, 6),
-                            "accepted": False,
-                            "reasons": ["non-slide-playable-contiguous-cluster"],
-                            "octaveDyadAllowed": False,
-                        }
-                    )
-
-    if (
-        len(selected) == 2
-        and end_time - start_time <= LOWER_MIXED_ROLL_EXTENSION_MAX_DURATION
-        and primary.candidate.frequency == min(note.frequency for note in selected)
-        and primary.candidate.octave <= 4
-    ):
-        upper_note = max(selected, key=lambda note: note.frequency)
-        selected_names = {note.note_name for note in selected}
-        if upper_note.key - primary.candidate.key >= 3:
-            selected_secondary_scores = [
-                secondary.score
-                for secondary in residual_ranked[:4]
-                if secondary.candidate.note_name in selected_names
-            ]
-            extension_candidate: tuple[NoteHypothesis, float] | None = None
-            for hypothesis in residual_ranked[:8]:
-                candidate = hypothesis.candidate
-                if candidate.note_name in selected_names:
-                    continue
-                if not (primary.candidate.frequency < candidate.frequency < upper_note.frequency):
-                    continue
-                if upper_note.key - candidate.key > 1:
-                    continue
-                if candidate.key - primary.candidate.key < 2:
-                    continue
-                if hypothesis.score < primary.score * LOWER_MIXED_ROLL_EXTENSION_MIN_EXTENSION_SCORE_RATIO:
-                    continue
-                if hypothesis.score < GLISS_TERTIARY_MIN_SCORE:
-                    continue
-                if hypothesis.fundamental_ratio < LOWER_MIXED_ROLL_EXTENSION_MIN_FUNDAMENTAL_RATIO:
-                    continue
-                if any(are_harmonic_related(candidate, existing) for existing in selected):
-                    continue
-                if selected_secondary_scores and hypothesis.score < max(selected_secondary_scores) * LOWER_MIXED_ROLL_EXTENSION_MIN_UPPER_SCORE_RATIO:
-                    continue
-                if primary_onset_gain is None:
-                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
-                if primary_onset_gain < LOWER_MIXED_ROLL_EXTENSION_MIN_PRIMARY_ONSET_GAIN:
-                    continue
-                onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, candidate.frequency)
-                if onset_gain < LOWER_MIXED_ROLL_EXTENSION_MIN_EXTENSION_ONSET_GAIN:
-                    continue
-                extension_candidate = (hypothesis, onset_gain)
-                break
-
-            if extension_candidate is not None:
-                hypothesis, onset_gain = extension_candidate
-                hypothesis.candidate.onset_gain = onset_gain
-                selected.append(hypothesis.candidate)
-                secondary_decision_trail.append(
-                    {
-                        "noteName": hypothesis.candidate.note_name,
-                        "score": round(hypothesis.score, 6),
-                        "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
-                        "onsetGain": round(onset_gain, 6),
-                        "accepted": True,
-                        "reasons": ["lower-mixed-roll-extension"],
-                        "octaveDyadAllowed": False,
-                    }
-                )
-
-    if (
-        len(selected) == 3
-        and end_time - start_time <= LOWER_ROLL_TAIL_EXTENSION_MAX_DURATION
-        and primary.candidate.frequency == max(note.frequency for note in selected)
-    ):
-        selected_keys = sorted(note.key for note in selected)
-        if selected_keys[-1] - selected_keys[0] == 2:
-            selected_names = {note.note_name for note in selected}
-            lowest_selected = min(selected, key=lambda note: note.frequency)
-            extension_key = selected_keys[0] - 1
-            extension_candidate: tuple[NoteHypothesis, float] | None = None
-            for hypothesis in residual_ranked[:8]:
-                candidate = hypothesis.candidate
-                if candidate.note_name in selected_names:
-                    continue
-                if candidate.key != extension_key:
-                    continue
-                if hypothesis.fundamental_ratio < LOWER_ROLL_TAIL_EXTENSION_MIN_FUNDAMENTAL_RATIO:
-                    continue
-                if hypothesis.score < GLISS_TERTIARY_MIN_SCORE:
-                    continue
-                if any(are_harmonic_related(candidate, existing) for existing in selected):
-                    continue
-                lowest_selected_score = next((item.score for item in residual_ranked[:8] if item.candidate.note_name == lowest_selected.note_name), None)
-                if lowest_selected_score is not None and hypothesis.score < lowest_selected_score * LOWER_ROLL_TAIL_EXTENSION_MIN_SCORE_RATIO:
-                    continue
-                if primary_onset_gain is None:
-                    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
-                if primary_onset_gain < LOWER_ROLL_TAIL_EXTENSION_MIN_PRIMARY_ONSET_GAIN:
-                    continue
-                onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, candidate.frequency)
-                if onset_gain > LOWER_ROLL_TAIL_EXTENSION_MAX_ONSET_GAIN:
-                    continue
-                extension_candidate = (hypothesis, onset_gain)
-                break
-
-            if extension_candidate is not None:
-                hypothesis, onset_gain = extension_candidate
-                hypothesis.candidate.onset_gain = onset_gain
-                selected.append(hypothesis.candidate)
-                secondary_decision_trail.append(
-                    {
-                        "noteName": hypothesis.candidate.note_name,
-                        "score": round(hypothesis.score, 6),
-                        "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
-                        "onsetGain": round(onset_gain, 6),
-                        "accepted": True,
-                        "reasons": ["lower-roll-tail-extension"],
-                        "octaveDyadAllowed": False,
-                    }
-                )
+    # Layer 4: Extension phases
+    _ext_state = _SelectionState(
+        selected=selected,
+        residual_ranked=residual_ranked,
+        secondary_decision_trail=secondary_decision_trail,
+        promoted_secondary_to_recent_upper_octave=promoted_secondary_to_recent_upper_octave,
+    )
+    _extend_gliss_tertiary(ctx, primary, _ext_state, evidence)
+    _extend_lower_mixed_roll(ctx, primary, _ext_state, evidence)
+    _extend_lower_roll_tail(ctx, primary, _ext_state, evidence)
+    selected = _ext_state.selected
+    secondary_decision_trail = _ext_state.secondary_decision_trail
 
     debug_payload = None
     if debug:
