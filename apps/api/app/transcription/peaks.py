@@ -1398,71 +1398,28 @@ def _extend_lower_roll_tail(
         )
 
 
-def segment_peaks(
-    audio: np.ndarray,
-    sample_rate: int,
-    start_time: float,
-    end_time: float,
-    tuning: InstrumentTuning,
-    *,
-    debug: bool = False,
-    recent_note_names: set[str] | None = None,
-    ascending_primary_run_ceiling: float | None = None,
-    ascending_singleton_suffix_ceiling: float | None = None,
-    ascending_singleton_suffix_note_names: set[str] | None = None,
-    descending_primary_suffix_floor: float | None = None,
-    descending_primary_suffix_ceiling: float | None = None,
-    descending_primary_suffix_note_names: set[str] | None = None,
-    previous_primary_note_name: str | None = None,
-    previous_primary_frequency: float | None = None,
-    previous_primary_was_singleton: bool = False,
-) -> tuple[list[NoteCandidate], dict[str, Any] | None, NoteHypothesis | None]:
-    ctx = _SegmentContext(
-        audio=audio, sample_rate=sample_rate,
-        start_time=start_time, end_time=end_time,
-        tuning=tuning, debug=debug,
-        recent_note_names=recent_note_names,
-        ascending_primary_run_ceiling=ascending_primary_run_ceiling,
-        ascending_singleton_suffix_ceiling=ascending_singleton_suffix_ceiling,
-        ascending_singleton_suffix_note_names=ascending_singleton_suffix_note_names,
-        descending_primary_suffix_floor=descending_primary_suffix_floor,
-        descending_primary_suffix_ceiling=descending_primary_suffix_ceiling,
-        descending_primary_suffix_note_names=descending_primary_suffix_note_names,
-        previous_primary_note_name=previous_primary_note_name,
-        previous_primary_frequency=previous_primary_frequency,
-        previous_primary_was_singleton=previous_primary_was_singleton,
-    )
 
-    # Layer 1: Signal acquisition
-    acquired = _acquire_spectrum(ctx)
-    if acquired is None:
-        return [], None, None
-    spectral, evidence = acquired
-    ranked = spectral.ranked
-    spectrum = spectral.spectrum
-    frequencies = spectral.frequencies
-
-    # Layer 2: Primary resolution
-    primary_result, rejection_debug = _resolve_primary(ctx, spectral, evidence)
-    if primary_result is None:
-        if ctx.debug and rejection_debug:
-            return [], rejection_debug, None
-        return [], None, None
+def _select_candidates(
+    ctx: _SegmentContext,
+    spectral: _SpectralData,
+    primary_result: _PrimaryResult,
+    evidence: _NoteEvidenceCache,
+) -> _SelectionState:
+    """Layer 3: Candidate selection — 4-note cluster, secondary gates, iterative suppression."""
     primary = primary_result.primary
     primary_onset_gain = primary_result.primary_onset_gain
     primary_promotion_debug = primary_result.promotion_debug
-    primary.candidate.onset_gain = primary_onset_gain
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     promoted_secondary_to_recent_upper_octave = False
     secondary_decision_trail: list[dict[str, Any]] = []
-    contiguous_four_note_cluster = select_contiguous_four_note_cluster(primary, ranked, end_time - start_time)
+    contiguous_four_note_cluster = select_contiguous_four_note_cluster(primary, spectral.ranked, ctx.duration)
     if contiguous_four_note_cluster is not None:
         selected = contiguous_four_note_cluster
         for candidate in selected:
             if candidate.note_name == primary.candidate.note_name:
                 continue
-            matching = next(hypothesis for hypothesis in ranked[:4] if hypothesis.candidate.note_name == candidate.note_name)
+            matching = next(hypothesis for hypothesis in spectral.ranked[:4] if hypothesis.candidate.note_name == candidate.note_name)
             secondary_decision_trail.append(
                 {
                     "noteName": matching.candidate.note_name,
@@ -1475,18 +1432,18 @@ def segment_peaks(
                 }
             )
     secondary_score_ratio = SECONDARY_SCORE_RATIO
-    if end_time - start_time <= 0.14:
+    if ctx.duration <= 0.14:
         secondary_score_ratio = SHORT_SEGMENT_SECONDARY_SCORE_RATIO
     secondary_min_fundamental_ratio = SECONDARY_MIN_FUNDAMENTAL_RATIO
 
     if MAX_POLYPHONY > 1 and contiguous_four_note_cluster is None:
-        residual_spectrum = suppress_harmonics(spectrum, frequencies, primary.candidate.frequency)
-        residual_ranked = rank_tuning_candidates(frequencies, residual_spectrum, tuning, debug=debug)
+        residual_spectrum = suppress_harmonics(spectral.spectrum, spectral.frequencies, primary.candidate.frequency)
+        residual_ranked = rank_tuning_candidates(spectral.frequencies, residual_spectrum, ctx.tuning, debug=ctx.debug)
         for hypothesis in residual_ranked[:8]:
             reasons: list[str] = []
             onset_gain: float | None = None
             octave_dyad_allowed = allow_octave_secondary(primary, hypothesis, selected)
-            segment_duration = end_time - start_time
+            segment_duration = ctx.duration
             score_ratio = secondary_score_ratio
             if octave_dyad_allowed and hypothesis.candidate.frequency > primary.candidate.frequency:
                 score_ratio = min(score_ratio, OCTAVE_DYAD_UPPER_SCORE_RATIO)
@@ -1498,7 +1455,7 @@ def segment_peaks(
                     # between existing keys would make the chord playable.
                     gap_filled = _try_gap_fill(
                         test_keys, selected, hypothesis, residual_ranked,
-                        primary, audio, sample_rate, start_time, end_time,
+                        primary, ctx.audio, ctx.sample_rate, ctx.start_time, ctx.end_time,
                     )
                     if gap_filled:
                         for gf_candidate in gap_filled:
@@ -1543,16 +1500,16 @@ def segment_peaks(
                 reasons.append("fundamental-ratio-too-low")
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not octave_dyad_allowed:
                 reasons.append("harmonic-related-to-selected")
-            if recent_note_names and hypothesis.candidate.note_name in recent_note_names:
+            if ctx.recent_note_names and hypothesis.candidate.note_name in ctx.recent_note_names:
                 onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if hypothesis.candidate.frequency < primary.candidate.frequency:
                     if (
                         onset_gain < MIN_RECENT_NOTE_ONSET_GAIN
                         or (
-                            ascending_primary_run_ceiling is not None
+                            ctx.ascending_primary_run_ceiling is not None
                             and segment_duration <= ASCENDING_PRIMARY_RUN_MAX_DURATION
-                            and primary.candidate.frequency >= ascending_primary_run_ceiling
-                            and hypothesis.candidate.frequency < ascending_primary_run_ceiling
+                            and primary.candidate.frequency >= ctx.ascending_primary_run_ceiling
+                            and hypothesis.candidate.frequency < ctx.ascending_primary_run_ceiling
                             and onset_gain < ASCENDING_PRIMARY_RUN_RECENT_SECONDARY_ONSET_GAIN
                         )
                     ):
@@ -1569,8 +1526,8 @@ def segment_peaks(
                         reasons.append("recent-carryover-candidate")
             if (
                 not reasons
-                and previous_primary_was_singleton
-                and previous_primary_note_name == hypothesis.candidate.note_name
+                and ctx.previous_primary_was_singleton
+                and ctx.previous_primary_note_name == hypothesis.candidate.note_name
                 and hypothesis.candidate.frequency > primary.candidate.frequency
                 and segment_duration <= DESCENDING_ADJACENT_UPPER_CARRYOVER_MAX_DURATION
                 and ADJACENT_RUN_STRIP_MIN_INTERVAL_CENTS
@@ -1587,11 +1544,11 @@ def segment_peaks(
                     reasons.append("descending-adjacent-upper-carryover")
             if (
                 not reasons
-                and previous_primary_was_singleton
-                and previous_primary_frequency is not None
+                and ctx.previous_primary_was_singleton
+                and ctx.previous_primary_frequency is not None
                 and hypothesis.candidate.frequency > primary.candidate.frequency
-                and primary.candidate.frequency < previous_primary_frequency
-                and hypothesis.candidate.frequency >= previous_primary_frequency
+                and primary.candidate.frequency < ctx.previous_primary_frequency
+                and hypothesis.candidate.frequency >= ctx.previous_primary_frequency
                 and segment_duration <= DESCENDING_RESTART_UPPER_CARRYOVER_MAX_DURATION
                 and not octave_dyad_allowed
             ):
@@ -1606,15 +1563,15 @@ def segment_peaks(
             if (
                 not reasons
                 and hypothesis.candidate.frequency > primary.candidate.frequency
-                and descending_primary_suffix_floor is not None
-                and descending_primary_suffix_ceiling is not None
-                and descending_primary_suffix_note_names
-                and primary.candidate.frequency <= descending_primary_suffix_floor
+                and ctx.descending_primary_suffix_floor is not None
+                and ctx.descending_primary_suffix_ceiling is not None
+                and ctx.descending_primary_suffix_note_names
+                and primary.candidate.frequency <= ctx.descending_primary_suffix_floor
                 and segment_duration <= DESCENDING_PRIMARY_SUFFIX_MAX_DURATION
                 and not octave_dyad_allowed
                 and (
-                    hypothesis.candidate.note_name in descending_primary_suffix_note_names
-                    or hypothesis.candidate.frequency > descending_primary_suffix_ceiling
+                    hypothesis.candidate.note_name in ctx.descending_primary_suffix_note_names
+                    or hypothesis.candidate.frequency > ctx.descending_primary_suffix_ceiling
                 )
             ):
                 primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
@@ -1640,8 +1597,8 @@ def segment_peaks(
                     and (
                         hypothesis.candidate.note_name == replaced_primary_note
                         or (
-                            descending_primary_suffix_ceiling is not None
-                            and hypothesis.candidate.frequency > descending_primary_suffix_ceiling
+                            ctx.descending_primary_suffix_ceiling is not None
+                            and hypothesis.candidate.frequency > ctx.descending_primary_suffix_ceiling
                         )
                     )
                 ):
@@ -1702,14 +1659,14 @@ def segment_peaks(
 
             if (
                 not reasons
-                and ascending_primary_run_ceiling is not None
+                and ctx.ascending_primary_run_ceiling is not None
                 and segment_duration <= ASCENDING_PRIMARY_RUN_MAX_DURATION
                 and hypothesis.candidate.frequency < primary.candidate.frequency
-                and primary.candidate.frequency >= ascending_primary_run_ceiling
-                and hypothesis.candidate.frequency < ascending_primary_run_ceiling
+                and primary.candidate.frequency >= ctx.ascending_primary_run_ceiling
+                and hypothesis.candidate.frequency < ctx.ascending_primary_run_ceiling
                 and hypothesis.score < primary.score * ASCENDING_PRIMARY_RUN_SECONDARY_SCORE_RATIO
                 and hypothesis.candidate.note_name != primary.candidate.note_name
-                and primary.candidate.note_name not in (recent_note_names or set())
+                and primary.candidate.note_name not in (ctx.recent_note_names or set())
                 and not octave_dyad_allowed
             ):
                 onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
@@ -1718,14 +1675,14 @@ def segment_peaks(
             if (
                 not reasons
                 and segment_duration <= 0.22
-                and previous_primary_was_singleton
-                and previous_primary_note_name == primary.candidate.note_name
-                and ascending_singleton_suffix_ceiling is not None
-                and primary.candidate.frequency >= ascending_singleton_suffix_ceiling
+                and ctx.previous_primary_was_singleton
+                and ctx.previous_primary_note_name == primary.candidate.note_name
+                and ctx.ascending_singleton_suffix_ceiling is not None
+                and primary.candidate.frequency >= ctx.ascending_singleton_suffix_ceiling
                 and hypothesis.candidate.frequency < primary.candidate.frequency
                 and hypothesis.score < primary.score * ASCENDING_PRIMARY_RUN_SECONDARY_SCORE_RATIO
                 and hypothesis.candidate.note_name != primary.candidate.note_name
-                and hypothesis.candidate.note_name not in (ascending_singleton_suffix_note_names or set())
+                and hypothesis.candidate.note_name not in (ctx.ascending_singleton_suffix_note_names or set())
                 and not octave_dyad_allowed
             ):
                 primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
@@ -1741,7 +1698,7 @@ def segment_peaks(
                     hypothesis,
                     residual_ranked,
                     segment_duration,
-                    recent_note_names,
+                    ctx.recent_note_names,
                 )
                 if promoted_from is not None:
                     promoted_secondary_to_recent_upper_octave = True
@@ -1775,10 +1732,10 @@ def segment_peaks(
             and len(selected) >= 2
             and len(selected) < MAX_POLYPHONY
         ):
-            _iter_residual = spectrum
+            _iter_residual = spectral.spectrum
             for _sel_note in selected:
-                _iter_residual = suppress_harmonics(_iter_residual, frequencies, _sel_note.frequency)
-            _iter_ranked = rank_tuning_candidates(frequencies, _iter_residual, tuning, debug=debug)
+                _iter_residual = suppress_harmonics(_iter_residual, spectral.frequencies, _sel_note.frequency)
+            _iter_ranked = rank_tuning_candidates(spectral.frequencies, _iter_residual, ctx.tuning, debug=ctx.debug)
             _already_selected = {n.note_name for n in selected}
             _iter_round_accepted = False
             for _iter_hyp in _iter_ranked[:8]:
@@ -1845,6 +1802,76 @@ def segment_peaks(
             if not _iter_round_accepted:
                 break  # no more candidates to recover
 
+
+    return _SelectionState(
+        selected=selected,
+        residual_ranked=residual_ranked,
+        secondary_decision_trail=secondary_decision_trail,
+        promoted_secondary_to_recent_upper_octave=promoted_secondary_to_recent_upper_octave,
+    )
+
+
+def segment_peaks(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    end_time: float,
+    tuning: InstrumentTuning,
+    *,
+    debug: bool = False,
+    recent_note_names: set[str] | None = None,
+    ascending_primary_run_ceiling: float | None = None,
+    ascending_singleton_suffix_ceiling: float | None = None,
+    ascending_singleton_suffix_note_names: set[str] | None = None,
+    descending_primary_suffix_floor: float | None = None,
+    descending_primary_suffix_ceiling: float | None = None,
+    descending_primary_suffix_note_names: set[str] | None = None,
+    previous_primary_note_name: str | None = None,
+    previous_primary_frequency: float | None = None,
+    previous_primary_was_singleton: bool = False,
+) -> tuple[list[NoteCandidate], dict[str, Any] | None, NoteHypothesis | None]:
+    ctx = _SegmentContext(
+        audio=audio, sample_rate=sample_rate,
+        start_time=start_time, end_time=end_time,
+        tuning=tuning, debug=debug,
+        recent_note_names=recent_note_names,
+        ascending_primary_run_ceiling=ascending_primary_run_ceiling,
+        ascending_singleton_suffix_ceiling=ascending_singleton_suffix_ceiling,
+        ascending_singleton_suffix_note_names=ascending_singleton_suffix_note_names,
+        descending_primary_suffix_floor=descending_primary_suffix_floor,
+        descending_primary_suffix_ceiling=descending_primary_suffix_ceiling,
+        descending_primary_suffix_note_names=descending_primary_suffix_note_names,
+        previous_primary_note_name=previous_primary_note_name,
+        previous_primary_frequency=previous_primary_frequency,
+        previous_primary_was_singleton=previous_primary_was_singleton,
+    )
+
+    # Layer 1: Signal acquisition
+    acquired = _acquire_spectrum(ctx)
+    if acquired is None:
+        return [], None, None
+    spectral, evidence = acquired
+    ranked = spectral.ranked
+    spectrum = spectral.spectrum
+    frequencies = spectral.frequencies
+
+    # Layer 2: Primary resolution
+    primary_result, rejection_debug = _resolve_primary(ctx, spectral, evidence)
+    if primary_result is None:
+        if ctx.debug and rejection_debug:
+            return [], rejection_debug, None
+        return [], None, None
+    primary = primary_result.primary
+    primary_onset_gain = primary_result.primary_onset_gain
+    primary_promotion_debug = primary_result.promotion_debug
+    primary.candidate.onset_gain = primary_onset_gain
+
+    # Layer 3: Candidate selection (4-note cluster + secondary loop + iterative suppression)
+    selection = _select_candidates(ctx, spectral, primary_result, evidence)
+    selected = selection.selected
+    residual_ranked = selection.residual_ranked
+    secondary_decision_trail = selection.secondary_decision_trail
+    promoted_secondary_to_recent_upper_octave = selection.promoted_secondary_to_recent_upper_octave
     # Layer 4: Extension phases
     _ext_state = _SelectionState(
         selected=selected,
