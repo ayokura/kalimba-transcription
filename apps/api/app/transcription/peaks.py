@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, NamedTuple
 
 import numpy as np
 
@@ -941,6 +942,145 @@ def should_block_descending_repeated_primary_tertiary_extension(
     )
 
 
+class SegmentPeaksResult(NamedTuple):
+    """Return type for segment_peaks. Supports tuple unpacking."""
+    candidates: list[NoteCandidate]
+    debug: dict[str, Any] | None
+    primary: NoteHypothesis | None
+
+
+@dataclass(slots=True)
+class _SegmentContext:
+    """Immutable context shared by all segment_peaks phases."""
+    audio: np.ndarray
+    sample_rate: int
+    start_time: float
+    end_time: float
+    tuning: InstrumentTuning
+    debug: bool
+    recent_note_names: set[str] | None
+    ascending_primary_run_ceiling: float | None
+    ascending_singleton_suffix_ceiling: float | None
+    ascending_singleton_suffix_note_names: set[str] | None
+    descending_primary_suffix_floor: float | None
+    descending_primary_suffix_ceiling: float | None
+    descending_primary_suffix_note_names: set[str] | None
+    previous_primary_note_name: str | None
+    previous_primary_frequency: float | None
+    previous_primary_was_singleton: bool
+
+    @property
+    def duration(self) -> float:
+        return self.end_time - self.start_time
+
+
+@dataclass(slots=True)
+class _SpectralData:
+    """FFT results from signal acquisition."""
+    frequencies: np.ndarray
+    spectrum: np.ndarray
+    ranked: list[NoteHypothesis]
+
+
+@dataclass(slots=True)
+class _PrimaryResult:
+    """Output of the primary promotion gauntlet."""
+    primary: NoteHypothesis
+    primary_onset_gain: float | None
+    promotion_debug: dict[str, Any] | None
+
+
+class _NoteEvidenceCache:
+    """Lazy, cached per-note evidence for a single segment.
+
+    All phases share one instance so that evidence computed during
+    primary resolution is reused in secondary selection and extensions.
+    Internally calls module-level functions (monkeypatch-compatible).
+    """
+
+    def __init__(
+        self,
+        audio: np.ndarray,
+        sample_rate: int,
+        start_time: float,
+        end_time: float,
+    ) -> None:
+        self._audio = audio
+        self._sr = sample_rate
+        self._start = start_time
+        self._end = end_time
+        self._onset_gains: dict[float, float] = {}
+        self._backward_gains: dict[float, float] = {}
+        self._mute_dip: dict[float, bool] = {}
+        self._residual_decay: dict[float, bool] = {}
+
+    def onset_gain(self, frequency: float) -> float:
+        if frequency not in self._onset_gains:
+            self._onset_gains[frequency] = onset_energy_gain(
+                self._audio, self._sr, self._start, self._end, frequency,
+            )
+        return self._onset_gains[frequency]
+
+    def backward_attack_gain(self, frequency: float) -> float:
+        if frequency not in self._backward_gains:
+            self._backward_gains[frequency] = onset_backward_attack_gain(
+                self._audio, self._sr, self._start, frequency,
+            )
+        return self._backward_gains[frequency]
+
+    def has_mute_dip_reattack(self, frequency: float) -> bool:
+        if frequency not in self._mute_dip:
+            self._mute_dip[frequency] = _has_mute_dip_reattack(
+                self._audio, self._sr, self._start, frequency,
+            )
+        return self._mute_dip[frequency]
+
+    def is_residual_decay(self, frequency: float) -> bool:
+        if frequency not in self._residual_decay:
+            self._residual_decay[frequency] = _is_residual_decay(
+                self._audio, self._sr, self._start, frequency,
+            )
+        return self._residual_decay[frequency]
+
+    def get_onset_gain_if_cached(self, frequency: float) -> float | None:
+        return self._onset_gains.get(frequency)
+
+
+def _acquire_spectrum(
+    ctx: _SegmentContext,
+) -> tuple[_SpectralData, _NoteEvidenceCache] | None:
+    """Layer 1: Signal acquisition — FFT and initial candidate ranking.
+
+    Returns None when the segment is too short or has no meaningful signal.
+    """
+    start = int(ctx.start_time * ctx.sample_rate)
+    end = int(ctx.end_time * ctx.sample_rate)
+    segment = ctx.audio[start:end]
+    if len(segment) < 512:
+        return None
+
+    analysis_samples = len(segment)
+    if len(segment) > int(ctx.sample_rate * 0.1):
+        analysis_samples = min(
+            len(segment),
+            max(int(ctx.sample_rate * ATTACK_ANALYSIS_SECONDS), int(len(segment) * ATTACK_ANALYSIS_RATIO)),
+        )
+    analysis_segment = segment[:analysis_samples]
+
+    n_fft = max(4096, 1 << int(np.ceil(np.log2(len(analysis_segment)))))
+    window = np.hanning(len(analysis_segment))
+    spectrum = np.abs(np.fft.rfft(analysis_segment * window, n=n_fft))
+    frequencies = np.fft.rfftfreq(n_fft, 1.0 / ctx.sample_rate)
+
+    ranked = rank_tuning_candidates(frequencies, spectrum, ctx.tuning, debug=ctx.debug)
+    if not ranked or ranked[0].score <= 1e-6:
+        return None
+
+    spectral = _SpectralData(frequencies=frequencies, spectrum=spectrum, ranked=ranked)
+    evidence = _NoteEvidenceCache(ctx.audio, ctx.sample_rate, ctx.start_time, ctx.end_time)
+    return spectral, evidence
+
+
 def segment_peaks(
     audio: np.ndarray,
     sample_rate: int,
@@ -960,28 +1100,30 @@ def segment_peaks(
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
 ) -> tuple[list[NoteCandidate], dict[str, Any] | None, NoteHypothesis | None]:
-    start = int(start_time * sample_rate)
-    end = int(end_time * sample_rate)
-    segment = audio[start:end]
-    if len(segment) < 512:
+    ctx = _SegmentContext(
+        audio=audio, sample_rate=sample_rate,
+        start_time=start_time, end_time=end_time,
+        tuning=tuning, debug=debug,
+        recent_note_names=recent_note_names,
+        ascending_primary_run_ceiling=ascending_primary_run_ceiling,
+        ascending_singleton_suffix_ceiling=ascending_singleton_suffix_ceiling,
+        ascending_singleton_suffix_note_names=ascending_singleton_suffix_note_names,
+        descending_primary_suffix_floor=descending_primary_suffix_floor,
+        descending_primary_suffix_ceiling=descending_primary_suffix_ceiling,
+        descending_primary_suffix_note_names=descending_primary_suffix_note_names,
+        previous_primary_note_name=previous_primary_note_name,
+        previous_primary_frequency=previous_primary_frequency,
+        previous_primary_was_singleton=previous_primary_was_singleton,
+    )
+
+    # Layer 1: Signal acquisition
+    acquired = _acquire_spectrum(ctx)
+    if acquired is None:
         return [], None, None
-
-    analysis_samples = len(segment)
-    if len(segment) > int(sample_rate * 0.1):
-        analysis_samples = min(
-            len(segment),
-            max(int(sample_rate * ATTACK_ANALYSIS_SECONDS), int(len(segment) * ATTACK_ANALYSIS_RATIO)),
-        )
-    analysis_segment = segment[:analysis_samples]
-
-    n_fft = max(4096, 1 << int(np.ceil(np.log2(len(analysis_segment)))))
-    window = np.hanning(len(analysis_segment))
-    spectrum = np.abs(np.fft.rfft(analysis_segment * window, n=n_fft))
-    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
-
-    ranked = rank_tuning_candidates(frequencies, spectrum, tuning, debug=debug)
-    if not ranked or ranked[0].score <= 1e-6:
-        return [], None, None
+    spectral, evidence = acquired
+    ranked = spectral.ranked
+    spectrum = spectral.spectrum
+    frequencies = spectral.frequencies
 
     primary = ranked[0]
     primary, primary_onset_gain, primary_promotion_debug = maybe_replace_stale_recent_primary(
