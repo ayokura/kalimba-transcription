@@ -1081,6 +1081,108 @@ def _acquire_spectrum(
     return spectral, evidence
 
 
+def _resolve_primary(
+    ctx: _SegmentContext,
+    spectral: _SpectralData,
+    evidence: _NoteEvidenceCache,
+) -> tuple[_PrimaryResult | None, dict[str, Any] | None]:
+    """Layer 2: Primary promotion gauntlet + residual decay check.
+
+    Returns (result, None) on success, or (None, debug_dict_or_None) on rejection.
+    """
+    ranked = spectral.ranked
+    primary = ranked[0]
+    primary, primary_onset_gain, primary_promotion_debug = maybe_replace_stale_recent_primary(
+        ctx.audio,
+        ctx.sample_rate,
+        ctx.start_time,
+        ctx.end_time,
+        primary,
+        ranked,
+        ctx.recent_note_names,
+        previous_primary_note_name=ctx.previous_primary_note_name,
+        previous_primary_frequency=ctx.previous_primary_frequency,
+        previous_primary_was_singleton=ctx.previous_primary_was_singleton,
+    )
+    primary, stale_upper_promotion_debug = maybe_promote_stale_primary_to_upper_octave(
+        primary,
+        ranked,
+        ctx.duration,
+        primary_onset_gain,
+        ctx.recent_note_names,
+    )
+    if stale_upper_promotion_debug is not None:
+        primary_promotion_debug = stale_upper_promotion_debug
+    primary, recent_upper_alias_promotion_debug = maybe_promote_recent_upper_octave_alias_primary(
+        primary,
+        ranked,
+        ctx.duration,
+        ctx.recent_note_names,
+    )
+    if recent_upper_alias_promotion_debug is not None:
+        primary_promotion_debug = recent_upper_alias_promotion_debug
+    if (
+        primary.score < PRIMARY_REJECTION_MAX_SCORE
+        and primary.fundamental_ratio < PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
+    ):
+        return None, None
+    # Suppress residual-decay segments: if the primary is a recent note and
+    # shows no mute-dip (smooth decay rather than finger-touch-then-repluck),
+    # the segment is likely resonance from a previous event, not a genuine
+    # new attack.
+    if (
+        ctx.recent_note_names
+        and primary.candidate.note_name in ctx.recent_note_names
+        and evidence.is_residual_decay(primary.candidate.frequency)
+        and not evidence.has_mute_dip_reattack(primary.candidate.frequency)
+    ):
+        # Forward-scan: check all recent notes for genuine re-attack (mute-dip).
+        _ranked_by_name: dict[str, NoteHypothesis] = {}
+        for h in ranked:
+            if h.candidate.note_name not in _ranked_by_name:
+                _ranked_by_name[h.candidate.note_name] = h
+        alternative_primary = None
+        for note_name in ctx.recent_note_names:
+            hyp = _ranked_by_name.get(note_name)
+            if hyp is None:
+                continue
+            if evidence.has_mute_dip_reattack(hyp.candidate.frequency):
+                if alternative_primary is None or hyp.score > alternative_primary.score:
+                    alternative_primary = hyp
+        if alternative_primary is None:
+            # Octave-up rescue: check 1 and 2 octaves above.
+            for octave_mult in (2, 4):
+                target_freq = primary.candidate.frequency * octave_mult
+                for h in ranked:
+                    if abs(h.candidate.frequency - target_freq) / target_freq < 0.03:
+                        octave_gain = _note_onset_energy_gain(ctx.audio, ctx.sample_rate, ctx.start_time, h.candidate.frequency)
+                        if octave_gain is not None and octave_gain >= RESIDUAL_DECAY_MIN_ONSET_GAIN:
+                            alternative_primary = h
+                        break
+                if alternative_primary is not None:
+                    break
+        if alternative_primary is None:
+            rejection_debug = None
+            if ctx.debug:
+                rejection_debug = {
+                    "startTime": round(ctx.start_time, 6),
+                    "endTime": round(ctx.end_time, 6),
+                    "durationSec": round(ctx.duration, 6),
+                    "selectedNotes": [],
+                    "primaryNote": primary.candidate.note_name,
+                    "droppedBy": "residual-decay-no-reattack",
+                }
+            return None, rejection_debug
+        primary = alternative_primary
+        primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
+        primary_promotion_debug = {
+            "reason": "residual-forward-scan",
+            "replacedPrimaryNote": ranked[0].candidate.note_name,
+            "replacementNote": primary.candidate.note_name,
+        }
+    return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug), None
+
+
 def segment_peaks(
     audio: np.ndarray,
     sample_rate: int,
@@ -1125,106 +1227,15 @@ def segment_peaks(
     spectrum = spectral.spectrum
     frequencies = spectral.frequencies
 
-    primary = ranked[0]
-    primary, primary_onset_gain, primary_promotion_debug = maybe_replace_stale_recent_primary(
-        audio,
-        sample_rate,
-        start_time,
-        end_time,
-        primary,
-        ranked,
-        recent_note_names,
-        previous_primary_note_name=previous_primary_note_name,
-        previous_primary_frequency=previous_primary_frequency,
-        previous_primary_was_singleton=previous_primary_was_singleton,
-    )
-    primary, stale_upper_promotion_debug = maybe_promote_stale_primary_to_upper_octave(
-        primary,
-        ranked,
-        end_time - start_time,
-        primary_onset_gain,
-        recent_note_names,
-    )
-    if stale_upper_promotion_debug is not None:
-        primary_promotion_debug = stale_upper_promotion_debug
-    primary, recent_upper_alias_promotion_debug = maybe_promote_recent_upper_octave_alias_primary(
-        primary,
-        ranked,
-        end_time - start_time,
-        recent_note_names,
-    )
-    if recent_upper_alias_promotion_debug is not None:
-        primary_promotion_debug = recent_upper_alias_promotion_debug
-    if (
-        primary.score < PRIMARY_REJECTION_MAX_SCORE
-        and primary.fundamental_ratio < PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
-    ):
+    # Layer 2: Primary resolution
+    primary_result, rejection_debug = _resolve_primary(ctx, spectral, evidence)
+    if primary_result is None:
+        if ctx.debug and rejection_debug:
+            return [], rejection_debug, None
         return [], None, None
-    # Suppress residual-decay segments: if the primary is a recent note and
-    # shows no mute-dip (smooth decay rather than finger-touch-then-repluck),
-    # the segment is likely resonance from a previous event, not a genuine
-    # new attack.  On a kalimba, replucking requires touching the tine first,
-    # which causes the note-band energy to drop before the new onset.
-    if (
-        recent_note_names
-        and primary.candidate.note_name in recent_note_names
-        and _is_residual_decay(audio, sample_rate, start_time, primary.candidate.frequency)
-        and not _has_mute_dip_reattack(audio, sample_rate, start_time, primary.candidate.frequency)
-    ):
-        # Forward-scan: the top-ranked candidate is residual, but a recent note
-        # may show a genuine re-attack (mute-dip).  The re-attack note can rank
-        # very low in the FFT because the mute period dilutes its spectral
-        # energy — so we check all recent notes by frequency-band energy
-        # rather than relying on FFT rank.
-        # Build {note_name: NoteHypothesis} lookup from ranked for quick access.
-        _ranked_by_name: dict[str, NoteHypothesis] = {}
-        for h in ranked:
-            if h.candidate.note_name not in _ranked_by_name:
-                _ranked_by_name[h.candidate.note_name] = h
-        alternative_primary = None
-        for note_name in recent_note_names:
-            hyp = _ranked_by_name.get(note_name)
-            if hyp is None:
-                continue  # note not present in spectrum at all
-            if _has_mute_dip_reattack(audio, sample_rate, start_time, hyp.candidate.frequency):
-                if alternative_primary is None or hyp.score > alternative_primary.score:
-                    alternative_primary = hyp
-        if alternative_primary is None:
-            # Octave-up rescue: the primary (e.g. A4) is residual, but an
-            # octave-related note above (A5, A6, …) may be a genuine new
-            # attack whose fundamental overlaps with a harmonic of the
-            # residual note.  Check 1 and 2 octaves above.
-            for octave_mult in (2, 4):
-                target_freq = primary.candidate.frequency * octave_mult
-                for h in ranked:
-                    if abs(h.candidate.frequency - target_freq) / target_freq < 0.03:
-                        octave_gain = _note_onset_energy_gain(audio, sample_rate, start_time, h.candidate.frequency)
-                        if octave_gain is not None and octave_gain >= RESIDUAL_DECAY_MIN_ONSET_GAIN:
-                            alternative_primary = h
-                        break
-                if alternative_primary is not None:
-                    break
-        if alternative_primary is None:
-            if debug:
-                _residual_debug: dict[str, Any] = {
-                    "startTime": round(start_time, 6),
-                    "endTime": round(end_time, 6),
-                    "durationSec": round(end_time - start_time, 6),
-                    "selectedNotes": [],
-                    "primaryNote": primary.candidate.note_name,
-                    "droppedBy": "residual-decay-no-reattack",
-                }
-                return [], _residual_debug, None
-            return [], None, None
-        primary = alternative_primary
-        # Recalculate primary-dependent state after forward-scan replacement
-        # so downstream secondary gates use the new primary's context.
-        primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
-        primary_promotion_debug = {
-            "reason": "residual-forward-scan",
-            "replacedPrimaryNote": ranked[0].candidate.note_name,
-            "replacementNote": primary.candidate.note_name,
-        }
+    primary = primary_result.primary
+    primary_onset_gain = primary_result.primary_onset_gain
+    primary_promotion_debug = primary_result.promotion_debug
     primary.candidate.onset_gain = primary_onset_gain
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
