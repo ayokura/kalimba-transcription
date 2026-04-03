@@ -1811,6 +1811,40 @@ def _select_candidates(
     )
 
 
+def _build_segment_debug(
+    ctx: _SegmentContext,
+    spectral: _SpectralData,
+    primary_result: _PrimaryResult,
+    selection: _SelectionState,
+    evidence: _NoteEvidenceCache,
+) -> dict[str, Any]:
+    """Layer 5: Assemble the debug payload."""
+    primary = primary_result.primary
+    attack_context = prepare_attack_debug_context(ctx.audio, ctx.sample_rate, ctx.start_time, ctx.end_time)
+    segment_attack_debug = attack_context["broadband"] if attack_context is not None else {}
+    attack_profiles: dict[str, dict[str, Any]] = {}
+    if attack_context is not None:
+        for hypothesis in [primary, *spectral.ranked[:5], *selection.residual_ranked[:5]]:
+            note_name = hypothesis.candidate.note_name
+            if note_name not in attack_profiles:
+                attack_profiles[note_name] = build_candidate_attack_debug(attack_context, hypothesis.candidate.frequency)
+    primary_og = evidence.get_onset_gain_if_cached(primary.candidate.frequency)
+    return {
+        "startTime": round(ctx.start_time, 4),
+        "endTime": round(ctx.end_time, 4),
+        "durationSec": round(ctx.duration, 4),
+        "selectedNotes": [candidate.note_name for candidate in selection.selected],
+        **segment_attack_debug,
+        "primaryCandidate": build_debug_candidates([primary], limit=1, attack_profiles=attack_profiles)[0],
+        "primaryOnsetGain": None if primary_og is None else round(primary_og, 6),
+        "primaryPromotion": primary_result.promotion_debug,
+        "rankedCandidates": build_debug_candidates(spectral.ranked, attack_profiles=attack_profiles),
+        "residualCandidates": build_debug_candidates(selection.residual_ranked, attack_profiles=attack_profiles),
+        "secondaryDecisionTrail": selection.secondary_decision_trail,
+        "rawPeaks": build_raw_peaks(spectral.frequencies, spectral.spectrum, ctx.tuning),
+    }
+
+
 def segment_peaks(
     audio: np.ndarray,
     sample_rate: int,
@@ -1829,7 +1863,7 @@ def segment_peaks(
     previous_primary_note_name: str | None = None,
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
-) -> tuple[list[NoteCandidate], dict[str, Any] | None, NoteHypothesis | None]:
+) -> SegmentPeaksResult:
     ctx = _SegmentContext(
         audio=audio, sample_rate=sample_rate,
         start_time=start_time, end_time=end_time,
@@ -1849,68 +1883,39 @@ def segment_peaks(
     # Layer 1: Signal acquisition
     acquired = _acquire_spectrum(ctx)
     if acquired is None:
-        return [], None, None
+        return SegmentPeaksResult([], None, None)
     spectral, evidence = acquired
-    ranked = spectral.ranked
-    spectrum = spectral.spectrum
-    frequencies = spectral.frequencies
 
     # Layer 2: Primary resolution
     primary_result, rejection_debug = _resolve_primary(ctx, spectral, evidence)
     if primary_result is None:
-        if ctx.debug and rejection_debug:
-            return [], rejection_debug, None
-        return [], None, None
+        return SegmentPeaksResult([], rejection_debug if ctx.debug else None, None)
     primary = primary_result.primary
-    primary_onset_gain = primary_result.primary_onset_gain
-    primary_promotion_debug = primary_result.promotion_debug
-    primary.candidate.onset_gain = primary_onset_gain
+    primary.candidate.onset_gain = primary_result.primary_onset_gain
 
-    # Layer 3: Candidate selection (4-note cluster + secondary loop + iterative suppression)
+    # Layer 3: Candidate selection
     selection = _select_candidates(ctx, spectral, primary_result, evidence)
-    selected = selection.selected
-    residual_ranked = selection.residual_ranked
-    secondary_decision_trail = selection.secondary_decision_trail
-    promoted_secondary_to_recent_upper_octave = selection.promoted_secondary_to_recent_upper_octave
+
     # Layer 4: Extension phases
-    _ext_state = _SelectionState(
-        selected=selected,
-        residual_ranked=residual_ranked,
-        secondary_decision_trail=secondary_decision_trail,
-        promoted_secondary_to_recent_upper_octave=promoted_secondary_to_recent_upper_octave,
-    )
-    _extend_gliss_tertiary(ctx, primary, _ext_state, evidence)
-    _extend_lower_mixed_roll(ctx, primary, _ext_state, evidence)
-    _extend_lower_roll_tail(ctx, primary, _ext_state, evidence)
-    selected = _ext_state.selected
-    secondary_decision_trail = _ext_state.secondary_decision_trail
+    _extend_gliss_tertiary(ctx, primary, selection, evidence)
+    _extend_lower_mixed_roll(ctx, primary, selection, evidence)
+    _extend_lower_roll_tail(ctx, primary, selection, evidence)
+
+    # Layer 5: Evidence freeze + debug assembly
+    for note in selection.selected:
+        cached_og = evidence.get_onset_gain_if_cached(note.frequency)
+        if cached_og is not None and note.onset_gain is None:
+            note.onset_gain = cached_og
 
     debug_payload = None
-    if debug:
-        attack_context = prepare_attack_debug_context(audio, sample_rate, start_time, end_time)
-        segment_attack_debug = attack_context["broadband"] if attack_context is not None else {}
-        attack_profiles: dict[str, dict[str, Any]] = {}
-        if attack_context is not None:
-            for hypothesis in [primary, *ranked[:5], *residual_ranked[:5]]:
-                note_name = hypothesis.candidate.note_name
-                if note_name not in attack_profiles:
-                    attack_profiles[note_name] = build_candidate_attack_debug(attack_context, hypothesis.candidate.frequency)
-        debug_payload = {
-            "startTime": round(start_time, 4),
-            "endTime": round(end_time, 4),
-            "durationSec": round(end_time - start_time, 4),
-            "selectedNotes": [candidate.note_name for candidate in selected],
-            **segment_attack_debug,
-            "primaryCandidate": build_debug_candidates([primary], limit=1, attack_profiles=attack_profiles)[0],
-            "primaryOnsetGain": None if primary_onset_gain is None else round(primary_onset_gain, 6),
-            "primaryPromotion": primary_promotion_debug,
-            "rankedCandidates": build_debug_candidates(ranked, attack_profiles=attack_profiles),
-            "residualCandidates": build_debug_candidates(residual_ranked, attack_profiles=attack_profiles),
-            "secondaryDecisionTrail": secondary_decision_trail,
-            "rawPeaks": build_raw_peaks(frequencies, spectrum, tuning),
-        }
+    if ctx.debug:
+        debug_payload = _build_segment_debug(ctx, spectral, primary_result, selection, evidence)
 
-    return sorted(selected, key=lambda item: item.frequency), debug_payload, primary
+    return SegmentPeaksResult(
+        sorted(selection.selected, key=lambda item: item.frequency),
+        debug_payload,
+        primary,
+    )
 
 def _note_band_energy(
     audio: np.ndarray,
