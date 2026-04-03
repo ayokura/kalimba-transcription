@@ -1083,6 +1083,7 @@ def segment_peaks(
             "replacedPrimaryNote": ranked[0].candidate.note_name,
             "replacementNote": primary.candidate.note_name,
         }
+    primary.candidate.onset_gain = primary_onset_gain
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
     promoted_secondary_to_recent_upper_octave = False
@@ -1410,6 +1411,7 @@ def segment_peaks(
                 }
             )
             if accepted:
+                accepted_hypothesis.candidate.onset_gain = onset_gain
                 selected.append(accepted_hypothesis.candidate)
                 if len(selected) >= MAX_POLYPHONY:
                     break
@@ -1498,6 +1500,7 @@ def segment_peaks(
                     }
                 )
                 if _iter_accepted:
+                    _iter_hyp.candidate.onset_gain = _iter_onset_gain
                     selected.append(_iter_hyp.candidate)
                     _iter_round_accepted = True
                     break  # re-suppress and re-rank in next while iteration
@@ -1572,6 +1575,7 @@ def segment_peaks(
                         }
                     )
                 elif is_slide_playable_contiguous_cluster(extended_cluster, tuning):
+                    hypothesis.candidate.onset_gain = onset_gain
                     selected.append(hypothesis.candidate)
                     secondary_decision_trail.append(
                         {
@@ -1644,6 +1648,7 @@ def segment_peaks(
 
             if extension_candidate is not None:
                 hypothesis, onset_gain = extension_candidate
+                hypothesis.candidate.onset_gain = onset_gain
                 selected.append(hypothesis.candidate)
                 secondary_decision_trail.append(
                     {
@@ -1695,6 +1700,7 @@ def segment_peaks(
 
             if extension_candidate is not None:
                 hypothesis, onset_gain = extension_candidate
+                hypothesis.candidate.onset_gain = onset_gain
                 selected.append(hypothesis.candidate)
                 secondary_decision_trail.append(
                     {

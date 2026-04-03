@@ -11,6 +11,7 @@ class NoteCandidate:
     frequency: float
     pitch_class: str
     octave: int
+    onset_gain: float | None = None
 
 
 @dataclass
