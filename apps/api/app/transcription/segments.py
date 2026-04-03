@@ -433,59 +433,6 @@ def collect_multi_onset_gap_segments(
     return segments
 
 
-def collect_post_tail_gap_head_segments(
-    active_ranges: list[tuple[float, float]],
-    onset_times: list[float],
-    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
-) -> list[tuple[float, float]]:
-    segments: list[tuple[float, float]] = []
-    for index in range(len(active_ranges) - 1):
-        previous_end = active_ranges[index][1]
-        next_start, next_end = active_ranges[index + 1]
-        gap_duration = next_start - previous_end
-        if gap_duration < POST_TAIL_GAP_HEAD_MIN_DURATION:
-            continue
-
-        gap_onsets = [
-            onset_time
-            for onset_time in onset_times
-            if previous_end + SPARSE_GAP_TAIL_MIN_PREVIOUS_EDGE < onset_time < next_start - 0.05
-        ]
-        if len(gap_onsets) < 4:
-            continue
-
-        early_gap_onsets = [
-            onset_time
-            for onset_time in gap_onsets
-            if onset_time - previous_end <= POST_TAIL_GAP_HEAD_MAX_EARLY_ONSET_OFFSET
-        ]
-        late_gap_onsets = [
-            onset_time
-            for onset_time in gap_onsets
-            if onset_time - previous_end >= POST_TAIL_GAP_HEAD_MIN_LATE_ONSET_OFFSET
-        ]
-        if not (1 <= len(early_gap_onsets) <= 2):
-            continue
-        if len(late_gap_onsets) < 3:
-            continue
-        if next_end - next_start > POST_TAIL_GAP_HEAD_MAX_NEXT_RANGE_DURATION:
-            continue
-        if next_start - late_gap_onsets[-1] < POST_TAIL_GAP_HEAD_MIN_TRAILING_EDGE:
-            continue
-
-        late_intervals = [late_gap_onsets[i + 1] - late_gap_onsets[i] for i in range(len(late_gap_onsets) - 1)]
-        if not all(
-            POST_TAIL_GAP_HEAD_MIN_INTERVAL <= interval <= POST_TAIL_GAP_HEAD_MAX_INTERVAL
-            for interval in late_intervals
-        ):
-            continue
-
-        for start_time, end_time in zip(late_gap_onsets, late_gap_onsets[1:]):
-            if end_time - start_time >= 0.08:
-                segments.append((start_time, end_time))
-
-    return segments
-
 
 def collect_leading_orphan_segments(
     active_ranges: list[tuple[float, float]],
@@ -561,38 +508,6 @@ def collect_sparse_gap_tail_segments(
 
     return segments
 
-
-def collect_single_onset_gap_head_segments(
-    active_ranges: list[tuple[float, float]],
-    onset_times: list[float],
-    onset_profiles: dict[float, OnsetAttackProfile] | None = None,
-) -> list[tuple[float, float]]:
-    segments: list[tuple[float, float]] = []
-    for index in range(len(active_ranges) - 1):
-        previous_end = active_ranges[index][1]
-        next_start, next_end = active_ranges[index + 1]
-        gap_duration = next_start - previous_end
-        if not (SINGLE_ONSET_GAP_HEAD_MIN_DURATION <= gap_duration < SINGLE_ONSET_GAP_HEAD_MAX_DURATION):
-            continue
-
-        gap_onsets = [onset_time for onset_time in onset_times if previous_end + 0.05 < onset_time < next_start - 0.05]
-        if len(gap_onsets) != 1:
-            continue
-
-        gap_onset = gap_onsets[0]
-        if gap_onset - previous_end < SINGLE_ONSET_GAP_HEAD_MIN_PREVIOUS_EDGE:
-            continue
-        if next_start - gap_onset < SINGLE_ONSET_GAP_HEAD_MIN_TRAILING_EDGE:
-            continue
-        if next_end - next_start > SINGLE_ONSET_GAP_HEAD_MAX_NEXT_RANGE_DURATION:
-            continue
-
-        segment_start = gap_onset
-        segment_end = min(segment_start + SINGLE_ONSET_GAP_HEAD_SEGMENT_DURATION, next_start - 0.08)
-        if segment_end - segment_start >= 0.08:
-            segments.append((segment_start, segment_end))
-
-    return segments
 
 
 def collect_attack_validated_gap_segments(
@@ -955,40 +870,12 @@ def detect_segments(
     leading_orphan_segments = (
         [] if (ABLATE_LEADING_ORPHAN or mid_performance_start) else collect_leading_orphan_segments(active_ranges, gap_onset_times, onset_attack_profiles)
     )
-    gap_injected_segments: list[tuple[float, float]] = []
     multi_onset_gap_segments = (
         [] if ABLATE_MULTI_ONSET_GAP else collect_multi_onset_gap_segments(active_ranges, gap_onset_times, onset_attack_profiles, attack_validated_gap_candidates)
-    )
-    post_tail_gap_head_segments = (
-        [] if ABLATE_POST_TAIL_GAP_HEAD else collect_post_tail_gap_head_segments(active_ranges, gap_onset_times, onset_attack_profiles)
-    )
-    single_onset_gap_head_segments = (
-        [] if ABLATE_SINGLE_ONSET_GAP_HEAD else collect_single_onset_gap_head_segments(active_ranges, gap_onset_times, onset_attack_profiles)
     )
     sparse_gap_tail_segments = (
         [] if ABLATE_SPARSE_GAP_TAIL else collect_sparse_gap_tail_segments(active_ranges, gap_onset_times, onset_attack_profiles)
     )
-    if not ABLATE_GAP_INJECTED:
-        qualifying_gap_run: list[tuple[float, float]] = []
-        for index in range(len(active_ranges) - 1):
-            previous_end = active_ranges[index][1]
-            next_start = active_ranges[index + 1][0]
-            gap_onsets = [time for time in gap_onset_times if previous_end + 0.05 < time < next_start - 0.05]
-            qualifies = (
-                len(gap_onsets) == 1
-                and gap_onsets[0] - previous_end >= 0.35
-                and next_start - gap_onsets[0] >= 0.35
-            )
-            if qualifies:
-                qualifying_gap_run.append((gap_onsets[0], next_start))
-                continue
-            if len(qualifying_gap_run) >= 3:
-                gap_injected_segments.extend(qualifying_gap_run)
-            qualifying_gap_run = []
-
-        if len(qualifying_gap_run) >= 3:
-            gap_injected_segments.extend(qualifying_gap_run)
-
     attack_validated_gap_segments: list[tuple[float, float]] = []
     if active_ranges and not mid_performance_end:
         if USE_ATTACK_VALIDATED_GAP_COLLECTOR:
@@ -1065,11 +952,8 @@ def detect_segments(
                 active_range_segments.append((start_time, end_time))
 
     collector_sources: list[tuple[list[tuple[float, float]], str, bool]] = [
-        (gap_injected_segments, "gapInjected", False),
         (leading_orphan_segments, "leadingOrphan", False),
         (multi_onset_gap_segments, "multiOnsetGap", False),
-        (post_tail_gap_head_segments, "postTailGapHead", False),
-        (single_onset_gap_head_segments, "singleOnsetGapHead", True),
         (sparse_gap_tail_segments, "sparseGapTail", True),
         (attack_validated_gap_segments, "attackValidatedGap", True),
     ]
@@ -1113,11 +997,8 @@ def detect_segments(
         "rawActiveRanges": [[round(start, 4), round(end, 4)] for start, end in raw_active_ranges],
         "shortBridgeActiveRanges": [[round(start, 4), round(end, 4)] for start, end in short_bridge_active_ranges],
         "activeRangeSegments": [[round(start, 4), round(end, 4)] for start, end in active_range_segments],
-        "gapInjectedSegments": [[round(start, 4), round(end, 4)] for start, end in gap_injected_segments],
         "leadingOrphanSegments": [[round(start, 4), round(end, 4)] for start, end in leading_orphan_segments],
         "multiOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in multi_onset_gap_segments],
-        "postTailGapHeadSegments": [[round(start, 4), round(end, 4)] for start, end in post_tail_gap_head_segments],
-        "singleOnsetGapHeadSegments": [[round(start, 4), round(end, 4)] for start, end in single_onset_gap_head_segments],
         "sparseGapTailSegments": [[round(start, 4), round(end, 4)] for start, end in sparse_gap_tail_segments],
         "attackValidatedGapSegments": [[round(start, 4), round(end, 4)] for start, end in attack_validated_gap_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],

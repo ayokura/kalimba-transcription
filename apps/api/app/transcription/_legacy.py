@@ -146,7 +146,6 @@ async def transcribe_audio(
         for start_time, end_time in segment_debug.get("multiOnsetGapSegments", [])
     ]
     multi_onset_gap_segment_keys = _segment_keys("multiOnsetGapSegments")
-    single_onset_gap_head_segment_keys = _segment_keys("singleOnsetGapHeadSegments")
     for segment in segments:
         start_time, end_time = segment
         duration = max(end_time - start_time, 0.08)
