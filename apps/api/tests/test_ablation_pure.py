@@ -24,18 +24,20 @@ pytestmark = [pytest.mark.manual_capture, pytest.mark.slow, pytest.mark.ablation
 COMPLETED_FIXTURES = fixture_dirs_for_status("completed")
 
 ABLATION_FLAGS = [
-    "ABLATE_SPARSE_GAP_TAIL",
-    "ABLATE_MULTI_ONSET_GAP",
-    "ABLATE_COLLAPSE_ACTIVE_RANGE_HEAD",
-    "ABLATE_SNAP_RANGE_START_TO_ONSET",
+    "ablate_sparse_gap_tail",
+    "ablate_multi_onset_gap",
+    "ablate_collapse_active_range_head",
+    "ablate_snap_range_start_to_onset",
 ]
 
 
 @pytest.fixture(params=ABLATION_FLAGS)
-def ablated_flag(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> str:
-    import app.transcription as mod
+def ablated_flag(request: pytest.FixtureRequest) -> str:
+    from app.transcription import settings
     flag_name = request.param
-    monkeypatch.setattr(mod.segments, flag_name, True)
+    ctx = settings.override(**{flag_name: True})
+    ctx.__enter__()
+    request.addfinalizer(lambda: ctx.__exit__(None, None, None))
     return flag_name
 
 

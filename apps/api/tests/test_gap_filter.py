@@ -26,9 +26,11 @@ COMPLETED_FIXTURES = fixture_dirs_for_status("completed")
 
 
 @pytest.fixture(autouse=True)
-def _enable_gap_filter(monkeypatch: pytest.MonkeyPatch) -> None:
-    import app.transcription as mod
-    monkeypatch.setattr(mod.segments, "FILTER_GAP_ONSETS_BY_ATTACK_PROFILE", True)
+def _enable_gap_filter(request: pytest.FixtureRequest) -> None:
+    from app.transcription import settings
+    ctx = settings.override(filter_gap_onsets_by_attack_profile=True)
+    ctx.__enter__()
+    request.addfinalizer(lambda: ctx.__exit__(None, None, None))
 
 
 @pytest.mark.parametrize("fixture_dir", COMPLETED_FIXTURES, ids=fixture_id)

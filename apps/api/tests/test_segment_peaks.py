@@ -524,15 +524,16 @@ def test_iterative_suppression_recovers_octave_tertiary(monkeypatch: pytest.Monk
     c4, a4, c5, fake_rank, fake_onset, fake_backward = _build_iterative_suppression_fakes()
     tuning = get_default_tunings()[0]
 
-    monkeypatch.setattr(transcription.peaks, "USE_ITERATIVE_HARMONIC_SUPPRESSION", True)
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
     monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
     monkeypatch.setattr(transcription.peaks, "onset_backward_attack_gain", fake_backward)
 
-    candidates, debug, primary = segment_peaks(
-        synthesize_note(523.2511, duration=0.4), 44100, 0.0, 0.4, tuning, debug=True,
-    )
+    from app.transcription import settings
+    with settings.override(use_iterative_harmonic_suppression=True):
+        candidates, debug, primary = segment_peaks(
+            synthesize_note(523.2511, duration=0.4), 44100, 0.0, 0.4, tuning, debug=True,
+        )
 
     note_names = {c.note_name for c in candidates}
     assert "C5" in note_names, f"expected C5 in {note_names}"
@@ -555,15 +556,16 @@ def test_iterative_suppression_ablation_flag_off(monkeypatch: pytest.MonkeyPatch
     c4, a4, c5, fake_rank, fake_onset, fake_backward = _build_iterative_suppression_fakes()
     tuning = get_default_tunings()[0]
 
-    monkeypatch.setattr(transcription.peaks, "USE_ITERATIVE_HARMONIC_SUPPRESSION", False)
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
     monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
     monkeypatch.setattr(transcription.peaks, "onset_backward_attack_gain", fake_backward)
 
-    candidates, debug, primary = segment_peaks(
-        synthesize_note(523.2511, duration=0.4), 44100, 0.0, 0.4, tuning, debug=True,
-    )
+    from app.transcription import settings
+    with settings.override(use_iterative_harmonic_suppression=False):
+        candidates, debug, primary = segment_peaks(
+            synthesize_note(523.2511, duration=0.4), 44100, 0.0, 0.4, tuning, debug=True,
+        )
 
     note_names = {c.note_name for c in candidates}
     assert "C5" in note_names

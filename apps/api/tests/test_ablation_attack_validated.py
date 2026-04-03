@@ -24,22 +24,21 @@ pytestmark = [pytest.mark.manual_capture, pytest.mark.slow, pytest.mark.ablation
 COMPLETED_FIXTURES = fixture_dirs_for_status("completed")
 
 ABLATION_FLAGS = [
-    "ABLATE_SPARSE_GAP_TAIL",
-    "ABLATE_MULTI_ONSET_GAP",
+    "ablate_sparse_gap_tail",
+    "ablate_multi_onset_gap",
 ]
 
 
-@pytest.fixture()
-def _enable_attack_validated(monkeypatch: pytest.MonkeyPatch) -> None:
-    import app.transcription as mod
-    monkeypatch.setattr(mod.segments, "USE_ATTACK_VALIDATED_GAP_COLLECTOR", True)
-
-
 @pytest.fixture(params=ABLATION_FLAGS)
-def ablated_flag(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch, _enable_attack_validated: None) -> str:
-    import app.transcription as mod
+def ablated_flag(request: pytest.FixtureRequest) -> str:
+    from app.transcription import settings
     flag_name = request.param
-    monkeypatch.setattr(mod.segments, flag_name, True)
+    ctx = settings.override(
+        use_attack_validated_gap_collector=True,
+        **{flag_name: True},
+    )
+    ctx.__enter__()
+    request.addfinalizer(lambda: ctx.__exit__(None, None, None))
     return flag_name
 
 

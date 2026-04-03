@@ -7,6 +7,7 @@ import numpy as np
 
 from ..models import InstrumentTuning
 from ..tunings import parse_note_name
+from . import settings
 from .audio import cents_distance, snap_frequency_to_tuning
 from .constants import *
 from .models import NoteCandidate, NoteHypothesis
@@ -1421,7 +1422,7 @@ def segment_peaks(
         # Each round accepts at most one candidate, then re-suppresses and
         # re-ranks before the next round (true iterative suppression).
         while (
-            USE_ITERATIVE_HARMONIC_SUPPRESSION
+            settings.get().use_iterative_harmonic_suppression
             and len(selected) >= 2
             and len(selected) < MAX_POLYPHONY
         ):

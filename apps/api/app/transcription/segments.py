@@ -8,6 +8,7 @@ import librosa
 import numpy as np
 
 from ..models import InstrumentTuning
+from . import settings
 from .constants import *
 from .models import GapAttackCandidates, NoteCandidate, OnsetAttackProfile, OnsetWaveformStats, Segment
 from .profiles import (
@@ -758,6 +759,7 @@ def detect_segments(
     mid_performance_start: bool = False,
     mid_performance_end: bool = False,
 ) -> tuple[list[Segment], float, dict[str, Any]]:
+    cfg = settings.get()
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
     max_rms = float(np.max(rms))
@@ -794,13 +796,13 @@ def detect_segments(
     onset_times = refine_onset_times_by_attack_profile(onset_times, onset_attack_profiles)
     onset_waveform_stats = (
         precompute_onset_waveform_stats(audio, sample_rate, onset_times)
-        if FILTER_GAP_ONSETS_BY_ATTACK_PROFILE or USE_ATTACK_VALIDATED_GAP_COLLECTOR
+        if cfg.filter_gap_onsets_by_attack_profile or cfg.use_attack_validated_gap_collector
         else {}
     )
     active_ranges, short_bridge_active_ranges = suppress_short_bridge_active_ranges(active_ranges, onset_times)
     gap_onset_times = (
         filter_gap_onsets_by_attack(onset_times, active_ranges, onset_attack_profiles, onset_waveform_stats)
-        if FILTER_GAP_ONSETS_BY_ATTACK_PROFILE
+        if cfg.filter_gap_onsets_by_attack_profile
         else onset_times
     )
     gap_ioi_diagnostics = build_gap_ioi_diagnostics(active_ranges, onset_times)
@@ -832,7 +834,7 @@ def detect_segments(
             audio_duration,
             waveform_stats=waveform_stats,
         )
-        if USE_ATTACK_VALIDATED_GAP_COLLECTOR
+        if cfg.use_attack_validated_gap_collector
         else None
     )
     if filtered_gap_candidates is not None and (mid_performance_start or mid_performance_end):
@@ -843,14 +845,14 @@ def detect_segments(
         )
 
     multi_onset_gap_segments = (
-        [] if ABLATE_MULTI_ONSET_GAP else collect_multi_onset_gap_segments(active_ranges, gap_onset_times, onset_attack_profiles, attack_validated_gap_candidates)
+        [] if cfg.ablate_multi_onset_gap else collect_multi_onset_gap_segments(active_ranges, gap_onset_times, onset_attack_profiles, attack_validated_gap_candidates)
     )
     sparse_gap_tail_segments = (
-        [] if ABLATE_SPARSE_GAP_TAIL else collect_sparse_gap_tail_segments(active_ranges, gap_onset_times, onset_attack_profiles)
+        [] if cfg.ablate_sparse_gap_tail else collect_sparse_gap_tail_segments(active_ranges, gap_onset_times, onset_attack_profiles)
     )
     attack_validated_gap_segments: list[tuple[float, float]] = []
     if active_ranges and not mid_performance_end:
-        if USE_ATTACK_VALIDATED_GAP_COLLECTOR:
+        if cfg.use_attack_validated_gap_collector:
             attack_validated_gap_segments = collect_attack_validated_gap_segments(
                 active_ranges,
                 gap_onset_times,
@@ -887,14 +889,14 @@ def detect_segments(
                     relaxed_head_segment = True
 
         range_onsets = [time for time in onset_times if effective_range_start + 0.005 < time < range_end - 0.05]
-        if not ABLATE_COLLAPSE_ACTIVE_RANGE_HEAD:
+        if not cfg.ablate_collapse_active_range_head:
             range_onsets = collapse_active_range_head_onsets(
                 effective_range_start,
                 range_end,
                 range_onsets,
                 onset_attack_profiles,
             )
-        if not ABLATE_SNAP_RANGE_START_TO_ONSET and not prior_onsets and not relaxed_head_segment and range_onsets:
+        if not cfg.ablate_snap_range_start_to_onset and not prior_onsets and not relaxed_head_segment and range_onsets:
             first_range_onset = range_onsets[0]
             if should_snap_range_start_to_first_onset(effective_range_start, first_range_onset, onset_attack_profiles):
                 effective_range_start = first_range_onset
@@ -957,7 +959,7 @@ def detect_segments(
 
     debug_info = {
         "onsetTimes": onset_times,
-        "gapValidatedOnsetTimes": gap_onset_times if FILTER_GAP_ONSETS_BY_ATTACK_PROFILE else None,
+        "gapValidatedOnsetTimes": gap_onset_times if cfg.filter_gap_onsets_by_attack_profile else None,
         "attackValidatedGapCandidates": {
             "interRanges": [[round(time, 4) for time in gap] for gap in attack_validated_gap_candidates.inter_ranges],
             "leading": [round(time, 4) for time in attack_validated_gap_candidates.leading],
