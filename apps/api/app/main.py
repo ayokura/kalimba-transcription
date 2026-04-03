@@ -1,11 +1,35 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, File, Form, UploadFile
+import json
+
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from .models import InstrumentTuning, TranscriptionResult
-from .transcription import parse_disabled_repeated_pattern_passes, parse_tuning_json, transcribe_audio
+from .transcription import parse_tuning_json, transcribe_audio
+from .transcription.patterns import REPEATED_PATTERN_PASS_IDS
 from .tunings import get_default_tunings
+
+
+def parse_disabled_repeated_pattern_passes(raw_value: str | None) -> frozenset[str]:
+    if raw_value is None or not raw_value.strip():
+        return frozenset()
+
+    try:
+        parsed = json.loads(raw_value)
+    except json.JSONDecodeError:
+        parsed = [item.strip() for item in raw_value.split(",") if item.strip()]
+
+    if isinstance(parsed, str):
+        parsed = [parsed]
+    if not isinstance(parsed, list) or not all(isinstance(item, str) for item in parsed):
+        raise HTTPException(status_code=400, detail="disabledRepeatedPatternPasses must be a JSON string array or comma-separated string.")
+
+    disabled = frozenset(item.strip() for item in parsed if item.strip())
+    unknown = sorted(disabled - set(REPEATED_PATTERN_PASS_IDS))
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown repeated-pattern pass ids: {', '.join(unknown)}")
+    return disabled
 
 
 app = FastAPI(title="Kalimba Score API", version="0.1.0")

@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
-import numpy as np
 from fastapi import HTTPException, UploadFile
 
-from ..models import InstrumentTuning, NotationViews, ScoreEvent, ScoreNote, TranscriptionResult
+from ..models import InstrumentTuning, ScoreEvent, ScoreNote, TranscriptionResult
 from .audio import read_audio
-from .constants import *
-from .models import NoteCandidate, RawEvent
-from .peaks import segment_peaks
-from .segments import build_segment_debug_contexts, detect_segments, should_keep_low_register_sparse_gap_tail, simplify_sparse_gap_tail_high_octave_dyad
+from .constants import GAP_RUN_LEAD_IN_MIN_FOLLOWUP_GAP
 from .events import (
+    build_recent_ascending_primary_run_ceiling,
+    build_recent_ascending_singleton_suffix,
+    build_recent_descending_primary_suffix,
+    build_recent_note_names,
+    classify_event_gesture,
     collapse_ascending_restart_lower_residue_singletons,
     collapse_high_register_adjacent_bridge_dyads,
     collapse_late_descending_step_handoffs,
@@ -41,74 +41,19 @@ from .events import (
     suppress_resonant_carryover,
     suppress_short_descending_return_singletons,
     suppress_short_residual_tails,
-    build_recent_ascending_primary_run_ceiling,
-    build_recent_ascending_singleton_suffix,
-    build_recent_descending_primary_suffix,
-    build_recent_note_names,
-    classify_event_gesture,
-    contiguous_note_cluster,
     suppress_subset_decay_events,
 )
-from .patterns import (
-    REPEATED_PATTERN_PASS_IDS,
-    apply_repeated_pattern_passes,
-    suppress_recent_upper_echo_mixed_clusters,
+from .models import NoteCandidate, RawEvent
+from .notation import build_notation_views, format_doremi, format_number, quantize_beat
+from .patterns import apply_repeated_pattern_passes, suppress_recent_upper_echo_mixed_clusters
+from .peaks import segment_peaks
+from .segments import (
+    build_segment_debug_contexts,
+    detect_segments,
+    should_keep_low_register_sparse_gap_tail,
+    simplify_sparse_gap_tail_high_octave_dyad,
 )
 
-def parse_disabled_repeated_pattern_passes(raw_value: str | None) -> frozenset[str]:
-    if raw_value is None or not raw_value.strip():
-        return frozenset()
-
-    try:
-        parsed = json.loads(raw_value)
-    except json.JSONDecodeError:
-        parsed = [item.strip() for item in raw_value.split(",") if item.strip()]
-
-    if isinstance(parsed, str):
-        parsed = [parsed]
-    if not isinstance(parsed, list) or not all(isinstance(item, str) for item in parsed):
-        raise HTTPException(status_code=400, detail="disabledRepeatedPatternPasses must be a JSON string array or comma-separated string.")
-
-    disabled = frozenset(item.strip() for item in parsed if item.strip())
-    unknown = sorted(disabled - set(REPEATED_PATTERN_PASS_IDS))
-    if unknown:
-        raise HTTPException(status_code=400, detail=f"Unknown repeated-pattern pass ids: {', '.join(unknown)}")
-    return disabled
-
-
-
-def quantize_beat(value: float, step: float = 0.25) -> float:
-    return round(value / step) * step
-
-def format_doremi(candidate: NoteCandidate) -> str:
-    base = PITCH_CLASS_TO_DOREMI[candidate.pitch_class]
-    if candidate.octave >= 6:
-        return f"{base}.."
-    if candidate.octave == 5:
-        return f"{base}."
-    if candidate.octave == 3:
-        return f"_{base}"
-    if candidate.octave <= 2:
-        return f"__{base}"
-    return base
-
-def format_number(candidate: NoteCandidate) -> str:
-    base = PITCH_CLASS_TO_NUMBER[candidate.pitch_class]
-    if candidate.octave >= 6:
-        return f"{base}''"
-    if candidate.octave == 5:
-        return f"{base}'"
-    if candidate.octave == 3:
-        return f".{base}"
-    if candidate.octave <= 2:
-        return f"..{base}"
-    return base
-
-def build_notation_views(events: list[ScoreEvent]) -> NotationViews:
-    western = [" | ".join(note.pitch_class + str(note.octave) for note in event.notes) for event in events]
-    numbered = [" ".join(note.label_number for note in event.notes) for event in events]
-    vertical = [[note.label_doremi for note in event.notes] for event in events]
-    return NotationViews(western=western, numbered=numbered, verticalDoReMi=vertical)
 
 async def transcribe_audio(
     upload: UploadFile,
