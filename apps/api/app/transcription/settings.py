@@ -37,6 +37,7 @@ class RecognizerSettings:
     use_attack_validated_gap_collector: bool = True
     filter_gap_onsets_by_attack_profile: bool = True
     use_iterative_harmonic_suppression: bool = True
+    use_evidence_gate_rescue: bool = True
 
     # Ablation switches (True = disable the feature)
     ablate_sparse_gap_tail: bool = False

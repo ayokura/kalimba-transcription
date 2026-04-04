@@ -1082,6 +1082,10 @@ GATE_CATEGORIES: dict[str, str] = {
     "descending-repeated-primary-tertiary-blocked": "extension",
     "lower-mixed-roll-extension": "extension",
     "lower-roll-tail-extension": "extension",
+    # Rescue (Layer 3.5: final decision)
+    "evidence-rescue-weak-secondary-onset": "rescue",
+    "evidence-rescue-weak-lower-secondary": "rescue",
+    "evidence-rescue-recent-carryover": "rescue",
 }
 
 
@@ -2053,19 +2057,122 @@ def _apply_final_decisions(
 ) -> None:
     """Layer 3.5: Final decision — post-selection review.
 
-    Handles deferred primary rejection from Layer 2: if primary was
-    marked rejected, clears selected (current-behavior compatible).
-    Candidate decisions are preserved for the trace.
-
-    Future candidates for this layer:
-    - Evidence-based rescue of rejected primaries
-    - Whole-set chord quality scoring
-    - Carryover detection with full candidate context (#107-style)
-    - Re-evaluation of tertiary-rejected candidates after set changes
-    - Multi-primary branch comparison (Phase 3)
+    1. Deferred primary rejection → clear selected.
+    2. Evidence gate rescue → re-admit candidates rejected only by
+       evidence gates if they have strong spectral quality.
     """
     if primary_result.decision.rejected:
         selection.selected.clear()
+        return
+
+    if not settings.get().use_evidence_gate_rescue:
+        return
+
+    _disabled = settings.get().disabled_gates
+    primary = primary_result.primary
+    selected_names = {n.note_name for n in selection.selected}
+
+    # Collect evidence-only rejected candidates (no structural rejection)
+    rescue_pool: list[tuple[_CandidateDecision, NoteHypothesis]] = []
+    for decision in selection.candidate_decisions:
+        if decision.accepted or decision.source != "secondary":
+            continue
+        cats = decision.reason_categories
+        if not cats or cats != {"evidence"}:
+            continue
+        # Find matching hypothesis from residual_ranked
+        hyp = _find_hypothesis_by_frequency(selection.residual_ranked, decision.frequency)
+        if hyp is None:
+            continue
+        rescue_pool.append((decision, hyp))
+
+    # Sort by score descending (strongest candidates first)
+    rescue_pool.sort(key=lambda pair: pair[0].score, reverse=True)
+
+    for decision, hypothesis in rescue_pool:
+        # Common score floor: catches octave-dyad candidates that
+        # bypassed structural score-below-threshold.
+        if hypothesis.score < primary.score * RESCUE_MIN_SCORE_RATIO:
+            continue
+        if len(selection.selected) >= MAX_POLYPHONY:
+            break
+        if hypothesis.candidate.note_name in selected_names:
+            continue
+        if any(are_harmonic_related(hypothesis.candidate, s) for s in selection.selected):
+            continue
+        test_keys = [n.key for n in selection.selected] + [hypothesis.candidate.key]
+        if not is_physically_playable_chord(test_keys):
+            continue
+
+        gate_name = _evidence_rescue_gate(decision, hypothesis, primary, evidence)
+        if gate_name is None:
+            continue
+        if gate_name in _disabled:
+            continue
+
+        hypothesis.candidate.onset_gain = evidence.get_onset_gain_if_cached(hypothesis.candidate.frequency)
+        selection.selected.append(hypothesis.candidate)
+        selected_names.add(hypothesis.candidate.note_name)
+        selection.candidate_decisions.append(_CandidateDecision(
+            note_name=hypothesis.candidate.note_name,
+            frequency=hypothesis.candidate.frequency,
+            score=hypothesis.score,
+            fundamental_ratio=hypothesis.fundamental_ratio,
+            onset_gain=decision.onset_gain,
+            accepted=True,
+            reasons=[gate_name],
+            octave_dyad_allowed=decision.octave_dyad_allowed,
+            source="rescue",
+        ))
+
+
+def _find_hypothesis_by_frequency(
+    ranked: list[NoteHypothesis],
+    frequency: float,
+) -> NoteHypothesis | None:
+    """Find a NoteHypothesis matching *frequency* in *ranked*."""
+    for hyp in ranked:
+        if abs(hyp.candidate.frequency - frequency) < 0.01:
+            return hyp
+    return None
+
+
+def _evidence_rescue_gate(
+    decision: _CandidateDecision,
+    hypothesis: NoteHypothesis,
+    primary: NoteHypothesis,
+    evidence: _NoteEvidenceCache,
+) -> str | None:
+    """Return rescue gate name if the candidate qualifies, else None.
+
+    Dispatches on which evidence gate originally rejected the candidate
+    and applies gate-specific rescue thresholds.
+    """
+    reasons = set(decision.reasons)
+
+    backward_gain = evidence.backward_attack_gain(hypothesis.candidate.frequency)
+    if backward_gain < RESCUE_MIN_BACKWARD_GAIN:
+        return None
+
+    # weak-lower-secondary (check before weak-secondary-onset since both may appear)
+    if "weak-lower-secondary" in reasons:
+        if hypothesis.fundamental_ratio >= RESCUE_WEAK_LOWER_MIN_FUNDAMENTAL_RATIO:
+            return "evidence-rescue-weak-lower-secondary"
+        return None
+
+    # weak-secondary-onset
+    if "weak-secondary-onset" in reasons:
+        if hypothesis.fundamental_ratio >= RESCUE_WEAK_ONSET_MIN_FUNDAMENTAL_RATIO:
+            return "evidence-rescue-weak-secondary-onset"
+        return None
+
+    # recent-carryover-candidate
+    if "recent-carryover-candidate" in reasons:
+        if hypothesis.score >= primary.score * RESCUE_CARRYOVER_MIN_SCORE_RATIO:
+            return "evidence-rescue-recent-carryover"
+        return None
+
+    return None
 
 
 def segment_peaks(
