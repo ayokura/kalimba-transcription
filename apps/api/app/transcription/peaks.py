@@ -1123,6 +1123,7 @@ class _BranchResult:
     decision: _PrimaryDecision
     selected: list[NoteCandidate]
     candidate_decisions: list[_CandidateDecision]
+    residual_ranked: list[NoteHypothesis]
     total_score: float
 
     @property
@@ -2269,6 +2270,7 @@ def _evaluate_branch(
             primary=primary_hyp, primary_onset_gain=onset_gain,
             promotion_debug=promotion_debug, decision=decision,
             selected=[], candidate_decisions=selection.candidate_decisions,
+            residual_ranked=selection.residual_ranked,
             total_score=0.0,
         )
 
@@ -2293,6 +2295,7 @@ def _evaluate_branch(
         promotion_debug=promotion_debug, decision=decision,
         selected=sorted(selection.selected, key=lambda n: n.frequency),
         candidate_decisions=selection.candidate_decisions,
+        residual_ranked=selection.residual_ranked,
         total_score=total_score,
     )
 
@@ -2366,7 +2369,7 @@ def segment_peaks(
             if ctx.debug:
                 _pr = _PrimaryResult(primary, best_alt.primary_onset_gain, best_alt.promotion_debug, best_alt.decision)
                 _sel = _SelectionState(
-                    selected=best_alt.selected, residual_ranked=[],
+                    selected=best_alt.selected, residual_ranked=best_alt.residual_ranked,
                     candidate_decisions=best_alt.candidate_decisions,
                     promoted_secondary_to_recent_upper_octave=False,
                 )
@@ -2400,6 +2403,7 @@ def segment_peaks(
         decision=primary_result.decision,
         selected=auth.selected,
         candidate_decisions=auth.candidate_decisions,
+        residual_ranked=auth.residual_ranked,
         total_score=auth.total_score,
     )
 
@@ -2443,7 +2447,7 @@ def segment_peaks(
         _pr = _PrimaryResult(primary, best.primary_onset_gain, best.promotion_debug, best.decision)
         _sel = _SelectionState(
             selected=best.selected,
-            residual_ranked=[],
+            residual_ranked=best.residual_ranked,
             candidate_decisions=best.candidate_decisions,
             promoted_secondary_to_recent_upper_octave=False,
         )
