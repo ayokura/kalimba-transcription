@@ -2322,13 +2322,33 @@ def segment_peaks(
 
     # Layer 2: Primary resolution
     primary_result = _resolve_primary(ctx, spectral, evidence)
+    primary = primary_result.primary
+    primary.candidate.onset_gain = primary_result.primary_onset_gain
+
+    # Handle rejected primary before branching
+    if primary_result.decision.rejected:
+        # Run L3 + L3.5 to collect candidate decisions for the trace,
+        # but _apply_final_decisions will clear selected.
+        selection = _select_candidates(ctx, spectral, primary_result, evidence)
+        _apply_final_decisions(ctx, selection, primary_result, evidence)
+        trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=selection.candidate_decisions)
+        rejection_debug = None
+        if ctx.debug and primary_result.decision.rejection_reason == "residual-decay-no-reattack":
+            rejection_debug = {
+                "startTime": round(ctx.start_time, 6),
+                "endTime": round(ctx.end_time, 6),
+                "durationSec": round(ctx.duration, 6),
+                "selectedNotes": [],
+                "primaryNote": primary.candidate.note_name,
+                "droppedBy": primary_result.decision.rejection_reason,
+            }
+        return SegmentPeaksResult([], rejection_debug, None, trace)
 
     # Layer 3–4: Evaluate authoritative branch
     auth = _evaluate_branch(
-        ctx, spectral, primary_result.primary, evidence,
+        ctx, spectral, primary, evidence,
         promotion_debug=primary_result.promotion_debug,
     )
-    # Patch authoritative decision to include promotions from _resolve_primary
     auth = _BranchResult(
         primary=auth.primary, primary_onset_gain=auth.primary_onset_gain,
         promotion_debug=auth.promotion_debug,
@@ -2343,13 +2363,10 @@ def segment_peaks(
     if (
         settings.get().use_multi_primary_branching
         and len(spectral.ranked) >= 2
-        and not primary_result.decision.rejected
     ):
-        alt_primaries = _select_alternative_primaries(spectral.ranked, primary_result.primary)
+        alt_primaries = _select_alternative_primaries(spectral.ranked, primary)
         for alt_hyp in alt_primaries:
             alt_branch = _evaluate_branch(ctx, spectral, alt_hyp, evidence)
-            # Switch only if alternative primary has notably stronger onset
-            # evidence (genuine attack) AND selects at least as many notes.
             alt_og = alt_branch.primary_onset_gain or 0.0
             best_og = best.primary_onset_gain or 0.0
             if (
