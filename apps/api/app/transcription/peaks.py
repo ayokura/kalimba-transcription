@@ -2009,6 +2009,31 @@ def _build_segment_debug(
     }
 
 
+def _apply_final_decisions(
+    ctx: _SegmentContext,
+    selection: _SelectionState,
+    primary: NoteHypothesis,
+    evidence: _NoteEvidenceCache,
+) -> None:
+    """Layer 3.5: Final decision — post-selection review.
+
+    Extension point for whole-set evaluation that the per-candidate gate
+    loop cannot perform.  Has access to the full candidate set (accepted
+    and rejected via candidate_decisions), evidence cache, and context.
+
+    Current: no-op (all decisions preserved from Layer 3).
+
+    Future candidates for this layer:
+    - Whole-set chord quality scoring
+    - Carryover detection with full candidate context (#107-style)
+    - Re-evaluation of tertiary-rejected candidates after set changes
+    - Multi-primary branch comparison (Phase 3)
+
+    See GATE_CATEGORIES for which gates are 'evidence' or 'context'
+    (candidates for deferred evaluation here).
+    """
+
+
 def segment_peaks(
     audio: np.ndarray,
     sample_rate: int,
@@ -2070,6 +2095,9 @@ def segment_peaks(
 
     # Layer 3: Candidate selection
     selection = _select_candidates(ctx, spectral, primary_result, evidence)
+
+    # Layer 3.5: Final decision (post-selection review)
+    _apply_final_decisions(ctx, selection, primary, evidence)
 
     # Layer 4: Extension phases
     _extend_gliss_tertiary(ctx, primary, selection, evidence)
