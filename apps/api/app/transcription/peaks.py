@@ -1247,21 +1247,20 @@ def _resolve_primary(
     if recent_upper_alias_promotion_debug is not None:
         primary_promotion_debug = recent_upper_alias_promotion_debug
         promotions.append(recent_upper_alias_promotion_debug.get("reason", "recent-upper-octave-alias"))
+    # Rejection is deferred: record reason but continue so secondary
+    # evaluation always runs.  _apply_final_decisions handles the final call.
+    _rejected = False
+    _rejection_reason: str | None = None
     if (
         primary.score < PRIMARY_REJECTION_MAX_SCORE
         and primary.fundamental_ratio < PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
     ):
-        decision = _PrimaryDecision(
-            initial_primary=initial_primary_name, final_primary=primary.candidate.note_name,
-            onset_gain=primary_onset_gain, promotions=promotions,
-            rejected=True, rejection_reason="primary-score-too-low",
-        )
-        return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug, decision)
-    # Suppress residual-decay segments: if the primary is a recent note and
-    # shows no mute-dip (smooth decay rather than finger-touch-then-repluck),
-    # the segment is likely resonance from a previous event, not a genuine
-    # new attack.
-    if (
+        _rejected = True
+        _rejection_reason = "primary-score-too-low"
+    elif (
+        # Suppress residual-decay segments: if the primary is a recent note
+        # and shows no mute-dip (smooth decay rather than finger-touch-then-
+        # repluck), the segment is likely resonance from a previous event.
         ctx.recent_note_names
         and primary.candidate.note_name in ctx.recent_note_names
         and evidence.is_residual_decay(primary.candidate.frequency)
@@ -1293,24 +1292,21 @@ def _resolve_primary(
                 if alternative_primary is not None:
                     break
         if alternative_primary is None:
-            decision = _PrimaryDecision(
-                initial_primary=initial_primary_name, final_primary=primary.candidate.note_name,
-                onset_gain=primary_onset_gain, promotions=promotions,
-                rejected=True, rejection_reason="residual-decay-no-reattack",
-            )
-            return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug, decision)
-        primary = alternative_primary
-        primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
-        primary_promotion_debug = {
-            "reason": "residual-forward-scan",
-            "replacedPrimaryNote": ranked[0].candidate.note_name,
-            "replacementNote": primary.candidate.note_name,
-        }
-        promotions.append("residual-forward-scan")
+            _rejected = True
+            _rejection_reason = "residual-decay-no-reattack"
+        else:
+            primary = alternative_primary
+            primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
+            primary_promotion_debug = {
+                "reason": "residual-forward-scan",
+                "replacedPrimaryNote": ranked[0].candidate.note_name,
+                "replacementNote": primary.candidate.note_name,
+            }
+            promotions.append("residual-forward-scan")
     decision = _PrimaryDecision(
         initial_primary=initial_primary_name, final_primary=primary.candidate.note_name,
         onset_gain=primary_onset_gain, promotions=promotions,
-        rejected=False, rejection_reason=None,
+        rejected=_rejected, rejection_reason=_rejection_reason,
     )
     return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug, decision)
 
@@ -2052,26 +2048,24 @@ def _build_segment_debug(
 def _apply_final_decisions(
     ctx: _SegmentContext,
     selection: _SelectionState,
-    primary: NoteHypothesis,
+    primary_result: _PrimaryResult,
     evidence: _NoteEvidenceCache,
 ) -> None:
     """Layer 3.5: Final decision — post-selection review.
 
-    Extension point for whole-set evaluation that the per-candidate gate
-    loop cannot perform.  Has access to the full candidate set (accepted
-    and rejected via candidate_decisions), evidence cache, and context.
-
-    Current: no-op (all decisions preserved from Layer 3).
+    Handles deferred primary rejection from Layer 2: if primary was
+    marked rejected, clears selected (current-behavior compatible).
+    Candidate decisions are preserved for the trace.
 
     Future candidates for this layer:
+    - Evidence-based rescue of rejected primaries
     - Whole-set chord quality scoring
     - Carryover detection with full candidate context (#107-style)
     - Re-evaluation of tertiary-rejected candidates after set changes
     - Multi-primary branch comparison (Phase 3)
-
-    See GATE_CATEGORIES for which gates are 'evidence' or 'context'
-    (candidates for deferred evaluation here).
     """
+    if primary_result.decision.rejected:
+        selection.selected.clear()
 
 
 def segment_peaks(
@@ -2115,10 +2109,20 @@ def segment_peaks(
         return SegmentPeaksResult([], None, None)
     spectral, evidence = acquired
 
-    # Layer 2: Primary resolution
+    # Layer 2: Primary resolution (rejection deferred to Layer 3.5)
     primary_result = _resolve_primary(ctx, spectral, evidence)
-    if primary_result.decision.rejected:
-        rejection_trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=[])
+    primary = primary_result.primary
+    primary.candidate.onset_gain = primary_result.primary_onset_gain
+
+    # Layer 3: Candidate selection (always runs, even if primary rejected)
+    selection = _select_candidates(ctx, spectral, primary_result, evidence)
+
+    # Layer 3.5: Final decision (handles deferred primary rejection)
+    _apply_final_decisions(ctx, selection, primary_result, evidence)
+
+    if not selection.selected:
+        # Primary rejected + no rescue → empty segment
+        trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=selection.candidate_decisions)
         rejection_debug = None
         if ctx.debug and primary_result.decision.rejection_reason == "residual-decay-no-reattack":
             rejection_debug = {
@@ -2126,18 +2130,10 @@ def segment_peaks(
                 "endTime": round(ctx.end_time, 6),
                 "durationSec": round(ctx.duration, 6),
                 "selectedNotes": [],
-                "primaryNote": primary_result.primary.candidate.note_name,
+                "primaryNote": primary.candidate.note_name,
                 "droppedBy": primary_result.decision.rejection_reason,
             }
-        return SegmentPeaksResult([], rejection_debug, None, rejection_trace)
-    primary = primary_result.primary
-    primary.candidate.onset_gain = primary_result.primary_onset_gain
-
-    # Layer 3: Candidate selection
-    selection = _select_candidates(ctx, spectral, primary_result, evidence)
-
-    # Layer 3.5: Final decision (post-selection review)
-    _apply_final_decisions(ctx, selection, primary, evidence)
+        return SegmentPeaksResult([], rejection_debug, None, trace)
 
     # Layer 4: Extension phases
     _extend_gliss_tertiary(ctx, primary, selection, evidence)
