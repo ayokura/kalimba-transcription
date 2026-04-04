@@ -2224,13 +2224,31 @@ def _evaluate_branch(
     with no side effects on other branches.
     """
     onset_gain = evidence.onset_gain(primary_hyp.candidate.frequency)
+    # Check rejection conditions (same as _resolve_primary)
+    _rejected = False
+    _rejection_reason: str | None = None
+    if (
+        primary_hyp.score < PRIMARY_REJECTION_MAX_SCORE
+        and primary_hyp.fundamental_ratio < PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
+    ):
+        _rejected = True
+        _rejection_reason = "primary-score-too-low"
+    elif (
+        ctx.recent_note_names
+        and primary_hyp.candidate.note_name in ctx.recent_note_names
+        and evidence.is_residual_decay(primary_hyp.candidate.frequency)
+        and not evidence.has_mute_dip_reattack(primary_hyp.candidate.frequency)
+    ):
+        _rejected = True
+        _rejection_reason = "residual-decay-no-reattack"
+
     decision = _PrimaryDecision(
         initial_primary=primary_hyp.candidate.note_name,
         final_primary=primary_hyp.candidate.note_name,
         onset_gain=onset_gain,
         promotions=[],
-        rejected=False,
-        rejection_reason=None,
+        rejected=_rejected,
+        rejection_reason=_rejection_reason,
     )
     primary_result = _PrimaryResult(
         primary=primary_hyp,
@@ -2325,10 +2343,37 @@ def segment_peaks(
     primary = primary_result.primary
     primary.candidate.onset_gain = primary_result.primary_onset_gain
 
-    # Handle rejected primary before branching
+    # Handle rejected primary: try alternative primaries before giving up
     if primary_result.decision.rejected:
-        # Run L3 + L3.5 to collect candidate decisions for the trace,
-        # but _apply_final_decisions will clear selected.
+        best_alt: _BranchResult | None = None
+        if (
+            settings.get().use_multi_primary_branching
+            and len(spectral.ranked) >= 2
+        ):
+            alt_primaries = _select_alternative_primaries(spectral.ranked, primary)
+            for alt_hyp in alt_primaries:
+                alt_branch = _evaluate_branch(ctx, spectral, alt_hyp, evidence)
+                if alt_branch.selected and (
+                    best_alt is None
+                    or alt_branch.total_score > best_alt.total_score
+                ):
+                    best_alt = alt_branch
+        if best_alt is not None:
+            # Alternative branch rescued the segment
+            primary = best_alt.primary
+            trace = SegmentDecisionTrace(primary=best_alt.decision, candidates=best_alt.candidate_decisions)
+            debug_payload = None
+            if ctx.debug:
+                _pr = _PrimaryResult(primary, best_alt.primary_onset_gain, best_alt.promotion_debug, best_alt.decision)
+                _sel = _SelectionState(
+                    selected=best_alt.selected, residual_ranked=[],
+                    candidate_decisions=best_alt.candidate_decisions,
+                    promoted_secondary_to_recent_upper_octave=False,
+                )
+                debug_payload = _build_segment_debug(ctx, spectral, _pr, _sel, evidence)
+            return SegmentPeaksResult(best_alt.selected, debug_payload, primary, trace)
+
+        # No alternative found — reject segment
         selection = _select_candidates(ctx, spectral, primary_result, evidence)
         _apply_final_decisions(ctx, selection, primary_result, evidence)
         trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=selection.candidate_decisions)
