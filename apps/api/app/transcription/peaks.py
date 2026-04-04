@@ -2166,11 +2166,9 @@ def _evidence_rescue_gate(
             return "evidence-rescue-weak-secondary-onset"
         return None
 
-    # recent-carryover-candidate
+    # recent-carryover-candidate (score floor covered by RESCUE_MIN_SCORE_RATIO)
     if "recent-carryover-candidate" in reasons:
-        if hypothesis.score >= primary.score * RESCUE_CARRYOVER_MIN_SCORE_RATIO:
-            return "evidence-rescue-recent-carryover"
-        return None
+        return "evidence-rescue-recent-carryover"
 
     return None
 
