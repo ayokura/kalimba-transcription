@@ -63,6 +63,19 @@ class TestAdaptiveNfft:
         n_fft = _adaptive_n_fft(44100, 1047.0, 8192)
         assert n_fft >= 8192
 
+    def test_min_bins_1_preserves_4096_at_44k(self):
+        """With min_bins=1, C4 at 44.1kHz stays at 4096 (same as old behavior)."""
+        n_fft = _adaptive_n_fft(44100, 261.0, 3528, min_bins=1)
+        assert n_fft == 4096
+
+    def test_min_bins_1_fixes_96k_blind_spot(self):
+        """With min_bins=1 at 96kHz, short chunks get escalated past 4096."""
+        n_fft = _adaptive_n_fft(96000, 261.0, 2880, min_bins=1)
+        bin_spacing = 96000 / n_fft
+        band_hz = 261.0 * (2 ** (40 / 1200) - 2 ** (-40 / 1200))
+        bins_in_band = band_hz / bin_spacing
+        assert bins_in_band >= 1.0, f"Only {bins_in_band:.2f} bins"
+
 
 # ---------------------------------------------------------------------------
 # _note_band_energy tests at low frequencies / high sample rates

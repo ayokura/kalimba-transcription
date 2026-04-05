@@ -34,15 +34,19 @@ def peak_energy_near(frequencies: np.ndarray, spectrum: np.ndarray, center_freq:
     return float(np.max(positive_spectrum[mask]))
 
 
-def _adaptive_n_fft(sample_rate: int, min_frequency: float, chunk_len: int) -> int:
-    """Compute FFT size ensuring >=2 bins in the +/-40 cents band around *min_frequency*.
+def _adaptive_n_fft(sample_rate: int, min_frequency: float, chunk_len: int, *, min_bins: int = 2) -> int:
+    """Compute FFT size ensuring >= *min_bins* bins in the +/-40 cents band.
 
     Without this, high sample rates (e.g. 96kHz) with a fixed n_fft=4096 produce
     bin spacings too coarse for low-register notes — the ±40-cent band may contain
     zero bins, causing energy functions to return 0.
+
+    *min_bins=2* (default) is suitable for accurate energy measurement.
+    *min_bins=1* is a conservative setting that only prevents zero-bin blind spots
+    while preserving existing behavior at standard sample rates.
     """
     band_hz = min_frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
-    min_n_fft = int(np.ceil(sample_rate / band_hz)) * 2 if band_hz > 0 else 4096
+    min_n_fft = int(np.ceil(sample_rate / band_hz)) * min_bins if band_hz > 0 else 4096
     n_fft = max(min_n_fft, chunk_len)
     return 1 << int(np.ceil(np.log2(n_fft)))
 
@@ -368,10 +372,7 @@ def onset_energy_gain(
         return 0.0
 
     def _energy(chunk: np.ndarray) -> float:
-        n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))
-        band_hz = target_frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
-        if band_hz > 0 and sample_rate / n_fft >= band_hz:
-            n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk))
+        n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk), min_bins=1)
         spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
         frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
         return peak_energy_near(frequencies, spectrum, target_frequency)
@@ -409,10 +410,7 @@ def onset_backward_attack_gain(
         return 0.0
 
     def _energy(chunk: np.ndarray) -> float:
-        n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))
-        band_hz = target_frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
-        if band_hz > 0 and sample_rate / n_fft >= band_hz:
-            n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk))
+        n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk), min_bins=1)
         spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
         frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
         return peak_energy_near(frequencies, spectrum, target_frequency)
@@ -437,11 +435,10 @@ def prepare_attack_debug_context(
 
     pre_chunk, attack_chunk, sustain_chunk = chunks
     max_chunk_len = max(len(pre_chunk), len(attack_chunk), len(sustain_chunk))
-    n_fft = max(4096, 1 << int(np.ceil(np.log2(max_chunk_len))))
     if min_frequency > 0:
-        band_hz = min_frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
-        if band_hz > 0 and sample_rate / n_fft >= band_hz:
-            n_fft = _adaptive_n_fft(sample_rate, min_frequency, max_chunk_len)
+        n_fft = _adaptive_n_fft(sample_rate, min_frequency, max_chunk_len, min_bins=1)
+    else:
+        n_fft = max(4096, 1 << int(np.ceil(np.log2(max_chunk_len))))
     frequencies, pre_spectrum = _chunk_spectrum(pre_chunk, sample_rate, n_fft)
     _, attack_spectrum = _chunk_spectrum(attack_chunk, sample_rate, n_fft)
     _, sustain_spectrum = _chunk_spectrum(sustain_chunk, sample_rate, n_fft)
@@ -799,6 +796,7 @@ def _try_gap_fill(
     sample_rate: int,
     start_time: float,
     end_time: float,
+    key_layers: dict[int, int] | None = None,
 ) -> list[NoteCandidate] | None:
     """Find gap-filling candidates that make a chord physically playable.
 
@@ -837,7 +835,7 @@ def _try_gap_fill(
         return None
 
     filled_keys = test_keys + [c.key for c in gap_candidates]
-    if not is_physically_playable_chord(filled_keys):
+    if not is_physically_playable_chord(filled_keys, key_layers=key_layers):
         return None
     if len(set(filled_keys)) > MAX_POLYPHONY:
         return None
@@ -845,7 +843,7 @@ def _try_gap_fill(
     return gap_candidates
 
 
-def is_physically_playable_chord(keys: list[int]) -> bool:
+def is_physically_playable_chord(keys: list[int], key_layers: dict[int, int] | None = None) -> bool:
     """Check if a set of keys can be played simultaneously on a kalimba.
 
     One thumb can slide across consecutive keys (2-4 tines).
@@ -853,19 +851,34 @@ def is_physically_playable_chord(keys: list[int]) -> bool:
     Either thumb can reach any part of the instrument.
     Valid chords must be splittable into:
       - a slide group (consecutive keys, any length) + a strict group (≤2 adjacent keys)
+
+    When *key_layers* is provided, consecutive-key checks also require that
+    adjacent keys share the same layer.  On a 34-key kalimba, keys 17 (bottom
+    layer) and 18 (top layer) are numerically adjacent but physically separated.
     """
     if len(keys) <= 2:
+        if key_layers is not None and len(keys) == 2:
+            k0, k1 = sorted(keys)
+            if abs(k1 - k0) == 1 and key_layers.get(k0) != key_layers.get(k1):
+                return False
         return True
     unique = sorted(set(keys))
     n = len(unique)
     if n > 4:
         return False
 
+    def _same_layer_adjacent(a: int, b: int) -> bool:
+        if b - a != 1:
+            return False
+        if key_layers is not None and key_layers.get(a) != key_layers.get(b):
+            return False
+        return True
+
     def _consecutive(ks: list[int]) -> bool:
-        return len(ks) <= 1 or all(ks[i + 1] - ks[i] == 1 for i in range(len(ks) - 1))
+        return len(ks) <= 1 or all(_same_layer_adjacent(ks[i], ks[i + 1]) for i in range(len(ks) - 1))
 
     def _strict_ok(ks: list[int]) -> bool:
-        return len(ks) <= 1 or (len(ks) == 2 and ks[1] - ks[0] == 1)
+        return len(ks) <= 1 or (len(ks) == 2 and _same_layer_adjacent(ks[0], ks[1]))
 
     # Try all ways to split into slide group + strict group
     for mask in range(1 << n):
@@ -999,6 +1012,14 @@ class _SegmentContext:
     @property
     def duration(self) -> float:
         return self.end_time - self.start_time
+
+    @property
+    def key_layers(self) -> dict[int, int] | None:
+        """Build key→layer mapping from tuning, or None if all on layer 0."""
+        layers = {n.key: n.layer for n in self.tuning.notes}
+        if all(v == 0 for v in layers.values()):
+            return None
+        return layers
 
 
 @dataclass(slots=True)
@@ -1233,7 +1254,8 @@ def _acquire_spectrum(
         )
     analysis_segment = segment[:analysis_samples]
 
-    n_fft = max(4096, 1 << int(np.ceil(np.log2(len(analysis_segment)))))
+    min_freq = min(n.frequency for n in ctx.tuning.notes)
+    n_fft = _adaptive_n_fft(ctx.sample_rate, min_freq, len(analysis_segment))
     window = np.hanning(len(analysis_segment))
     spectrum = np.abs(np.fft.rfft(analysis_segment * window, n=n_fft))
     frequencies = np.fft.rfftfreq(n_fft, 1.0 / ctx.sample_rate)
@@ -1897,10 +1919,11 @@ def _select_candidates(
             is_tertiary_or_beyond = len(selected) >= 2
             if is_tertiary_or_beyond:
                 test_keys = [n.key for n in selected] + [hypothesis.candidate.key]
-                if not is_physically_playable_chord(test_keys):
+                if not is_physically_playable_chord(test_keys, key_layers=ctx.key_layers):
                     gap_filled = _try_gap_fill(
                         test_keys, selected, hypothesis, residual_ranked,
                         primary, ctx.audio, ctx.sample_rate, ctx.start_time, ctx.end_time,
+                        key_layers=ctx.key_layers,
                     )
                     if gap_filled:
                         for gf_candidate in gap_filled:
@@ -1998,7 +2021,7 @@ def _select_candidates(
                 _iter_reasons: list[str] = []
                 _iter_onset_gain: float | None = None
                 _test_keys = [n.key for n in selected] + [_iter_hyp.candidate.key]
-                if not is_physically_playable_chord(_test_keys):
+                if not is_physically_playable_chord(_test_keys, key_layers=ctx.key_layers):
                     _iter_reasons.append("iterative-tertiary-physically-impossible")
                 elif (
                     _iter_hyp.score < primary.score * TERTIARY_MIN_SCORE_RATIO
@@ -2144,7 +2167,7 @@ def _apply_final_decisions(
         if any(are_harmonic_related(hypothesis.candidate, s) for s in selection.selected):
             continue
         test_keys = [n.key for n in selection.selected] + [hypothesis.candidate.key]
-        if not is_physically_playable_chord(test_keys):
+        if not is_physically_playable_chord(test_keys, key_layers=ctx.key_layers):
             continue
 
         gate_name = _evidence_rescue_gate(decision, hypothesis, primary, evidence)
