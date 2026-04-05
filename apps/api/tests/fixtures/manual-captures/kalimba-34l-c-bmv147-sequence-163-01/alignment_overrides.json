@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "overrides": [
+    {
+      "eventIndex": 143,
+      "expectedNotes": ["A5", "C6"],
+      "reason": "C6 is adjacent key (key 16) simultaneous touch with A5 (key 15). Ear-verified: performer clearly touched both keys. Energy trace confirms simultaneous attack (A5=397506, C6=219722, ratio stable ~1.8)."
+    }
+  ]
+}
