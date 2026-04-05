@@ -1095,7 +1095,7 @@ GATE_CATEGORIES: dict[str, str] = {
     "tertiary-physically-impossible": "structural",
     "tertiary-score-below-threshold": "structural",
     "tertiary-duplicate-note": "structural",
-    "tertiary-semitone-leakage": "structural",
+    "semitone-leakage": "structural",
     "same-as-primary": "structural",
     "recent-upper-octave-alias-secondary-blocked": "structural",
     "score-below-threshold": "structural",
@@ -1922,6 +1922,13 @@ def _select_candidates(
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not octave_dyad_allowed_full:
                 if "harmonic-related-to-selected" not in _disabled:
                     phase_b_reasons.append("harmonic-related-to-selected")
+            # ── Semitone leakage gate (all candidates, not just tertiary) ──
+            for existing in selected:
+                interval = abs(cents_distance(hypothesis.candidate.frequency, existing.frequency))
+                if interval <= SEMITONE_LEAKAGE_MAX_CENTS and existing.score > 0 and hypothesis.score < existing.score * SEMITONE_LEAKAGE_MAX_SCORE_RATIO:
+                    if "semitone-leakage" not in _disabled:
+                        phase_b_reasons.append("semitone-leakage")
+                    break
             # ── Tertiary gates (selected-dependent) ──────────────────
             is_tertiary_or_beyond = len(selected) >= 2
             if is_tertiary_or_beyond:
@@ -1952,13 +1959,6 @@ def _select_candidates(
                     phase_b_reasons.append("tertiary-score-below-threshold")
                 elif any(hypothesis.candidate.note_name == existing.note_name for existing in selected):
                     phase_b_reasons.append("tertiary-duplicate-note")
-                # ── Semitone leakage gate ──
-                for existing in selected:
-                    interval = abs(cents_distance(hypothesis.candidate.frequency, existing.frequency))
-                    if interval <= SEMITONE_LEAKAGE_MAX_CENTS and existing.score > 0 and hypothesis.score < existing.score * SEMITONE_LEAKAGE_MAX_SCORE_RATIO:
-                        if "tertiary-semitone-leakage" not in _disabled:
-                            phase_b_reasons.append("tertiary-semitone-leakage")
-                        break
                 # ── Tertiary evidence gates ──
                 onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if onset_gain < TERTIARY_MIN_ONSET_GAIN:
