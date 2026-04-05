@@ -9,6 +9,7 @@ from app.transcription import (
     PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO,
     maybe_promote_lower_secondary_to_recent_upper_octave,
     segment_peaks,
+    settings,
 )
 from conftest import synthesize_note, synthesize_chord
 
@@ -407,6 +408,100 @@ def test_segment_peaks_rejects_weak_primary_with_low_score_and_fundamental_ratio
     assert candidates == []
     assert primary is None
     assert debug is None
+
+
+def test_rejected_primary_rescued_by_alternative_branch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When primary is rejected, an alternative primary can rescue the segment."""
+    import app.transcription as transcription
+
+    tuning = get_default_tunings()[0]
+    # Primary: E6 — will be rejected (low score + low FR)
+    e6 = NoteCandidate(key=0, note_name="E6", frequency=1318.5102276514797, pitch_class="E", octave=6)
+    # Alternative: D5 — strong candidate, not harmonically related to E6
+    d5 = NoteCandidate(key=3, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    ranked_calls = 0
+
+    def fake_rank(frequencies, spectrum, _tuning, debug=False):
+        nonlocal ranked_calls
+        ranked_calls += 1
+        if ranked_calls == 1:
+            # Initial ranking: E6 top (will be rejected), D5 second
+            return [
+                NoteHypothesis(e6, PRIMARY_REJECTION_MAX_SCORE - 1, 0.0, 0.0,
+                               PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO - 0.1, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(d5, 200.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+            ]
+        # Residual ranking (after suppressing alternative primary D5)
+        return [
+            NoteHypothesis(e6, 5.0, 0.0, 0.0, 0.3, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    def fake_onset_energy_gain(_audio, _sr, _start, _end, frequency):
+        if abs(frequency - d5.frequency) < 1:
+            return 15.0  # Strong onset for D5
+        return 0.5
+
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq: s)
+    monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
+
+    candidates, _debug, result_primary, trace = segment_peaks(
+        synthesize_note(d5.frequency, duration=0.3),
+        44100, 0.0, 0.3, tuning, debug=True,
+    )
+
+    assert len(candidates) > 0, "alternative branch should rescue the segment"
+    assert result_primary is not None
+    assert result_primary.candidate.note_name == "D5"
+    assert trace is not None
+    assert "multi-primary-rescue" in trace.primary.promotions
+
+
+def test_rejected_primary_not_rescued_when_flag_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With use_multi_primary_branching=False, rejected primary stays rejected."""
+    import app.transcription as transcription
+
+    tuning = get_default_tunings()[0]
+    e6 = NoteCandidate(key=0, note_name="E6", frequency=1318.5102276514797, pitch_class="E", octave=6)
+    d5 = NoteCandidate(key=3, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+
+    ranked_calls = 0
+
+    def fake_rank(frequencies, spectrum, _tuning, debug=False):
+        nonlocal ranked_calls
+        ranked_calls += 1
+        if ranked_calls == 1:
+            return [
+                NoteHypothesis(e6, PRIMARY_REJECTION_MAX_SCORE - 1, 0.0, 0.0,
+                               PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO - 0.1, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(d5, 200.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+            ]
+        return [
+            NoteHypothesis(e6, 5.0, 0.0, 0.0, 0.3, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    def fake_onset_energy_gain(_audio, _sr, _start, _end, frequency):
+        if abs(frequency - d5.frequency) < 1:
+            return 15.0
+        return 0.5
+
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq: s)
+    monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
+
+    with settings.override(use_multi_primary_branching=False):
+        candidates, _debug, primary, _trace = segment_peaks(
+            synthesize_note(d5.frequency, duration=0.3),
+            44100, 0.0, 0.3, tuning, debug=True,
+        )
+
+    assert candidates == [], "should remain rejected when flag is off"
+    assert primary is None
 
 
 def test_segment_peaks_keeps_low_score_primary_with_high_fundamental_ratio(
