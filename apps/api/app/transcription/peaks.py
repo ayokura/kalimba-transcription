@@ -1046,7 +1046,6 @@ GATE_CATEGORIES: dict[str, str] = {
     # Structural (Layer 3: selection, stay here)
     "tertiary-physically-impossible": "structural",
     "tertiary-score-below-threshold": "structural",
-    "tertiary-fundamental-ratio-too-low": "structural",
     "tertiary-duplicate-note": "structural",
     "same-as-primary": "structural",
     "recent-upper-octave-alias-secondary-blocked": "structural",
