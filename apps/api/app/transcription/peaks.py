@@ -2355,6 +2355,13 @@ def segment_peaks(
         ):
             alt_primaries = _select_alternative_primaries(spectral.ranked, primary)
             for alt_hyp in alt_primaries:
+                # Alternative must show genuine attack (not just residual leakage)
+                alt_og = evidence.onset_gain(alt_hyp.candidate.frequency)
+                if alt_og < MIN_RECENT_NOTE_ONSET_GAIN:
+                    continue
+                # Must have meaningful spectral score (not just harmonic leakage)
+                if alt_hyp.score < spectral.ranked[0].score * RESCUE_MIN_SCORE_RATIO:
+                    continue
                 alt_branch = _evaluate_branch(ctx, spectral, alt_hyp, evidence)
                 if alt_branch.selected and (
                     best_alt is None
@@ -2420,7 +2427,7 @@ def segment_peaks(
             best_og = best.primary_onset_gain or 0.0
             if (
                 alt_og > best_og * 1.5
-                and alt_branch.note_count >= best.note_count
+                and alt_branch.note_count == best.note_count
             ):
                 best = alt_branch
 
