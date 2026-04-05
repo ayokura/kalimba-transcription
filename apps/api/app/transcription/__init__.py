@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from . import audio, constants, events, models, notation, patterns, peaks, pipeline, profiles, segments, settings
 from .pipeline import transcribe_audio
-from .peaks import _find_note_attack_time, _has_mute_dip_reattack, _is_residual_decay, _note_band_energy
+from .peaks import _adaptive_n_fft, _find_note_attack_time, _has_mute_dip_reattack, _is_residual_decay, _note_band_energy
 from .audio import *  # noqa: F401,F403
 from .constants import *  # noqa: F401,F403
 from .events import *  # noqa: F401,F403

@@ -33,6 +33,20 @@ def peak_energy_near(frequencies: np.ndarray, spectrum: np.ndarray, center_freq:
         return 0.0
     return float(np.max(positive_spectrum[mask]))
 
+
+def _adaptive_n_fft(sample_rate: int, min_frequency: float, chunk_len: int) -> int:
+    """Compute FFT size ensuring >=2 bins in the +/-40 cents band around *min_frequency*.
+
+    Without this, high sample rates (e.g. 96kHz) with a fixed n_fft=4096 produce
+    bin spacings too coarse for low-register notes — the ±40-cent band may contain
+    zero bins, causing energy functions to return 0.
+    """
+    band_hz = min_frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
+    min_n_fft = int(np.ceil(sample_rate / band_hz)) * 2 if band_hz > 0 else 4096
+    n_fft = max(min_n_fft, chunk_len)
+    return 1 << int(np.ceil(np.log2(n_fft)))
+
+
 def batch_peak_energies(frequencies: np.ndarray, spectrum: np.ndarray, center_freqs: np.ndarray, band_cents: float = HARMONIC_BAND_CENTS) -> np.ndarray:
     valid = frequencies > 0
     positive_freqs = frequencies[valid]
@@ -355,6 +369,9 @@ def onset_energy_gain(
 
     def _energy(chunk: np.ndarray) -> float:
         n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))
+        band_hz = target_frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
+        if band_hz > 0 and sample_rate / n_fft >= band_hz:
+            n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk))
         spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
         frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
         return peak_energy_near(frequencies, spectrum, target_frequency)
@@ -393,6 +410,9 @@ def onset_backward_attack_gain(
 
     def _energy(chunk: np.ndarray) -> float:
         n_fft = max(4096, 1 << int(np.ceil(np.log2(len(chunk)))))
+        band_hz = target_frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
+        if band_hz > 0 and sample_rate / n_fft >= band_hz:
+            n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk))
         spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
         frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
         return peak_energy_near(frequencies, spectrum, target_frequency)
@@ -409,13 +429,19 @@ def prepare_attack_debug_context(
     sample_rate: int,
     start_time: float,
     end_time: float,
+    min_frequency: float = 0.0,
 ) -> dict[str, Any] | None:
     chunks = _build_analysis_window_chunks(audio, sample_rate, start_time, end_time)
     if chunks is None:
         return None
 
     pre_chunk, attack_chunk, sustain_chunk = chunks
-    n_fft = max(4096, 1 << int(np.ceil(np.log2(max(len(pre_chunk), len(attack_chunk), len(sustain_chunk))))))
+    max_chunk_len = max(len(pre_chunk), len(attack_chunk), len(sustain_chunk))
+    n_fft = max(4096, 1 << int(np.ceil(np.log2(max_chunk_len))))
+    if min_frequency > 0:
+        band_hz = min_frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
+        if band_hz > 0 and sample_rate / n_fft >= band_hz:
+            n_fft = _adaptive_n_fft(sample_rate, min_frequency, max_chunk_len)
     frequencies, pre_spectrum = _chunk_spectrum(pre_chunk, sample_rate, n_fft)
     _, attack_spectrum = _chunk_spectrum(attack_chunk, sample_rate, n_fft)
     _, sustain_spectrum = _chunk_spectrum(sustain_chunk, sample_rate, n_fft)
@@ -2040,7 +2066,8 @@ def _build_segment_debug(
 ) -> dict[str, Any]:
     """Layer 5: Assemble the debug payload."""
     primary = primary_result.primary
-    attack_context = prepare_attack_debug_context(ctx.audio, ctx.sample_rate, ctx.start_time, ctx.end_time)
+    min_freq = min(n.frequency for n in ctx.tuning.notes)
+    attack_context = prepare_attack_debug_context(ctx.audio, ctx.sample_rate, ctx.start_time, ctx.end_time, min_frequency=min_freq)
     segment_attack_debug = attack_context["broadband"] if attack_context is not None else {}
     attack_profiles: dict[str, dict[str, Any]] = {}
     if attack_context is not None:
@@ -2464,10 +2491,7 @@ def _note_band_energy(
     chunk = audio[start:end]
     if len(chunk) < 256:
         return 0.0
-    band_hz = frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
-    min_n_fft = int(np.ceil(sample_rate / band_hz)) * 2 if band_hz > 0 else 4096
-    n_fft = max(min_n_fft, len(chunk))
-    n_fft = 1 << int(np.ceil(np.log2(n_fft)))
+    n_fft = _adaptive_n_fft(sample_rate, frequency, len(chunk))
     spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
     frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
     return peak_energy_near(frequencies, spectrum, frequency)
