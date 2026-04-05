@@ -2399,69 +2399,35 @@ def segment_peaks(
             }
         return SegmentPeaksResult([], rejection_debug, None, trace)
 
-    # Layer 3–4: Evaluate authoritative branch
-    auth = _evaluate_branch(
-        ctx, spectral, primary, evidence,
-        promotion_debug=primary_result.promotion_debug,
-    )
-    auth = _BranchResult(
-        primary=auth.primary, primary_onset_gain=auth.primary_onset_gain,
-        promotion_debug=auth.promotion_debug,
-        decision=primary_result.decision,
-        selected=auth.selected,
-        candidate_decisions=auth.candidate_decisions,
-        residual_ranked=auth.residual_ranked,
-        total_score=auth.total_score,
-    )
+    # Layer 3: Candidate selection
+    selection = _select_candidates(ctx, spectral, primary_result, evidence)
 
-    # Multi-primary: evaluate alternative branches and pick best
-    best = auth
-    if (
-        settings.get().use_multi_primary_branching
-        and len(spectral.ranked) >= 2
-    ):
-        alt_primaries = _select_alternative_primaries(spectral.ranked, primary)
-        for alt_hyp in alt_primaries:
-            alt_branch = _evaluate_branch(ctx, spectral, alt_hyp, evidence)
-            alt_og = alt_branch.primary_onset_gain or 0.0
-            best_og = best.primary_onset_gain or 0.0
-            if (
-                alt_og > best_og * 1.5
-                and alt_branch.note_count == best.note_count
-            ):
-                best = alt_branch
+    # Layer 3.5: Final decision
+    _apply_final_decisions(ctx, selection, primary_result, evidence)
 
-    primary = best.primary
-    trace = SegmentDecisionTrace(primary=best.decision, candidates=best.candidate_decisions)
+    if not selection.selected:
+        trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=selection.candidate_decisions)
+        return SegmentPeaksResult([], None, None, trace)
 
-    if not best.selected:
-        rejection_debug = None
-        if ctx.debug and best.decision.rejection_reason == "residual-decay-no-reattack":
-            rejection_debug = {
-                "startTime": round(ctx.start_time, 6),
-                "endTime": round(ctx.end_time, 6),
-                "durationSec": round(ctx.duration, 6),
-                "selectedNotes": [],
-                "primaryNote": primary.candidate.note_name,
-                "droppedBy": best.decision.rejection_reason,
-            }
-        return SegmentPeaksResult([], rejection_debug, None, trace)
+    # Layer 4: Extension phases
+    _extend_gliss_tertiary(ctx, primary, selection, evidence)
+    _extend_lower_mixed_roll(ctx, primary, selection, evidence)
+    _extend_lower_roll_tail(ctx, primary, selection, evidence)
 
-    # Layer 5: Debug
+    # Layer 5: Evidence freeze + trace assembly + debug
+    for note in selection.selected:
+        cached_og = evidence.get_onset_gain_if_cached(note.frequency)
+        if cached_og is not None and note.onset_gain is None:
+            note.onset_gain = cached_og
+
+    trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=selection.candidate_decisions)
+
     debug_payload = None
     if ctx.debug:
-        # Reconstruct _PrimaryResult and _SelectionState for debug builder
-        _pr = _PrimaryResult(primary, best.primary_onset_gain, best.promotion_debug, best.decision)
-        _sel = _SelectionState(
-            selected=best.selected,
-            residual_ranked=best.residual_ranked,
-            candidate_decisions=best.candidate_decisions,
-            promoted_secondary_to_recent_upper_octave=False,
-        )
-        debug_payload = _build_segment_debug(ctx, spectral, _pr, _sel, evidence)
+        debug_payload = _build_segment_debug(ctx, spectral, primary_result, selection, evidence)
 
     return SegmentPeaksResult(
-        best.selected,
+        sorted(selection.selected, key=lambda item: item.frequency),
         debug_payload,
         primary,
         trace,
