@@ -2222,6 +2222,21 @@ def _evidence_rescue_gate(
     reasons = set(decision.reasons)
 
     backward_gain = evidence.backward_attack_gain(hypothesis.candidate.frequency)
+    onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
+
+    # Carryover rescue with onset override: when the backward_gain is low
+    # (note was present in past) but onset_gain confirms a genuine re-attack,
+    # rescue based on onset + score instead of backward_gain.
+    if "recent-carryover-candidate" in reasons:
+        if backward_gain >= RESCUE_MIN_BACKWARD_GAIN:
+            return "evidence-rescue-recent-carryover"
+        if (
+            onset_gain >= RESCUE_CARRYOVER_MIN_ONSET_GAIN
+            and hypothesis.score >= primary.score * RESCUE_CARRYOVER_MIN_SCORE_RATIO
+        ):
+            return "evidence-rescue-recent-carryover"
+        return None
+
     if backward_gain < RESCUE_MIN_BACKWARD_GAIN:
         return None
 
@@ -2236,10 +2251,6 @@ def _evidence_rescue_gate(
         if hypothesis.fundamental_ratio >= RESCUE_WEAK_ONSET_MIN_FUNDAMENTAL_RATIO:
             return "evidence-rescue-weak-secondary-onset"
         return None
-
-    # recent-carryover-candidate (score floor covered by RESCUE_MIN_SCORE_RATIO)
-    if "recent-carryover-candidate" in reasons:
-        return "evidence-rescue-recent-carryover"
 
     return None
 

@@ -23,6 +23,9 @@ from app.transcription.peaks import (
     SECONDARY_MIN_FUNDAMENTAL_RATIO,
     SECONDARY_WEAK_ONSET_MIN_FUNDAMENTAL_RATIO,
     TERTIARY_MIN_ONSET_GAIN,
+    RESCUE_MIN_BACKWARD_GAIN,
+    RESCUE_CARRYOVER_MIN_ONSET_GAIN,
+    RESCUE_CARRYOVER_MIN_SCORE_RATIO,
 )
 
 
@@ -133,3 +136,42 @@ class TestFundamentalRatioArtifactGate:
         """E65 trail should show C4 was accepted in the pre-fix snapshot."""
         s = snapshots["E65_fr_artifact"]
         assert "C4" in s["selectedNotes"], "C4 was accepted pre-fix (the bug)"
+
+
+class TestCarryoverRescueOnsetOverride:
+    """E100/E130/E136: carryover candidates with og>2 and high score should be rescued
+    even when backward_gain is below RESCUE_MIN_BACKWARD_GAIN."""
+
+    @pytest.mark.parametrize("key", ["E100_carryover_G4", "E136_carryover_G4", "E130_carryover_D4"])
+    def test_snapshot_has_low_backward_gain(self, snapshots, key):
+        """All three carryover candidates have bg < RESCUE_MIN_BACKWARD_GAIN."""
+        target = snapshots[key]["targetNote"]
+        assert target["backwardAttackGain"] < RESCUE_MIN_BACKWARD_GAIN
+
+    @pytest.mark.parametrize("key", ["E100_carryover_G4", "E136_carryover_G4", "E130_carryover_D4"])
+    def test_onset_gain_meets_rescue_threshold(self, snapshots, key):
+        """All three carryover candidates have og >= RESCUE_CARRYOVER_MIN_ONSET_GAIN."""
+        target = snapshots[key]["targetNote"]
+        assert target["onsetGain"] >= RESCUE_CARRYOVER_MIN_ONSET_GAIN
+
+    def test_carryover_rescue_logic(self, snapshots):
+        """When bg < 10 but og >= 2.0 and score ratio >= 0.15, rescue should fire."""
+        s = snapshots["E100_carryover_G4"]
+        target = s["targetNote"]
+        og = target["onsetGain"]
+        bg = target["backwardAttackGain"]
+        score = target["score"]
+        primary_score = s["primaryScore"]
+
+        assert bg < RESCUE_MIN_BACKWARD_GAIN, "bg is below normal rescue threshold"
+        assert og >= RESCUE_CARRYOVER_MIN_ONSET_GAIN, "og meets carryover rescue threshold"
+        assert score / primary_score >= RESCUE_CARRYOVER_MIN_SCORE_RATIO, "score ratio meets threshold"
+
+    def test_weak_onset_carryover_not_rescued(self):
+        """A carryover with weak onset (og=0.9) should NOT be rescued."""
+        og = 0.9
+        bg = 3.0
+        assert og < RESCUE_CARRYOVER_MIN_ONSET_GAIN
+        # This candidate should remain rejected
+        should_rescue = og >= RESCUE_CARRYOVER_MIN_ONSET_GAIN
+        assert not should_rescue

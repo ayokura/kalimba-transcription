@@ -374,5 +374,44 @@
       "fundamentalRatio": 0.902
     },
     "expectedOutcome": "G4 should be accepted (genuine attack with og=171)"
+  },
+  "E100_carryover_G4": {
+    "description": "E100 G4: og=2.08, bg=4.03, score=264.7. Carryover candidate with genuine re-attack.",
+    "targetNote": {
+      "noteName": "G4",
+      "frequency": 392.0,
+      "onsetGain": 2.08,
+      "backwardAttackGain": 4.03,
+      "score": 264.7,
+      "fundamentalRatio": 0.966
+    },
+    "primaryScore": 963.99,
+    "expectedOutcome": "G4 should be rescued via carryover onset override (og >= 2.0, score/primary >= 0.15)"
+  },
+  "E136_carryover_G4": {
+    "description": "E136 G4: og=2.14, bg=3.42, score=345.9. Carryover candidate with genuine re-attack.",
+    "targetNote": {
+      "noteName": "G4",
+      "frequency": 392.0,
+      "onsetGain": 2.14,
+      "backwardAttackGain": 3.42,
+      "score": 345.9,
+      "fundamentalRatio": 0.989
+    },
+    "primaryScore": 399200.3,
+    "expectedOutcome": "G4 should be rescued via carryover onset override"
+  },
+  "E130_carryover_D4": {
+    "description": "E130 D4: og=2.04, bg=1.90, score=226.4. Carryover with mute-dip re-attack pattern.",
+    "targetNote": {
+      "noteName": "D4",
+      "frequency": 293.66,
+      "onsetGain": 2.04,
+      "backwardAttackGain": 1.9,
+      "score": 226.4,
+      "fundamentalRatio": 0.642
+    },
+    "primaryScore": 64270.3,
+    "expectedOutcome": "D4 should be rescued via carryover onset override (og >= 2.0, score/primary >= 0.15)"
   }
 }
