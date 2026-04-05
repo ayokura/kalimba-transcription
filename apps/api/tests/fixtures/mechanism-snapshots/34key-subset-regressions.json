@@ -1,0 +1,378 @@
+{
+  "E65_fr_artifact": {
+    "description": "E65 C4: accepted with fr=0.398. Harmonic artifact from E5, not a genuine C4.",
+    "fixture": "kalimba-34l-c-bmv147-sequence-163-01",
+    "startTime": 31.8752,
+    "endTime": 32.3744,
+    "durationSec": 0.4992,
+    "primaryNote": "E5",
+    "selectedNotes": [
+      "E5",
+      "C4"
+    ],
+    "rankedCandidates": [
+      {
+        "noteName": "E5",
+        "score": 963.993756,
+        "fundamentalRatio": 0.999056
+      },
+      {
+        "noteName": "C5",
+        "score": 332.792848,
+        "fundamentalRatio": 0.997632
+      },
+      {
+        "noteName": "C5",
+        "score": 332.792848,
+        "fundamentalRatio": 0.997632
+      },
+      {
+        "noteName": "E4",
+        "score": 245.62694,
+        "fundamentalRatio": 0.233579
+      },
+      {
+        "noteName": "G4",
+        "score": 231.050961,
+        "fundamentalRatio": 0.97022
+      }
+    ],
+    "residualCandidates": [
+      {
+        "noteName": "C5",
+        "score": 332.792848,
+        "fundamentalRatio": 0.997632
+      },
+      {
+        "noteName": "C5",
+        "score": 332.792848,
+        "fundamentalRatio": 0.997632
+      },
+      {
+        "noteName": "G4",
+        "score": 231.050961,
+        "fundamentalRatio": 0.97022
+      },
+      {
+        "noteName": "B4",
+        "score": 180.225065,
+        "fundamentalRatio": 0.990098
+      },
+      {
+        "noteName": "E4",
+        "score": 174.853906,
+        "fundamentalRatio": 0.789047
+      }
+    ],
+    "trail": [
+      {
+        "noteName": "C5",
+        "score": 332.792848,
+        "fundamentalRatio": 0.997632,
+        "onsetGain": 0.884972,
+        "accepted": false,
+        "reasons": [
+          "recent-carryover-candidate"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "C5",
+        "score": 332.792848,
+        "fundamentalRatio": 0.997632,
+        "onsetGain": 0.884972,
+        "accepted": false,
+        "reasons": [
+          "recent-carryover-candidate"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "G4",
+        "score": 231.050961,
+        "fundamentalRatio": 0.97022,
+        "onsetGain": 0.927364,
+        "accepted": false,
+        "reasons": [
+          "recent-carryover-candidate"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "B4",
+        "score": 180.225065,
+        "fundamentalRatio": 0.990098,
+        "onsetGain": 0.998524,
+        "accepted": false,
+        "reasons": [
+          "recent-carryover-candidate"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "E4",
+        "score": 174.853906,
+        "fundamentalRatio": 0.789047,
+        "onsetGain": 0.975676,
+        "accepted": false,
+        "reasons": [
+          "recent-carryover-candidate"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "C4",
+        "score": 165.754044,
+        "fundamentalRatio": 0.397669,
+        "onsetGain": null,
+        "accepted": true,
+        "reasons": [],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "D4",
+        "score": 72.847571,
+        "fundamentalRatio": 0.946797,
+        "onsetGain": 0.909834,
+        "accepted": false,
+        "reasons": [
+          "score-below-threshold",
+          "recent-carryover-candidate"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "E5",
+        "score": 31.361009,
+        "fundamentalRatio": 0.999056,
+        "onsetGain": null,
+        "accepted": false,
+        "reasons": [
+          "same-as-primary",
+          "score-below-threshold"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "E4",
+        "score": 174.853906,
+        "fundamentalRatio": 0.789047,
+        "onsetGain": 0.975676,
+        "accepted": false,
+        "reasons": [
+          "iterative-tertiary-weak-onset"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "C5",
+        "score": 26.030704,
+        "fundamentalRatio": 0.994307,
+        "onsetGain": 0.884972,
+        "accepted": false,
+        "reasons": [
+          "iterative-tertiary-score-below-threshold"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "C5",
+        "score": 26.030704,
+        "fundamentalRatio": 0.994307,
+        "onsetGain": 0.884972,
+        "accepted": false,
+        "reasons": [
+          "iterative-tertiary-physically-impossible"
+        ],
+        "octaveDyadAllowed": false
+      }
+    ],
+    "targetNote": {
+      "noteName": "C4",
+      "frequency": 261.63,
+      "onsetGain": 0.91,
+      "backwardAttackGain": 0.88,
+      "score": 165.8,
+      "fundamentalRatio": 0.398
+    },
+    "expectedOutcome": "C4 should be rejected (harmonic artifact, fr=0.398)"
+  },
+  "E145_backward_gate": {
+    "description": "E145 G4: og=171 but backward_gain=15.66 < 20.0 threshold. Genuine attack rejected by tertiary-weak-backward-attack.",
+    "fixture": "kalimba-34l-c-bmv147-sequence-163-01",
+    "startTime": 80.8461,
+    "endTime": 81.0712,
+    "durationSec": 0.2251,
+    "primaryNote": "G5",
+    "selectedNotes": [
+      "G5",
+      "E4"
+    ],
+    "rankedCandidates": [
+      {
+        "noteName": "G5",
+        "score": 512.704284,
+        "fundamentalRatio": 0.999384
+      },
+      {
+        "noteName": "E4",
+        "score": 441.458578,
+        "fundamentalRatio": 0.983003
+      },
+      {
+        "noteName": "G4",
+        "score": 283.169388,
+        "fundamentalRatio": 0.427972
+      },
+      {
+        "noteName": "F4",
+        "score": 140.051312,
+        "fundamentalRatio": 0.950698
+      },
+      {
+        "noteName": "F4",
+        "score": 140.051312,
+        "fundamentalRatio": 0.950698
+      }
+    ],
+    "residualCandidates": [
+      {
+        "noteName": "E4",
+        "score": 441.458578,
+        "fundamentalRatio": 0.983003
+      },
+      {
+        "noteName": "G4",
+        "score": 242.409908,
+        "fundamentalRatio": 0.902372
+      },
+      {
+        "noteName": "F4",
+        "score": 140.051312,
+        "fundamentalRatio": 0.950698
+      },
+      {
+        "noteName": "F4",
+        "score": 140.051312,
+        "fundamentalRatio": 0.950698
+      },
+      {
+        "noteName": "A4",
+        "score": 89.942852,
+        "fundamentalRatio": 0.903423
+      }
+    ],
+    "trail": [
+      {
+        "noteName": "E4",
+        "score": 441.458578,
+        "fundamentalRatio": 0.983003,
+        "onsetGain": 12.521496,
+        "accepted": true,
+        "reasons": [],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "G4",
+        "score": 242.409908,
+        "fundamentalRatio": 0.902372,
+        "onsetGain": 171.261882,
+        "accepted": false,
+        "reasons": [
+          "tertiary-weak-backward-attack"
+        ],
+        "octaveDyadAllowed": true
+      },
+      {
+        "noteName": "F4",
+        "score": 140.051312,
+        "fundamentalRatio": 0.950698,
+        "onsetGain": 2.670803,
+        "accepted": false,
+        "reasons": [
+          "tertiary-physically-impossible",
+          "tertiary-weak-backward-attack"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "F4",
+        "score": 140.051312,
+        "fundamentalRatio": 0.950698,
+        "onsetGain": 2.670803,
+        "accepted": false,
+        "reasons": [
+          "tertiary-physically-impossible",
+          "tertiary-weak-backward-attack"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "A4",
+        "score": 89.942852,
+        "fundamentalRatio": 0.903423,
+        "onsetGain": 1.259334,
+        "accepted": false,
+        "reasons": [
+          "recent-carryover-candidate",
+          "weak-secondary-onset"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "G#4",
+        "score": 24.863376,
+        "fundamentalRatio": 0.59579,
+        "onsetGain": 87.401362,
+        "accepted": false,
+        "reasons": [
+          "score-below-threshold"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "F#4",
+        "score": 24.653705,
+        "fundamentalRatio": 0.666653,
+        "onsetGain": 2.352335,
+        "accepted": false,
+        "reasons": [
+          "score-below-threshold"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "C5",
+        "score": 22.065886,
+        "fundamentalRatio": 0.858708,
+        "onsetGain": 0.821689,
+        "accepted": false,
+        "reasons": [
+          "score-below-threshold",
+          "weak-secondary-onset"
+        ],
+        "octaveDyadAllowed": false
+      },
+      {
+        "noteName": "G4",
+        "score": 242.409908,
+        "fundamentalRatio": 0.902372,
+        "onsetGain": 171.261882,
+        "accepted": false,
+        "reasons": [
+          "iterative-tertiary-weak-backward-attack"
+        ],
+        "octaveDyadAllowed": false
+      }
+    ],
+    "targetNote": {
+      "noteName": "G4",
+      "frequency": 392.0,
+      "onsetGain": 171.26,
+      "backwardAttackGain": 15.66,
+      "score": 242.4,
+      "fundamentalRatio": 0.902
+    },
+    "expectedOutcome": "G4 should be accepted (genuine attack with og=171)"
+  }
+}

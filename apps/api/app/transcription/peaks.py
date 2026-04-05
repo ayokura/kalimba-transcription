@@ -1414,7 +1414,7 @@ def _extend_gliss_tertiary(
             continue
         og = evidence.onset_gain(candidate.frequency)
         bg = evidence.backward_attack_gain(candidate.frequency)
-        if bg < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
+        if bg < TERTIARY_MIN_BACKWARD_ATTACK_GAIN and og < TERTIARY_BACKWARD_GATE_ONSET_OVERRIDE:
             continue
         viable_extensions.append((hypothesis, og))
 
@@ -1686,6 +1686,11 @@ def _select_candidates(
             if hypothesis.fundamental_ratio < secondary_min_fundamental_ratio:
                 if "fundamental-ratio-too-low" not in _disabled:
                     phase_a_reasons.append("fundamental-ratio-too-low")
+            elif hypothesis.fundamental_ratio < SECONDARY_WEAK_ONSET_MIN_FUNDAMENTAL_RATIO:
+                onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
+                if onset_gain < TERTIARY_MIN_ONSET_GAIN:
+                    if "fundamental-ratio-too-low" not in _disabled:
+                        phase_a_reasons.append("fundamental-ratio-too-low")
             _structural_snapshot = list(phase_a_reasons)
             # ── Evidence + Context gates (selected-independent) ──────
             if ctx.recent_note_names and hypothesis.candidate.note_name in ctx.recent_note_names:
@@ -1951,7 +1956,7 @@ def _select_candidates(
                     if "tertiary-weak-onset" not in _disabled:
                         phase_b_reasons.append("tertiary-weak-onset")
                 backward_gain = evidence.backward_attack_gain(hypothesis.candidate.frequency)
-                if backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
+                if backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN and onset_gain < TERTIARY_BACKWARD_GATE_ONSET_OVERRIDE:
                     if "tertiary-weak-backward-attack" not in _disabled:
                         phase_b_reasons.append("tertiary-weak-backward-attack")
             verdict.phase_b_reasons = phase_b_reasons
@@ -2048,7 +2053,7 @@ def _select_candidates(
                         _iter_reasons.append("iterative-tertiary-weak-onset")
                 if not _iter_reasons:
                     _iter_backward_gain = evidence.backward_attack_gain(_iter_hyp.candidate.frequency)
-                    if _iter_backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
+                    if _iter_backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN and _iter_onset_gain < TERTIARY_BACKWARD_GATE_ONSET_OVERRIDE:
                         _iter_reasons.append("iterative-tertiary-weak-backward-attack")
                 _iter_accepted = len(_iter_reasons) == 0
                 _iter_cached_og = evidence.get_onset_gain_if_cached(_iter_hyp.candidate.frequency)
