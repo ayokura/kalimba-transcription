@@ -11,6 +11,7 @@ class NoteCandidate:
     frequency: float
     pitch_class: str
     octave: int
+    score: float = 0.0
     onset_gain: float | None = None
 
 

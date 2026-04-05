@@ -198,6 +198,7 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
                 for index in range(len(subharmonic_frequencies))
             ]
 
+        candidate.score = score
         hypotheses.append(
             NoteHypothesis(
                 candidate=candidate,
@@ -1954,15 +1955,10 @@ def _select_candidates(
                 # ── Semitone leakage gate ──
                 for existing in selected:
                     interval = abs(cents_distance(hypothesis.candidate.frequency, existing.frequency))
-                    if interval <= SEMITONE_LEAKAGE_MAX_CENTS:
-                        # Find the selected note's score from ranked/residual
-                        neighbor_hyp = _find_hypothesis_by_frequency(spectral.ranked, existing.frequency)
-                        if neighbor_hyp is None:
-                            neighbor_hyp = _find_hypothesis_by_frequency(residual_ranked, existing.frequency)
-                        if neighbor_hyp is not None and hypothesis.score < neighbor_hyp.score * SEMITONE_LEAKAGE_MAX_SCORE_RATIO:
-                            if "tertiary-semitone-leakage" not in _disabled:
-                                phase_b_reasons.append("tertiary-semitone-leakage")
-                            break
+                    if interval <= SEMITONE_LEAKAGE_MAX_CENTS and existing.score > 0 and hypothesis.score < existing.score * SEMITONE_LEAKAGE_MAX_SCORE_RATIO:
+                        if "tertiary-semitone-leakage" not in _disabled:
+                            phase_b_reasons.append("tertiary-semitone-leakage")
+                        break
                 # ── Tertiary evidence gates ──
                 onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if onset_gain < TERTIARY_MIN_ONSET_GAIN:
