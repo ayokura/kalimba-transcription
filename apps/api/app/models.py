@@ -9,6 +9,7 @@ class TuningNote(BaseModel):
     key: int
     note_name: str = Field(alias="noteName")
     frequency: float
+    layer: int = Field(default=0, alias="layer")
 
     model_config = {"populate_by_name": True}
 

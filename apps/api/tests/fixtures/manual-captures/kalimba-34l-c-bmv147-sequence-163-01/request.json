@@ -8,172 +8,206 @@
       {
         "key": 1,
         "noteName": "D6",
-        "frequency": 1174.659072
+        "frequency": 1174.659072,
+        "layer": 0
       },
       {
         "key": 2,
         "noteName": "B5",
-        "frequency": 987.766603
+        "frequency": 987.766603,
+        "layer": 0
       },
       {
         "key": 3,
         "noteName": "G5",
-        "frequency": 783.990872
+        "frequency": 783.990872,
+        "layer": 0
       },
       {
         "key": 4,
         "noteName": "E5",
-        "frequency": 659.255114
+        "frequency": 659.255114,
+        "layer": 0
       },
       {
         "key": 5,
         "noteName": "C5",
-        "frequency": 523.251131
+        "frequency": 523.251131,
+        "layer": 0
       },
       {
         "key": 6,
         "noteName": "A4",
-        "frequency": 440.0
+        "frequency": 440.0,
+        "layer": 0
       },
       {
         "key": 7,
         "noteName": "F4",
-        "frequency": 349.228231
+        "frequency": 349.228231,
+        "layer": 0
       },
       {
         "key": 8,
         "noteName": "D4",
-        "frequency": 293.664768
+        "frequency": 293.664768,
+        "layer": 0
       },
       {
         "key": 9,
         "noteName": "C4",
-        "frequency": 261.625565
+        "frequency": 261.625565,
+        "layer": 0
       },
       {
         "key": 10,
         "noteName": "E4",
-        "frequency": 329.627557
+        "frequency": 329.627557,
+        "layer": 0
       },
       {
         "key": 11,
         "noteName": "G4",
-        "frequency": 391.995436
+        "frequency": 391.995436,
+        "layer": 0
       },
       {
         "key": 12,
         "noteName": "B4",
-        "frequency": 493.883301
+        "frequency": 493.883301,
+        "layer": 0
       },
       {
         "key": 13,
         "noteName": "D5",
-        "frequency": 587.329536
+        "frequency": 587.329536,
+        "layer": 0
       },
       {
         "key": 14,
         "noteName": "F5",
-        "frequency": 698.456463
+        "frequency": 698.456463,
+        "layer": 0
       },
       {
         "key": 15,
         "noteName": "A5",
-        "frequency": 880.0
+        "frequency": 880.0,
+        "layer": 0
       },
       {
         "key": 16,
         "noteName": "C6",
-        "frequency": 1046.502261
+        "frequency": 1046.502261,
+        "layer": 0
       },
       {
         "key": 17,
         "noteName": "E6",
-        "frequency": 1318.510228
+        "frequency": 1318.510228,
+        "layer": 0
       },
       {
         "key": 18,
         "noteName": "D#6",
-        "frequency": 1244.507935
+        "frequency": 1244.507935,
+        "layer": 1
       },
       {
         "key": 19,
         "noteName": "C6",
-        "frequency": 1046.502261
+        "frequency": 1046.502261,
+        "layer": 1
       },
       {
         "key": 20,
         "noteName": "G#5",
-        "frequency": 830.609395
+        "frequency": 830.609395,
+        "layer": 1
       },
       {
         "key": 21,
         "noteName": "F5",
-        "frequency": 698.456463
+        "frequency": 698.456463,
+        "layer": 1
       },
       {
         "key": 22,
         "noteName": "C#5",
-        "frequency": 554.365262
+        "frequency": 554.365262,
+        "layer": 1
       },
       {
         "key": 23,
         "noteName": "A#4",
-        "frequency": 466.163762
+        "frequency": 466.163762,
+        "layer": 1
       },
       {
         "key": 24,
         "noteName": "F#4",
-        "frequency": 369.994423
+        "frequency": 369.994423,
+        "layer": 1
       },
       {
         "key": 25,
         "noteName": "D#4",
-        "frequency": 311.126984
+        "frequency": 311.126984,
+        "layer": 1
       },
       {
         "key": 26,
         "noteName": "C#4",
-        "frequency": 277.182631
+        "frequency": 277.182631,
+        "layer": 1
       },
       {
         "key": 27,
         "noteName": "F4",
-        "frequency": 349.228231
+        "frequency": 349.228231,
+        "layer": 1
       },
       {
         "key": 28,
         "noteName": "G#4",
-        "frequency": 415.304698
+        "frequency": 415.304698,
+        "layer": 1
       },
       {
         "key": 29,
         "noteName": "C5",
-        "frequency": 523.251131
+        "frequency": 523.251131,
+        "layer": 1
       },
       {
         "key": 30,
         "noteName": "D#5",
-        "frequency": 622.253967
+        "frequency": 622.253967,
+        "layer": 1
       },
       {
         "key": 31,
         "noteName": "F#5",
-        "frequency": 739.988845
+        "frequency": 739.988845,
+        "layer": 1
       },
       {
         "key": 32,
         "noteName": "A#5",
-        "frequency": 932.327523
+        "frequency": 932.327523,
+        "layer": 1
       },
       {
         "key": 33,
         "noteName": "C#6",
-        "frequency": 1108.730524
+        "frequency": 1108.730524,
+        "layer": 1
       },
       {
         "key": 34,
         "noteName": "F6",
-        "frequency": 1396.912926
+        "frequency": 1396.912926,
+        "layer": 1
       }
     ]
   },
