@@ -2286,8 +2286,13 @@ def _evaluate_branch(
         if cached_og is not None and note.onset_gain is None:
             note.onset_gain = cached_og
 
+    # Use accepted candidate scores (from spectral.ranked + residual_ranked)
+    # to avoid under-scoring residual-only notes.
     score_by_name: dict[str, float] = {}
     for h in spectral.ranked:
+        if h.candidate.note_name not in score_by_name:
+            score_by_name[h.candidate.note_name] = h.score
+    for h in selection.residual_ranked:
         if h.candidate.note_name not in score_by_name:
             score_by_name[h.candidate.note_name] = h.score
     total_score = sum(score_by_name.get(note.note_name, 0.0) for note in selection.selected)
