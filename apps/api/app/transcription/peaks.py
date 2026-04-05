@@ -2197,10 +2197,10 @@ def _select_alternative_primaries(
 ) -> list[NoteHypothesis]:
     """Pick non-redundant alternative primary candidates from *ranked*."""
     alternatives: list[NoteHypothesis] = []
-    for hyp in ranked[1:]:
+    for hyp in ranked:
         if hyp.score <= 0:
             break
-        if hyp.candidate.note_name == authoritative.candidate.note_name:
+        if hyp is authoritative:
             continue
         if are_harmonic_related(hyp.candidate, authoritative.candidate):
             continue
@@ -2221,8 +2221,9 @@ def _evaluate_branch(
     """Evaluate a complete branch for a given primary hypothesis (L3–L4).
 
     Creates a synthetic _PrimaryResult and runs candidate selection,
-    final decisions, and extensions. Returns a self-contained _BranchResult
-    with no side effects on other branches.
+    final decisions, and extensions.  Shared evidence caches
+    (onset_gain, backward_attack_gain) may be populated as a side
+    effect; branch-specific selection state is isolated.
     """
     onset_gain = evidence.onset_gain(primary_hyp.candidate.frequency)
     # Check rejection conditions (same as _resolve_primary)
@@ -2285,10 +2286,11 @@ def _evaluate_branch(
         if cached_og is not None and note.onset_gain is None:
             note.onset_gain = cached_og
 
-    total_score = sum(
-        next((h.score for h in spectral.ranked if h.candidate.note_name == note.note_name), 0.0)
-        for note in selection.selected
-    )
+    score_by_name: dict[str, float] = {}
+    for h in spectral.ranked:
+        if h.candidate.note_name not in score_by_name:
+            score_by_name[h.candidate.note_name] = h.score
+    total_score = sum(score_by_name.get(note.note_name, 0.0) for note in selection.selected)
 
     return _BranchResult(
         primary=primary_hyp, primary_onset_gain=onset_gain,
@@ -2369,12 +2371,21 @@ def segment_peaks(
                 ):
                     best_alt = alt_branch
         if best_alt is not None:
-            # Alternative branch rescued the segment
+            # Alternative branch rescued the segment — patch trace to
+            # record the original rejected primary and rescue provenance.
             primary = best_alt.primary
-            trace = SegmentDecisionTrace(primary=best_alt.decision, candidates=best_alt.candidate_decisions)
+            rescue_decision = _PrimaryDecision(
+                initial_primary=primary_result.decision.final_primary,
+                final_primary=best_alt.primary.candidate.note_name,
+                onset_gain=best_alt.primary_onset_gain,
+                promotions=["multi-primary-rescue"],
+                rejected=False,
+                rejection_reason=None,
+            )
+            trace = SegmentDecisionTrace(primary=rescue_decision, candidates=best_alt.candidate_decisions)
             debug_payload = None
             if ctx.debug:
-                _pr = _PrimaryResult(primary, best_alt.primary_onset_gain, best_alt.promotion_debug, best_alt.decision)
+                _pr = _PrimaryResult(primary, best_alt.primary_onset_gain, best_alt.promotion_debug, rescue_decision)
                 _sel = _SelectionState(
                     selected=best_alt.selected, residual_ranked=best_alt.residual_ranked,
                     candidate_decisions=best_alt.candidate_decisions,
