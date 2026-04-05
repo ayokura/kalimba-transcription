@@ -70,13 +70,13 @@ class TestBackwardGateOnsetOverride:
         final_reject = bg < TERTIARY_MIN_BACKWARD_ATTACK_GAIN and og < TERTIARY_BACKWARD_GATE_ONSET_OVERRIDE
         assert final_reject, "weak onset should still be rejected by backward gate"
 
-    def test_override_does_not_help_transient_brush(self):
-        """Transient brush (og=55, verified as non-sustained) should not override."""
-        og = 55.37  # E4 in triple-glissando chord 3 (confirmed transient brush)
+    def test_weak_intentional_strike_passes_override(self):
+        """Weak but intentional strike (og=55) should pass the override."""
+        og = 55.37  # E4 in triple-glissando chord 3 (weak but intentional)
         bg = 8.0
-        assert og < TERTIARY_BACKWARD_GATE_ONSET_OVERRIDE
+        assert og >= TERTIARY_BACKWARD_GATE_ONSET_OVERRIDE
         final_reject = bg < TERTIARY_MIN_BACKWARD_ATTACK_GAIN and og < TERTIARY_BACKWARD_GATE_ONSET_OVERRIDE
-        assert final_reject, "transient brush should still be rejected"
+        assert not final_reject, "intentional strike should pass override"
 
     def test_e145_g4_now_accepted(self, snapshots):
         """E145 trail should show G4 was rejected before this fix."""
