@@ -1948,9 +1948,13 @@
           {
             "key": 14,
             "noteName": "F5"
+          },
+          {
+            "key": 7,
+            "noteName": "F4"
           }
         ],
-        "display": "[F5,<F5,D4>]",
+        "display": "F4 + D4 + F5",
         "intent": null,
         "parts": [
           {

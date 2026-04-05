@@ -132,7 +132,7 @@
 - 115. <C5,A4> [intent: slide_chord] :: C5 (#5), A4 (#6)
 - 116. D5 :: D5 (#13)
 - 117. E5 :: E5 (#4)
-- 118. [F5,<F5,D4>] [parts: strict_chord(F5); slide_chord(<F5,D4>)] :: D4 (#8), F5 (#14)
+- 118. [F5,<F4,D4>] [parts: strict_chord(F5); slide_chord(<F4,D4>)] :: D4 (#8), F4 (#7), F5 (#14) — score correction: F4 is part of the chord, not F5 sub-harmonic
 - 119. G5 :: G5 (#3)
 - 120. A5 :: A5 (#15)
 - 121. [G5,<G4,E4>] [parts: strict_chord(G5); slide_chord(<G4,E4>)] :: G5 (#3), E4 (#10), G4 (#11)

@@ -106,7 +106,7 @@
         115,
         129
       ],
-      "content": "<C5,A4> / D5 / E5 / [F5,<F5,D4>] / G5 / A5 / [G5,<G4,E4>] / F5 / E5 / [D5,<A4,F4>] / E5 / C5 / [<B4,G4>,D4] / C5 / D5",
+      "content": "<C5,A4> / D5 / E5 / [F5,<F4,D4>] / G5 / A5 / [G5,<G4,E4>] / F5 / E5 / [D5,<A4,F4>] / E5 / C5 / [<B4,G4>,D4] / C5 / D5",
       "estimatedStartSec": 191.7,
       "verifiedStartSec": 195.76,
       "verificationMethod": "ear_verified"
@@ -152,7 +152,7 @@
     {
       "nearEvent": 116,
       "line": "R3",
-      "description": "演奏ミス: R3の2音目のD5が欠落しE5を弾く。R3の2番目のD5から弾き直し（3:21.52 = 201.52s）",
+      "description": "\u6f14\u594f\u30df\u30b9: R3\u306e2\u97f3\u76ee\u306eD5\u304c\u6b20\u843d\u3057E5\u3092\u5f3e\u304f\u3002R3\u306e2\u756a\u76ee\u306eD5\u304b\u3089\u5f3e\u304d\u76f4\u3057\uff083:21.52 = 201.52s\uff09",
       "errorStartSec": 195.78,
       "restartTimeSec": 201.52
     }
