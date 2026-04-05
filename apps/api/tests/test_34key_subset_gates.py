@@ -26,7 +26,10 @@ from app.transcription.peaks import (
     RESCUE_MIN_BACKWARD_GAIN,
     RESCUE_CARRYOVER_MIN_ONSET_GAIN,
     RESCUE_CARRYOVER_MIN_SCORE_RATIO,
+    SEMITONE_LEAKAGE_MAX_CENTS,
+    SEMITONE_LEAKAGE_MAX_SCORE_RATIO,
 )
+from app.transcription.audio import cents_distance
 
 
 SNAPSHOT_PATH = Path(__file__).parent / "fixtures" / "mechanism-snapshots" / "34key-subset-regressions.json"
@@ -175,3 +178,33 @@ class TestCarryoverRescueOnsetOverride:
         # This candidate should remain rejected
         should_rescue = og >= RESCUE_CARRYOVER_MIN_ONSET_GAIN
         assert not should_rescue
+
+
+class TestSemitoneLeakageGate:
+    """E133 A#4: spectral leakage from B4 should be rejected as tertiary."""
+
+    def test_a_sharp4_is_within_semitone_of_b4(self):
+        """A#4 (466.16Hz) and B4 (493.88Hz) are ~100 cents apart."""
+        interval = abs(cents_distance(466.16, 493.88))
+        assert interval <= SEMITONE_LEAKAGE_MAX_CENTS
+        assert interval == pytest.approx(100.0, abs=5.0)
+
+    def test_leakage_score_ratio_triggers_rejection(self):
+        """A#4 score=45.3 vs B4 score=330.4 → ratio=0.137 < 0.20 threshold."""
+        candidate_score = 45.3
+        neighbor_score = 330.4
+        ratio = candidate_score / neighbor_score
+        assert ratio < SEMITONE_LEAKAGE_MAX_SCORE_RATIO
+
+    def test_genuine_semitone_pair_not_rejected(self):
+        """Two notes with similar scores should NOT be rejected as leakage."""
+        candidate_score = 200.0
+        neighbor_score = 250.0
+        ratio = candidate_score / neighbor_score
+        assert ratio >= SEMITONE_LEAKAGE_MAX_SCORE_RATIO, "similar scores should pass"
+
+    def test_non_semitone_interval_not_affected(self):
+        """Notes more than 150 cents apart should not trigger leakage gate."""
+        # G4 (392Hz) to B4 (494Hz) = ~400 cents (major third)
+        interval = abs(cents_distance(392.0, 493.88))
+        assert interval > SEMITONE_LEAKAGE_MAX_CENTS

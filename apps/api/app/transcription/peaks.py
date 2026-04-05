@@ -1094,6 +1094,7 @@ GATE_CATEGORIES: dict[str, str] = {
     "tertiary-physically-impossible": "structural",
     "tertiary-score-below-threshold": "structural",
     "tertiary-duplicate-note": "structural",
+    "tertiary-semitone-leakage": "structural",
     "same-as-primary": "structural",
     "recent-upper-octave-alias-secondary-blocked": "structural",
     "score-below-threshold": "structural",
@@ -1950,6 +1951,18 @@ def _select_candidates(
                     phase_b_reasons.append("tertiary-score-below-threshold")
                 elif any(hypothesis.candidate.note_name == existing.note_name for existing in selected):
                     phase_b_reasons.append("tertiary-duplicate-note")
+                # ── Semitone leakage gate ──
+                for existing in selected:
+                    interval = abs(cents_distance(hypothesis.candidate.frequency, existing.frequency))
+                    if interval <= SEMITONE_LEAKAGE_MAX_CENTS:
+                        # Find the selected note's score from ranked/residual
+                        neighbor_hyp = _find_hypothesis_by_frequency(spectral.ranked, existing.frequency)
+                        if neighbor_hyp is None:
+                            neighbor_hyp = _find_hypothesis_by_frequency(residual_ranked, existing.frequency)
+                        if neighbor_hyp is not None and hypothesis.score < neighbor_hyp.score * SEMITONE_LEAKAGE_MAX_SCORE_RATIO:
+                            if "tertiary-semitone-leakage" not in _disabled:
+                                phase_b_reasons.append("tertiary-semitone-leakage")
+                            break
                 # ── Tertiary evidence gates ──
                 onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
                 if onset_gain < TERTIARY_MIN_ONSET_GAIN:
