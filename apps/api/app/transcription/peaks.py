@@ -410,7 +410,7 @@ def onset_backward_attack_gain(
         return 0.0
 
     def _energy(chunk: np.ndarray) -> float:
-        n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk), min_bins=1)
+        n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk))
         spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
         frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
         return peak_energy_near(frequencies, spectrum, target_frequency)
