@@ -796,6 +796,18 @@ def detect_segments(
         hop_length=HOP_LENGTH,
         backtrack=True,
     )
+    if cfg.use_hpss_onset:
+        _, percussive = librosa.effects.hpss(
+            audio, n_fft=FRAME_LENGTH, hop_length=HOP_LENGTH,
+        )
+        perc_env = librosa.onset.onset_strength(y=percussive, sr=sample_rate, hop_length=HOP_LENGTH)
+        perc_frames = librosa.onset.onset_detect(
+            onset_envelope=perc_env,
+            sr=sample_rate,
+            hop_length=HOP_LENGTH,
+            backtrack=True,
+        )
+        onset_frames = np.unique(np.concatenate([onset_frames, perc_frames]))
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
     onset_attack_profiles = precompute_onset_attack_profiles(audio, sample_rate, onset_times)
     onset_times = refine_onset_times_by_attack_profile(onset_times, onset_attack_profiles)

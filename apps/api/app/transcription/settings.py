@@ -39,6 +39,7 @@ class RecognizerSettings:
     use_iterative_harmonic_suppression: bool = True
     use_evidence_gate_rescue: bool = True
     use_multi_primary_branching: bool = True
+    use_hpss_onset: bool = False
 
     # Ablation switches (True = disable the feature)
     ablate_sparse_gap_tail: bool = False
