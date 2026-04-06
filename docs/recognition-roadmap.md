@@ -1,45 +1,60 @@
 # Recognition Roadmap
 
-## Current State
+## Current State (2026-04-06)
 
-### Stable / completed
-- single notes
-- octave dyads
-- repeated triads
-- repeated four-note `slide_chord`
-- triple glissando / three-note `slide_chord`
-- four-note ascending `slide_chord`
+### Fixture カバレッジ
 
-### Not yet complete
-- fixture explainability reason codes
-- `arpeggio` data-model introduction
-- source-profile aware evaluation policy
+43 fixtures total:
+- **30 completed** — strict regression target
+- **9 pending** — recognizer 改善待ち
+- **2 reference_only** — 参照用（regression 対象外）
+- **1 review_needed** — メタデータ要確認
+- **1 rerecord** — 再録音優先
+
+### Gesture families (completed)
+- single notes（C4, D4, D5 等の繰り返し）
+- octave dyads（C4+C5, D4+D5）
+- triads（C4+E4+G4, A4+D4+F4, E4+G4+B4）
+- four-note strict / rolled / gliss chords（E4+G4+B4+D5）
+- ascending sequences（C4→E6 17音、C6→E6 13/15音）
+- descending sequences（E6→C4 17/51音、E6→G4 6音、D6→E6 10音）
+- mixed phrases（混合シーケンス）
+- BWV147 scoped phrases（6 sub-fixtures: late-upper-tail, lower-context-roll, lower-mixed-roll, upper-mixed-cluster, restart-prefix, restart-tail 等）
+
+### BWV147 practical coverage
+- **17-key 163-event sequence**: pending（full-sequence 認識はまだ未完）
+- **34-key 163-event sequence**: pending（初の multi-layer kalimba fixture）
+- 6 scoped BWV sub-fixtures: 4 completed, 2 pending
 
 ### Explicitly not a current acoustic regression target
-- legacy four-note fixture with broken metadata
+- legacy four-note fixture with broken metadata (`reference_only`)
 - smartphone app reference video/audio
 
 ## Current Bottleneck
 
-The strict four-note reference is now stable. The main remaining bottlenecks are:
+30 completed fixtures が安定した regression baseline を形成している。主な残課題:
 
-- fixture explainability coverage and reason codes ([#5](https://github.com/ayokura/kalimba-transcription/issues/5))
-- `arpeggio` modeling separate from `slide_chord` ([#6](https://github.com/ayokura/kalimba-transcription/issues/6))
-- future source-profile differentiation for app/synth input ([#7](https://github.com/ayokura/kalimba-transcription/issues/7))
-- tempo-estimation optimization ([#10](https://github.com/ayokura/kalimba-transcription/issues/10))
+- **peaks redesign / chord selector** ([#111](https://github.com/ayokura/kalimba-transcription/issues/111)): `_evidence_rescue_gate` の複雑化、sequential accept loop の構造的制約。3-note chord の検出が restart-prefix / restart-tail の pending 理由
+- **ranked candidate 不在問題** ([#125](https://github.com/ayokura/kalimba-transcription/issues/125)): segment 全体の FFT で primary 倍音に吸収される genuine note の検出。onset-focused FFT window 等の spectral acquisition 改善が必要
+- **BWV147 full-sequence** (163-event fixture × 2 が pending): onset detection 層の問題（34-key で 4 events が NO MATCH）と post-processing の fixture-specific debt
+- **`arpeggio` modeling** ([#6](https://github.com/ayokura/kalimba-transcription/issues/6)): `slide_chord` との分離。Phase 1 設計は [arpeggio-design.md](arpeggio-design.md) に記載
 
 ## Active Fixture Policy
 
-### Completed strict four-note reference
-- `kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03`
-- status: `completed`
-- issue: [#1](https://github.com/ayokura/kalimba-transcription/issues/1)
-- note: recognizer now restores `E4+G4+B4+D5 x 6`
+### ステータス分布
 
-### Legacy reference only
-- `kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01`
-- status: `reference_only`
-- reason: missing reliable `captureIntent`, broken scenario metadata, superseded by explicit fixtures
+- `completed` (30): strict regression target。`test_manual_capture_completed.py` が自動検証
+- `pending` (9): recognizer 改善待ち。smoke probe のみ実行
+- `reference_only` (2): 参照用。regression 対象外
+- `review_needed` (1): メタデータ要確認
+- `rerecord` (1): 再録音優先
+
+詳細なステータス定義は [testing.md](testing.md) を参照。
+
+### Historical context
+- strict four-note reference (`four-note-strict-repeat-02/03/04`): 初期の認識精度検証に使用。現在は 30 completed fixtures のうちの一部
+- legacy four-note reference (`four-note-repeat-01`): `reference_only` — broken scenario metadata
+- BWV147 fixture-specific ルールの管理は [recognizer-local-rules.md](recognizer-local-rules.md) を参照
 
 ## User-Facing Gesture Families
 
@@ -75,11 +90,11 @@ For Strategy B gap-candidate design and the current candidate/promotion prototyp
 
 ## Immediate Next Engineering Tasks
 
-1. keep the completed strict four-note baseline stable
-2. improve fixture explainability and coverage reporting
-3. prepare `arpeggio` semantics and future source-profile support
-4. keep editor gesture handling safe before adding `arpeggio`
-5. start arpeggio sample collection only after the data model boundary is fixed
+1. 30 completed fixtures の regression baseline を維持する
+2. peaks redesign (#111): chord selector による sequential accept loop の構造改善
+3. ranked candidate 不在問題 (#125): onset-focused FFT window 等の spectral acquisition 改善
+4. BWV147 full-sequence の pending 解消（onset detection 層 + post-processing debt）
+5. `arpeggio` Phase 1 の vocabulary 導入（[arpeggio-design.md](arpeggio-design.md) 参照）
 
 ## Suggested Future Sample Matrix
 

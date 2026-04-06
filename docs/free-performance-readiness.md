@@ -84,12 +84,13 @@
 - 適用順序に結果が依存する
 
 ### 既知の fixture-specific debt
-- `collapse_restart_tail_subset_into_following_chord`
-- `suppress_recent_upper_echo_mixed_clusters`
-- `collect_two_onset_terminal_tail_segments`
-- `recent-upper-octave-alias-primary` promotion
+- `collapse_restart_tail_subset_into_following_chord` (events.py)
+- `suppress_recent_upper_echo_mixed_clusters` (patterns.py)
+- `lower-mixed-roll-extension` (peaks.py)
+- ~~`collect_two_onset_terminal_tail_segments`~~ — #122 で削除済み（AVC trailing collector で代替）
+- `recent-upper-octave-alias-primary` promotion — Stage 3 (peaks.py) のスコープ。詳細は Stage 3 の懸念点を参照
 
-詳細は `docs/recognizer-local-rules.md` 参照。
+詳細は [recognizer-local-rules.md](recognizer-local-rules.md) ��照。
 
 ---
 
