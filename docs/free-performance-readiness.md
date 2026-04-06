@@ -4,7 +4,7 @@
 
 各 recognizer コンポーネントについて、Free Performance（楽譜知識なし・Expected Performance なしの自由演奏転写）への適合度を評価する。チケット処理のたびに関連コンポーネントを再評価し、このドキュメントを更新する。
 
-**最終更新: 2026-04-06 (コミット 7e2b6f8, Stage 2/7 評価追加)**
+**最終更新: 2026-04-07 (コミット 2dda614, per-note onset 基盤 + fast mute-dip)**
 
 ## 評価基準
 
@@ -30,7 +30,7 @@
 
 **評価: Mostly Ready（onset/active range） / Needs Work（SR依存性）**
 
-**最終更新: 2026-04-06 (コミット 7e2b6f8, #140 SR正規化調査)**
+**最終更新: 2026-04-07 (コミット 2dda614, per-note onset 基盤実装)**
 
 ### 良い点
 
@@ -38,12 +38,14 @@
 - **Attack profile validation**: broadband_gain + high_band_flux の組み合わせ判定。moderate gain-flux gate (gain≥3.0, flux≥0.8) の追加で 34-key の genuine attack 2件を救済済み。閾値は物理量ベースで fixture-specific でない
 - **Gap collector (AVC)**: onset の attack profile で判定しており因果的・楽譜非依存
 - **librosa onset_strength + onset_detect**: 標準的な broadband spectral flux。大半の onset を正しく検出（17-key 160/163, 34-key 156/163）
+- **Per-note onset detection (Pass 1)**: gap mute-dip rescue 実装済み (#144, コミット a936d6e)。broadband onset が見逃した same-note re-attack を per-note の mute-dip パターンで検出し、`confirmed_primary` 付き segment を生成。compact-window アルゴリズムで自然減衰の false positive を排除。楽譜非依存・因果的・WebAssembly 互換
 
 ### 懸念点
 
 - **SR 依存性 (#140)**: FRAME_LENGTH=2048, HOP_LENGTH=256 が固定サンプル数。sr=44100 で STFT窓=46.4ms、sr=96000 で 21.3ms。onset 検出の時間分解能が楽器/録音環境で異なる。リサンプル実験で -5 exact 回帰、n_fft 変更で -4 exact — チューニング再調整なしの単独投入は不可
-- **Polyphonic onset の限界**: 単音 attack が他の音の残響に埋もれると onset_strength に現れない（E162 B4: onset_strength=0.6 vs background 0.3-0.5）。per-note onset detection で補完する設計を策定済み（docs/per-note-onset-detection-design.md）
+- **Polyphonic onset の限界**: 単音 attack が他の音の残響に埋もれると onset_strength に現れない（E162 B4: onset_strength=0.6 vs background 0.3-0.5）。per-note onset detection の Pass 2 (onset splitting) で補完予定 (#145)
 - **Streaming 再設計**: librosa.onset.onset_strength は batch 処理。streaming 化には incremental spectral flux + peak picking の再実装が必要。per-note onset の部品（`_note_band_energy()` 等）は因果的で streaming 互換
+- **HPSS onset 分離**: 試験の結果、percussive 単独置換は回帰 (76%→53%)。カリンバの撥弦 attack が harmonic/percussive に分散し、percussive のノイズフロア上昇で偽 onset 増加。パイプライン全体チューンが必要 (#148)
 
 ---
 
@@ -57,6 +59,8 @@
 - **`is_physically_playable_chord`** はチューニング定義のみに依存し、楽譜知識を使わない
 - **Octave dyad判定 (`allow_octave_secondary`)** は fundamental_ratio ベースで汎用的。今回の閾値緩和 (0.85→0.75) で octave-4 ノートの過度な棄却が解消。non-octave-4 の閾値 (0.32) と比較して 0.75 はまだ保守的
 - **Evidence gate (`onset_gain`, `backward_attack_gain`)** はセグメント内の物理的な attack 特性に基づく判定であり、楽譜に依存しない
+- **Fast mute-dip 検出**: 50ms + 30ms の2段階 FFT 窓で ~20ms の高速 mute-dip も検出 (コミット e599d4b)。E83 G4 型（segment 内で residual-decay 棄却されていた genuine re-attack）を rescue
+- **Segment provenance**: `confirmed_primary` / `hint_primary` フィールド (#143) で per-note パスから peaks 層への情報伝達基盤を確立。`confirmed_primary` 付き segment は `_resolve_primary` をスキップし residual-decay 免除
 
 ### 懸念点
 
@@ -233,3 +237,4 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 | 2026-04-06 | #126 gate調整 | 初版作成。Stage 3 (peaks.py) を詳細評価。octave dyad 閾値緩和 + rescue bypass の Free Performance 影響を記載 |
 | 2026-04-06 | 34-key NO MATCH調査 | Stage 2 (segments.py) 評価追加。SR依存性 (#140)、polyphonic onset 限界、per-note onset 設計 (#141) を記載 |
 | 2026-04-06 | Stage 5/7 棚卸し | Stage 5 suppress/simplify 系 19関数の個別評価（依存度別4段階分類）。Stage 7 merge 4関数 + collapse 6関数の評価追加。潜在 debt 3件特定 |
+| 2026-04-07 | #142-144, E83分析 | Stage 2: per-note onset Pass 1 (gap mute-dip rescue) + HPSS 試験結果追加。Stage 3: fast mute-dip 30ms 窓フォールバック + Segment provenance 追加 |
