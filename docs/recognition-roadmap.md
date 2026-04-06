@@ -1,232 +1,244 @@
 # Recognition Roadmap
 
-## Current State
+## Current State (2026-04-06)
 
-### Stable / completed
-- single notes
-- octave dyads
-- repeated triads
-- repeated four-note `slide_chord`
-- triple glissando / three-note `slide_chord`
-- four-note ascending `slide_chord`
+### Fixture カバレッジ
 
-### Not yet complete
-- fixture explainability reason codes
-- `arpeggio` data-model introduction
-- source-profile aware evaluation policy
+43 fixtures total:
+- **30 completed** — strict regression target
+- **9 pending** — recognizer 改善待ち
+- **2 reference_only** — 参照用（regression 対象外）
+- **1 review_needed** — メタデータ要確認
+- **1 rerecord** — 再録音優先
 
-### Explicitly not a current acoustic regression target
-- legacy four-note fixture with broken metadata
+### Gesture families (completed)
+- single notes（C4, D4, D5 等の繰り返し）
+- octave dyads（C4+C5, D4+D5）
+- triads（C4+E4+G4, A4+D4+F4, E4+G4+B4）
+- four-note strict / rolled / gliss chords（E4+G4+B4+D5）
+- ascending sequences（C4→E6 17音、C6→E6 13/15音）
+- descending sequences（E6→C4 17/51音、E6→G4 6音、D6→E6 10音）
+- mixed phrases（混合シーケンス）
+- BWV147 scoped phrases（6 sub-fixtures: late-upper-tail, lower-context-roll, lower-mixed-roll, upper-mixed-cluster, restart-prefix, restart-tail 等）
+
+### BWV147 practical coverage
+- **17-key 163-event sequence**: pending（full-sequence 認識はまだ未完）
+- **34-key 163-event sequence**: pending（初の multi-layer kalimba fixture）
+- 6 scoped BWV sub-fixtures: 4 completed, 2 pending
+
+### 現時点で acoustic regression target ではないもの
+- legacy four-note fixture（broken metadata, `reference_only`）
 - smartphone app reference video/audio
 
 ## Current Bottleneck
 
-The strict four-note reference is now stable. The main remaining bottlenecks are:
+30 completed fixtures が安定した regression baseline を形成している。主な残課題:
 
-- fixture explainability coverage and reason codes ([#5](https://github.com/ayokura/kalimba-transcription/issues/5))
-- `arpeggio` modeling separate from `slide_chord` ([#6](https://github.com/ayokura/kalimba-transcription/issues/6))
-- future source-profile differentiation for app/synth input ([#7](https://github.com/ayokura/kalimba-transcription/issues/7))
-- tempo-estimation optimization ([#10](https://github.com/ayokura/kalimba-transcription/issues/10))
+- **peaks redesign / chord selector** ([#111](https://github.com/ayokura/kalimba-transcription/issues/111)): `_evidence_rescue_gate` の複雑化、sequential accept loop の構造的制約。3-note chord の検出が restart-prefix / restart-tail の pending 理由
+- **ranked candidate 不在問題** ([#125](https://github.com/ayokura/kalimba-transcription/issues/125)): segment 全体の FFT で primary 倍音に吸収される genuine note の検出。onset-focused FFT window 等の spectral acquisition 改善が必要
+- **BWV147 full-sequence** (163-event fixture × 2 が pending): onset detection 層の問題（34-key で 4 events が NO MATCH）と post-processing の fixture-specific debt
+- **`arpeggio` modeling** ([#6](https://github.com/ayokura/kalimba-transcription/issues/6)): `slide_chord` との分離。Phase 1 設計は [arpeggio-design.md](arpeggio-design.md) に記載
 
 ## Active Fixture Policy
 
-### Completed strict four-note reference
-- `kalimba-17-c-e4-g4-b4-d5-four-note-strict-repeat-03`
-- status: `completed`
-- issue: [#1](https://github.com/ayokura/kalimba-transcription/issues/1)
-- note: recognizer now restores `E4+G4+B4+D5 x 6`
+### ステータス分布
 
-### Legacy reference only
-- `kalimba-17-c-e4-g4-b4-d5-four-note-repeat-01`
-- status: `reference_only`
-- reason: missing reliable `captureIntent`, broken scenario metadata, superseded by explicit fixtures
+- `completed` (30): strict regression target。`test_manual_capture_completed.py` が自動検証
+- `pending` (9): recognizer 改善待ち。smoke probe のみ実行
+- `reference_only` (2): 参照用。regression 対象外
+- `review_needed` (1): メタデータ要確認
+- `rerecord` (1): 再録音優先
 
-## User-Facing Gesture Families
+詳細なステータス定義は [testing.md](testing.md) を参照。
 
-Current canonical user-facing families are:
+### Historical context
+- strict four-note reference (`four-note-strict-repeat-02/03/04`): 初期の認識精度検証に使用。現在は 30 completed fixtures のうちの一部
+- legacy four-note reference (`four-note-repeat-01`): `reference_only` — broken scenario metadata
+- BWV147 fixture-specific ルールの管理は [recognizer-local-rules.md](recognizer-local-rules.md) を参照
+
+## ユーザー向け Gesture Families
+
+現在の canonical なファミリー:
 - `strict_chord`
 - `slide_chord`
 - `separated_notes`
 - `ambiguous`
 
-For kalimba semantics, `rolled_chord` and `gliss` are unified as `slide_chord`.
+カリンバのセマンティクスでは、`rolled_chord` と `gliss` は `slide_chord` に統一されている。
 
-## Future Boundary: Arpeggio
+## 将来の境界: Arpeggio
 
-`arpeggio` should **not** be folded into `slide_chord`.
+`arpeggio` は `slide_chord` に統合**すべきではない**。
 
-Why:
-- `slide_chord` still resolves to one chord gesture family
-- `arpeggio` is an ordered broken-chord pattern with distinct time structure
-- later notation and editing will need note order and direction, not just the harmonic set
+理由:
+- `slide_chord` は依然として 1 つの chord gesture family に解決される
+- `arpeggio` は独自の時間構造を持つ ordered broken-chord パターン
+- 将来の記譜・編集ではノート順序と方向が必要（harmonic set だけでは不十分）
 
-Planned direction:
-- keep `arpeggio` separate from `slide_chord`
-- attach it to a main harmonic event or explicitly link it to one
-- avoid double-counting one musical idea as several unrelated top-level chord events
+計画方針:
+- `arpeggio` を `slide_chord` と分離して維持
+- main harmonic event に attach するか、明示的にリンクする
+- 1 つの音楽的アイデアを無関係な複数の top-level chord event として二重計上しない
 
-Tracking issue:
-- [#6](https://github.com/ayokura/kalimba-transcription/issues/6)
+詳細設計: [arpeggio-design.md](arpeggio-design.md)
+Tracking issue: [#6](https://github.com/ayokura/kalimba-transcription/issues/6)
 
 ## Local Rule Debt
 
-For fixture-specific or very local recognizer rules that may become debt for future free-performance transcription, see [recognizer-local-rules.md](recognizer-local-rules.md).
-For Strategy B gap-candidate design and the current candidate/promotion prototype, see [strategy-b-gap-candidates.md](strategy-b-gap-candidates.md).
+fixture 固有または非常に局所的な recognizer ルール（将来の Free Performance 転写で debt になりうるもの）は [recognizer-local-rules.md](recognizer-local-rules.md) を参照。
+Strategy B の gap-candidate 設計と candidate/promotion プロトタイプは [strategy-b-gap-candidates.md](strategy-b-gap-candidates.md) を参照。
 
 ## Immediate Next Engineering Tasks
 
-1. keep the completed strict four-note baseline stable
-2. improve fixture explainability and coverage reporting
-3. prepare `arpeggio` semantics and future source-profile support
-4. keep editor gesture handling safe before adding `arpeggio`
-5. start arpeggio sample collection only after the data model boundary is fixed
+1. 30 completed fixtures の regression baseline を維持する
+2. peaks redesign (#111): chord selector による sequential accept loop の構造改善
+3. ranked candidate 不在問題 (#125): onset-focused FFT window 等の spectral acquisition 改善
+4. BWV147 full-sequence の pending 解消（onset detection 層 + post-processing debt）
+5. `arpeggio` Phase 1 の vocabulary 導入（[arpeggio-design.md](arpeggio-design.md) 参照）
 
-## Suggested Future Sample Matrix
+## 将来のサンプル収集マトリクス
 
-When collection resumes, prefer paired samples for the same pitch set:
+収集再開時は、同じ pitch set に対する paired sample を優先:
 
-### For the same note set
+### 同一ノートセットで
 - `strict_chord`
 - `slide_chord`
 - `arpeggio`
 
-### Suggested note sets
+### 推奨ノートセット
 - `C4 + E4 + G4`
 - `A4 + C5 + E5`
 - `E4 + G4 + B4 + D5`
 
-This will make family boundaries testable without changing pitch content.
+pitch content を変えずに family 境界をテスト可能にする。
 
-Longer term, intent should move from recording-level metadata to event-level metadata. The current one-intent-per-capture model is acceptable only because fixtures are deliberately collected as one-gesture-per-take.
-## Next Recording Priorities
+長期的には、intent は recording-level メタデータから event-level メタデータに移行すべき。現在の one-intent-per-capture モデルは、fixture が意図的に one-gesture-per-take で収集されている間のみ許容される。
+## 次の録音優先度
 
-The current acoustic recognizer no longer has a strong repeated-pattern redesign blocker. The next useful data is directional and register-sensitive practical material.
+現在の acoustic recognizer には repeated-pattern redesign の強い blocker はない。次に有用なデータは方向・音域に敏感な practical material。
 
-### Priority 1: Descending separated-note runs
+### Priority 1: 下降 separated-note run
 
-Purpose:
-- validate whether ascending-only local carryover cleanup generalizes
-- measure whether descending runs need their own logic or only more data
+目的:
+- ascending-only の local carryover cleanup が汎化するか検証
+- descending run に専用ロジックが必要か、データ追加だけで十分かを測定
 
-Suggested captures:
+推奨キャプチャ:
 - E6 -> D6 -> C6 -> B5 -> A5 -> G5 -> F5 -> E5 -> D5 -> C5 -> B4 -> A4 -> G4 -> F4 -> E4 -> D4 -> C4
 - single pass
-- same phrase repeated 3 times without intentional silence between notes
+- 同一フレーズ 3 回繰り返し（ノート間に意図的な無音なし）
 
-### Priority 2: High-register short-tine coverage
+### Priority 2: 高音域 short-tine coverage
 
-Purpose:
-- measure whether D6/E6 need note-specific handling or only better fixture support
-- capture the shorter sustain / different timbre the user identified near the top of the instrument
+目的:
+- D6/E6 にノート固有の処理が必要か、fixture サポートの拡充だけで十分かを測定
+- ユーザーが指摘した楽器上端付近の短い sustain / 異なる timbre をキャプチャ
 
-Suggested captures:
-- alternating D6 / E6 single notes, 5 cycles
-- C6 / D6 / E6 ascending and descending, each 5 cycles
-- short phrase endings such as A5 / B5 / C6 / D6 / E6
+推奨キャプチャ:
+- D6 / E6 交互の単音、5 サイクル
+- C6 / D6 / E6 昇順・降順、各 5 サイクル
+- A5 / B5 / C6 / D6 / E6 などの短いフレーズ末尾
 
-### Priority 3: High-register mixed phrase endings
+### Priority 3: 高音域 mixed phrase endings
 
-Purpose:
-- test whether phrase tails near D6/E6 are still robust when they follow denser mid-register material
+目的:
+- より密な mid-register 素材に続く D6/E6 付近のフレーズ末尾が robust かテスト
 
-Suggested captures:
+推奨キャプチャ:
 - C4 -> ... -> B5 -> C6 -> D6 -> E6
-- E6 -> C4 restart after a brief gap
-- one or two realistic phrase endings rather than isolated unit patterns only
+- E6 -> C4 restart（短い gap の後）
+- 孤立した unit pattern だけでなく、realistic なフレーズ末尾を 1-2 パターン
 
-Collection rule:
-- prefer real-device fixtures
-- keep articulation natural unless the goal specifically requires silence between notes
-- when a phrase mixes techniques, add intent notes in the memo even if the current schema is still recording-level
-## Future Input Source Profiles
+収集ルール:
+- real-device fixture を優先
+- 目的が特にノート間の無音を要求しない限り、自然なアーティキュレーションを維持
+- フレーズ内で technique が混在する場合、現在のスキーマが recording-level でもメモに intent を記載
+## 将来の入力ソースプロファイル
 
-For a detailed comparison between the current acoustic recognizer and the local app/synth reference audio, see [app-synth-audio-gap-analysis.md](C:/src/calimba-score/docs/app-synth-audio-gap-analysis.md).
+現在の acoustic recognizer と local app/synth 参照音声の詳細な比較は [app-synth-audio-gap-analysis.md](app-synth-audio-gap-analysis.md) を参照。
 
+長期的に、recognizer は単一の acoustic 環境を前提とすべきではない。異なる入力ソースを明示的に表現する必要がある。
 
-Long term, the recognizer should not assume one acoustic environment.
-Different input sources should be represented explicitly.
+初期プロファイル分割:
+- `acoustic_real`: マイクで録音された実カリンバ
+- `app_synth`: スマートフォンまたはソフトウェアカリンバアプリの音声/映像
 
-Initial profile split:
-- `acoustic_real`: real kalimba recorded by microphone
-- `app_synth`: smartphone or software kalimba app audio/video
-
-Likely future dimensions inside `acoustic_real`:
+`acoustic_real` 内の将来的な次元:
 - close mic vs room mic
-- quiet room vs noisy room
-- different phone / laptop microphone responses
-- different kalimba models and resonance behavior
+- 静かな部屋 vs 騒がしい部屋
+- 異なる電話 / ラップトップマイクの周波数応答
+- 異なるカリンバモデルと resonance 特性
 
-Policy:
-- primary regression stays on `acoustic_real`
-- app-derived material stays `reference_only` until a separate profile exists
-- source profile should affect fixture status, evaluation policy, and future feature normalization
+ポリシー:
+- primary regression は `acoustic_real` で維持
+- アプリ由来の素材は別プロファイルが存在するまで `reference_only`
+- source profile は fixture status, evaluation policy, 将来の feature normalization に影響すべき
 
-Why this matters:
-- phone app audio can still be useful for pattern discovery and symbolic references
-- but mixing it directly into the real-device regression pool will blur recognizer tuning decisions
+重要な理由:
+- phone app audio はパターン発見やシンボリック参照には依然有用
+- ただし real-device regression pool に直接混在させると recognizer チューニングの判断が曖昧になる
 
-## Smartphone App Reference Video
+## スマートフォンアプリ参照映像
 
-Local path:
+ローカルパス:
 - `C:\src\calimba-score\.codex-media\source-videos\ScreenRecording_03-23-2026_13-09-56_1.mov`
 
-Use it only as:
-- visual vocabulary reference
-- possible future `reference_only` UI material
+用途（許可）:
+- visual vocabulary 参照
+- 将来の `reference_only` UI 素材の候補
 
-Do **not** use it as:
-- acoustic regression input
-- real-device performance ground truth
+用途（禁止）:
+- acoustic regression 入力
+- real-device performance の ground truth
 
-Reason:
-- it reflects app rendering and phone capture behavior, not real kalimba acoustics or hand technique
+理由:
+- アプリのレンダリングと phone capture の挙動を反映しており、実カリンバの acoustics や手の technique ではない
 
 ## App-Video Arpeggio Candidate
 
-The later half of the local smartphone-app reference is not best understood as `slide_chord`.
-It is better treated as an `arpeggio candidate` / broken-chord reference.
+スマートフォンアプリ参照映像の後半は `slide_chord` よりも `arpeggio candidate` / broken-chord 参照として理解するのが適切。
 
-Current evidence from `.codex-media/derived-analysis/kira-kira-expected-performance.json`:
-- strongest candidate block: about `15.41s-22.83s`
-- clearest arpeggio-like sub-block: about `19.25s-20.89s`
-- projected sequence in that sub-block: `F4+F5 / A4 / C5 / A5 / A4 / F4`
+`.codex-media/derived-analysis/kira-kira-expected-performance.json` からの根拠:
+- 最有力候補ブロック: 約 `15.41s-22.83s`
+- 最も明確な arpeggio 風サブブロック: 約 `19.25s-20.89s`
+- そのサブブロックの推定シーケンス: `F4+F5 / A4 / C5 / A5 / A4 / F4`
 
-Interpretation:
-- this is useful as a reference for future `arpeggio` semantics and sample planning
-- it is not a current acoustic regression target
-- it should not be folded into `slide_chord` semantics
+解釈:
+- 将来の `arpeggio` セマンティクスとサンプル計画の参照として有用
+- 現在の acoustic regression target ではない
+- `slide_chord` セマンティクスに統合すべきではない
 
-Near-term use:
-- keep the source media local under `.codex-media/`
-- use the derived event sequence only as `reference_only` design evidence
-- collect equivalent real-device samples before recognizer work starts
+短期的用途:
+- ソースメディアは `.codex-media/` 配下にローカル保持
+- derived event sequence は `reference_only` の設計根拠としてのみ使用
+- recognizer 作業の開始前に同等の real-device sample を収集
 
-## Future Real-Device Sample Families
+## 将来の Real-Device Sample Families
 
-The app-video analysis suggests these real-device families are worth collecting later:
-- wide-register dyads such as `G5 + C4`, `C5 + G4`, `F4 + F5`
-- wide-register triads such as `G5 + E4 + G4`
-- chord-to-single continuations such as `B4 + D5 -> D5`
-- broken-chord / `arpeggio` patterns such as `F4+F5 / A4 / C5 / A5 / A4 / F4`
+app-video 分析から、以下の real-device family が将来の収集候補:
+- wide-register dyad: `G5 + C4`, `C5 + G4`, `F4 + F5`
+- wide-register triad: `G5 + E4 + G4`
+- chord-to-single continuation: `B4 + D5 -> D5`
+- broken-chord / `arpeggio` パターン: `F4+F5 / A4 / C5 / A5 / A4 / F4`
 
-These should be recorded as real-device fixtures, not derived directly from the app video.
+これらは app video から直接導出せず、real-device fixture として録音すべき。
 
-## Recording Request Template
+## 録音リクエストテンプレート
 
-Use this structure whenever asking for new manual data:
+新しいマニュアルデータを依頼する際は以下の構造を使う:
 
-- `goal`
-- `gesture`
-- `notes`
-- `repetitions`
-- `spacing`
-- `success criteria`
+- `goal`: 目的
+- `gesture`: 演奏スタイル
+- `notes`: ノート
+- `repetitions`: 繰り返し回数
+- `spacing`: 間隔
+- `success criteria`: 成功基準
 
-For the current strict four-note rerecord:
-- goal: rebuild clean simultaneous four-note reference
+strict four-note rerecord の例:
+- goal: クリーンな同時 four-note reference の再構築
 - gesture: `strict_chord`
 - notes: `E4 + G4 + B4 + D5`
 - repetitions: `5`
-- spacing: about `1s` silence between takes
-- success criteria: `5 events`, each `E4+G4+B4+D5`
+- spacing: take 間に約 `1s` の無音
+- success criteria: `5 events`、各 `E4+G4+B4+D5`
 

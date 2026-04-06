@@ -1,71 +1,71 @@
 # Recognizer Local Rules Ledger
 
-## Purpose
+## 目的
 
-This document tracks recognizer rules that are either:
-- effectively fixture-specific, or
-- narrow enough that they may become debt for future free-performance transcription without expected metadata.
+以下に該当する recognizer ルールを追跡する:
+- 事実上 fixture 固有のもの
+- 将来の Free Performance 転写（expected metadata なし）で debt になりうるほど狭いもの
 
-The goal is not to remove these rules immediately. The goal is to keep them visible so they can be revisited when:
-- BWV147 practical coverage is broader,
-- scoped-fixture debt is reduced,
-- or free-performance recognition becomes a first-class target.
+これらのルールを即座に削除することが目的ではない。以下の条件が整ったときに再検討できるよう可視化しておくことが目的:
+- BWV147 の practical coverage が拡大した
+- scoped-fixture debt が削減された
+- Free Performance 認識が first-class target になった
 
-## Classification
+## 分類
 
-### Keep For Now
+### Keep For Now（当面維持）
 
-These are local rules, but they currently protect multiple practical fixtures or broad onset quality rather than a single clip.
+局所的なルールだが、複数の practical fixture や広範な onset 品質を保護している。
 
-| Rule / helper | Code path | Current role | Protected practical fixtures / tests | Why keep for now | Future removal trigger |
+| ルール / ヘルパー | コードパス | 現在の役割 | 保護している fixture / テスト | 維持理由 | 将来の削除条件 |
 | --- | --- | --- | --- | --- | --- |
-| `collapse_active_range_head_onsets` | `apps/api/app/transcription.py` | Collapses dense head-onset clusters inside an active range to reduce over-segmentation at phrase starts. | `#30` practical recovery set, verified through `apps/api/tests/test_api.py` and current completed/manual-capture suites | This is a cross-fixture onset-shape fix, not a single BWV rule. | Remove only after a more principled onset-boundary model replaces head-cluster collapse. |
-| `refine_onset_times_by_attack_profile` | `apps/api/app/transcription.py` | Replaces a nearby weak / invalid onset with a stronger valid-attack onset. | `#30` practical recovery set and current manual-capture regressions | This is still local, but it is attack-profile based and broadly useful. | Remove only after onset detection itself reliably resolves close invalid-valid pairs. |
+| `collapse_active_range_head_onsets` | `apps/api/app/transcription/segments.py` | active range 内の密集 head-onset cluster を畳み、フレーズ冒頭の over-segmentation を低減 | `#30` practical recovery set。`test_api.py` および completed/manual-capture suite で検証 | 単一 BWV ルールではなく、cross-fixture の onset-shape 修正 | より原理的な onset-boundary モデルが head-cluster collapse を置き換えた時点 |
+| `refine_onset_times_by_attack_profile` | `apps/api/app/transcription/profiles.py` | 近傍の弱い / invalid onset をより強い valid-attack onset で置換 | `#30` practical recovery set および manual-capture regressions | 局所的だが attack-profile ベースで汎用性がある | onset detection 自体が close invalid-valid ペアを確実に解決できるようになった時点 |
 
-### Candidate For Later Removal
+### Candidate For Later Removal（将来削除候補）
 
-These rules are useful today, but they are strongly tied to particular practical failure shapes. They should be treated as debt and periodically re-evaluated.
+現時点で有用だが、特定の practical failure shape に強く結びついている。debt として定期的に再評価すべき。
 
-| Rule / helper | Code path | Processing summary | Primary purpose | Protected practical fixtures / tests | Debt signal | Preferred long-term replacement |
+| ルール / ヘルパー | コードパス | 処理概要 | 主目的 | 保護している fixture / テスト | debt シグナル | 望ましい長期的代替 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `collect_two_onset_terminal_tail_segments` | `apps/api/app/transcription.py` | When the final active range is followed by exactly two sparse trailing onsets, create two short terminal segments. | Recover sparse late terminal tails. | `kalimba-17-c-bwv147-late-upper-tail-01`; `test_bwv147_late_upper_tail_recovers_sparse_terminal_d5_e5_tail` in `apps/api/tests/test_api.py` | Very tailored to one tail shape: two delayed terminal hits after an otherwise finished phrase. | Better terminal-note modeling or a more general causal tail-segmentation policy. |
-| `recent-upper-octave-alias-primary` promotion | `apps/api/app/transcription.py` | Promotes an upper octave candidate to primary when the current primary looks like a recent lower alias and support is present. | Recover the correct high-register note at restart tails. | `kalimba-17-c-bwv147-restart-tail-01`; `test_bwv147_restart_tail_promotes_recent_upper_octave_alias` | Strongly tied to a high-register alias failure at the tail of a restart phrase. | Better alias modeling at candidate ranking time, instead of post-hoc primary replacement. |
-| `collapse_restart_tail_subset_into_following_chord` | `apps/api/app/transcription.py` | Drops a transient subset event when a following chord clearly absorbs it. | Suppress restart-tail subset blips before the final chord. | `kalimba-17-c-bwv147-restart-tail-01` practical regression path | Pattern-specific post-merge cleanup for one restart-tail failure mode. | Better event bundling around restart tails so subset blips are not emitted. |
-| `suppress_recent_upper_echo_mixed_clusters` | `apps/api/app/transcription.py` | Removes a short upper echo and strips repeated upper carryover from a following mixed cluster. | Prevent extra upper-note echoes / over-bundling in mixed upper BWV phrases. | `kalimba-17-c-bwv147-upper-mixed-cluster-01`; `test_bwv147_upper_cluster_recovers_delayed_terminal_e5` | Highly shaped around one mixed upper echo pattern. | Better carryover / resonance modeling before post-merge cleanup. |
-| `lower-mixed-roll-extension` | `apps/api/app/transcription.py` | Adds one missing lower/mixed note from residual candidates when onset and score constraints are met. | Recover missing `G4`-class lower notes inside mixed lower-roll phrases. | `kalimba-17-c-bwv147-lower-mixed-roll-01`; `kalimba-17-c-bwv147-lower-context-roll-01`; `test_bwv147_lower_mixed_roll_recovers_opening_mixed_dyad_and_long_gap_run`; `test_bwv147_lower_context_roll_matches_completed_nine_event_phrase` | Narrowly tuned to BWV lower-roll vocabulary and onset shape. | Better multi-note selection for lower/mixed phrases without a dedicated extension rule. |
-| ~~`collect_post_sparse_gap_run_segments`~~ | **Removed** — replaced by `_promote_gap_candidates_by_structure` via candidate fallback in `collect_multi_onset_gap_segments`. | — | — | — | — | — |
+| ~~`collect_two_onset_terminal_tail_segments`~~ | **削除済み** (#122) — AVC trailing collector で代替。詳細は [deferred-ideas.md](deferred-ideas.md) の「Terminal collector 5種」を参照 | — | — | — | — | — |
+| `recent-upper-octave-alias-primary` promotion | `apps/api/app/transcription/peaks.py` (`maybe_promote_recent_upper_octave_alias_primary`) | current primary が直近の lower alias に見える場合、upper octave candidate を primary に昇格 | restart tail での正しい高音域ノートの復元 | `kalimba-17-c-bwv147-restart-tail-01`; `test_bwv147_restart_tail_promotes_recent_upper_octave_alias` | restart フレーズ tail の高音域 alias failure に強く結びつく | candidate ranking 時点でのより良い alias 解消（事後的な primary 置換ではなく） |
+| `collapse_restart_tail_subset_into_following_chord` | `apps/api/app/transcription/events.py` | 後続の chord が明らかに吸収する transient subset event を除去 | restart-tail の最終 chord 手前の subset blip を抑制 | `kalimba-17-c-bwv147-restart-tail-01` practical regression path | 1つの restart-tail failure mode に特化した post-merge cleanup | restart tail 周辺でのより良い event bundling（subset blip が生成されないようにする） |
+| `suppress_recent_upper_echo_mixed_clusters` | `apps/api/app/transcription/patterns.py` | 短い upper echo を除去し、後続 mixed cluster から繰り返し upper carryover を除去 | mixed upper BWV フレーズでの extra upper-note echo / over-bundling を防止 | `kalimba-17-c-bwv147-upper-mixed-cluster-01`; `test_bwv147_upper_cluster_recovers_delayed_terminal_e5` | 1つの mixed upper echo パターンに強く特化 | post-merge cleanup 前のより良い carryover / resonance モデリング |
+| `lower-mixed-roll-extension` | `apps/api/app/transcription/peaks.py` (`segment_peaks` 内 inline) | 残余 candidate から onset / score 制約を満たす lower/mixed ノートを 1つ追加 | mixed lower-roll フレーズ内の `G4` クラスの欠落ノートを復元 | `kalimba-17-c-bwv147-lower-mixed-roll-01`; `kalimba-17-c-bwv147-lower-context-roll-01`; `test_bwv147_lower_mixed_roll_recovers_opening_mixed_dyad_and_long_gap_run`; `test_bwv147_lower_context_roll_matches_completed_nine_event_phrase` | BWV lower-roll の語彙と onset shape に狭くチューニングされている | 専用 extension ルールなしでの lower/mixed フレーズ向けのより良い multi-note selection |
+| ~~`collect_post_sparse_gap_run_segments`~~ | **削除済み** — `collect_multi_onset_gap_segments` 内の candidate fallback (`_promote_gap_candidates_by_structure`) で代替 | — | — | — | — | — |
 
 ## Fixture Coverage Map
 
-### BWV147 fixtures currently protected by local rules
+### local rules で保護されている BWV147 fixtures
 
-| Fixture | Status | Local rules that materially protect it | Notes |
+| Fixture | Status | 実質的に保護しているルール | 備考 |
 | --- | --- | --- | --- |
-| `kalimba-17-c-bwv147-restart-prefix-01` | `completed` | none that are clearly fixture-specific today | This is useful as a relatively clean restart baseline. |
-| `kalimba-17-c-bwv147-upper-mixed-cluster-01` | `completed` | `suppress_recent_upper_echo_mixed_clusters`, delayed-terminal-orphan path | Main risk is upper echo / bundle overgrowth. |
-| `kalimba-17-c-bwv147-restart-tail-01` | `completed` | `recent-upper-octave-alias-primary`, `collapse_restart_tail_subset_into_following_chord` | Strong example of restart-tail-specific cleanup debt. |
-| `kalimba-17-c-bwv147-late-upper-tail-01` | `completed` | `collect_two_onset_terminal_tail_segments` | Sparse terminal-tail rescue. |
-| `kalimba-17-c-bwv147-lower-context-roll-01` | `completed` | `lower-mixed-roll-extension`, candidate promotion via `_promote_gap_candidates_by_structure` | Context-preserved lower-roll phrase. |
-| `kalimba-17-c-bwv147-lower-mixed-roll-01` | `pending` | `lower-mixed-roll-extension`, candidate promotion via `_promote_gap_candidates_by_structure` | Current blocker is mainly scoped-evaluation / scoping debt, not recognizer debt. |
-| `kalimba-17-c-bwv147-lower-f4-mixed-run-01` | `pending` | none yet beyond general recognizer behavior | Added as a non-overlapping lower/F4 coverage fixture; current miss shape is still open. |
-| `kalimba-17-c-bwv147-mid-gesture-cluster-01` | `review_needed` | none should be added currently | Main blocker is boundary contamination and failed re-windowing, not recognizer logic. |
-| `kalimba-17-c-bwv147-upper-transition-01` | `reference_only` | none should be added currently | Provenance/scoping mismatch, not an active recognizer target. |
-| `kalimba-17-c-bwv147-restart-high-register-01` | `reference_only` | none should be added currently | Superseded by cleaner restart subsets. |
+| `kalimba-17-c-bwv147-restart-prefix-01` | `pending` | 現時点で明確に fixture 固有のものはなし | 4-note chord (C4+E4+G4+E5) の検出が未完。比較的クリーンな restart baseline |
+| `kalimba-17-c-bwv147-upper-mixed-cluster-01` | `completed` | `suppress_recent_upper_echo_mixed_clusters`, delayed-terminal-orphan path | 主なリスクは upper echo / bundle の過剰成長 |
+| `kalimba-17-c-bwv147-restart-tail-01` | `pending` | `recent-upper-octave-alias-primary`, `collapse_restart_tail_subset_into_following_chord` | 3-note chord の検出が未完。restart-tail-specific cleanup debt の典型例 |
+| `kalimba-17-c-bwv147-late-upper-tail-01` | `completed` | AVC trailing collector (terminal collectors は #122 で削除済み) | sparse terminal-tail の rescue |
+| `kalimba-17-c-bwv147-lower-context-roll-01` | `completed` | `lower-mixed-roll-extension`, `_promote_gap_candidates_by_structure` による candidate promotion | context を保持した lower-roll phrase |
+| `kalimba-17-c-bwv147-lower-mixed-roll-01` | `completed` | `lower-mixed-roll-extension`, `_promote_gap_candidates_by_structure` による candidate promotion | scoped-evaluation 解消により completed に昇格 |
+| `kalimba-17-c-bwv147-lower-f4-mixed-run-01` | `pending` | 一般的な recognizer 動作以外にはまだなし | 非重複の lower/F4 coverage fixture。現在の miss shape はまだ open |
+| `kalimba-17-c-bwv147-mid-gesture-cluster-01` | `review_needed` | 現時点で追加すべきではない | 主な blocker は boundary contamination と re-windowing 失敗（recognizer logic ではない） |
+| `kalimba-17-c-bwv147-upper-transition-01` | `reference_only` | 現時点で追加すべきではない | provenance/scoping の不一致。active な recognizer target ではない |
+| `kalimba-17-c-bwv147-restart-high-register-01` | `reference_only` | 現時点で追加すべきではない | よりクリーンな restart subset に置き換えられた |
 
-### Non-BWV practical coverage touched by local onset logic
+### local onset logic が影響する非 BWV practical coverage
 
-| Rule / area | Protected practical scope |
+| ルール / 領域 | 保護している practical scope |
 | --- | --- |
-| `collapse_active_range_head_onsets` | Current `#30` practical fixture recovery set and associated completed/manual-capture regressions |
-| `refine_onset_times_by_attack_profile` | Current `#30` practical fixture recovery set and associated completed/manual-capture regressions |
+| `collapse_active_range_head_onsets` | `#30` practical fixture recovery set および completed/manual-capture regressions |
+| `refine_onset_times_by_attack_profile` | `#30` practical fixture recovery set および completed/manual-capture regressions |
 
-## Review Guidance
+## レビューガイダンス
 
-When adding another local rule, record all of the following here:
-- exact helper / promotion / suppression name
-- whether it is "Keep For Now" or "Candidate For Later Removal"
-- the fixture(s) that require it
-- the concrete failure shape it patches
-- the long-term replacement that would make it removable
+新しい local rule を追加する際は、以下をすべて記録すること:
+- 正確な helper / promotion / suppression 名
+- "Keep For Now" か "Candidate For Later Removal" か
+- それを必要とする fixture
+- パッチしている具体的な failure shape
+- 削除可能にする長期的な代替
 
-When free-performance recognition becomes an active goal, review the "Candidate For Later Removal" table first.
+Free Performance 認識が active goal になった時点で、"Candidate For Later Removal" テーブルを最初にレビューすること。
