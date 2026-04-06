@@ -7,87 +7,104 @@
       {
         "key": 1,
         "noteName": "D6",
-        "frequency": 1174.6590716696303
+        "frequency": 1174.6590716696303,
+        "layer": 0
       },
       {
         "key": 2,
         "noteName": "B5",
-        "frequency": 987.7666025122483
+        "frequency": 987.7666025122483,
+        "layer": 0
       },
       {
         "key": 3,
         "noteName": "G5",
-        "frequency": 783.9908719634985
+        "frequency": 783.9908719634985,
+        "layer": 0
       },
       {
         "key": 4,
         "noteName": "E5",
-        "frequency": 659.2551138257398
+        "frequency": 659.2551138257398,
+        "layer": 0
       },
       {
         "key": 5,
         "noteName": "C5",
-        "frequency": 523.2511306011972
+        "frequency": 523.2511306011972,
+        "layer": 0
       },
       {
         "key": 6,
         "noteName": "A4",
-        "frequency": 440
+        "frequency": 440.0,
+        "layer": 0
       },
       {
         "key": 7,
         "noteName": "F4",
-        "frequency": 349.2282314330039
+        "frequency": 349.2282314330039,
+        "layer": 0
       },
       {
         "key": 8,
         "noteName": "D4",
-        "frequency": 293.6647679174076
+        "frequency": 293.6647679174076,
+        "layer": 0
       },
       {
         "key": 9,
         "noteName": "C4",
-        "frequency": 261.6255653005986
+        "frequency": 261.6255653005986,
+        "layer": 0
       },
       {
         "key": 10,
         "noteName": "E4",
-        "frequency": 329.6275569128699
+        "frequency": 329.6275569128699,
+        "layer": 0
       },
       {
         "key": 11,
         "noteName": "G4",
-        "frequency": 391.99543598174927
+        "frequency": 391.99543598174927,
+        "layer": 0
       },
       {
         "key": 12,
         "noteName": "B4",
-        "frequency": 493.8833012561241
+        "frequency": 493.8833012561241,
+        "layer": 0
       },
       {
         "key": 13,
         "noteName": "D5",
-        "frequency": 587.3295358348151
+        "frequency": 587.3295358348151,
+        "layer": 0
       },
       {
         "key": 14,
         "noteName": "F5",
-        "frequency": 698.4564628660078
+        "frequency": 698.4564628660078,
+        "layer": 0
       },
       {
         "key": 15,
         "noteName": "A5",
-        "frequency": 880
+        "frequency": 880.0,
+        "layer": 0
       },
       {
         "key": 16,
         "noteName": "C6",
-        "frequency": 1046.5022612023945
+        "frequency": 1046.5022612023945,
+        "layer": 0
       },
       {
         "key": 17,
         "noteName": "E6",
-        "frequency": 1318.5102276514797
+        "frequency": 1318.5102276514797,
+        "layer": 0
       }
     ]
   },
@@ -96,7 +113,7 @@
     {
       "id": "evt-1",
       "startBeat": 5.75,
-      "durationBeat": 1,
+      "durationBeat": 0.75,
       "notes": [
         {
           "key": 17,
@@ -113,7 +130,7 @@
     {
       "id": "evt-2",
       "startBeat": 6.75,
-      "durationBeat": 1,
+      "durationBeat": 1.0,
       "notes": [
         {
           "key": 9,
@@ -129,16 +146,16 @@
     },
     {
       "id": "evt-3",
-      "startBeat": 7.5,
-      "durationBeat": 0.5,
+      "startBeat": 8.0,
+      "durationBeat": 1.0,
       "notes": [
         {
-          "key": 17,
-          "pitchClass": "E",
-          "octave": 6,
-          "labelDoReMi": "ミ..",
-          "labelNumber": "3''",
-          "frequency": 1318.51
+          "key": 8,
+          "pitchClass": "D",
+          "octave": 4,
+          "labelDoReMi": "レ",
+          "labelNumber": "2",
+          "frequency": 293.665
         }
       ],
       "isGlissLike": false,
@@ -146,16 +163,16 @@
     },
     {
       "id": "evt-4",
-      "startBeat": 8,
-      "durationBeat": 1,
+      "startBeat": 9.25,
+      "durationBeat": 1.25,
       "notes": [
         {
-          "key": 8,
-          "pitchClass": "D",
+          "key": 10,
+          "pitchClass": "E",
           "octave": 4,
-          "labelDoReMi": "レ",
-          "labelNumber": "2",
-          "frequency": 293.665
+          "labelDoReMi": "ミ",
+          "labelNumber": "3",
+          "frequency": 329.628
         }
       ],
       "isGlissLike": false,
@@ -163,57 +180,6 @@
     },
     {
       "id": "evt-5",
-      "startBeat": 9.25,
-      "durationBeat": 0.75,
-      "notes": [
-        {
-          "key": 10,
-          "pitchClass": "E",
-          "octave": 4,
-          "labelDoReMi": "ミ",
-          "labelNumber": "3",
-          "frequency": 329.628
-        }
-      ],
-      "isGlissLike": false,
-      "gesture": "ambiguous"
-    },
-    {
-      "id": "evt-6",
-      "startBeat": 9.75,
-      "durationBeat": 0.25,
-      "notes": [
-        {
-          "key": 8,
-          "pitchClass": "D",
-          "octave": 4,
-          "labelDoReMi": "レ",
-          "labelNumber": "2",
-          "frequency": 293.665
-        }
-      ],
-      "isGlissLike": false,
-      "gesture": "ambiguous"
-    },
-    {
-      "id": "evt-7",
-      "startBeat": 10.25,
-      "durationBeat": 0.25,
-      "notes": [
-        {
-          "key": 10,
-          "pitchClass": "E",
-          "octave": 4,
-          "labelDoReMi": "ミ",
-          "labelNumber": "3",
-          "frequency": 329.628
-        }
-      ],
-      "isGlissLike": false,
-      "gesture": "ambiguous"
-    },
-    {
-      "id": "evt-8",
       "startBeat": 10.5,
       "durationBeat": 1.25,
       "notes": [
@@ -230,7 +196,7 @@
       "gesture": "ambiguous"
     },
     {
-      "id": "evt-9",
+      "id": "evt-6",
       "startBeat": 11.5,
       "durationBeat": 1.75,
       "notes": [
@@ -251,9 +217,6 @@
     "western": [
       "E6",
       "C4",
-      "E6",
-      "D4",
-      "E4",
       "D4",
       "E4",
       "F4",
@@ -262,9 +225,6 @@
     "numbered": [
       "3''",
       "1",
-      "3''",
-      "2",
-      "3",
       "2",
       "3",
       "4",
@@ -276,15 +236,6 @@
       ],
       [
         "ド"
-      ],
-      [
-        "ミ.."
-      ],
-      [
-        "レ"
-      ],
-      [
-        "ミ"
       ],
       [
         "レ"
@@ -301,5 +252,5089 @@
     ]
   },
   "warnings": [],
-  "debug": null
+  "debug": {
+    "onsetTimes": [
+      0.058666666666666666,
+      0.09333333333333334,
+      2.3866666666666667,
+      2.7973333333333334,
+      3.1653333333333333,
+      3.3653333333333335,
+      3.832,
+      4.338666666666667,
+      4.818666666666667
+    ],
+    "gapValidatedOnsetTimes": [
+      0.058666666666666666,
+      0.09333333333333334,
+      2.3866666666666667,
+      2.7973333333333334,
+      3.1653333333333333,
+      3.3653333333333335,
+      3.832,
+      4.338666666666667,
+      4.818666666666667
+    ],
+    "attackValidatedGapCandidates": {
+      "interRanges": [
+        []
+      ],
+      "leading": [
+        0.0587
+      ],
+      "trailing": []
+    },
+    "gapIoiDiagnostics": [],
+    "activeRanges": [
+      [
+        2.3693,
+        2.6933
+      ],
+      [
+        2.78,
+        5.568
+      ]
+    ],
+    "rawActiveRanges": [
+      [
+        2.3693,
+        2.6933
+      ],
+      [
+        2.78,
+        3.7733
+      ],
+      [
+        3.676,
+        3.8027
+      ],
+      [
+        3.708,
+        3.832
+      ],
+      [
+        3.7373,
+        3.8613
+      ],
+      [
+        3.7693,
+        3.8907
+      ],
+      [
+        3.7987,
+        3.92
+      ],
+      [
+        3.8253,
+        3.9787
+      ],
+      [
+        3.8813,
+        4.1653
+      ],
+      [
+        4.068,
+        4.192
+      ],
+      [
+        4.0973,
+        4.2187
+      ],
+      [
+        4.1293,
+        4.248
+      ],
+      [
+        4.156,
+        4.2773
+      ],
+      [
+        4.1853,
+        4.304
+      ],
+      [
+        4.2147,
+        4.3333
+      ],
+      [
+        4.244,
+        4.36
+      ],
+      [
+        4.2733,
+        4.3787
+      ],
+      [
+        4.3133,
+        4.5787
+      ],
+      [
+        4.4813,
+        4.632
+      ],
+      [
+        4.5347,
+        4.7253
+      ],
+      [
+        4.628,
+        4.7787
+      ],
+      [
+        4.6973,
+        4.8293
+      ],
+      [
+        4.7507,
+        4.88
+      ],
+      [
+        4.7987,
+        5.568
+      ]
+    ],
+    "shortBridgeActiveRanges": [],
+    "activeRangeSegments": [
+      [
+        2.3867,
+        2.6933
+      ],
+      [
+        2.7973,
+        3.1653
+      ],
+      [
+        3.1653,
+        3.3653
+      ],
+      [
+        3.3653,
+        3.832
+      ],
+      [
+        3.832,
+        4.3387
+      ],
+      [
+        4.3387,
+        4.8187
+      ],
+      [
+        4.8187,
+        5.568
+      ]
+    ],
+    "multiOnsetGapSegments": [],
+    "sparseGapTailSegments": [],
+    "attackValidatedGapSegments": [
+      [
+        0.0587,
+        0.2987
+      ]
+    ],
+    "segments": [
+      [
+        0.0587,
+        0.2987
+      ],
+      [
+        2.3867,
+        2.6933
+      ],
+      [
+        2.7973,
+        3.1653
+      ],
+      [
+        3.1653,
+        3.3653
+      ],
+      [
+        3.3653,
+        3.832
+      ],
+      [
+        3.832,
+        4.3387
+      ],
+      [
+        4.3387,
+        4.8187
+      ],
+      [
+        4.8187,
+        5.568
+      ]
+    ],
+    "rmsThreshold": 0.045613,
+    "tempoRaw": 144.2308,
+    "tempoHopLength": 1024,
+    "tempoAudioDurationSec": 12.3,
+    "tempoEstimationMs": 60.725,
+    "onsetAttackProfiles": {
+      "0.0587": {
+        "broadbandOnsetGain": 2.284833,
+        "highBandSpectralFlux": 739.095459,
+        "broadbandSpectralFlux": 1357.055557,
+        "isValidAttack": true
+      },
+      "0.0933": {
+        "broadbandOnsetGain": 1.736696,
+        "highBandSpectralFlux": 0.936576,
+        "broadbandSpectralFlux": 0.881838,
+        "isValidAttack": false
+      },
+      "2.3867": {
+        "broadbandOnsetGain": 5101.481306,
+        "highBandSpectralFlux": 45.584019,
+        "broadbandSpectralFlux": 68.434767,
+        "isValidAttack": true
+      },
+      "2.7973": {
+        "broadbandOnsetGain": 13.902535,
+        "highBandSpectralFlux": 72.768313,
+        "broadbandSpectralFlux": 13.851626,
+        "isValidAttack": true
+      },
+      "3.1653": {
+        "broadbandOnsetGain": 0.743577,
+        "highBandSpectralFlux": 1.54452,
+        "broadbandSpectralFlux": 0.091097,
+        "isValidAttack": true
+      },
+      "3.3653": {
+        "broadbandOnsetGain": 2.39055,
+        "highBandSpectralFlux": 5.257612,
+        "broadbandSpectralFlux": 1.311077,
+        "isValidAttack": true
+      },
+      "3.832": {
+        "broadbandOnsetGain": 1.330599,
+        "highBandSpectralFlux": 5.480733,
+        "broadbandSpectralFlux": 0.798831,
+        "isValidAttack": true
+      },
+      "4.3387": {
+        "broadbandOnsetGain": 3.301523,
+        "highBandSpectralFlux": 9.842426,
+        "broadbandSpectralFlux": 1.355326,
+        "isValidAttack": true
+      },
+      "4.8187": {
+        "broadbandOnsetGain": 17.809784,
+        "highBandSpectralFlux": 21.449972,
+        "broadbandSpectralFlux": 3.629715,
+        "isValidAttack": true
+      }
+    },
+    "segmentCandidates": [
+      {
+        "startTime": 2.3867,
+        "endTime": 2.6933,
+        "durationSec": 0.3067,
+        "selectedNotes": [
+          "E6"
+        ],
+        "broadbandPreAttackEnergy": 0.0,
+        "broadbandAttackEnergy": 0.006014,
+        "broadbandSustainEnergy": 0.001684,
+        "broadbandOnsetGain": 5101.481306,
+        "broadbandAttackToSustainRatio": 3.570255,
+        "spectralFlux": 68.434767,
+        "highBandSpectralFlux": 45.584019,
+        "primaryCandidate": {
+          "noteName": "E6",
+          "score": 529.326775,
+          "fundamentalEnergy": 362.553836,
+          "overtoneEnergy": 18.876558,
+          "fundamentalRatio": 0.950511,
+          "subharmonicAliasEnergy": 0.252665,
+          "octaveAliasEnergy": 0.181135,
+          "octaveAliasRatio": 0.0005,
+          "octaveAliasPenalty": 0.0,
+          "harmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 1318.51,
+              "energy": 362.553836,
+              "weight": 1.0
+            },
+            {
+              "multiple": 2.0,
+              "frequency": 2637.02,
+              "energy": 33.442176,
+              "weight": 0.55
+            },
+            {
+              "multiple": 3.0,
+              "frequency": 3955.531,
+              "energy": 0.577532,
+              "weight": 0.3
+            },
+            {
+              "multiple": 4.0,
+              "frequency": 5274.041,
+              "energy": 2.067343,
+              "weight": 0.15
+            }
+          ],
+          "subharmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 659.255,
+              "energy": 0.181135
+            },
+            {
+              "multiple": 0.5,
+              "frequency": 439.503,
+              "energy": 0.279711
+            }
+          ],
+          "preAttackEnergy": 0.024016,
+          "attackEnergy": 184.359142,
+          "sustainEnergy": 99.298033,
+          "attackToSustainRatio": 1.856624,
+          "candidateOnsetGain": 7676.261056
+        },
+        "primaryOnsetGain": 7676.261056,
+        "primaryPromotion": null,
+        "rankedCandidates": [
+          {
+            "noteName": "E6",
+            "score": 529.326775,
+            "fundamentalEnergy": 362.553836,
+            "overtoneEnergy": 18.876558,
+            "fundamentalRatio": 0.950511,
+            "subharmonicAliasEnergy": 0.252665,
+            "octaveAliasEnergy": 0.181135,
+            "octaveAliasRatio": 0.0005,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1318.51,
+                "energy": 362.553836,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2637.02,
+                "energy": 33.442176,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3955.531,
+                "energy": 0.577532,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 5274.041,
+                "energy": 2.067343,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 0.181135
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 439.503,
+                "energy": 0.279711
+              }
+            ],
+            "preAttackEnergy": 0.024016,
+            "attackEnergy": 184.359142,
+            "sustainEnergy": 99.298033,
+            "attackToSustainRatio": 1.856624,
+            "candidateOnsetGain": 7676.261056
+          },
+          {
+            "noteName": "E5",
+            "score": 40.735339,
+            "fundamentalEnergy": 0.181135,
+            "overtoneEnergy": 204.475425,
+            "fundamentalRatio": 0.000885,
+            "subharmonicAliasEnergy": 0.334393,
+            "octaveAliasEnergy": 0.26089,
+            "octaveAliasRatio": 1.440305,
+            "octaveAliasPenalty": 0.221757,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 0.181135,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 1318.51,
+                "energy": 362.553836,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1977.765,
+                "energy": 0.18163,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 2637.02,
+                "energy": 33.442176,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 0.26089
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 219.752,
+                "energy": 0.337266
+              }
+            ],
+            "preAttackEnergy": 0.017275,
+            "attackEnergy": 0.524126,
+            "sustainEnergy": 0.042617,
+            "attackToSustainRatio": 12.298224,
+            "candidateOnsetGain": 30.338217
+          },
+          {
+            "noteName": "C6",
+            "score": 34.368993,
+            "fundamentalEnergy": 23.729219,
+            "overtoneEnergy": 0.786072,
+            "fundamentalRatio": 0.967935,
+            "subharmonicAliasEnergy": 0.325982,
+            "octaveAliasEnergy": 0.282874,
+            "octaveAliasRatio": 0.011921,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1046.502,
+                "energy": 23.729219,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2093.005,
+                "energy": 0.706492,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3139.507,
+                "energy": 1.129,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 4186.009,
+                "energy": 0.392005,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 523.251,
+                "energy": 0.282874
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 348.834,
+                "energy": 0.284378
+              }
+            ],
+            "preAttackEnergy": 0.007428,
+            "attackEnergy": 12.390592,
+            "sustainEnergy": 7.576712,
+            "attackToSustainRatio": 1.635352,
+            "candidateOnsetGain": 1667.970564
+          },
+          {
+            "noteName": "A4",
+            "score": 21.850164,
+            "fundamentalEnergy": 0.279711,
+            "overtoneEnergy": 111.349878,
+            "fundamentalRatio": 0.002506,
+            "subharmonicAliasEnergy": 0.897861,
+            "octaveAliasEnergy": 0.337266,
+            "octaveAliasRatio": 1.205766,
+            "octaveAliasPenalty": 0.286676,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 440.0,
+                "energy": 0.279711,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 880.0,
+                "energy": 4.64982,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1320.0,
+                "energy": 362.553836,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1760.0,
+                "energy": 0.17551,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 220.0,
+                "energy": 0.337266
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 146.667,
+                "energy": 1.470611
+              }
+            ],
+            "preAttackEnergy": 0.084321,
+            "attackEnergy": 0.568015,
+            "sustainEnergy": 0.103614,
+            "attackToSustainRatio": 5.481975,
+            "candidateOnsetGain": 6.736308
+          },
+          {
+            "noteName": "A5",
+            "score": 8.724195,
+            "fundamentalEnergy": 4.64982,
+            "overtoneEnergy": 10.83682,
+            "fundamentalRatio": 0.300247,
+            "subharmonicAliasEnergy": 0.309013,
+            "octaveAliasEnergy": 0.279711,
+            "octaveAliasRatio": 0.060155,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 880.0,
+                "energy": 4.64982,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 1760.0,
+                "energy": 0.17551,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 2640.0,
+                "energy": 33.442176,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 3520.0,
+                "energy": 4.717577,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 440.0,
+                "energy": 0.279711
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 293.333,
+                "energy": 0.251591
+              }
+            ],
+            "preAttackEnergy": 0.009771,
+            "attackEnergy": 2.432187,
+            "sustainEnergy": 1.579445,
+            "attackToSustainRatio": 1.539899,
+            "candidateOnsetGain": 248.885825
+          }
+        ],
+        "residualCandidates": [
+          {
+            "noteName": "E6",
+            "score": 42.206671,
+            "fundamentalEnergy": 29.004307,
+            "overtoneEnergy": 1.510125,
+            "fundamentalRatio": 0.950511,
+            "subharmonicAliasEnergy": 0.252665,
+            "octaveAliasEnergy": 0.181135,
+            "octaveAliasRatio": 0.006245,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1318.51,
+                "energy": 29.004307,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2637.02,
+                "energy": 2.675374,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3955.531,
+                "energy": 0.046203,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 5274.041,
+                "energy": 0.165387,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 0.181135
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 439.503,
+                "energy": 0.279711
+              }
+            ],
+            "preAttackEnergy": 0.024016,
+            "attackEnergy": 184.359142,
+            "sustainEnergy": 99.298033,
+            "attackToSustainRatio": 1.856624,
+            "candidateOnsetGain": 7676.261056
+          },
+          {
+            "noteName": "C6",
+            "score": 34.368993,
+            "fundamentalEnergy": 23.729219,
+            "overtoneEnergy": 0.786072,
+            "fundamentalRatio": 0.967935,
+            "subharmonicAliasEnergy": 0.325982,
+            "octaveAliasEnergy": 0.282874,
+            "octaveAliasRatio": 0.011921,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1046.502,
+                "energy": 23.729219,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2093.005,
+                "energy": 0.706492,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3139.507,
+                "energy": 1.129,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 4186.009,
+                "energy": 0.392005,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 523.251,
+                "energy": 0.282874
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 348.834,
+                "energy": 0.284378
+              }
+            ],
+            "preAttackEnergy": 0.007428,
+            "attackEnergy": 12.390592,
+            "sustainEnergy": 7.576712,
+            "attackToSustainRatio": 1.635352,
+            "candidateOnsetGain": 1667.970564
+          },
+          {
+            "noteName": "A5",
+            "score": 6.878187,
+            "fundamentalEnergy": 4.64982,
+            "overtoneEnergy": 1.606779,
+            "fundamentalRatio": 0.743186,
+            "subharmonicAliasEnergy": 0.309013,
+            "octaveAliasEnergy": 0.279711,
+            "octaveAliasRatio": 0.060155,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 880.0,
+                "energy": 4.64982,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 1760.0,
+                "energy": 0.17551,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 2640.0,
+                "energy": 2.675374,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 3520.0,
+                "energy": 4.717577,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 440.0,
+                "energy": 0.279711
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 293.333,
+                "energy": 0.251591
+              }
+            ],
+            "preAttackEnergy": 0.009771,
+            "attackEnergy": 2.432187,
+            "sustainEnergy": 1.579445,
+            "attackToSustainRatio": 1.539899,
+            "candidateOnsetGain": 248.885825
+          },
+          {
+            "noteName": "E5",
+            "score": 3.121887,
+            "fundamentalEnergy": 0.181135,
+            "overtoneEnergy": 16.408164,
+            "fundamentalRatio": 0.010919,
+            "subharmonicAliasEnergy": 0.334393,
+            "octaveAliasEnergy": 0.26089,
+            "octaveAliasRatio": 1.440305,
+            "octaveAliasPenalty": 0.221757,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 0.181135,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 1318.51,
+                "energy": 29.004307,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1977.765,
+                "energy": 0.18163,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 2637.02,
+                "energy": 2.675374,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 0.26089
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 219.752,
+                "energy": 0.337266
+              }
+            ],
+            "preAttackEnergy": 0.017275,
+            "attackEnergy": 0.524126,
+            "sustainEnergy": 0.042617,
+            "attackToSustainRatio": 12.298224,
+            "candidateOnsetGain": 30.338217
+          },
+          {
+            "noteName": "D6",
+            "score": 2.580856,
+            "fundamentalEnergy": 1.59557,
+            "overtoneEnergy": 1.853984,
+            "fundamentalRatio": 0.462544,
+            "subharmonicAliasEnergy": 0.172529,
+            "octaveAliasEnergy": 0.124507,
+            "octaveAliasRatio": 0.078033,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1174.659,
+                "energy": 1.59557,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2349.318,
+                "energy": 0.491782,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3523.977,
+                "energy": 4.717577,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 4698.636,
+                "energy": 1.121541,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 587.33,
+                "energy": 0.124507
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 391.553,
+                "energy": 0.189719
+              }
+            ],
+            "preAttackEnergy": 0.034242,
+            "attackEnergy": 2.734767,
+            "sustainEnergy": 0.543888,
+            "attackToSustainRatio": 5.028177,
+            "candidateOnsetGain": 79.863626
+          }
+        ],
+        "secondaryDecisionTrail": [
+          {
+            "noteName": "E6",
+            "score": 42.206671,
+            "fundamentalRatio": 0.950511,
+            "onsetGain": 7676.261056,
+            "accepted": false,
+            "reasons": [
+              "same-as-primary",
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "C6",
+            "score": 34.368993,
+            "fundamentalRatio": 0.967935,
+            "onsetGain": 1667.970564,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "A5",
+            "score": 6.878187,
+            "fundamentalRatio": 0.743186,
+            "onsetGain": 248.885825,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E5",
+            "score": 3.121887,
+            "fundamentalRatio": 0.010919,
+            "onsetGain": 30.338217,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "D6",
+            "score": 2.580856,
+            "fundamentalRatio": 0.462544,
+            "onsetGain": 79.863626,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "A4",
+            "score": 1.837192,
+            "fundamentalRatio": 0.024187,
+            "onsetGain": 6.736308,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "C5",
+            "score": 1.498419,
+            "fundamentalRatio": 0.020852,
+            "onsetGain": 29.13181,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "B5",
+            "score": 1.442518,
+            "fundamentalRatio": 0.4823,
+            "onsetGain": 127.372869,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          }
+        ],
+        "rawPeaks": [
+          {
+            "frequency": 1318.359,
+            "amplitude": 362.553836,
+            "snappedNote": "E6",
+            "centsToSnapped": 0.198
+          },
+          {
+            "frequency": 2636.719,
+            "amplitude": 33.442176,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 1048.828,
+            "amplitude": 23.729219,
+            "snappedNote": "C6",
+            "centsToSnapped": 3.843
+          },
+          {
+            "frequency": 58.594,
+            "amplitude": 19.400424,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 64.453,
+            "amplitude": 19.028579,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 105.469,
+            "amplitude": 11.374807,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 111.328,
+            "amplitude": 9.372324,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 99.609,
+            "amplitude": 8.792644,
+            "snappedNote": null,
+            "centsToSnapped": null
+          }
+        ],
+        "previousGapSec": 2.088,
+        "nextGapSec": 0.104,
+        "segmentOnsets": [
+          2.3867
+        ],
+        "localOnsetCount": 1,
+        "activeRangeStart": 2.3693,
+        "activeRangeEnd": 2.6933,
+        "backtrackedStartTime": 2.3693,
+        "activeRangeOnsets": [
+          2.3867
+        ],
+        "activeRangeOnsetCount": 1,
+        "segmentSource": [
+          "activeRange"
+        ]
+      },
+      {
+        "startTime": 2.7973,
+        "endTime": 3.1653,
+        "durationSec": 0.368,
+        "selectedNotes": [
+          "C4"
+        ],
+        "broadbandPreAttackEnergy": 0.00097,
+        "broadbandAttackEnergy": 0.013499,
+        "broadbandSustainEnergy": 0.004798,
+        "broadbandOnsetGain": 13.902535,
+        "broadbandAttackToSustainRatio": 2.813045,
+        "spectralFlux": 13.851626,
+        "highBandSpectralFlux": 72.768313,
+        "primaryCandidate": {
+          "noteName": "C4",
+          "score": 618.1436,
+          "fundamentalEnergy": 427.911382,
+          "overtoneEnergy": 7.086081,
+          "fundamentalRatio": 0.98371,
+          "subharmonicAliasEnergy": 6.241867,
+          "octaveAliasEnergy": 2.808378,
+          "octaveAliasRatio": 0.006563,
+          "octaveAliasPenalty": 0.0,
+          "harmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 261.626,
+              "energy": 427.911382,
+              "weight": 1.0
+            },
+            {
+              "multiple": 2.0,
+              "frequency": 523.251,
+              "energy": 10.018879,
+              "weight": 0.55
+            },
+            {
+              "multiple": 3.0,
+              "frequency": 784.877,
+              "energy": 0.798667,
+              "weight": 0.3
+            },
+            {
+              "multiple": 4.0,
+              "frequency": 1046.502,
+              "energy": 8.907316,
+              "weight": 0.15
+            }
+          ],
+          "subharmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 130.813,
+              "energy": 2.808378
+            },
+            {
+              "multiple": 0.5,
+              "frequency": 87.209,
+              "energy": 9.502228
+            }
+          ],
+          "preAttackEnergy": 0.126306,
+          "attackEnergy": 242.389277,
+          "sustainEnergy": 173.557219,
+          "attackToSustainRatio": 1.396596,
+          "candidateOnsetGain": 1919.052062
+        },
+        "primaryOnsetGain": 1919.052062,
+        "primaryPromotion": null,
+        "rankedCandidates": [
+          {
+            "noteName": "C4",
+            "score": 618.1436,
+            "fundamentalEnergy": 427.911382,
+            "overtoneEnergy": 7.086081,
+            "fundamentalRatio": 0.98371,
+            "subharmonicAliasEnergy": 6.241867,
+            "octaveAliasEnergy": 2.808378,
+            "octaveAliasRatio": 0.006563,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 261.626,
+                "energy": 427.911382,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 523.251,
+                "energy": 10.018879,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 784.877,
+                "energy": 0.798667,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1046.502,
+                "energy": 8.907316,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 130.813,
+                "energy": 2.808378
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 87.209,
+                "energy": 9.502228
+              }
+            ],
+            "preAttackEnergy": 0.126306,
+            "attackEnergy": 242.389277,
+            "sustainEnergy": 173.557219,
+            "attackToSustainRatio": 1.396596,
+            "candidateOnsetGain": 1919.052062
+          },
+          {
+            "noteName": "E6",
+            "score": 185.322958,
+            "fundamentalEnergy": 125.839947,
+            "overtoneEnergy": 17.048857,
+            "fundamentalRatio": 0.880684,
+            "subharmonicAliasEnergy": 0.924561,
+            "octaveAliasEnergy": 0.346126,
+            "octaveAliasRatio": 0.002751,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1318.51,
+                "energy": 125.839947,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2637.02,
+                "energy": 23.296634,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3955.531,
+                "energy": 7.079767,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 5274.041,
+                "energy": 14.07852,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 0.346126
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 439.503,
+                "energy": 1.516162
+              }
+            ],
+            "preAttackEnergy": 75.004309,
+            "attackEnergy": 63.438529,
+            "sustainEnergy": 25.794346,
+            "attackToSustainRatio": 2.459397,
+            "candidateOnsetGain": 0.845798
+          },
+          {
+            "noteName": "E4",
+            "score": 9.52602,
+            "fundamentalEnergy": 5.413047,
+            "overtoneEnergy": 19.293109,
+            "fundamentalRatio": 0.219097,
+            "subharmonicAliasEnergy": 3.635866,
+            "octaveAliasEnergy": 2.226804,
+            "octaveAliasRatio": 0.411377,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 5.413047,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 659.255,
+                "energy": 0.346126,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 988.883,
+                "energy": 0.755828,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1318.51,
+                "energy": 125.839947,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 164.814,
+                "energy": 2.226804
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 109.876,
+                "energy": 4.615786
+              }
+            ],
+            "preAttackEnergy": 0.09934,
+            "attackEnergy": 4.293124,
+            "sustainEnergy": 1.689823,
+            "attackToSustainRatio": 2.540575,
+            "candidateOnsetGain": 43.216204
+          },
+          {
+            "noteName": "C6",
+            "score": 8.296422,
+            "fundamentalEnergy": 8.907316,
+            "overtoneEnergy": 1.055258,
+            "fundamentalRatio": 0.894078,
+            "subharmonicAliasEnergy": 8.050396,
+            "octaveAliasEnergy": 10.018879,
+            "octaveAliasRatio": 1.124792,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1046.502,
+                "energy": 8.907316,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2093.005,
+                "energy": 0.981585,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3139.507,
+                "energy": 0.798834,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 4186.009,
+                "energy": 1.838244,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 523.251,
+                "energy": 10.018879
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 348.834,
+                "energy": 2.304847
+              }
+            ],
+            "preAttackEnergy": 5.701776,
+            "attackEnergy": 4.529012,
+            "sustainEnergy": 2.170652,
+            "attackToSustainRatio": 2.086475,
+            "candidateOnsetGain": 0.794316
+          },
+          {
+            "noteName": "A4",
+            "score": 8.037973,
+            "fundamentalEnergy": 1.516162,
+            "overtoneEnergy": 41.711655,
+            "fundamentalRatio": 0.035074,
+            "subharmonicAliasEnergy": 4.171321,
+            "octaveAliasEnergy": 1.558848,
+            "octaveAliasRatio": 1.028154,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 440.0,
+                "energy": 1.516162,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 880.0,
+                "energy": 2.547958,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1320.0,
+                "energy": 125.839947,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1760.0,
+                "energy": 17.055292,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 220.0,
+                "energy": 1.558848
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 146.667,
+                "energy": 6.844727
+              }
+            ],
+            "preAttackEnergy": 0.039063,
+            "attackEnergy": 1.259787,
+            "sustainEnergy": 0.50229,
+            "attackToSustainRatio": 2.508084,
+            "candidateOnsetGain": 32.248927
+          }
+        ],
+        "residualCandidates": [
+          {
+            "noteName": "E6",
+            "score": 185.322958,
+            "fundamentalEnergy": 125.839947,
+            "overtoneEnergy": 17.048857,
+            "fundamentalRatio": 0.880684,
+            "subharmonicAliasEnergy": 0.924561,
+            "octaveAliasEnergy": 0.346126,
+            "octaveAliasRatio": 0.002751,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1318.51,
+                "energy": 125.839947,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2637.02,
+                "energy": 23.296634,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3955.531,
+                "energy": 7.079767,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 5274.041,
+                "energy": 14.07852,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 0.346126
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 439.503,
+                "energy": 1.516162
+              }
+            ],
+            "preAttackEnergy": 75.004309,
+            "attackEnergy": 63.438529,
+            "sustainEnergy": 25.794346,
+            "attackToSustainRatio": 2.459397,
+            "candidateOnsetGain": 0.845798
+          },
+          {
+            "noteName": "C4",
+            "score": 46.005977,
+            "fundamentalEnergy": 34.232911,
+            "overtoneEnergy": 0.566886,
+            "fundamentalRatio": 0.98371,
+            "subharmonicAliasEnergy": 6.241867,
+            "octaveAliasEnergy": 2.808378,
+            "octaveAliasRatio": 0.082037,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 261.626,
+                "energy": 34.232911,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 523.251,
+                "energy": 0.80151,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 784.877,
+                "energy": 0.063893,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1046.502,
+                "energy": 0.712585,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 130.813,
+                "energy": 2.808378
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 87.209,
+                "energy": 9.502228
+              }
+            ],
+            "preAttackEnergy": 0.126306,
+            "attackEnergy": 242.389277,
+            "sustainEnergy": 173.557219,
+            "attackToSustainRatio": 1.396596,
+            "candidateOnsetGain": 1919.052062
+          },
+          {
+            "noteName": "E4",
+            "score": 9.52602,
+            "fundamentalEnergy": 5.413047,
+            "overtoneEnergy": 19.293109,
+            "fundamentalRatio": 0.219097,
+            "subharmonicAliasEnergy": 3.635866,
+            "octaveAliasEnergy": 2.226804,
+            "octaveAliasRatio": 0.411377,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 5.413047,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 659.255,
+                "energy": 0.346126,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 988.883,
+                "energy": 0.755828,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1318.51,
+                "energy": 125.839947,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 164.814,
+                "energy": 2.226804
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 109.876,
+                "energy": 4.615786
+              }
+            ],
+            "preAttackEnergy": 0.09934,
+            "attackEnergy": 4.293124,
+            "sustainEnergy": 1.689823,
+            "attackToSustainRatio": 2.540575,
+            "candidateOnsetGain": 43.216204
+          },
+          {
+            "noteName": "A4",
+            "score": 8.037973,
+            "fundamentalEnergy": 1.516162,
+            "overtoneEnergy": 41.711655,
+            "fundamentalRatio": 0.035074,
+            "subharmonicAliasEnergy": 4.171321,
+            "octaveAliasEnergy": 1.558848,
+            "octaveAliasRatio": 1.028154,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 440.0,
+                "energy": 1.516162,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 880.0,
+                "energy": 2.547958,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1320.0,
+                "energy": 125.839947,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1760.0,
+                "energy": 17.055292,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 220.0,
+                "energy": 1.558848
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 146.667,
+                "energy": 6.844727
+              }
+            ],
+            "preAttackEnergy": 0.039063,
+            "attackEnergy": 1.259787,
+            "sustainEnergy": 0.50229,
+            "attackToSustainRatio": 2.508084,
+            "candidateOnsetGain": 32.248927
+          },
+          {
+            "noteName": "E5",
+            "score": 7.907099,
+            "fundamentalEnergy": 0.346126,
+            "overtoneEnergy": 73.503375,
+            "fundamentalRatio": 0.004687,
+            "subharmonicAliasEnergy": 4.490615,
+            "octaveAliasEnergy": 5.413047,
+            "octaveAliasRatio": 15.638959,
+            "octaveAliasPenalty": 4.60109,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 0.346126,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 1318.51,
+                "energy": 125.839947,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1977.765,
+                "energy": 2.656364,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 2637.02,
+                "energy": 23.296634,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 5.413047
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 219.752,
+                "energy": 1.558848
+              }
+            ],
+            "preAttackEnergy": 0.034198,
+            "attackEnergy": 0.467069,
+            "sustainEnergy": 0.054373,
+            "attackToSustainRatio": 8.589959,
+            "candidateOnsetGain": 13.657326
+          }
+        ],
+        "secondaryDecisionTrail": [
+          {
+            "noteName": "E6",
+            "score": 185.322958,
+            "fundamentalRatio": 0.880684,
+            "onsetGain": 0.845798,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "C4",
+            "score": 46.005977,
+            "fundamentalRatio": 0.98371,
+            "onsetGain": null,
+            "accepted": false,
+            "reasons": [
+              "same-as-primary",
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E4",
+            "score": 9.52602,
+            "fundamentalRatio": 0.219097,
+            "onsetGain": 43.216204,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "A4",
+            "score": 8.037973,
+            "fundamentalRatio": 0.035074,
+            "onsetGain": null,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E5",
+            "score": 7.907099,
+            "fundamentalRatio": 0.004687,
+            "onsetGain": null,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "D4",
+            "score": 7.700198,
+            "fundamentalRatio": 0.846365,
+            "onsetGain": null,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "A5",
+            "score": 4.186681,
+            "fundamentalRatio": 0.129269,
+            "onsetGain": null,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "D6",
+            "score": 2.489263,
+            "fundamentalRatio": 0.212981,
+            "onsetGain": 2.558625,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          }
+        ],
+        "rawPeaks": [
+          {
+            "frequency": 257.812,
+            "amplitude": 427.911382,
+            "snappedNote": "C4",
+            "centsToSnapped": 25.418
+          },
+          {
+            "frequency": 263.672,
+            "amplitude": 427.147391,
+            "snappedNote": "C4",
+            "centsToSnapped": 13.488
+          },
+          {
+            "frequency": 1710.938,
+            "amplitude": 161.367564,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 1318.359,
+            "amplitude": 125.839947,
+            "snappedNote": "E6",
+            "centsToSnapped": 0.198
+          },
+          {
+            "frequency": 251.953,
+            "amplitude": 112.558992,
+            "snappedNote": "C4",
+            "centsToSnapped": 65.218
+          },
+          {
+            "frequency": 269.531,
+            "amplitude": 107.337696,
+            "snappedNote": "C4",
+            "centsToSnapped": 51.539
+          },
+          {
+            "frequency": 2607.422,
+            "amplitude": 23.296634,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 275.391,
+            "amplitude": 20.10685,
+            "snappedNote": null,
+            "centsToSnapped": null
+          }
+        ],
+        "previousGapSec": 0.104,
+        "nextGapSec": 0.0,
+        "segmentOnsets": [
+          2.7973,
+          3.1653
+        ],
+        "localOnsetCount": 2,
+        "activeRangeStart": 2.78,
+        "activeRangeEnd": 5.568,
+        "backtrackedStartTime": 2.78,
+        "activeRangeOnsets": [
+          2.7973,
+          3.1653,
+          3.3653,
+          3.832,
+          4.3387,
+          4.8187
+        ],
+        "activeRangeOnsetCount": 6,
+        "segmentSource": [
+          "activeRange"
+        ]
+      },
+      {
+        "startTime": 3.165333,
+        "endTime": 3.365333,
+        "durationSec": 0.2,
+        "selectedNotes": [],
+        "primaryNote": "C4",
+        "droppedBy": "residual-decay-no-reattack"
+      },
+      {
+        "startTime": 3.3653,
+        "endTime": 3.832,
+        "durationSec": 0.4667,
+        "selectedNotes": [
+          "D4"
+        ],
+        "broadbandPreAttackEnergy": 0.002508,
+        "broadbandAttackEnergy": 0.005997,
+        "broadbandSustainEnergy": 0.002718,
+        "broadbandOnsetGain": 2.39055,
+        "broadbandAttackToSustainRatio": 2.205918,
+        "spectralFlux": 1.311077,
+        "highBandSpectralFlux": 5.257612,
+        "primaryCandidate": {
+          "noteName": "D4",
+          "score": 431.411134,
+          "fundamentalEnergy": 298.280702,
+          "overtoneEnergy": 3.561989,
+          "fundamentalRatio": 0.988199,
+          "subharmonicAliasEnergy": 3.013802,
+          "octaveAliasEnergy": 3.569,
+          "octaveAliasRatio": 0.011965,
+          "octaveAliasPenalty": 0.0,
+          "harmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 293.665,
+              "energy": 298.280702,
+              "weight": 1.0
+            },
+            {
+              "multiple": 2.0,
+              "frequency": 587.33,
+              "energy": 5.516647,
+              "weight": 0.55
+            },
+            {
+              "multiple": 3.0,
+              "frequency": 880.994,
+              "energy": 1.085168,
+              "weight": 0.3
+            },
+            {
+              "multiple": 4.0,
+              "frequency": 1174.659,
+              "energy": 1.348551,
+              "weight": 0.15
+            }
+          ],
+          "subharmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 146.832,
+              "energy": 3.569
+            },
+            {
+              "multiple": 0.5,
+              "frequency": 97.888,
+              "energy": 1.145562
+            }
+          ],
+          "preAttackEnergy": 2.999701,
+          "attackEnergy": 155.118259,
+          "sustainEnergy": 107.742559,
+          "attackToSustainRatio": 1.439712,
+          "candidateOnsetGain": 51.711218
+        },
+        "primaryOnsetGain": 51.711218,
+        "primaryPromotion": null,
+        "rankedCandidates": [
+          {
+            "noteName": "D4",
+            "score": 431.411134,
+            "fundamentalEnergy": 298.280702,
+            "overtoneEnergy": 3.561989,
+            "fundamentalRatio": 0.988199,
+            "subharmonicAliasEnergy": 3.013802,
+            "octaveAliasEnergy": 3.569,
+            "octaveAliasRatio": 0.011965,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 293.665,
+                "energy": 298.280702,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 587.33,
+                "energy": 5.516647,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 880.994,
+                "energy": 1.085168,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1174.659,
+                "energy": 1.348551,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 146.832,
+                "energy": 3.569
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 97.888,
+                "energy": 1.145562
+              }
+            ],
+            "preAttackEnergy": 2.999701,
+            "attackEnergy": 155.118259,
+            "sustainEnergy": 107.742559,
+            "attackToSustainRatio": 1.439712,
+            "candidateOnsetGain": 51.711218
+          },
+          {
+            "noteName": "C4",
+            "score": 289.302665,
+            "fundamentalEnergy": 199.700269,
+            "overtoneEnergy": 2.00381,
+            "fundamentalRatio": 0.990066,
+            "subharmonicAliasEnergy": 1.105812,
+            "octaveAliasEnergy": 0.695387,
+            "octaveAliasRatio": 0.003482,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 261.626,
+                "energy": 199.700269,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 523.251,
+                "energy": 3.190279,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 784.877,
+                "energy": 0.179293,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1046.502,
+                "energy": 1.302455,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 130.813,
+                "energy": 0.695387
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 87.209,
+                "energy": 1.375646
+              }
+            ],
+            "preAttackEnergy": 128.866956,
+            "attackEnergy": 114.106466,
+            "sustainEnergy": 82.861371,
+            "attackToSustainRatio": 1.377077,
+            "candidateOnsetGain": 0.885459
+          },
+          {
+            "noteName": "E6",
+            "score": 30.352842,
+            "fundamentalEnergy": 21.129377,
+            "overtoneEnergy": 0.830973,
+            "fundamentalRatio": 0.96216,
+            "subharmonicAliasEnergy": 0.751583,
+            "octaveAliasEnergy": 0.26458,
+            "octaveAliasRatio": 0.012522,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1318.51,
+                "energy": 21.129377,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2637.02,
+                "energy": 0.660679,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3955.531,
+                "energy": 0.488661,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 5274.041,
+                "energy": 2.140005,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 0.26458
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 439.503,
+                "energy": 1.258617
+              }
+            ],
+            "preAttackEnergy": 13.22773,
+            "attackEnergy": 10.586401,
+            "sustainEnergy": 2.756051,
+            "attackToSustainRatio": 3.841148,
+            "candidateOnsetGain": 0.800319
+          },
+          {
+            "noteName": "F4",
+            "score": 4.735183,
+            "fundamentalEnergy": 3.903156,
+            "overtoneEnergy": 0.673241,
+            "fundamentalRatio": 0.852888,
+            "subharmonicAliasEnergy": 1.765069,
+            "octaveAliasEnergy": 0.771407,
+            "octaveAliasRatio": 0.197637,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 349.228,
+                "energy": 3.903156,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 698.456,
+                "energy": 0.336024,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1047.685,
+                "energy": 1.302455,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1396.913,
+                "energy": 0.651279,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 174.614,
+                "energy": 0.771407
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 116.409,
+                "energy": 2.722409
+              }
+            ],
+            "preAttackEnergy": 0.317056,
+            "attackEnergy": 1.588216,
+            "sustainEnergy": 1.326217,
+            "attackToSustainRatio": 1.197554,
+            "candidateOnsetGain": 5.009252
+          },
+          {
+            "noteName": "E4",
+            "score": 4.110703,
+            "fundamentalEnergy": 3.285926,
+            "overtoneEnergy": 3.471963,
+            "fundamentalRatio": 0.486236,
+            "subharmonicAliasEnergy": 2.247137,
+            "octaveAliasEnergy": 1.269091,
+            "octaveAliasRatio": 0.38622,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 3.285926,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 659.255,
+                "energy": 0.26458,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 988.883,
+                "energy": 0.52346,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1318.51,
+                "energy": 21.129377,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 164.814,
+                "energy": 1.269091
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 109.876,
+                "energy": 3.019496
+              }
+            ],
+            "preAttackEnergy": 1.549446,
+            "attackEnergy": 1.477817,
+            "sustainEnergy": 1.607064,
+            "attackToSustainRatio": 0.919576,
+            "candidateOnsetGain": 0.953771
+          }
+        ],
+        "residualCandidates": [
+          {
+            "noteName": "C4",
+            "score": 289.302665,
+            "fundamentalEnergy": 199.700269,
+            "overtoneEnergy": 2.00381,
+            "fundamentalRatio": 0.990066,
+            "subharmonicAliasEnergy": 1.105812,
+            "octaveAliasEnergy": 0.695387,
+            "octaveAliasRatio": 0.003482,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 261.626,
+                "energy": 199.700269,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 523.251,
+                "energy": 3.190279,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 784.877,
+                "energy": 0.179293,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1046.502,
+                "energy": 1.302455,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 130.813,
+                "energy": 0.695387
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 87.209,
+                "energy": 1.375646
+              }
+            ],
+            "preAttackEnergy": 128.866956,
+            "attackEnergy": 114.106466,
+            "sustainEnergy": 82.861371,
+            "attackToSustainRatio": 1.377077,
+            "candidateOnsetGain": 0.885459
+          },
+          {
+            "noteName": "D4",
+            "score": 32.849272,
+            "fundamentalEnergy": 23.862456,
+            "overtoneEnergy": 0.284959,
+            "fundamentalRatio": 0.988199,
+            "subharmonicAliasEnergy": 3.013802,
+            "octaveAliasEnergy": 3.569,
+            "octaveAliasRatio": 0.149565,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 293.665,
+                "energy": 23.862456,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 587.33,
+                "energy": 0.441332,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 880.994,
+                "energy": 0.086813,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1174.659,
+                "energy": 0.107884,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 146.832,
+                "energy": 3.569
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 97.888,
+                "energy": 1.145562
+              }
+            ],
+            "preAttackEnergy": 2.999701,
+            "attackEnergy": 155.118259,
+            "sustainEnergy": 107.742559,
+            "attackToSustainRatio": 1.439712,
+            "candidateOnsetGain": 51.711218
+          },
+          {
+            "noteName": "E6",
+            "score": 30.352842,
+            "fundamentalEnergy": 21.129377,
+            "overtoneEnergy": 0.830973,
+            "fundamentalRatio": 0.96216,
+            "subharmonicAliasEnergy": 0.751583,
+            "octaveAliasEnergy": 0.26458,
+            "octaveAliasRatio": 0.012522,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1318.51,
+                "energy": 21.129377,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2637.02,
+                "energy": 0.660679,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3955.531,
+                "energy": 0.488661,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 5274.041,
+                "energy": 2.140005,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 0.26458
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 439.503,
+                "energy": 1.258617
+              }
+            ],
+            "preAttackEnergy": 13.22773,
+            "attackEnergy": 10.586401,
+            "sustainEnergy": 2.756051,
+            "attackToSustainRatio": 3.841148,
+            "candidateOnsetGain": 0.800319
+          },
+          {
+            "noteName": "F4",
+            "score": 4.735183,
+            "fundamentalEnergy": 3.903156,
+            "overtoneEnergy": 0.673241,
+            "fundamentalRatio": 0.852888,
+            "subharmonicAliasEnergy": 1.765069,
+            "octaveAliasEnergy": 0.771407,
+            "octaveAliasRatio": 0.197637,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 349.228,
+                "energy": 3.903156,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 698.456,
+                "energy": 0.336024,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1047.685,
+                "energy": 1.302455,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1396.913,
+                "energy": 0.651279,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 174.614,
+                "energy": 0.771407
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 116.409,
+                "energy": 2.722409
+              }
+            ],
+            "preAttackEnergy": 0.317056,
+            "attackEnergy": 1.588216,
+            "sustainEnergy": 1.326217,
+            "attackToSustainRatio": 1.197554,
+            "candidateOnsetGain": 5.009252
+          },
+          {
+            "noteName": "E4",
+            "score": 4.110703,
+            "fundamentalEnergy": 3.285926,
+            "overtoneEnergy": 3.471963,
+            "fundamentalRatio": 0.486236,
+            "subharmonicAliasEnergy": 2.247137,
+            "octaveAliasEnergy": 1.269091,
+            "octaveAliasRatio": 0.38622,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 3.285926,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 659.255,
+                "energy": 0.26458,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 988.883,
+                "energy": 0.52346,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1318.51,
+                "energy": 21.129377,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 164.814,
+                "energy": 1.269091
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 109.876,
+                "energy": 3.019496
+              }
+            ],
+            "preAttackEnergy": 1.549446,
+            "attackEnergy": 1.477817,
+            "sustainEnergy": 1.607064,
+            "attackToSustainRatio": 0.919576,
+            "candidateOnsetGain": 0.953771
+          }
+        ],
+        "secondaryDecisionTrail": [
+          {
+            "noteName": "C4",
+            "score": 289.302665,
+            "fundamentalRatio": 0.990066,
+            "onsetGain": 0.885459,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "D4",
+            "score": 32.849272,
+            "fundamentalRatio": 0.988199,
+            "onsetGain": null,
+            "accepted": false,
+            "reasons": [
+              "same-as-primary",
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E6",
+            "score": 30.352842,
+            "fundamentalRatio": 0.96216,
+            "onsetGain": 0.800319,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "recent-carryover-candidate",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "F4",
+            "score": 4.735183,
+            "fundamentalRatio": 0.852888,
+            "onsetGain": 5.009252,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E4",
+            "score": 4.110703,
+            "fundamentalRatio": 0.486236,
+            "onsetGain": 0.953771,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "G4",
+            "score": 1.861199,
+            "fundamentalRatio": 0.931872,
+            "onsetGain": 0.942529,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "B5",
+            "score": 0.647819,
+            "fundamentalRatio": 0.050353,
+            "onsetGain": 3.710569,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "A4",
+            "score": -0.027913,
+            "fundamentalRatio": 0.156908,
+            "onsetGain": 3.356958,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          }
+        ],
+        "rawPeaks": [
+          {
+            "frequency": 292.969,
+            "amplitude": 298.280702,
+            "snappedNote": "D4",
+            "centsToSnapped": 4.108
+          },
+          {
+            "frequency": 263.672,
+            "amplitude": 199.700269,
+            "snappedNote": "C4",
+            "centsToSnapped": 13.488
+          },
+          {
+            "frequency": 257.812,
+            "amplitude": 198.713515,
+            "snappedNote": "C4",
+            "centsToSnapped": 25.418
+          },
+          {
+            "frequency": 269.531,
+            "amplitude": 49.276875,
+            "snappedNote": "C4",
+            "centsToSnapped": 51.539
+          },
+          {
+            "frequency": 251.953,
+            "amplitude": 45.89268,
+            "snappedNote": "C4",
+            "centsToSnapped": 65.218
+          },
+          {
+            "frequency": 1710.938,
+            "amplitude": 27.42909,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 304.688,
+            "amplitude": 23.229579,
+            "snappedNote": "D4",
+            "centsToSnapped": 63.792
+          },
+          {
+            "frequency": 1318.359,
+            "amplitude": 21.129377,
+            "snappedNote": "E6",
+            "centsToSnapped": 0.198
+          }
+        ],
+        "previousGapSec": 0.0,
+        "nextGapSec": 0.0,
+        "segmentOnsets": [
+          3.3653,
+          3.832
+        ],
+        "localOnsetCount": 2,
+        "activeRangeStart": 2.78,
+        "activeRangeEnd": 5.568,
+        "backtrackedStartTime": 2.78,
+        "activeRangeOnsets": [
+          2.7973,
+          3.1653,
+          3.3653,
+          3.832,
+          4.3387,
+          4.8187
+        ],
+        "activeRangeOnsetCount": 6,
+        "segmentSource": [
+          "activeRange"
+        ]
+      },
+      {
+        "startTime": 3.832,
+        "endTime": 4.3387,
+        "durationSec": 0.5067,
+        "selectedNotes": [
+          "E4"
+        ],
+        "broadbandPreAttackEnergy": 0.002718,
+        "broadbandAttackEnergy": 0.003617,
+        "broadbandSustainEnergy": 0.001874,
+        "broadbandOnsetGain": 1.330599,
+        "broadbandAttackToSustainRatio": 1.929395,
+        "spectralFlux": 0.798831,
+        "highBandSpectralFlux": 5.480733,
+        "primaryCandidate": {
+          "noteName": "E4",
+          "score": 331.425462,
+          "fundamentalEnergy": 228.681858,
+          "overtoneEnergy": 1.948986,
+          "fundamentalRatio": 0.991549,
+          "subharmonicAliasEnergy": 0.921714,
+          "octaveAliasEnergy": 1.053446,
+          "octaveAliasRatio": 0.004607,
+          "octaveAliasPenalty": 0.0,
+          "harmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 329.628,
+              "energy": 228.681858,
+              "weight": 1.0
+            },
+            {
+              "multiple": 2.0,
+              "frequency": 659.255,
+              "energy": 2.429236,
+              "weight": 0.55
+            },
+            {
+              "multiple": 3.0,
+              "frequency": 988.883,
+              "energy": 0.238305,
+              "weight": 0.3
+            },
+            {
+              "multiple": 4.0,
+              "frequency": 1318.51,
+              "energy": 3.609432,
+              "weight": 0.15
+            }
+          ],
+          "subharmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 164.814,
+              "energy": 1.053446
+            },
+            {
+              "multiple": 0.5,
+              "frequency": 109.876,
+              "energy": 0.40956
+            }
+          ],
+          "preAttackEnergy": 1.607064,
+          "attackEnergy": 104.082246,
+          "sustainEnergy": 71.772461,
+          "attackToSustainRatio": 1.45017,
+          "candidateOnsetGain": 64.765432
+        },
+        "primaryOnsetGain": 64.765432,
+        "primaryPromotion": null,
+        "rankedCandidates": [
+          {
+            "noteName": "E4",
+            "score": 331.425462,
+            "fundamentalEnergy": 228.681858,
+            "overtoneEnergy": 1.948986,
+            "fundamentalRatio": 0.991549,
+            "subharmonicAliasEnergy": 0.921714,
+            "octaveAliasEnergy": 1.053446,
+            "octaveAliasRatio": 0.004607,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 228.681858,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 659.255,
+                "energy": 2.429236,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 988.883,
+                "energy": 0.238305,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1318.51,
+                "energy": 3.609432,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 164.814,
+                "energy": 1.053446
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 109.876,
+                "energy": 0.40956
+              }
+            ],
+            "preAttackEnergy": 1.607064,
+            "attackEnergy": 104.082246,
+            "sustainEnergy": 71.772461,
+            "attackToSustainRatio": 1.45017,
+            "candidateOnsetGain": 64.765432
+          },
+          {
+            "noteName": "D4",
+            "score": 310.716065,
+            "fundamentalEnergy": 214.712457,
+            "overtoneEnergy": 1.781542,
+            "fundamentalRatio": 0.991771,
+            "subharmonicAliasEnergy": 1.622176,
+            "octaveAliasEnergy": 1.508895,
+            "octaveAliasRatio": 0.007028,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 293.665,
+                "energy": 214.712457,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 587.33,
+                "energy": 2.929041,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 880.994,
+                "energy": 0.393287,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1174.659,
+                "energy": 0.350557,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 146.832,
+                "energy": 1.508895
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 97.888,
+                "energy": 1.257666
+              }
+            ],
+            "preAttackEnergy": 107.742559,
+            "attackEnergy": 105.213441,
+            "sustainEnergy": 69.908069,
+            "attackToSustainRatio": 1.505026,
+            "candidateOnsetGain": 0.976526
+          },
+          {
+            "noteName": "C4",
+            "score": 254.342853,
+            "fundamentalEnergy": 175.683837,
+            "overtoneEnergy": 1.312613,
+            "fundamentalRatio": 0.992584,
+            "subharmonicAliasEnergy": 1.102056,
+            "octaveAliasEnergy": 0.780454,
+            "octaveAliasRatio": 0.004442,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 261.626,
+                "energy": 175.683837,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 523.251,
+                "energy": 2.216106,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 784.877,
+                "energy": 0.221653,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1046.502,
+                "energy": 0.181728,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 130.813,
+                "energy": 0.780454
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 87.209,
+                "energy": 1.234975
+              }
+            ],
+            "preAttackEnergy": 82.861371,
+            "attackEnergy": 80.784538,
+            "sustainEnergy": 53.010829,
+            "attackToSustainRatio": 1.523925,
+            "candidateOnsetGain": 0.974936
+          },
+          {
+            "noteName": "F4",
+            "score": 5.38685,
+            "fundamentalEnergy": 3.881756,
+            "overtoneEnergy": 0.957493,
+            "fundamentalRatio": 0.80214,
+            "subharmonicAliasEnergy": 0.721991,
+            "octaveAliasEnergy": 0.697033,
+            "octaveAliasRatio": 0.179566,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 349.228,
+                "energy": 3.881756,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 698.456,
+                "energy": 0.333669,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1047.685,
+                "energy": 0.181728,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1396.913,
+                "energy": 4.796379,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 174.614,
+                "energy": 0.697033
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 116.409,
+                "energy": 0.52015
+              }
+            ],
+            "preAttackEnergy": 1.326217,
+            "attackEnergy": 11.544013,
+            "sustainEnergy": 6.233022,
+            "attackToSustainRatio": 1.852073,
+            "candidateOnsetGain": 8.704462
+          },
+          {
+            "noteName": "E6",
+            "score": 4.645135,
+            "fundamentalEnergy": 3.609432,
+            "overtoneEnergy": 3.204787,
+            "fundamentalRatio": 0.529691,
+            "subharmonicAliasEnergy": 2.049166,
+            "octaveAliasEnergy": 2.429236,
+            "octaveAliasRatio": 0.673024,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1318.51,
+                "energy": 3.609432,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2637.02,
+                "energy": 5.707528,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3955.531,
+                "energy": 0.070135,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 5274.041,
+                "energy": 0.297372,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 2.429236
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 439.503,
+                "energy": 0.77489
+              }
+            ],
+            "preAttackEnergy": 2.756051,
+            "attackEnergy": 2.005565,
+            "sustainEnergy": 0.105932,
+            "attackToSustainRatio": 18.932405,
+            "candidateOnsetGain": 0.727695
+          }
+        ],
+        "residualCandidates": [
+          {
+            "noteName": "D4",
+            "score": 310.716065,
+            "fundamentalEnergy": 214.712457,
+            "overtoneEnergy": 1.781542,
+            "fundamentalRatio": 0.991771,
+            "subharmonicAliasEnergy": 1.622176,
+            "octaveAliasEnergy": 1.508895,
+            "octaveAliasRatio": 0.007028,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 293.665,
+                "energy": 214.712457,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 587.33,
+                "energy": 2.929041,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 880.994,
+                "energy": 0.393287,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1174.659,
+                "energy": 0.350557,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 146.832,
+                "energy": 1.508895
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 97.888,
+                "energy": 1.257666
+              }
+            ],
+            "preAttackEnergy": 107.742559,
+            "attackEnergy": 105.213441,
+            "sustainEnergy": 69.908069,
+            "attackToSustainRatio": 1.505026,
+            "candidateOnsetGain": 0.976526
+          },
+          {
+            "noteName": "C4",
+            "score": 254.342853,
+            "fundamentalEnergy": 175.683837,
+            "overtoneEnergy": 1.312613,
+            "fundamentalRatio": 0.992584,
+            "subharmonicAliasEnergy": 1.102056,
+            "octaveAliasEnergy": 0.780454,
+            "octaveAliasRatio": 0.004442,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 261.626,
+                "energy": 175.683837,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 523.251,
+                "energy": 2.216106,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 784.877,
+                "energy": 0.221653,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1046.502,
+                "energy": 0.181728,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 130.813,
+                "energy": 0.780454
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 87.209,
+                "energy": 1.234975
+              }
+            ],
+            "preAttackEnergy": 82.861371,
+            "attackEnergy": 80.784538,
+            "sustainEnergy": 53.010829,
+            "attackToSustainRatio": 1.523925,
+            "candidateOnsetGain": 0.974936
+          },
+          {
+            "noteName": "E4",
+            "score": 26.005251,
+            "fundamentalEnergy": 18.294549,
+            "overtoneEnergy": 0.155919,
+            "fundamentalRatio": 0.991549,
+            "subharmonicAliasEnergy": 0.921714,
+            "octaveAliasEnergy": 1.053446,
+            "octaveAliasRatio": 0.057583,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 18.294549,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 659.255,
+                "energy": 0.194339,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 988.883,
+                "energy": 0.019064,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1318.51,
+                "energy": 0.288755,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 164.814,
+                "energy": 1.053446
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 109.876,
+                "energy": 0.40956
+              }
+            ],
+            "preAttackEnergy": 1.607064,
+            "attackEnergy": 104.082246,
+            "sustainEnergy": 71.772461,
+            "attackToSustainRatio": 1.45017,
+            "candidateOnsetGain": 64.765432
+          },
+          {
+            "noteName": "F4",
+            "score": 5.38685,
+            "fundamentalEnergy": 3.881756,
+            "overtoneEnergy": 0.957493,
+            "fundamentalRatio": 0.80214,
+            "subharmonicAliasEnergy": 0.721991,
+            "octaveAliasEnergy": 0.697033,
+            "octaveAliasRatio": 0.179566,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 349.228,
+                "energy": 3.881756,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 698.456,
+                "energy": 0.333669,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1047.685,
+                "energy": 0.181728,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1396.913,
+                "energy": 4.796379,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 174.614,
+                "energy": 0.697033
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 116.409,
+                "energy": 0.52015
+              }
+            ],
+            "preAttackEnergy": 1.326217,
+            "attackEnergy": 11.544013,
+            "sustainEnergy": 6.233022,
+            "attackToSustainRatio": 1.852073,
+            "candidateOnsetGain": 8.704462
+          },
+          {
+            "noteName": "G4",
+            "score": 2.154588,
+            "fundamentalEnergy": 1.960265,
+            "overtoneEnergy": 0.237425,
+            "fundamentalRatio": 0.891966,
+            "subharmonicAliasEnergy": 1.225469,
+            "octaveAliasEnergy": 1.24895,
+            "octaveAliasRatio": 0.637133,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 391.995,
+                "energy": 1.960265,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 783.991,
+                "energy": 0.221653,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1175.986,
+                "energy": 0.350557,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1567.982,
+                "energy": 0.068991,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 195.998,
+                "energy": 1.24895
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 130.665,
+                "energy": 0.780454
+              }
+            ],
+            "preAttackEnergy": 0.369073,
+            "attackEnergy": 1.05978,
+            "sustainEnergy": 0.823807,
+            "attackToSustainRatio": 1.286443,
+            "candidateOnsetGain": 2.871456
+          }
+        ],
+        "secondaryDecisionTrail": [
+          {
+            "noteName": "D4",
+            "score": 310.716065,
+            "fundamentalRatio": 0.991771,
+            "onsetGain": 0.976526,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "C4",
+            "score": 254.342853,
+            "fundamentalRatio": 0.992584,
+            "onsetGain": 0.974936,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E4",
+            "score": 26.005251,
+            "fundamentalRatio": 0.991549,
+            "onsetGain": null,
+            "accepted": false,
+            "reasons": [
+              "same-as-primary",
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "F4",
+            "score": 5.38685,
+            "fundamentalRatio": 0.80214,
+            "onsetGain": 8.704462,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "G4",
+            "score": 2.154588,
+            "fundamentalRatio": 0.891966,
+            "onsetGain": 2.871456,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E6",
+            "score": 0.768809,
+            "fundamentalRatio": 0.082654,
+            "onsetGain": 0.727695,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low",
+              "recent-carryover-candidate",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "A4",
+            "score": -0.507223,
+            "fundamentalRatio": 0.676768,
+            "onsetGain": 0.94581,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "C6",
+            "score": -1.655464,
+            "fundamentalRatio": 0.377752,
+            "onsetGain": 0.797765,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          }
+        ],
+        "rawPeaks": [
+          {
+            "frequency": 331.055,
+            "amplitude": 228.681858,
+            "snappedNote": "E4",
+            "centsToSnapped": 7.479
+          },
+          {
+            "frequency": 292.969,
+            "amplitude": 214.712457,
+            "snappedNote": "D4",
+            "centsToSnapped": 4.108
+          },
+          {
+            "frequency": 260.742,
+            "amplitude": 175.683837,
+            "snappedNote": "C4",
+            "centsToSnapped": 5.855
+          },
+          {
+            "frequency": 266.602,
+            "amplitude": 82.873757,
+            "snappedNote": "C4",
+            "centsToSnapped": 32.618
+          },
+          {
+            "frequency": 254.883,
+            "amplitude": 81.528983,
+            "snappedNote": "C4",
+            "centsToSnapped": 45.203
+          },
+          {
+            "frequency": 301.758,
+            "amplitude": 59.743382,
+            "snappedNote": "D4",
+            "centsToSnapped": 47.065
+          },
+          {
+            "frequency": 2188.477,
+            "amplitude": 46.66467,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 322.266,
+            "amplitude": 38.96775,
+            "snappedNote": "E4",
+            "centsToSnapped": 39.104
+          }
+        ],
+        "previousGapSec": 0.0,
+        "nextGapSec": 0.0,
+        "segmentOnsets": [
+          3.832,
+          4.3387
+        ],
+        "localOnsetCount": 2,
+        "activeRangeStart": 2.78,
+        "activeRangeEnd": 5.568,
+        "backtrackedStartTime": 2.78,
+        "activeRangeOnsets": [
+          2.7973,
+          3.1653,
+          3.3653,
+          3.832,
+          4.3387,
+          4.8187
+        ],
+        "activeRangeOnsetCount": 6,
+        "segmentSource": [
+          "activeRange"
+        ]
+      },
+      {
+        "startTime": 4.3387,
+        "endTime": 4.8187,
+        "durationSec": 0.48,
+        "selectedNotes": [
+          "F4"
+        ],
+        "broadbandPreAttackEnergy": 0.001874,
+        "broadbandAttackEnergy": 0.00619,
+        "broadbandSustainEnergy": 0.002261,
+        "broadbandOnsetGain": 3.301523,
+        "broadbandAttackToSustainRatio": 2.737432,
+        "spectralFlux": 1.355326,
+        "highBandSpectralFlux": 9.842426,
+        "primaryCandidate": {
+          "noteName": "F4",
+          "score": 434.986428,
+          "fundamentalEnergy": 299.983981,
+          "overtoneEnergy": 2.82367,
+          "fundamentalRatio": 0.990675,
+          "subharmonicAliasEnergy": 0.925129,
+          "octaveAliasEnergy": 0.969332,
+          "octaveAliasRatio": 0.003231,
+          "octaveAliasPenalty": 0.0,
+          "harmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 349.228,
+              "energy": 299.983981,
+              "weight": 1.0
+            },
+            {
+              "multiple": 2.0,
+              "frequency": 698.456,
+              "energy": 4.980568,
+              "weight": 0.55
+            },
+            {
+              "multiple": 3.0,
+              "frequency": 1047.685,
+              "energy": 0.097006,
+              "weight": 0.3
+            },
+            {
+              "multiple": 4.0,
+              "frequency": 1396.913,
+              "energy": 0.368371,
+              "weight": 0.15
+            }
+          ],
+          "subharmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 174.614,
+              "energy": 0.969332
+            },
+            {
+              "multiple": 0.5,
+              "frequency": 116.409,
+              "energy": 0.547994
+            }
+          ],
+          "preAttackEnergy": 6.233022,
+          "attackEnergy": 155.306581,
+          "sustainEnergy": 113.708027,
+          "attackToSustainRatio": 1.365837,
+          "candidateOnsetGain": 24.916735
+        },
+        "primaryOnsetGain": 24.916735,
+        "primaryPromotion": null,
+        "rankedCandidates": [
+          {
+            "noteName": "F4",
+            "score": 434.986428,
+            "fundamentalEnergy": 299.983981,
+            "overtoneEnergy": 2.82367,
+            "fundamentalRatio": 0.990675,
+            "subharmonicAliasEnergy": 0.925129,
+            "octaveAliasEnergy": 0.969332,
+            "octaveAliasRatio": 0.003231,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 349.228,
+                "energy": 299.983981,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 698.456,
+                "energy": 4.980568,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1047.685,
+                "energy": 0.097006,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1396.913,
+                "energy": 0.368371,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 174.614,
+                "energy": 0.969332
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 116.409,
+                "energy": 0.547994
+              }
+            ],
+            "preAttackEnergy": 6.233022,
+            "attackEnergy": 155.306581,
+            "sustainEnergy": 113.708027,
+            "attackToSustainRatio": 1.365837,
+            "candidateOnsetGain": 24.916735
+          },
+          {
+            "noteName": "D4",
+            "score": 187.292629,
+            "fundamentalEnergy": 129.697689,
+            "overtoneEnergy": 0.982842,
+            "fundamentalRatio": 0.992479,
+            "subharmonicAliasEnergy": 1.609314,
+            "octaveAliasEnergy": 1.329657,
+            "octaveAliasRatio": 0.010252,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 293.665,
+                "energy": 129.697689,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 587.33,
+                "energy": 1.609388,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 880.994,
+                "energy": 0.179605,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1174.659,
+                "energy": 0.291981,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 146.832,
+                "energy": 1.329657
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 97.888,
+                "energy": 1.507898
+              }
+            ],
+            "preAttackEnergy": 69.908069,
+            "attackEnergy": 66.939951,
+            "sustainEnergy": 45.212055,
+            "attackToSustainRatio": 1.480577,
+            "candidateOnsetGain": 0.957543
+          },
+          {
+            "noteName": "E4",
+            "score": 183.358727,
+            "fundamentalEnergy": 126.922161,
+            "overtoneEnergy": 0.661663,
+            "fundamentalRatio": 0.994814,
+            "subharmonicAliasEnergy": 1.351232,
+            "octaveAliasEnergy": 1.634496,
+            "octaveAliasRatio": 0.012878,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 126.922161,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 659.255,
+                "energy": 1.083317,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 988.883,
+                "energy": 0.079089,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1318.51,
+                "energy": 0.280746,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 164.814,
+                "energy": 1.634496
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 109.876,
+                "energy": 0.460189
+              }
+            ],
+            "preAttackEnergy": 71.772461,
+            "attackEnergy": 66.387568,
+            "sustainEnergy": 56.582604,
+            "attackToSustainRatio": 1.173286,
+            "candidateOnsetGain": 0.924973
+          },
+          {
+            "noteName": "C4",
+            "score": 118.699628,
+            "fundamentalEnergy": 82.365609,
+            "overtoneEnergy": 0.735321,
+            "fundamentalRatio": 0.991151,
+            "subharmonicAliasEnergy": 1.462616,
+            "octaveAliasEnergy": 0.606785,
+            "octaveAliasRatio": 0.007367,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 261.626,
+                "energy": 82.365609,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 523.251,
+                "energy": 1.132888,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 784.877,
+                "energy": 0.325608,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1046.502,
+                "energy": 0.097006,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 130.813,
+                "energy": 0.606785
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 87.209,
+                "energy": 2.306371
+              }
+            ],
+            "preAttackEnergy": 53.010829,
+            "attackEnergy": 46.232183,
+            "sustainEnergy": 30.222441,
+            "attackToSustainRatio": 1.52973,
+            "candidateOnsetGain": 0.872127
+          },
+          {
+            "noteName": "D6",
+            "score": 14.72677,
+            "fundamentalEnergy": 0.291981,
+            "overtoneEnergy": 85.546169,
+            "fundamentalRatio": 0.003402,
+            "subharmonicAliasEnergy": 2.396427,
+            "octaveAliasEnergy": 1.609388,
+            "octaveAliasRatio": 5.511965,
+            "octaveAliasPenalty": 1.36798,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1174.659,
+                "energy": 0.291981,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2349.318,
+                "energy": 155.122079,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3523.977,
+                "energy": 0.364493,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 4698.636,
+                "energy": 0.797854,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 587.33,
+                "energy": 1.609388
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 391.553,
+                "energy": 2.821901
+              }
+            ],
+            "preAttackEnergy": 0.054696,
+            "attackEnergy": 0.211501,
+            "sustainEnergy": 0.034547,
+            "attackToSustainRatio": 6.122052,
+            "candidateOnsetGain": 3.8668
+          }
+        ],
+        "residualCandidates": [
+          {
+            "noteName": "D4",
+            "score": 187.292629,
+            "fundamentalEnergy": 129.697689,
+            "overtoneEnergy": 0.982842,
+            "fundamentalRatio": 0.992479,
+            "subharmonicAliasEnergy": 1.609314,
+            "octaveAliasEnergy": 1.329657,
+            "octaveAliasRatio": 0.010252,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 293.665,
+                "energy": 129.697689,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 587.33,
+                "energy": 1.609388,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 880.994,
+                "energy": 0.179605,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1174.659,
+                "energy": 0.291981,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 146.832,
+                "energy": 1.329657
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 97.888,
+                "energy": 1.507898
+              }
+            ],
+            "preAttackEnergy": 69.908069,
+            "attackEnergy": 66.939951,
+            "sustainEnergy": 45.212055,
+            "attackToSustainRatio": 1.480577,
+            "candidateOnsetGain": 0.957543
+          },
+          {
+            "noteName": "E4",
+            "score": 183.358727,
+            "fundamentalEnergy": 126.922161,
+            "overtoneEnergy": 0.661663,
+            "fundamentalRatio": 0.994814,
+            "subharmonicAliasEnergy": 1.351232,
+            "octaveAliasEnergy": 1.634496,
+            "octaveAliasRatio": 0.012878,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 126.922161,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 659.255,
+                "energy": 1.083317,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 988.883,
+                "energy": 0.079089,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1318.51,
+                "energy": 0.280746,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 164.814,
+                "energy": 1.634496
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 109.876,
+                "energy": 0.460189
+              }
+            ],
+            "preAttackEnergy": 71.772461,
+            "attackEnergy": 66.387568,
+            "sustainEnergy": 56.582604,
+            "attackToSustainRatio": 1.173286,
+            "candidateOnsetGain": 0.924973
+          },
+          {
+            "noteName": "C4",
+            "score": 118.69695,
+            "fundamentalEnergy": 82.365609,
+            "overtoneEnergy": 0.721935,
+            "fundamentalRatio": 0.991311,
+            "subharmonicAliasEnergy": 1.462616,
+            "octaveAliasEnergy": 0.606785,
+            "octaveAliasRatio": 0.007367,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 261.626,
+                "energy": 82.365609,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 523.251,
+                "energy": 1.132888,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 784.877,
+                "energy": 0.325608,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1046.502,
+                "energy": 0.00776,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 130.813,
+                "energy": 0.606785
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 87.209,
+                "energy": 2.306371
+              }
+            ],
+            "preAttackEnergy": 53.010829,
+            "attackEnergy": 46.232183,
+            "sustainEnergy": 30.222441,
+            "attackToSustainRatio": 1.52973,
+            "candidateOnsetGain": 0.872127
+          },
+          {
+            "noteName": "F4",
+            "score": 34.288243,
+            "fundamentalEnergy": 23.998718,
+            "overtoneEnergy": 0.225894,
+            "fundamentalRatio": 0.990675,
+            "subharmonicAliasEnergy": 0.925129,
+            "octaveAliasEnergy": 0.969332,
+            "octaveAliasRatio": 0.040391,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 349.228,
+                "energy": 23.998718,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 698.456,
+                "energy": 0.398445,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1047.685,
+                "energy": 0.00776,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1396.913,
+                "energy": 0.02947,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 174.614,
+                "energy": 0.969332
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 116.409,
+                "energy": 0.547994
+              }
+            ],
+            "preAttackEnergy": 6.233022,
+            "attackEnergy": 155.306581,
+            "sustainEnergy": 113.708027,
+            "attackToSustainRatio": 1.365837,
+            "candidateOnsetGain": 24.916735
+          },
+          {
+            "noteName": "D6",
+            "score": 14.72677,
+            "fundamentalEnergy": 0.291981,
+            "overtoneEnergy": 85.546169,
+            "fundamentalRatio": 0.003402,
+            "subharmonicAliasEnergy": 2.396427,
+            "octaveAliasEnergy": 1.609388,
+            "octaveAliasRatio": 5.511965,
+            "octaveAliasPenalty": 1.36798,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1174.659,
+                "energy": 0.291981,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2349.318,
+                "energy": 155.122079,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3523.977,
+                "energy": 0.364493,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 4698.636,
+                "energy": 0.797854,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 587.33,
+                "energy": 1.609388
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 391.553,
+                "energy": 2.821901
+              }
+            ],
+            "preAttackEnergy": 0.054696,
+            "attackEnergy": 0.211501,
+            "sustainEnergy": 0.034547,
+            "attackToSustainRatio": 6.122052,
+            "candidateOnsetGain": 3.8668
+          }
+        ],
+        "secondaryDecisionTrail": [
+          {
+            "noteName": "D4",
+            "score": 187.292629,
+            "fundamentalRatio": 0.992479,
+            "onsetGain": 0.957543,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E4",
+            "score": 183.358727,
+            "fundamentalRatio": 0.994814,
+            "onsetGain": 0.924973,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "C4",
+            "score": 118.69695,
+            "fundamentalRatio": 0.991311,
+            "onsetGain": 0.872127,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "F4",
+            "score": 34.288243,
+            "fundamentalRatio": 0.990675,
+            "onsetGain": null,
+            "accepted": false,
+            "reasons": [
+              "same-as-primary",
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "D6",
+            "score": 14.72677,
+            "fundamentalRatio": 0.003402,
+            "onsetGain": 3.8668,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "A4",
+            "score": 4.200674,
+            "fundamentalRatio": 0.949444,
+            "onsetGain": 1.816392,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "G4",
+            "score": 3.644003,
+            "fundamentalRatio": 0.909286,
+            "onsetGain": 1.54282,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E6",
+            "score": -1.032914,
+            "fundamentalRatio": 0.056039,
+            "onsetGain": 2.817187,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          }
+        ],
+        "rawPeaks": [
+          {
+            "frequency": 351.562,
+            "amplitude": 299.983981,
+            "snappedNote": "F4",
+            "centsToSnapped": 11.533
+          },
+          {
+            "frequency": 2314.453,
+            "amplitude": 155.122079,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 292.969,
+            "amplitude": 129.697689,
+            "snappedNote": "D4",
+            "centsToSnapped": 4.108
+          },
+          {
+            "frequency": 328.125,
+            "amplitude": 126.922161,
+            "snappedNote": "E4",
+            "centsToSnapped": 7.91
+          },
+          {
+            "frequency": 257.812,
+            "amplitude": 82.365609,
+            "snappedNote": "C4",
+            "centsToSnapped": 25.418
+          },
+          {
+            "frequency": 263.672,
+            "amplitude": 81.289134,
+            "snappedNote": "C4",
+            "centsToSnapped": 13.488
+          },
+          {
+            "frequency": 339.844,
+            "amplitude": 49.093851,
+            "snappedNote": "F4",
+            "centsToSnapped": 47.158
+          },
+          {
+            "frequency": 251.953,
+            "amplitude": 20.12149,
+            "snappedNote": "C4",
+            "centsToSnapped": 65.218
+          }
+        ],
+        "previousGapSec": 0.0,
+        "nextGapSec": 0.0,
+        "segmentOnsets": [
+          4.3387,
+          4.8187
+        ],
+        "localOnsetCount": 2,
+        "activeRangeStart": 2.78,
+        "activeRangeEnd": 5.568,
+        "backtrackedStartTime": 2.78,
+        "activeRangeOnsets": [
+          2.7973,
+          3.1653,
+          3.3653,
+          3.832,
+          4.3387,
+          4.8187
+        ],
+        "activeRangeOnsetCount": 6,
+        "segmentSource": [
+          "activeRange"
+        ]
+      },
+      {
+        "startTime": 4.8187,
+        "endTime": 5.568,
+        "durationSec": 0.7493,
+        "selectedNotes": [
+          "G4"
+        ],
+        "broadbandPreAttackEnergy": 0.002261,
+        "broadbandAttackEnergy": 0.04028,
+        "broadbandSustainEnergy": 0.000982,
+        "broadbandOnsetGain": 17.809784,
+        "broadbandAttackToSustainRatio": 40.974024,
+        "spectralFlux": 3.629715,
+        "highBandSpectralFlux": 21.449972,
+        "primaryCandidate": {
+          "noteName": "G4",
+          "score": 878.523278,
+          "fundamentalEnergy": 605.964566,
+          "overtoneEnergy": 9.79294,
+          "fundamentalRatio": 0.984096,
+          "subharmonicAliasEnergy": 3.473216,
+          "octaveAliasEnergy": 4.31204,
+          "octaveAliasRatio": 0.007116,
+          "octaveAliasPenalty": 0.0,
+          "harmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 391.995,
+              "energy": 605.964566,
+              "weight": 1.0
+            },
+            {
+              "multiple": 2.0,
+              "frequency": 783.991,
+              "energy": 17.591056,
+              "weight": 0.55
+            },
+            {
+              "multiple": 3.0,
+              "frequency": 1175.986,
+              "energy": 0.231081,
+              "weight": 0.3
+            },
+            {
+              "multiple": 4.0,
+              "frequency": 1567.982,
+              "energy": 0.323563,
+              "weight": 0.15
+            }
+          ],
+          "subharmonics": [
+            {
+              "multiple": 1.0,
+              "frequency": 195.998,
+              "energy": 4.31204
+            },
+            {
+              "multiple": 0.5,
+              "frequency": 130.665,
+              "energy": 1.010641
+            }
+          ],
+          "preAttackEnergy": 1.210866,
+          "attackEnergy": 169.954134,
+          "sustainEnergy": 60.54221,
+          "attackToSustainRatio": 2.807201,
+          "candidateOnsetGain": 140.357352
+        },
+        "primaryOnsetGain": 140.357352,
+        "primaryPromotion": null,
+        "rankedCandidates": [
+          {
+            "noteName": "G4",
+            "score": 878.523278,
+            "fundamentalEnergy": 605.964566,
+            "overtoneEnergy": 9.79294,
+            "fundamentalRatio": 0.984096,
+            "subharmonicAliasEnergy": 3.473216,
+            "octaveAliasEnergy": 4.31204,
+            "octaveAliasRatio": 0.007116,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 391.995,
+                "energy": 605.964566,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 783.991,
+                "energy": 17.591056,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1175.986,
+                "energy": 0.231081,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1567.982,
+                "energy": 0.323563,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 195.998,
+                "energy": 4.31204
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 130.665,
+                "energy": 1.010641
+              }
+            ],
+            "preAttackEnergy": 1.210866,
+            "attackEnergy": 169.954134,
+            "sustainEnergy": 60.54221,
+            "attackToSustainRatio": 2.807201,
+            "candidateOnsetGain": 140.357352
+          },
+          {
+            "noteName": "F4",
+            "score": 392.238093,
+            "fundamentalEnergy": 270.717379,
+            "overtoneEnergy": 1.927547,
+            "fundamentalRatio": 0.99293,
+            "subharmonicAliasEnergy": 1.146027,
+            "octaveAliasEnergy": 1.162332,
+            "octaveAliasRatio": 0.004294,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 349.228,
+                "energy": 270.717379,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 698.456,
+                "energy": 3.402022,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1047.685,
+                "energy": 0.080641,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1396.913,
+                "energy": 0.214953,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 174.614,
+                "energy": 1.162332
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 116.409,
+                "energy": 0.738655
+              }
+            ],
+            "preAttackEnergy": 113.708027,
+            "attackEnergy": 85.582582,
+            "sustainEnergy": 33.811177,
+            "attackToSustainRatio": 2.531192,
+            "candidateOnsetGain": 0.752652
+          },
+          {
+            "noteName": "E4",
+            "score": 212.379411,
+            "fundamentalEnergy": 146.882347,
+            "overtoneEnergy": 0.598965,
+            "fundamentalRatio": 0.995939,
+            "subharmonicAliasEnergy": 1.199643,
+            "octaveAliasEnergy": 0.945589,
+            "octaveAliasRatio": 0.006438,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 146.882347,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 659.255,
+                "energy": 0.9138,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 988.883,
+                "energy": 0.235779,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1318.51,
+                "energy": 0.170943,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 164.814,
+                "energy": 0.945589
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 109.876,
+                "energy": 1.194958
+              }
+            ],
+            "preAttackEnergy": 56.582604,
+            "attackEnergy": 42.96102,
+            "sustainEnergy": 21.869441,
+            "attackToSustainRatio": 1.964432,
+            "candidateOnsetGain": 0.759262
+          },
+          {
+            "noteName": "D4",
+            "score": 161.635597,
+            "fundamentalEnergy": 112.201898,
+            "overtoneEnergy": 2.376655,
+            "fundamentalRatio": 0.979257,
+            "subharmonicAliasEnergy": 2.554144,
+            "octaveAliasEnergy": 2.242302,
+            "octaveAliasRatio": 0.019985,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 293.665,
+                "energy": 112.201898,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 587.33,
+                "energy": 4.014588,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 880.994,
+                "energy": 0.446563,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1174.659,
+                "energy": 0.231081,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 146.832,
+                "energy": 2.242302
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 97.888,
+                "energy": 2.18785
+              }
+            ],
+            "preAttackEnergy": 45.212055,
+            "attackEnergy": 39.694342,
+            "sustainEnergy": 17.777168,
+            "attackToSustainRatio": 2.232883,
+            "candidateOnsetGain": 0.877959
+          },
+          {
+            "noteName": "C4",
+            "score": 112.700053,
+            "fundamentalEnergy": 77.668135,
+            "overtoneEnergy": 6.112349,
+            "fundamentalRatio": 0.927043,
+            "subharmonicAliasEnergy": 1.902021,
+            "octaveAliasEnergy": 1.010641,
+            "octaveAliasRatio": 0.013012,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 261.626,
+                "energy": 77.668135,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 523.251,
+                "energy": 1.496248,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 784.877,
+                "energy": 17.591056,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1046.502,
+                "energy": 0.080641,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 130.813,
+                "energy": 1.010641
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 87.209,
+                "energy": 2.654606
+              }
+            ],
+            "preAttackEnergy": 30.222441,
+            "attackEnergy": 29.729002,
+            "sustainEnergy": 15.362967,
+            "attackToSustainRatio": 1.935108,
+            "candidateOnsetGain": 0.983673
+          }
+        ],
+        "residualCandidates": [
+          {
+            "noteName": "F4",
+            "score": 392.238093,
+            "fundamentalEnergy": 270.717379,
+            "overtoneEnergy": 1.927547,
+            "fundamentalRatio": 0.99293,
+            "subharmonicAliasEnergy": 1.146027,
+            "octaveAliasEnergy": 1.162332,
+            "octaveAliasRatio": 0.004294,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 349.228,
+                "energy": 270.717379,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 698.456,
+                "energy": 3.402022,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 1047.685,
+                "energy": 0.080641,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1396.913,
+                "energy": 0.214953,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 174.614,
+                "energy": 1.162332
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 116.409,
+                "energy": 0.738655
+              }
+            ],
+            "preAttackEnergy": 113.708027,
+            "attackEnergy": 85.582582,
+            "sustainEnergy": 33.811177,
+            "attackToSustainRatio": 2.531192,
+            "candidateOnsetGain": 0.752652
+          },
+          {
+            "noteName": "E4",
+            "score": 212.379411,
+            "fundamentalEnergy": 146.882347,
+            "overtoneEnergy": 0.598965,
+            "fundamentalRatio": 0.995939,
+            "subharmonicAliasEnergy": 1.199643,
+            "octaveAliasEnergy": 0.945589,
+            "octaveAliasRatio": 0.006438,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 329.628,
+                "energy": 146.882347,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 659.255,
+                "energy": 0.9138,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 988.883,
+                "energy": 0.235779,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1318.51,
+                "energy": 0.170943,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 164.814,
+                "energy": 0.945589
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 109.876,
+                "energy": 1.194958
+              }
+            ],
+            "preAttackEnergy": 56.582604,
+            "attackEnergy": 42.96102,
+            "sustainEnergy": 21.869441,
+            "attackToSustainRatio": 1.964432,
+            "candidateOnsetGain": 0.759262
+          },
+          {
+            "noteName": "D4",
+            "score": 161.629219,
+            "fundamentalEnergy": 112.201898,
+            "overtoneEnergy": 2.344766,
+            "fundamentalRatio": 0.97953,
+            "subharmonicAliasEnergy": 2.554144,
+            "octaveAliasEnergy": 2.242302,
+            "octaveAliasRatio": 0.019985,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 293.665,
+                "energy": 112.201898,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 587.33,
+                "energy": 4.014588,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 880.994,
+                "energy": 0.446563,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1174.659,
+                "energy": 0.018486,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 146.832,
+                "energy": 2.242302
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 97.888,
+                "energy": 2.18785
+              }
+            ],
+            "preAttackEnergy": 45.212055,
+            "attackEnergy": 39.694342,
+            "sustainEnergy": 17.777168,
+            "attackToSustainRatio": 2.232883,
+            "candidateOnsetGain": 0.877959
+          },
+          {
+            "noteName": "C4",
+            "score": 111.729027,
+            "fundamentalEnergy": 77.668135,
+            "overtoneEnergy": 1.257218,
+            "fundamentalRatio": 0.984071,
+            "subharmonicAliasEnergy": 1.902021,
+            "octaveAliasEnergy": 1.010641,
+            "octaveAliasRatio": 0.013012,
+            "octaveAliasPenalty": 0.0,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 261.626,
+                "energy": 77.668135,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 523.251,
+                "energy": 1.496248,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 784.877,
+                "energy": 1.407284,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 1046.502,
+                "energy": 0.080641,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 130.813,
+                "energy": 1.010641
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 87.209,
+                "energy": 2.654606
+              }
+            ],
+            "preAttackEnergy": 30.222441,
+            "attackEnergy": 29.729002,
+            "sustainEnergy": 15.362967,
+            "attackToSustainRatio": 1.935108,
+            "candidateOnsetGain": 0.983673
+          },
+          {
+            "noteName": "E6",
+            "score": 86.84312,
+            "fundamentalEnergy": 0.170943,
+            "overtoneEnergy": 443.909087,
+            "fundamentalRatio": 0.000385,
+            "subharmonicAliasEnergy": 2.349723,
+            "octaveAliasEnergy": 0.9138,
+            "octaveAliasRatio": 5.345653,
+            "octaveAliasPenalty": 0.77673,
+            "harmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 1318.51,
+                "energy": 0.170943,
+                "weight": 1.0
+              },
+              {
+                "multiple": 2.0,
+                "frequency": 2637.02,
+                "energy": 806.522336,
+                "weight": 0.55
+              },
+              {
+                "multiple": 3.0,
+                "frequency": 3955.531,
+                "energy": 1.04563,
+                "weight": 0.3
+              },
+              {
+                "multiple": 4.0,
+                "frequency": 5274.041,
+                "energy": 0.054089,
+                "weight": 0.15
+              }
+            ],
+            "subharmonics": [
+              {
+                "multiple": 1.0,
+                "frequency": 659.255,
+                "energy": 0.9138
+              },
+              {
+                "multiple": 0.5,
+                "frequency": 439.503,
+                "energy": 3.80014
+              }
+            ],
+            "preAttackEnergy": 0.029139,
+            "attackEnergy": 0.180189,
+            "sustainEnergy": 0.058623,
+            "attackToSustainRatio": 3.073633,
+            "candidateOnsetGain": 6.183687
+          }
+        ],
+        "secondaryDecisionTrail": [
+          {
+            "noteName": "F4",
+            "score": 392.238093,
+            "fundamentalRatio": 0.99293,
+            "onsetGain": 0.752652,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E4",
+            "score": 212.379411,
+            "fundamentalRatio": 0.995939,
+            "onsetGain": 0.759262,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "D4",
+            "score": 161.629219,
+            "fundamentalRatio": 0.97953,
+            "onsetGain": 0.877959,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "C4",
+            "score": 111.729027,
+            "fundamentalRatio": 0.984071,
+            "onsetGain": 0.983673,
+            "accepted": false,
+            "reasons": [
+              "recent-carryover-candidate"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "E6",
+            "score": 86.84312,
+            "fundamentalRatio": 0.000385,
+            "onsetGain": 6.183687,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "G4",
+            "score": 68.364647,
+            "fundamentalRatio": 0.984096,
+            "onsetGain": null,
+            "accepted": false,
+            "reasons": [
+              "same-as-primary",
+              "score-below-threshold"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "A5",
+            "score": 13.961433,
+            "fundamentalRatio": 0.001841,
+            "onsetGain": 3.606403,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "fundamental-ratio-too-low",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          },
+          {
+            "noteName": "B4",
+            "score": 9.686567,
+            "fundamentalRatio": 0.952512,
+            "onsetGain": 7.00989,
+            "accepted": false,
+            "reasons": [
+              "score-below-threshold",
+              "weak-upper-secondary"
+            ],
+            "octaveDyadAllowed": false
+          }
+        ],
+        "rawPeaks": [
+          {
+            "frequency": 2607.422,
+            "amplitude": 806.522336,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 392.578,
+            "amplitude": 605.964566,
+            "snappedNote": "G4",
+            "centsToSnapped": 2.572
+          },
+          {
+            "frequency": 348.633,
+            "amplitude": 270.717379,
+            "snappedNote": "F4",
+            "centsToSnapped": 2.954
+          },
+          {
+            "frequency": 331.055,
+            "amplitude": 146.882347,
+            "snappedNote": "E4",
+            "centsToSnapped": 7.479
+          },
+          {
+            "frequency": 292.969,
+            "amplitude": 112.201898,
+            "snappedNote": "D4",
+            "centsToSnapped": 4.108
+          },
+          {
+            "frequency": 260.742,
+            "amplitude": 77.668135,
+            "snappedNote": "C4",
+            "centsToSnapped": 5.855
+          },
+          {
+            "frequency": 2314.453,
+            "amplitude": 36.575547,
+            "snappedNote": null,
+            "centsToSnapped": null
+          },
+          {
+            "frequency": 383.789,
+            "amplitude": 18.415587,
+            "snappedNote": "G4",
+            "centsToSnapped": 36.628
+          }
+        ],
+        "previousGapSec": 0.0,
+        "nextGapSec": null,
+        "segmentOnsets": [
+          4.8187
+        ],
+        "localOnsetCount": 1,
+        "activeRangeStart": 2.78,
+        "activeRangeEnd": 5.568,
+        "backtrackedStartTime": 2.78,
+        "activeRangeOnsets": [
+          2.7973,
+          3.1653,
+          3.3653,
+          3.832,
+          4.3387,
+          4.8187
+        ],
+        "activeRangeOnsetCount": 6,
+        "segmentSource": [
+          "activeRange"
+        ]
+      }
+    ],
+    "mergedEvents": [
+      {
+        "startTime": 2.3867,
+        "endTime": 2.6933,
+        "notes": [
+          "E6"
+        ],
+        "gesture": "ambiguous"
+      },
+      {
+        "startTime": 2.7973,
+        "endTime": 3.1653,
+        "notes": [
+          "C4"
+        ],
+        "gesture": "ambiguous"
+      },
+      {
+        "startTime": 3.3653,
+        "endTime": 3.832,
+        "notes": [
+          "D4"
+        ],
+        "gesture": "ambiguous"
+      },
+      {
+        "startTime": 3.832,
+        "endTime": 4.3387,
+        "notes": [
+          "E4"
+        ],
+        "gesture": "ambiguous"
+      },
+      {
+        "startTime": 4.3387,
+        "endTime": 4.8187,
+        "notes": [
+          "F4"
+        ],
+        "gesture": "ambiguous"
+      },
+      {
+        "startTime": 4.8187,
+        "endTime": 5.568,
+        "notes": [
+          "G4"
+        ],
+        "gesture": "ambiguous"
+      }
+    ],
+    "disabledRepeatedPatternPasses": [],
+    "repeatedPatternPassTrace": [
+      {
+        "pass": "normalize_repeated_explicit_four_note_patterns",
+        "enabled": true,
+        "mergeAfter": true,
+        "beforeEventCount": 6,
+        "afterEventCount": 6,
+        "changed": false,
+        "removed": [],
+        "added": []
+      },
+      {
+        "pass": "normalize_repeated_triad_patterns",
+        "enabled": true,
+        "mergeAfter": true,
+        "beforeEventCount": 6,
+        "afterEventCount": 6,
+        "changed": false,
+        "removed": [],
+        "added": []
+      },
+      {
+        "pass": "normalize_strict_four_note_subsets",
+        "enabled": true,
+        "mergeAfter": true,
+        "beforeEventCount": 6,
+        "afterEventCount": 6,
+        "changed": false,
+        "removed": [],
+        "added": []
+      },
+      {
+        "pass": "suppress_repeated_triad_blips",
+        "enabled": true,
+        "mergeAfter": false,
+        "beforeEventCount": 6,
+        "afterEventCount": 6,
+        "changed": false,
+        "removed": [],
+        "added": []
+      },
+      {
+        "pass": "suppress_isolated_triad_extensions",
+        "enabled": true,
+        "mergeAfter": false,
+        "beforeEventCount": 6,
+        "afterEventCount": 6,
+        "changed": false,
+        "removed": [],
+        "added": []
+      }
+    ]
+  }
 }
