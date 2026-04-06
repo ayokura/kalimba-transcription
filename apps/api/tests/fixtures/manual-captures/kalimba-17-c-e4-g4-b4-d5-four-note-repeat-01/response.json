@@ -373,6 +373,7 @@
       0.296,
       1.6853333333333333,
       1.8026666666666666,
+      1.8373333333333333,
       1.9013333333333333,
       1.9413333333333334,
       3.3226666666666667,
@@ -403,6 +404,7 @@
       0.09333333333333334,
       0.21866666666666668,
       1.8026666666666666,
+      1.8373333333333333,
       1.9013333333333333,
       1.9413333333333334,
       3.7413333333333334,
@@ -610,7 +612,7 @@
     "tempoRaw": 112.5,
     "tempoHopLength": 1024,
     "tempoAudioDurationSec": 14.7,
-    "tempoEstimationMs": 71.821,
+    "tempoEstimationMs": 149.286,
     "onsetAttackProfiles": {
       "0.0373": {
         "broadbandOnsetGain": 5.94579,
@@ -652,7 +654,7 @@
         "broadbandOnsetGain": 5.299318,
         "highBandSpectralFlux": 1.167942,
         "broadbandSpectralFlux": 1.290846,
-        "isValidAttack": false
+        "isValidAttack": true
       },
       "1.9013": {
         "broadbandOnsetGain": 7.328308,
@@ -1235,18 +1237,20 @@
         "nextGapSec": 0.636,
         "segmentOnsets": [
           1.8027,
+          1.8373,
           1.9013,
           1.9413
         ],
-        "localOnsetCount": 3,
+        "localOnsetCount": 4,
         "activeRangeStart": 1.7987,
         "activeRangeEnd": 3.0933,
         "backtrackedStartTime": 1.8027,
         "activeRangeOnsets": [
+          1.8373,
           1.9013,
           1.9413
         ],
-        "activeRangeOnsetCount": 2,
+        "activeRangeOnsetCount": 3,
         "segmentSource": [
           "activeRange"
         ]

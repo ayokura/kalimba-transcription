@@ -704,7 +704,7 @@
     "tempoRaw": 137.1951,
     "tempoHopLength": 1024,
     "tempoAudioDurationSec": 39.6,
-    "tempoEstimationMs": 281.935,
+    "tempoEstimationMs": 447.566,
     "onsetAttackProfiles": {
       "3.792": {
         "broadbandOnsetGain": 118894.085433,

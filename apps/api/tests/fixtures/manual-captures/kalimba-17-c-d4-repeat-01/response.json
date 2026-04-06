@@ -235,6 +235,7 @@
       0.06133333333333333,
       0.33866666666666667,
       0.376,
+      0.6266666666666667,
       0.672,
       0.8613333333333333,
       2.3973333333333335,
@@ -557,7 +558,7 @@
     "tempoRaw": 114.7959,
     "tempoHopLength": 1024,
     "tempoAudioDurationSec": 27.78,
-    "tempoEstimationMs": 142.307,
+    "tempoEstimationMs": 250.069,
     "onsetAttackProfiles": {
       "0.0613": {
         "broadbandOnsetGain": 1.17382,
@@ -581,7 +582,7 @@
         "broadbandOnsetGain": 8.362164,
         "highBandSpectralFlux": 0.950507,
         "broadbandSpectralFlux": 1.6721,
-        "isValidAttack": false
+        "isValidAttack": true
       },
       "0.672": {
         "broadbandOnsetGain": 13.11523,

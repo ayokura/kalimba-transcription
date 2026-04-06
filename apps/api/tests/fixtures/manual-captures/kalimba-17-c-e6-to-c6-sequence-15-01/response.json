@@ -507,7 +507,8 @@
       ],
       "leading": [],
       "trailing": [
-        11.544
+        11.544,
+        13.584
       ]
     },
     "gapIoiDiagnostics": [],
@@ -692,7 +693,12 @@
     ],
     "multiOnsetGapSegments": [],
     "sparseGapTailSegments": [],
-    "attackValidatedGapSegments": [],
+    "attackValidatedGapSegments": [
+      [
+        13.584,
+        13.68
+      ]
+    ],
     "segments": [
       [
         2.432,
@@ -757,13 +763,17 @@
       [
         10.0187,
         10.464
+      ],
+      [
+        13.584,
+        13.68
       ]
     ],
     "rmsThreshold": 0.073115,
     "tempoRaw": 152.027,
     "tempoHopLength": 1024,
     "tempoAudioDurationSec": 13.68,
-    "tempoEstimationMs": 67.021,
+    "tempoEstimationMs": 105.999,
     "onsetAttackProfiles": {
       "0.3013": {
         "broadbandOnsetGain": 2.10357,
@@ -883,7 +893,7 @@
         "broadbandOnsetGain": 6.385696,
         "highBandSpectralFlux": 1.348362,
         "broadbandSpectralFlux": 1.506445,
-        "isValidAttack": false
+        "isValidAttack": true
       }
     },
     "segmentCandidates": [
@@ -12563,7 +12573,7 @@
           }
         ],
         "previousGapSec": 0.0,
-        "nextGapSec": null,
+        "nextGapSec": 3.12,
         "segmentOnsets": [
           10.0187
         ],

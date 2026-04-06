@@ -434,6 +434,7 @@
         3.7653
       ],
       "trailing": [
+        51.3813,
         51.8747,
         53.7893
       ]
@@ -714,7 +715,7 @@
     "tempoRaw": 119.6809,
     "tempoHopLength": 1024,
     "tempoAudioDurationSec": 53.82,
-    "tempoEstimationMs": 405.275,
+    "tempoEstimationMs": 573.723,
     "onsetAttackProfiles": {
       "0.1387": {
         "broadbandOnsetGain": 1.827561,
@@ -888,7 +889,7 @@
         "broadbandOnsetGain": 5.606298,
         "highBandSpectralFlux": 1.021748,
         "broadbandSpectralFlux": 5.775959,
-        "isValidAttack": false
+        "isValidAttack": true
       },
       "51.4667": {
         "broadbandOnsetGain": 0.343783,

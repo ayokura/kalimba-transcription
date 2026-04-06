@@ -436,6 +436,7 @@
         ]
       ],
       "leading": [
+        0.3653,
         0.4933
       ],
       "trailing": [
@@ -758,11 +759,19 @@
         7.9667
       ],
       [
+        0.3653,
+        0.4933
+      ],
+      [
         0.4933,
         0.7333
       ]
     ],
     "segments": [
+      [
+        0.3653,
+        0.4933
+      ],
       [
         0.4933,
         0.7333
@@ -800,13 +809,13 @@
     "tempoRaw": 127.8409,
     "tempoHopLength": 1024,
     "tempoAudioDurationSec": 29.52,
-    "tempoEstimationMs": 209.05,
+    "tempoEstimationMs": 244.85,
     "onsetAttackProfiles": {
       "0.3653": {
         "broadbandOnsetGain": 8.86755,
         "highBandSpectralFlux": 1.046489,
         "broadbandSpectralFlux": 2.453154,
-        "isValidAttack": false
+        "isValidAttack": true
       },
       "0.4107": {
         "broadbandOnsetGain": 5.298186,
