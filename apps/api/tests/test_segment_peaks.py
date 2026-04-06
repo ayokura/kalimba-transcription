@@ -3,6 +3,7 @@ import pytest
 
 from app.tunings import get_default_tunings
 from app.transcription import (
+    Note,
     NoteCandidate,
     NoteHypothesis,
     PRIMARY_REJECTION_MAX_SCORE,
@@ -122,7 +123,7 @@ def test_segment_peaks_suppresses_recent_upper_carryover_with_weak_onset() -> No
 
 def test_maybe_promote_lower_secondary_to_recent_upper_octave_has_reachable_interval_window() -> None:
     primary = NoteHypothesis(
-        NoteCandidate(14, "F5", 698.4564628660078, "F", 5),
+        NoteCandidate(14, Note.from_name("F5")),
         100.0,
         0.0,
         0.0,
@@ -133,7 +134,7 @@ def test_maybe_promote_lower_secondary_to_recent_upper_octave_has_reachable_inte
         0.0,
     )
     accepted_secondary = NoteHypothesis(
-        NoteCandidate(10, "E4", 329.6275569128699, "E", 4),
+        NoteCandidate(10, Note.from_name("E4")),
         10.0,
         0.0,
         0.0,
@@ -145,7 +146,7 @@ def test_maybe_promote_lower_secondary_to_recent_upper_octave_has_reachable_inte
     )
     residual_ranked = [
         NoteHypothesis(
-            NoteCandidate(4, "E5", 659.2551138257398, "E", 5),
+            NoteCandidate(4, Note.from_name("E5")),
             20.0,
             0.0,
             0.0,
@@ -229,8 +230,8 @@ def test_segment_peaks_suppresses_descending_stale_upper_adjacent_carryover(monk
     import app.transcription as transcription
 
     tuning = get_default_tunings()[0]
-    a5 = NoteCandidate(key=16, note_name="A5", frequency=880.0, pitch_class="A", octave=5)
-    b5 = NoteCandidate(key=15, note_name="B5", frequency=987.7666025122483, pitch_class="B", octave=5)
+    a5 = NoteCandidate(key=16, note=Note.from_name("A5"))
+    b5 = NoteCandidate(key=15, note=Note.from_name("B5"))
 
     ranked_calls = 0
 
@@ -284,8 +285,8 @@ def test_segment_peaks_replaces_descending_repeated_stale_primary(monkeypatch: p
     import app.transcription as transcription
 
     tuning = get_default_tunings()[0]
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
 
     def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
         return [
@@ -327,8 +328,8 @@ def test_segment_peaks_suppresses_descending_restart_upper_carryover(monkeypatch
     import app.transcription as transcription
 
     tuning = get_default_tunings()[0]
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    e5 = NoteCandidate(key=4, note=Note.from_name("E5"))
 
     ranked_calls = 0
 
@@ -386,7 +387,7 @@ def test_segment_peaks_rejects_weak_primary_with_low_score_and_fundamental_ratio
     import app.transcription as transcription
 
     tuning = get_default_tunings()[0]
-    e6 = NoteCandidate(key=0, note_name="E6", frequency=1318.5102276514797, pitch_class="E", octave=6)
+    e6 = NoteCandidate(key=0, note=Note.from_name("E6"))
 
     def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
         return [
@@ -418,9 +419,9 @@ def test_rejected_primary_rescued_by_alternative_branch(
 
     tuning = get_default_tunings()[0]
     # Primary: E6 — will be rejected (low score + low FR)
-    e6 = NoteCandidate(key=0, note_name="E6", frequency=1318.5102276514797, pitch_class="E", octave=6)
+    e6 = NoteCandidate(key=0, note=Note.from_name("E6"))
     # Alternative: D5 — strong candidate, not harmonically related to E6
-    d5 = NoteCandidate(key=3, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    d5 = NoteCandidate(key=3, note=Note.from_name("D5"))
 
     ranked_calls = 0
 
@@ -467,8 +468,8 @@ def test_rejected_primary_not_rescued_when_flag_off(
     import app.transcription as transcription
 
     tuning = get_default_tunings()[0]
-    e6 = NoteCandidate(key=0, note_name="E6", frequency=1318.5102276514797, pitch_class="E", octave=6)
-    d5 = NoteCandidate(key=3, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e6 = NoteCandidate(key=0, note=Note.from_name("E6"))
+    d5 = NoteCandidate(key=3, note=Note.from_name("D5"))
 
     ranked_calls = 0
 
@@ -511,7 +512,7 @@ def test_segment_peaks_keeps_low_score_primary_with_high_fundamental_ratio(
     import app.transcription as transcription
 
     tuning = get_default_tunings()[0]
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
 
     def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
         return [
@@ -542,7 +543,7 @@ def test_segment_peaks_keeps_high_score_primary_with_low_fundamental_ratio(
     import app.transcription as transcription
 
     tuning = get_default_tunings()[0]
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
 
     def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
         return [
@@ -576,9 +577,9 @@ def _build_iterative_suppression_fakes():
     C4 is rejected in the 1st pass for harmonic-related but should be
     recovered by the 2nd pass with iterative suppression.
     """
-    c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511, pitch_class="C", octave=5)
-    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6256, pitch_class="C", octave=4)
+    c5 = NoteCandidate(key=5, note=Note.from_name("C5"))
+    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
 
     rank_calls = 0
 

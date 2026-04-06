@@ -54,6 +54,9 @@ def _merge_segments(a: Segment, b: Segment, start: float, end: float, reason: st
         merged_end_estimated = b.end_estimated
     else:
         merged_end_estimated = a.end_estimated or b.end_estimated
+    # Preserve per-note provenance: keep if both agree or only one is set
+    confirmed = a.confirmed_primary if a.confirmed_primary == b.confirmed_primary else (a.confirmed_primary or b.confirmed_primary)
+    hint = a.hint_primary if a.hint_primary == b.hint_primary else (a.hint_primary or b.hint_primary)
     return Segment(
         start_time=start,
         end_time=end,
@@ -61,6 +64,8 @@ def _merge_segments(a: Segment, b: Segment, start: float, end: float, reason: st
         merged_from=_segment_leaves(a) + _segment_leaves(b),
         merge_reason=reason,
         end_estimated=merged_end_estimated,
+        confirmed_primary=confirmed,
+        hint_primary=hint,
     )
 
 

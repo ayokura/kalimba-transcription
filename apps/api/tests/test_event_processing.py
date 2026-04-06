@@ -1,5 +1,6 @@
 from app.tunings import get_default_tunings
 from app.transcription import (
+    Note,
     NoteCandidate,
     NoteHypothesis,
     RawEvent,
@@ -79,11 +80,11 @@ def test_suppress_descending_terminal_residual_cluster_keeps_non_rebound_tail() 
 
 def test_select_contiguous_four_note_cluster_promotes_dense_local_family() -> None:
     ranked = [
-        NoteHypothesis(NoteCandidate(13, 'D5', 587.33, 'D', 5), 1000.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
-        NoteHypothesis(NoteCandidate(12, 'B4', 493.88, 'B', 4), 800.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
-        NoteHypothesis(NoteCandidate(11, 'G4', 391.99, 'G', 4), 600.0, 0.0, 0.0, 0.97, 0.0, 0.0, 0.0, 0.0),
-        NoteHypothesis(NoteCandidate(10, 'E4', 329.63, 'E', 4), 180.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
-        NoteHypothesis(NoteCandidate(9, 'D4', 293.66, 'D', 4), 100.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(13, Note.from_name('D5')), 1000.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(12, Note.from_name('B4')), 800.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(11, Note.from_name('G4')), 600.0, 0.0, 0.0, 0.97, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(10, Note.from_name('E4')), 180.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(9, Note.from_name('D4')), 100.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0),
     ]
 
     selected = select_contiguous_four_note_cluster(ranked[0], ranked, 0.7)
@@ -94,11 +95,11 @@ def test_select_contiguous_four_note_cluster_promotes_dense_local_family() -> No
 
 def test_select_contiguous_four_note_cluster_rejects_short_or_ambiguous_window() -> None:
     ranked = [
-        NoteHypothesis(NoteCandidate(13, 'D5', 587.33, 'D', 5), 1000.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
-        NoteHypothesis(NoteCandidate(12, 'B4', 493.88, 'B', 4), 800.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
-        NoteHypothesis(NoteCandidate(11, 'G4', 391.99, 'G', 4), 600.0, 0.0, 0.0, 0.97, 0.0, 0.0, 0.0, 0.0),
-        NoteHypothesis(NoteCandidate(10, 'E4', 329.63, 'E', 4), 120.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
-        NoteHypothesis(NoteCandidate(9, 'D4', 293.66, 'D', 4), 110.0, 0.0, 0.0, 0.92, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(13, Note.from_name('D5')), 1000.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(12, Note.from_name('B4')), 800.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(11, Note.from_name('G4')), 600.0, 0.0, 0.0, 0.97, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(10, Note.from_name('E4')), 120.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+        NoteHypothesis(NoteCandidate(9, Note.from_name('D4')), 110.0, 0.0, 0.0, 0.92, 0.0, 0.0, 0.0, 0.0),
     ]
 
     assert select_contiguous_four_note_cluster(ranked[0], ranked, 0.4) is None
@@ -113,9 +114,9 @@ def test_should_keep_dense_trailing_onset_preserves_penultimate_dense_onset() ->
 
 
 def test_simplify_short_secondary_bleed_strips_restart_stale_upper_note() -> None:
-    c4 = NoteCandidate(9, "C4", 261.6255653005986, "C", 4)
-    d4 = NoteCandidate(8, "D4", 293.6647679174076, "D", 4)
-    e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
+    c4 = NoteCandidate(9, Note.from_name("C4"))
+    d4 = NoteCandidate(8, Note.from_name("D4"))
+    e6 = NoteCandidate(17, Note.from_name("E6"))
     events = [
         RawEvent(0.0, 0.18, [e6], False, "E6", 400.0),
         RawEvent(0.18, 0.38, [c4, e6], False, "C4", 350.0),
@@ -128,9 +129,9 @@ def test_simplify_short_secondary_bleed_strips_restart_stale_upper_note() -> Non
 
 
 def test_simplify_short_secondary_bleed_collapses_mirrored_adjacent_run_to_upper_note() -> None:
-    d4 = NoteCandidate(8, "D4", 293.6647679174076, "D", 4)
-    e4 = NoteCandidate(10, "E4", 329.6275569128699, "E", 4)
-    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    d4 = NoteCandidate(8, Note.from_name("D4"))
+    e4 = NoteCandidate(10, Note.from_name("E4"))
+    f4 = NoteCandidate(7, Note.from_name("F4"))
     events = [
         RawEvent(0.0, 0.24, [d4], False, "D4", 340.0),
         RawEvent(0.24, 0.42, [d4, e4], False, "D4", 300.0),
@@ -146,9 +147,9 @@ def test_simplify_short_secondary_bleed_collapses_mirrored_adjacent_run_to_upper
 
 
 def test_simplify_short_secondary_bleed_strips_descending_stale_upper_step() -> None:
-    g5 = NoteCandidate(3, "G5", 783.9908719634985, "G", 5)
-    f5 = NoteCandidate(14, "F5", 698.4564628660078, "F", 5)
-    e5 = NoteCandidate(4, "E5", 659.2551138257398, "E", 5)
+    g5 = NoteCandidate(3, Note.from_name("G5"))
+    f5 = NoteCandidate(14, Note.from_name("F5"))
+    e5 = NoteCandidate(4, Note.from_name("E5"))
     events = [
         RawEvent(0.0, 0.22, [g5], False, "G5", 340.0),
         RawEvent(0.22, 0.4, [f5, g5], False, "F5", 300.0),
@@ -161,9 +162,9 @@ def test_simplify_short_secondary_bleed_strips_descending_stale_upper_step() -> 
 
 
 def test_simplify_short_secondary_bleed_promotes_descending_lower_step() -> None:
-    c5 = NoteCandidate(5, "C5", 523.2511306011972, "C", 5)
-    b4 = NoteCandidate(12, "B4", 493.8833012561241, "B", 4)
-    a4 = NoteCandidate(6, "A4", 440.0, "A", 4)
+    c5 = NoteCandidate(5, Note.from_name("C5"))
+    b4 = NoteCandidate(12, Note.from_name("B4"))
+    a4 = NoteCandidate(6, Note.from_name("A4"))
     events = [
         RawEvent(0.0, 0.22, [c5], False, "C5", 340.0),
         RawEvent(0.22, 0.4, [b4, c5], False, "C5", 300.0),
@@ -176,9 +177,9 @@ def test_simplify_short_secondary_bleed_promotes_descending_lower_step() -> None
 
 
 def test_simplify_short_secondary_bleed_collapses_descending_upper_residue_to_primary() -> None:
-    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
-    b4 = NoteCandidate(12, "B4", 493.8833012561241, "B", 4)
-    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    g4 = NoteCandidate(11, Note.from_name("G4"))
+    b4 = NoteCandidate(12, Note.from_name("B4"))
+    f4 = NoteCandidate(7, Note.from_name("F4"))
     events = [
         RawEvent(0.0, 0.18, [g4], False, "G4", 320.0),
         RawEvent(0.18, 0.29, [g4, b4], False, "G4", 300.0),
@@ -191,9 +192,9 @@ def test_simplify_short_secondary_bleed_collapses_descending_upper_residue_to_pr
 
 
 def test_simplify_short_secondary_bleed_collapses_repeated_descending_handoff_to_primary() -> None:
-    c5 = NoteCandidate(14, "C5", 523.2511306011972, "C", 5)
-    b4 = NoteCandidate(12, "B4", 493.8833012561241, "B", 4)
-    a4 = NoteCandidate(10, "A4", 440.0, "A", 4)
+    c5 = NoteCandidate(14, Note.from_name("C5"))
+    b4 = NoteCandidate(12, Note.from_name("B4"))
+    a4 = NoteCandidate(10, Note.from_name("A4"))
     events = [
         RawEvent(0.0, 0.18, [c5], False, "C5", 320.0),
         RawEvent(0.18, 0.31, [b4, c5], False, "B4", 300.0),
@@ -209,10 +210,10 @@ def test_simplify_short_secondary_bleed_collapses_repeated_descending_handoff_to
 
 def test_suppress_descending_restart_residual_cluster_drops_repeated_low_register_residue() -> None:
     tuning = get_default_tunings()[0]
-    c4 = NoteCandidate(0, "C4", 261.6255653005986, "C", 4)
-    d4 = NoteCandidate(1, "D4", 293.6647679174076, "D", 4)
-    e4 = NoteCandidate(2, "E4", 329.6275569128699, "E", 4)
-    e6 = NoteCandidate(16, "E6", 1318.5102276514797, "E", 6)
+    c4 = NoteCandidate(0, Note.from_name("C4"))
+    d4 = NoteCandidate(1, Note.from_name("D4"))
+    e4 = NoteCandidate(2, Note.from_name("E4"))
+    e6 = NoteCandidate(16, Note.from_name("E6"))
     events = [
         RawEvent(0.0, 0.22, [c4], False, "C4", 320.0),
         RawEvent(0.22, 0.34, [d4, e4], False, "D4", 260.0),
@@ -227,10 +228,10 @@ def test_suppress_descending_restart_residual_cluster_drops_repeated_low_registe
 
 def test_suppress_descending_restart_residual_cluster_drops_repeated_low_register_residue_before_large_restart_gap() -> None:
     tuning = get_default_tunings()[0]
-    c4 = NoteCandidate(0, "C4", 261.6255653005986, "C", 4)
-    d4 = NoteCandidate(1, "D4", 293.6647679174076, "D", 4)
-    e4 = NoteCandidate(2, "E4", 329.6275569128699, "E", 4)
-    e6 = NoteCandidate(16, "E6", 1318.5102276514797, "E", 6)
+    c4 = NoteCandidate(0, Note.from_name("C4"))
+    d4 = NoteCandidate(1, Note.from_name("D4"))
+    e4 = NoteCandidate(2, Note.from_name("E4"))
+    e6 = NoteCandidate(16, Note.from_name("E6"))
     events = [
         RawEvent(0.0, 0.22, [c4], False, "C4", 320.0),
         RawEvent(0.22, 0.32, [d4, e4], False, "D4", 260.0),
@@ -243,9 +244,9 @@ def test_suppress_descending_restart_residual_cluster_drops_repeated_low_registe
     assert [[note.note_name for note in event.notes] for event in cleaned] == [["C4"], ["E6"]]
 
 def test_simplify_descending_adjacent_dyad_residue_collapses_upper_residue_to_lower() -> None:
-    a4 = NoteCandidate(10, "A4", 440.0, "A", 4)
-    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
-    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    a4 = NoteCandidate(10, Note.from_name("A4"))
+    g4 = NoteCandidate(11, Note.from_name("G4"))
+    f4 = NoteCandidate(7, Note.from_name("F4"))
     events = [
         RawEvent(0.0, 0.18, [a4], False, "A4", 320.0),
         RawEvent(0.18, 0.31, [g4, a4], False, "G4", 300.0),
@@ -259,9 +260,9 @@ def test_simplify_descending_adjacent_dyad_residue_collapses_upper_residue_to_lo
 
 def test_collapse_ascending_restart_lower_residue_singletons_keeps_previous_step() -> None:
     tuning = get_default_tunings()[0]
-    d6 = NoteCandidate(15, "D6", 1174.6590716696303, "D", 6)
-    b5 = NoteCandidate(13, "B5", 987.7666025122483, "B", 5)
-    e6 = NoteCandidate(16, "E6", 1318.5102276514797, "E", 6)
+    d6 = NoteCandidate(15, Note.from_name("D6"))
+    b5 = NoteCandidate(13, Note.from_name("B5"))
+    e6 = NoteCandidate(16, Note.from_name("E6"))
     events = [
         RawEvent(0.0, 0.28, [d6], False, "D6", 320.0),
         RawEvent(0.28, 0.40, [b5], False, "B5", 260.0),
@@ -274,9 +275,9 @@ def test_collapse_ascending_restart_lower_residue_singletons_keeps_previous_step
 
 
 def test_simplify_short_secondary_bleed_keeps_primary_for_restart_upper_sandwich() -> None:
-    b5 = NoteCandidate(2, "B5", 987.7666025122483, "B", 5)
-    d6 = NoteCandidate(1, "D6", 1174.6590716696303, "D", 6)
-    e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
+    b5 = NoteCandidate(2, Note.from_name("B5"))
+    d6 = NoteCandidate(1, Note.from_name("D6"))
+    e6 = NoteCandidate(17, Note.from_name("E6"))
     events = [
         RawEvent(0.0, 0.18, [e6], False, "E6", 320.0),
         RawEvent(0.18, 0.3, [b5, d6], False, "D6", 300.0),
@@ -289,10 +290,10 @@ def test_simplify_short_secondary_bleed_keeps_primary_for_restart_upper_sandwich
 
 
 def test_simplify_short_secondary_bleed_keeps_primary_for_restart_followed_by_upper_extension() -> None:
-    b5 = NoteCandidate(2, "B5", 987.7666025122483, "B", 5)
-    d6 = NoteCandidate(1, "D6", 1174.6590716696303, "D", 6)
-    e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
-    c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
+    b5 = NoteCandidate(2, Note.from_name("B5"))
+    d6 = NoteCandidate(1, Note.from_name("D6"))
+    e6 = NoteCandidate(17, Note.from_name("E6"))
+    c6 = NoteCandidate(16, Note.from_name("C6"))
     events = [
         RawEvent(0.0, 0.18, [e6], False, "E6", 320.0),
         RawEvent(0.18, 0.3, [b5, d6], False, "D6", 300.0),
@@ -306,9 +307,9 @@ def test_simplify_short_secondary_bleed_keeps_primary_for_restart_followed_by_up
 
 
 def test_collapse_late_descending_step_handoffs_keeps_lower_note() -> None:
-    a4 = NoteCandidate(13, "A4", 440.0, "A", 4)
-    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
-    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    a4 = NoteCandidate(13, Note.from_name("A4"))
+    g4 = NoteCandidate(11, Note.from_name("G4"))
+    f4 = NoteCandidate(7, Note.from_name("F4"))
     events = [
         RawEvent(0.0, 0.22, [a4], False, "A4", 320.0),
         RawEvent(0.22, 0.34, [g4, a4], False, "G4", 280.0),
@@ -321,9 +322,9 @@ def test_collapse_late_descending_step_handoffs_keeps_lower_note() -> None:
 
 
 def test_collapse_late_descending_step_handoffs_keeps_lower_note_when_middle_is_short_gliss_like() -> None:
-    a4 = NoteCandidate(13, "A4", 440.0, "A", 4)
-    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
-    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
+    a4 = NoteCandidate(13, Note.from_name("A4"))
+    g4 = NoteCandidate(11, Note.from_name("G4"))
+    f4 = NoteCandidate(7, Note.from_name("F4"))
     events = [
         RawEvent(0.0, 0.22, [a4], False, "A4", 320.0),
         RawEvent(0.22, 0.34, [g4, a4], True, "G4", 280.0),
@@ -336,10 +337,10 @@ def test_collapse_late_descending_step_handoffs_keeps_lower_note_when_middle_is_
 
 
 def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -> None:
-    c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
-    b5 = NoteCandidate(2, "B5", 987.7666025122483, "B", 5)
-    a5 = NoteCandidate(13, "A5", 880.0, "A", 5)
-    g5 = NoteCandidate(3, "G5", 783.9908719634985, "G", 5)
+    c6 = NoteCandidate(16, Note.from_name("C6"))
+    b5 = NoteCandidate(2, Note.from_name("B5"))
+    a5 = NoteCandidate(13, Note.from_name("A5"))
+    g5 = NoteCandidate(3, Note.from_name("G5"))
     events = [
         RawEvent(0.0, 0.22, [c6], False, "C6", 340.0),
         RawEvent(0.22, 0.4, [b5, g5], False, "B5", 300.0),
@@ -352,9 +353,9 @@ def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -
 
 
 def test_suppress_resonant_carryover_keeps_lower_note_in_descending_adjacent_chain() -> None:
-    f4 = NoteCandidate(7, "F4", 349.2282314330039, "F", 4)
-    g4 = NoteCandidate(11, "G4", 391.99543598174927, "G", 4)
-    e4 = NoteCandidate(2, "E4", 329.6275569128699, "E", 4)
+    f4 = NoteCandidate(7, Note.from_name("F4"))
+    g4 = NoteCandidate(11, Note.from_name("G4"))
+    e4 = NoteCandidate(2, Note.from_name("E4"))
     events = [
         RawEvent(0.0, 0.18, [f4], False, "F4", 320.0),
         RawEvent(0.18, 0.29, [f4, g4], False, "F4", 300.0),
@@ -367,9 +368,9 @@ def test_suppress_resonant_carryover_keeps_lower_note_in_descending_adjacent_cha
 
 
 def test_suppress_descending_upper_return_overlap_drops_residual_dyad() -> None:
-    e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
-    d6 = NoteCandidate(1, "D6", 1174.6590716696303, "D", 6)
-    c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
+    e6 = NoteCandidate(17, Note.from_name("E6"))
+    d6 = NoteCandidate(1, Note.from_name("D6"))
+    c6 = NoteCandidate(16, Note.from_name("C6"))
     events = [
         RawEvent(0.0, 0.14, [e6], False, "E6", 320.0),
         RawEvent(0.14, 0.25, [d6], False, "D6", 300.0),
@@ -384,9 +385,9 @@ def test_suppress_descending_upper_return_overlap_drops_residual_dyad() -> None:
 
 def test_suppress_leading_descending_overlap_collapses_first_bridge() -> None:
     tuning = get_default_tunings()[0]
-    e6 = NoteCandidate(17, "E6", 1318.5102276514797, "E", 6)
-    d6 = NoteCandidate(1, "D6", 1174.6590716696303, "D", 6)
-    c6 = NoteCandidate(16, "C6", 1046.5022612023945, "C", 6)
+    e6 = NoteCandidate(17, Note.from_name("E6"))
+    d6 = NoteCandidate(1, Note.from_name("D6"))
+    c6 = NoteCandidate(16, Note.from_name("C6"))
     events = [
         RawEvent(0.0, 0.12, [c6, e6], False, "E6", 400.0),
         RawEvent(0.12, 0.36, [d6], False, "D6", 320.0),
@@ -399,10 +400,10 @@ def test_suppress_leading_descending_overlap_collapses_first_bridge() -> None:
 
 
 def test_build_recent_ascending_primary_run_ceiling_uses_latest_suffix() -> None:
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    d6 = NoteCandidate(key=1, note_name="D6", frequency=1174.6590716696303, pitch_class="D", octave=6)
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    d6 = NoteCandidate(key=1, note=Note.from_name("D6"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.2, notes=[d6], is_gliss_like=False, primary_note_name="D6", primary_score=500.0),
@@ -415,9 +416,9 @@ def test_build_recent_ascending_primary_run_ceiling_uses_latest_suffix() -> None
 
 
 def test_should_block_descending_repeated_primary_tertiary_extension_requires_descending_suffix_context() -> None:
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     assert should_block_descending_repeated_primary_tertiary_extension(
         selected=[g4, b4],
@@ -451,10 +452,10 @@ def test_should_block_descending_repeated_primary_tertiary_extension_requires_de
 
 
 def test_build_recent_note_names_collapses_consecutive_duplicates() -> None:
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.4, notes=[c4], is_gliss_like=False),
@@ -469,12 +470,12 @@ def test_build_recent_note_names_collapses_consecutive_duplicates() -> None:
 
 
 def test_suppress_resonant_carryover_prefers_fresh_ascending_note() -> None:
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
-    c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
-    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
-    f5 = NoteCandidate(key=14, note_name="F5", frequency=698.4564628660078, pitch_class="F", octave=5)
-    g5 = NoteCandidate(key=3, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    c5 = NoteCandidate(key=5, note=Note.from_name("C5"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
+    e5 = NoteCandidate(key=4, note=Note.from_name("E5"))
+    f5 = NoteCandidate(key=14, note=Note.from_name("F5"))
+    g5 = NoteCandidate(key=3, note=Note.from_name("G5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.4, notes=[c4], is_gliss_like=False),
@@ -496,8 +497,8 @@ def test_suppress_resonant_carryover_prefers_fresh_ascending_note() -> None:
     ]
 
 def test_suppress_resonant_carryover_keeps_true_short_octave_dyad() -> None:
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.6, notes=[d4], is_gliss_like=False),
@@ -511,10 +512,10 @@ def test_suppress_resonant_carryover_keeps_true_short_octave_dyad() -> None:
     ]
 
 def test_suppress_resonant_carryover_keeps_phrase_reset_ascending_dyad() -> None:
-    c5 = NoteCandidate(key=14, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
-    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
-    g5 = NoteCandidate(key=3, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    c5 = NoteCandidate(key=14, note=Note.from_name("C5"))
+    e5 = NoteCandidate(key=4, note=Note.from_name("E5"))
+    g5 = NoteCandidate(key=3, note=Note.from_name("G5"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.08, notes=[c5, e5], is_gliss_like=True, primary_note_name="C5", primary_score=121.0),
@@ -531,9 +532,9 @@ def test_suppress_resonant_carryover_keeps_phrase_reset_ascending_dyad() -> None
 
 
 def test_suppress_resonant_carryover_keeps_lower_note_when_high_return_is_stale() -> None:
-    e6 = NoteCandidate(key=17, note_name="E6", frequency=1318.5102276514797, pitch_class="E", octave=6)
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
+    e6 = NoteCandidate(key=17, note=Note.from_name("E6"))
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.4, notes=[e6], is_gliss_like=False, primary_note_name="E6", primary_score=700.0),
@@ -551,9 +552,9 @@ def test_suppress_resonant_carryover_keeps_lower_note_when_high_return_is_stale(
     ]
 
 def test_suppress_resonant_carryover_keeps_repeated_note_for_short_restart_overlap() -> None:
-    c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    c5 = NoteCandidate(key=5, note=Note.from_name("C5"))
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.32, notes=[c5], is_gliss_like=False, primary_note_name="C5", primary_score=320.0),
@@ -571,10 +572,10 @@ def test_suppress_resonant_carryover_keeps_repeated_note_for_short_restart_overl
 
 def test_suppress_resonant_carryover_keeps_repeated_note_for_short_post_triad_upper_tail() -> None:
     tuning = next(tuning for tuning in get_default_tunings() if tuning.id == "kalimba-17-c")
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
-    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
+    e5 = NoteCandidate(key=4, note=Note.from_name("E5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.44, notes=[g4, b4, d5], is_gliss_like=False, primary_note_name="D5", primary_score=420.0),
@@ -590,8 +591,8 @@ def test_suppress_resonant_carryover_keeps_repeated_note_for_short_post_triad_up
     ]
 
 def test_collapse_same_start_primary_singletons_prefers_singleton_over_lower_carryover() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.12, notes=[a4, e4], is_gliss_like=False, primary_note_name="A4", primary_score=140.0),
@@ -606,8 +607,8 @@ def test_collapse_same_start_primary_singletons_prefers_singleton_over_lower_car
 
 
 def test_collapse_same_start_primary_singletons_prefers_singleton_when_following_primary_is_lower_carryover() -> None:
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.18, notes=[g4], is_gliss_like=False, primary_note_name="G4", primary_score=220.0),
@@ -623,9 +624,9 @@ def test_collapse_same_start_primary_singletons_prefers_singleton_when_following
 
 
 def test_merge_short_chord_clusters_merges_singleton_and_dyad_into_triad() -> None:
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.14, notes=[c4], is_gliss_like=False, primary_note_name="C4", primary_score=80.0),
@@ -637,9 +638,9 @@ def test_merge_short_chord_clusters_merges_singleton_and_dyad_into_triad() -> No
 
 
 def test_merge_short_chord_clusters_does_not_merge_gliss_like_head_with_dyad() -> None:
-    c5 = NoteCandidate(key=13, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
-    e5 = NoteCandidate(key=15, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
-    g5 = NoteCandidate(key=17, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
+    c5 = NoteCandidate(key=13, note=Note.from_name("C5"))
+    e5 = NoteCandidate(key=15, note=Note.from_name("E5"))
+    g5 = NoteCandidate(key=17, note=Note.from_name("G5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.0667, notes=[c5, e5], is_gliss_like=True, primary_note_name="C5", primary_score=121.0),
@@ -650,9 +651,9 @@ def test_merge_short_chord_clusters_does_not_merge_gliss_like_head_with_dyad() -
     assert [[note.note_name for note in event.notes] for event in merged] == [["C5", "E5"], ["G5"]]
 
 def test_merge_short_gliss_clusters_does_not_merge_gliss_head_with_longer_overlapping_dyad() -> None:
-    c5 = NoteCandidate(key=13, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
-    e5 = NoteCandidate(key=15, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
-    g5 = NoteCandidate(key=17, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
+    c5 = NoteCandidate(key=13, note=Note.from_name("C5"))
+    e5 = NoteCandidate(key=15, note=Note.from_name("E5"))
+    g5 = NoteCandidate(key=17, note=Note.from_name("G5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.0667, notes=[c5, e5], is_gliss_like=True, primary_note_name="C5", primary_score=121.0),
@@ -663,9 +664,9 @@ def test_merge_short_gliss_clusters_does_not_merge_gliss_head_with_longer_overla
     assert [[note.note_name for note in event.notes] for event in merged] == [["C5", "E5"], ["E5", "G5"]]
 
 def test_simplify_short_gliss_prefix_to_contiguous_singleton_handles_dyad_head_before_dyad() -> None:
-    c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
-    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
-    g5 = NoteCandidate(key=3, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
+    c5 = NoteCandidate(key=5, note=Note.from_name("C5"))
+    e5 = NoteCandidate(key=4, note=Note.from_name("E5"))
+    g5 = NoteCandidate(key=3, note=Note.from_name("G5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.0667, notes=[c5, e5], is_gliss_like=True, primary_note_name="C5", primary_score=121.0),
@@ -677,9 +678,9 @@ def test_simplify_short_gliss_prefix_to_contiguous_singleton_handles_dyad_head_b
 
 
 def test_merge_short_chord_clusters_merges_subset_into_following_triad() -> None:
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.8, notes=[d4, f4], is_gliss_like=False, primary_note_name="D4", primary_score=1000.0),
@@ -691,11 +692,11 @@ def test_merge_short_chord_clusters_merges_subset_into_following_triad() -> None
 
 
 def test_simplify_short_gliss_prefix_to_contiguous_singleton_picks_matching_note() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.08, notes=[e4, f4], is_gliss_like=True, primary_note_name="E4", primary_score=120.0),
@@ -707,10 +708,10 @@ def test_simplify_short_gliss_prefix_to_contiguous_singleton_picks_matching_note
 
 
 def test_merge_four_note_gliss_clusters_merges_triad_and_singleton() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.6, notes=[e4, g4, b4], is_gliss_like=True, primary_note_name="E4", primary_score=500.0),
@@ -724,11 +725,11 @@ def test_merge_four_note_gliss_clusters_merges_triad_and_singleton() -> None:
 
 
 def test_suppress_leading_gliss_neighbor_noise_drops_short_dyad_before_four_note_gliss() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.08, notes=[e4, f4], is_gliss_like=True, primary_note_name="E4", primary_score=120.0),
@@ -740,9 +741,9 @@ def test_suppress_leading_gliss_neighbor_noise_drops_short_dyad_before_four_note
 
 
 def test_suppress_leading_gliss_subset_transients_drops_short_prefix() -> None:
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.09, notes=[c4], is_gliss_like=True, primary_note_name="C4", primary_score=80.0),
@@ -753,10 +754,10 @@ def test_suppress_leading_gliss_subset_transients_drops_short_prefix() -> None:
     assert [[note.note_name for note in event.notes] for event in cleaned] == [["C4", "E4", "G4"]]
 
 def test_suppress_short_residual_tails_drops_recent_single_note_tail() -> None:
-    c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
-    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
-    g5 = NoteCandidate(key=3, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
+    c5 = NoteCandidate(key=5, note=Note.from_name("C5"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
+    e5 = NoteCandidate(key=4, note=Note.from_name("E5"))
+    g5 = NoteCandidate(key=3, note=Note.from_name("G5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.4, notes=[d5], is_gliss_like=False),
@@ -774,9 +775,9 @@ def test_suppress_short_residual_tails_drops_recent_single_note_tail() -> None:
 
 
 def test_suppress_subset_decay_events_drops_contiguous_subset_tail() -> None:
-    c5 = NoteCandidate(key=5, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
-    e5 = NoteCandidate(key=4, note_name="E5", frequency=659.2551138257398, pitch_class="E", octave=5)
-    g5 = NoteCandidate(key=3, note_name="G5", frequency=783.9908719634985, pitch_class="G", octave=5)
+    c5 = NoteCandidate(key=5, note=Note.from_name("C5"))
+    e5 = NoteCandidate(key=4, note=Note.from_name("E5"))
+    g5 = NoteCandidate(key=3, note=Note.from_name("G5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.5, notes=[c5, e5], is_gliss_like=False),
@@ -792,19 +793,19 @@ def test_suppress_subset_decay_events_drops_contiguous_subset_tail() -> None:
 
 
 def test_classify_event_gesture_strict_chord() -> None:
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
 
     event = RawEvent(start_time=0.0, end_time=0.7, notes=[c4, e4, g4], is_gliss_like=False)
     assert classify_event_gesture(event, 0, [event], [event]) == "strict_chord"
 
 
 def test_classify_event_gesture_slide_chord_from_subset_growth() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.5, notes=[g4, b4, d5], is_gliss_like=False),
@@ -815,12 +816,12 @@ def test_classify_event_gesture_slide_chord_from_subset_growth() -> None:
 
 
 def test_classify_event_gesture_slide_chord_from_neighbor_progression() -> None:
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
 
     merged_events = [
         RawEvent(start_time=0.0, end_time=0.5, notes=[c4, e4, g4], is_gliss_like=True),
@@ -830,10 +831,10 @@ def test_classify_event_gesture_slide_chord_from_neighbor_progression() -> None:
 
 
 def test_classify_event_gesture_slide_chord_from_gliss_like_family_without_neighbor_shift() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.6, notes=[g4, b4, d5], is_gliss_like=True),

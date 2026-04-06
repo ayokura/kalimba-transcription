@@ -7,11 +7,10 @@ from typing import Any, NamedTuple
 import numpy as np
 
 from ..models import InstrumentTuning
-from ..tunings import parse_note_name
 from . import settings
 from .audio import cents_distance, snap_frequency_to_tuning
 from .constants import *
-from .models import NoteCandidate, NoteHypothesis
+from .models import Note, NoteCandidate, NoteHypothesis
 from .profiles import (
     _build_analysis_window_chunks,
     _broadband_chunk_energy,
@@ -144,13 +143,9 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
     hypotheses: list[NoteHypothesis] = []
 
     for note_index, note in enumerate(tuning.notes):
-        pitch_class, octave = parse_note_name(note.note_name)
         candidate = NoteCandidate(
             key=note.key,
-            note_name=note.note_name,
-            frequency=note.frequency,
-            pitch_class=pitch_class,
-            octave=octave,
+            note=Note.from_name(note.note_name),
         )
 
         harmonic_energies = [float(harmonic_energy_matrix[h, note_index]) for h in range(MAX_HARMONIC_MULTIPLE)]

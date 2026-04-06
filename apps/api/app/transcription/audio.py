@@ -10,8 +10,8 @@ import soundfile as sf
 from fastapi import HTTPException, UploadFile
 
 from ..models import InstrumentTuning
-from ..tunings import build_custom_tuning, parse_note_name
-from .models import NoteCandidate
+from ..tunings import build_custom_tuning
+from .models import Note, NoteCandidate
 
 
 def parse_tuning_json(tuning_json: str) -> InstrumentTuning:
@@ -81,11 +81,7 @@ def snap_frequency_to_tuning(freq: float, tuning: InstrumentTuning) -> NoteCandi
     if best_note is None or best_distance > 80:
         return None
 
-    pitch_class, octave = parse_note_name(best_note.note_name)
     return NoteCandidate(
         key=best_note.key,
-        note_name=best_note.note_name,
-        frequency=best_note.frequency,
-        pitch_class=pitch_class,
-        octave=octave,
+        note=Note.from_name(best_note.note_name),
     )

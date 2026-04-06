@@ -2,6 +2,7 @@ import pytest
 
 from app.transcription import (
     REPEATED_PATTERN_PASS_IDS,
+    Note,
     NoteCandidate,
     RawEvent,
     apply_repeated_pattern_passes,
@@ -15,10 +16,10 @@ from app.transcription import (
 
 
 def test_normalize_repeated_four_note_family_merges_local_slide_extension() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.7, notes=[g4, b4, d5], is_gliss_like=False, primary_note_name="G4", primary_score=900.0),
@@ -35,10 +36,10 @@ def test_normalize_repeated_four_note_family_merges_local_slide_extension() -> N
 
 
 def test_normalize_repeated_four_note_family_stays_within_local_context_gap() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.7, notes=[g4, b4, d5], is_gliss_like=False, primary_note_name="G4", primary_score=900.0),
@@ -54,10 +55,10 @@ def test_normalize_repeated_four_note_family_stays_within_local_context_gap() ->
     ]
 
 def test_normalize_repeated_explicit_four_note_patterns_requires_explicit_four_note_anchor() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.26, notes=[e4, d5], is_gliss_like=False, primary_note_name="E4", primary_score=720.0),
@@ -76,10 +77,10 @@ def test_normalize_repeated_explicit_four_note_patterns_requires_explicit_four_n
 
 
 def test_normalize_repeated_explicit_four_note_patterns_keeps_terminal_subset_tail_without_future_anchor() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.9, notes=[e4, g4, b4, d5], is_gliss_like=False, primary_note_name="E4", primary_score=900.0),
@@ -99,11 +100,11 @@ def test_normalize_repeated_explicit_four_note_patterns_keeps_terminal_subset_ta
     ]
 
 def test_normalize_repeated_explicit_four_note_patterns_keeps_off_family_gliss_tail_outside_local_run() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
-    f5 = NoteCandidate(key=14, note_name="F5", frequency=698.4564628660078, pitch_class="F", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
+    f5 = NoteCandidate(key=14, note=Note.from_name("F5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.9, notes=[e4, g4, b4, d5], is_gliss_like=False, primary_note_name="E4", primary_score=900.0),
@@ -128,9 +129,9 @@ def test_normalize_repeated_explicit_four_note_patterns_keeps_off_family_gliss_t
 
 
 def test_suppress_repeated_triad_blips_drops_short_middle_burst() -> None:
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.9, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=1200.0),
@@ -148,12 +149,12 @@ def test_suppress_repeated_triad_blips_drops_short_middle_burst() -> None:
 
 
 def test_suppress_repeated_triad_blips_keeps_non_identical_anchor_context() -> None:
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.9, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=1200.0),
@@ -170,9 +171,9 @@ def test_suppress_repeated_triad_blips_keeps_non_identical_anchor_context() -> N
 
 
 def test_suppress_isolated_triad_extensions_rewrites_local_extension_between_dyad_anchors() -> None:
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
-    f5 = NoteCandidate(key=14, note_name="F5", frequency=698.4564628660078, pitch_class="F", octave=5)
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
+    f5 = NoteCandidate(key=14, note=Note.from_name("F5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.35, notes=[b4, d5], is_gliss_like=False, primary_note_name="B4", primary_score=700.0),
@@ -194,13 +195,13 @@ def test_suppress_isolated_triad_extensions_rewrites_local_extension_between_dya
 
 
 def test_suppress_isolated_triad_extensions_does_not_rewrite_without_bidirectional_dyad_support() -> None:
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
-    f5 = NoteCandidate(key=14, note_name="F5", frequency=698.4564628660078, pitch_class="F", octave=5)
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    c5 = NoteCandidate(key=15, note_name="C5", frequency=523.2511306011972, pitch_class="C", octave=5)
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
+    f5 = NoteCandidate(key=14, note=Note.from_name("F5"))
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    c5 = NoteCandidate(key=15, note=Note.from_name("C5"))
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.4, notes=[c4, g4], is_gliss_like=False, primary_note_name="C4", primary_score=680.0),
@@ -219,9 +220,9 @@ def test_suppress_isolated_triad_extensions_does_not_rewrite_without_bidirection
 
 
 def test_normalize_repeated_triad_patterns_expands_dominant_subsets() -> None:
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.7, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=1000.0),
@@ -240,10 +241,10 @@ def test_normalize_repeated_triad_patterns_expands_dominant_subsets() -> None:
 
 
 def test_normalize_repeated_triad_patterns_rewrites_isolated_outlier_triad() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.6, notes=[e4, g4, b4], is_gliss_like=False, primary_note_name="E4", primary_score=900.0),
@@ -264,9 +265,9 @@ def test_normalize_repeated_triad_patterns_rewrites_isolated_outlier_triad() -> 
 
 
 def test_normalize_repeated_triad_patterns_rewrites_terminal_dyad_with_anchor_run() -> None:
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.7, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=1000.0),
@@ -286,12 +287,12 @@ def test_normalize_repeated_triad_patterns_rewrites_terminal_dyad_with_anchor_ru
 
 
 def test_normalize_repeated_triad_patterns_does_not_rewrite_without_local_anchor_support() -> None:
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
-    c4 = NoteCandidate(key=9, note_name="C4", frequency=261.6255653005986, pitch_class="C", octave=4)
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
+    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.6, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=980.0),
@@ -310,10 +311,10 @@ def test_normalize_repeated_triad_patterns_does_not_rewrite_without_local_anchor
 
 
 def test_normalize_repeated_explicit_four_note_patterns_merges_leading_subset_into_dominant_take() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.8, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="E4", primary_score=900.0),
@@ -335,10 +336,10 @@ def test_normalize_repeated_explicit_four_note_patterns_merges_leading_subset_in
 
 
 def test_normalize_repeated_explicit_four_note_patterns_merges_adjacent_strict_subsets_into_dominant_take() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.26, notes=[e4, d5], is_gliss_like=False, primary_note_name="E4", primary_score=720.0),
@@ -361,11 +362,11 @@ def test_normalize_repeated_explicit_four_note_patterns_merges_adjacent_strict_s
 
 
 def test_normalize_repeated_explicit_four_note_patterns_absorbs_short_gliss_prefix_noise() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.8, notes=[e4, g4, b4, d5], is_gliss_like=True, primary_note_name="E4", primary_score=900.0),
@@ -388,10 +389,10 @@ def test_normalize_repeated_explicit_four_note_patterns_absorbs_short_gliss_pref
 
 
 def test_normalize_strict_four_note_subsets_merges_leading_dyad_into_following_dominant() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.42, notes=[e4, d5], is_gliss_like=False, primary_note_name="E4", primary_score=640.0),
@@ -413,10 +414,10 @@ def test_normalize_strict_four_note_subsets_merges_leading_dyad_into_following_d
 
 
 def test_normalize_strict_four_note_subsets_keeps_one_off_prefix_without_local_support() -> None:
-    e4 = NoteCandidate(key=10, note_name="E4", frequency=329.6275569128699, pitch_class="E", octave=4)
-    g4 = NoteCandidate(key=11, note_name="G4", frequency=391.99543598174927, pitch_class="G", octave=4)
-    b4 = NoteCandidate(key=12, note_name="B4", frequency=493.8833012561241, pitch_class="B", octave=4)
-    d5 = NoteCandidate(key=13, note_name="D5", frequency=587.3295358348151, pitch_class="D", octave=5)
+    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.42, notes=[e4, d5], is_gliss_like=False, primary_note_name="E4", primary_score=640.0),
@@ -437,9 +438,9 @@ def test_repeated_pattern_pass_ids_are_unique() -> None:
 
 
 def test_apply_repeated_pattern_passes_can_disable_triad_normalizer() -> None:
-    d4 = NoteCandidate(key=8, note_name="D4", frequency=293.6647679174076, pitch_class="D", octave=4)
-    f4 = NoteCandidate(key=7, note_name="F4", frequency=349.2282314330039, pitch_class="F", octave=4)
-    a4 = NoteCandidate(key=6, note_name="A4", frequency=440.0, pitch_class="A", octave=4)
+    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
+    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
+    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
 
     raw_events = [
         RawEvent(start_time=0.0, end_time=0.75, notes=[d4, f4], is_gliss_like=False, primary_note_name="D4", primary_score=700.0),

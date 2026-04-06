@@ -1,18 +1,80 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field as dataclass_field
+from math import pow
 from typing import Callable
+
+_NOTE_TO_SEMITONE = {
+    "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3,
+    "E": 4, "F": 5, "F#": 6, "Gb": 6, "G": 7, "G#": 8, "Ab": 8,
+    "A": 9, "A#": 10, "Bb": 10, "B": 11,
+}
+_NOTE_NAME_RE = re.compile(r"^([A-Ga-g])([#b]?)(-?\d+)$")
+
+
+@dataclass(frozen=True)
+class Note:
+    """Immutable representation of a musical note with all derived properties."""
+
+    name: str           # "G4"
+    pitch_class: str    # "G"
+    octave: int         # 4
+    frequency: float    # 391.995...
+    midi: int           # 67
+
+    @staticmethod
+    def from_name(name: str) -> Note:
+        match = _NOTE_NAME_RE.match(name.strip())
+        if not match:
+            raise ValueError(f"Invalid note name: {name}")
+        pitch = f"{match.group(1).upper()}{match.group(2)}"
+        octave = int(match.group(3))
+        midi = _NOTE_TO_SEMITONE[pitch] + (octave + 1) * 12
+        frequency = 440.0 * pow(2.0, (midi - 69) / 12.0)
+        return Note(
+            name=f"{pitch}{octave}",
+            pitch_class=pitch,
+            octave=octave,
+            frequency=frequency,
+            midi=midi,
+        )
+
+    def semitone_distance(self, other: Note) -> int:
+        return abs(self.midi - other.midi)
+
+    def is_octave_of(self, other: Note) -> bool:
+        return self.pitch_class == other.pitch_class and self.octave != other.octave
+
+    def octave_above(self) -> Note:
+        return Note.from_name(f"{self.pitch_class}{self.octave + 1}")
+
+    def octave_below(self) -> Note:
+        return Note.from_name(f"{self.pitch_class}{self.octave - 1}")
 
 
 @dataclass
 class NoteCandidate:
     key: int
-    note_name: str
-    frequency: float
-    pitch_class: str
-    octave: int
+    note: Note
     score: float = 0.0
     onset_gain: float | None = None
+
+    @property
+    def note_name(self) -> str:
+        return self.note.name
+
+    @property
+    def frequency(self) -> float:
+        return self.note.frequency
+
+    @property
+    def pitch_class(self) -> str:
+        return self.note.pitch_class
+
+    @property
+    def octave(self) -> int:
+        return self.note.octave
 
 
 @dataclass
@@ -59,6 +121,8 @@ class Segment:
     merge_reason: str = ""
     end_estimated: bool = False
     trimmed_from: "Segment | None" = None
+    confirmed_primary: Note | None = None
+    hint_primary: Note | None = None
 
     def __iter__(self):
         yield self.start_time
