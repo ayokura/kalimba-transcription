@@ -48,6 +48,7 @@ from .models import NoteCandidate, RawEvent
 from .notation import build_notation_views, format_doremi, format_number, quantize_beat
 from .patterns import apply_repeated_pattern_passes, suppress_recent_upper_echo_mixed_clusters
 from .peaks import segment_peaks
+from .per_note import rescue_gap_mute_dips
 from .segments import (
     build_segment_debug_contexts,
     detect_segments,
@@ -71,6 +72,7 @@ async def transcribe_audio(
         mid_performance_start=mid_performance_start,
         mid_performance_end=mid_performance_end,
     )
+    segments = rescue_gap_mute_dips(segments, audio, sample_rate, tuning)
 
     raw_events: list[RawEvent] = []
     segment_candidates_debug: list[dict[str, Any]] = []
@@ -122,6 +124,7 @@ async def transcribe_audio(
             previous_primary_note_name=previous_primary_note_name,
             previous_primary_frequency=previous_primary_frequency,
             previous_primary_was_singleton=previous_primary_was_singleton,
+            confirmed_primary=segment.confirmed_primary,
         )
         if not candidates or primary is None:
             if debug and candidate_debug:

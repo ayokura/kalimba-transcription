@@ -1267,6 +1267,36 @@ def _acquire_spectrum(
     return spectral, evidence
 
 
+def _resolve_confirmed_primary(
+    confirmed: Note,
+    spectral: _SpectralData,
+    evidence: _NoteEvidenceCache,
+) -> _PrimaryResult:
+    """Resolve primary using a per-note-pass confirmed note (mute-dip).
+
+    Skips the full promotion gauntlet and residual-decay check.  Falls back
+    to normal ranking if the confirmed note has no FFT presence.
+    """
+    # Find the confirmed note in the ranked hypotheses.
+    match = next(
+        (h for h in spectral.ranked if h.candidate.note_name == confirmed.name),
+        None,
+    )
+    if match is None:
+        # Confirmed note not found in FFT — fall back to rank-1.
+        match = spectral.ranked[0]
+    onset_gain = evidence.onset_gain(match.candidate.frequency)
+    decision = _PrimaryDecision(
+        initial_primary=match.candidate.note_name,
+        final_primary=match.candidate.note_name,
+        onset_gain=onset_gain,
+        promotions=["confirmed-primary"],
+        rejected=False,
+        rejection_reason=None,
+    )
+    return _PrimaryResult(match, onset_gain, None, decision)
+
+
 def _resolve_primary(
     ctx: _SegmentContext,
     spectral: _SpectralData,
@@ -2408,6 +2438,7 @@ def segment_peaks(
     previous_primary_note_name: str | None = None,
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
+    confirmed_primary: Note | None = None,
 ) -> SegmentPeaksResult:
     ctx = _SegmentContext(
         audio=audio, sample_rate=sample_rate,
@@ -2432,7 +2463,12 @@ def segment_peaks(
     spectral, evidence = acquired
 
     # Layer 2: Primary resolution
-    primary_result = _resolve_primary(ctx, spectral, evidence)
+    if confirmed_primary is not None:
+        primary_result = _resolve_confirmed_primary(
+            confirmed_primary, spectral, evidence,
+        )
+    else:
+        primary_result = _resolve_primary(ctx, spectral, evidence)
     primary = primary_result.primary
     primary.candidate.onset_gain = primary_result.primary_onset_gain
 
