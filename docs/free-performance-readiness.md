@@ -4,7 +4,7 @@
 
 各 recognizer コンポーネントについて、Free Performance（楽譜知識なし・Expected Performance なしの自由演奏転写）への適合度を評価する。チケット処理のたびに関連コンポーネントを再評価し、このドキュメントを更新する。
 
-**最終更新: 2026-04-06 (コミット 00d43dc, #126 gate調整)**
+**最終更新: 2026-04-06 (コミット 7e2b6f8, Stage 2/7 評価追加)**
 
 ## 評価基準
 
@@ -28,16 +28,22 @@
 
 ## Stage 2: Onset & Segment Detection (`segments.py`)
 
-**評価: TBD**
+**評価: Mostly Ready（onset/active range） / Needs Work（SR依存性）**
 
-- `detect_segments()`: librosa RMS + onset detection + attack profile validation
-- 34-key BWV147 で NO MATCH が 4件 (E46, E62, E83, E162) 残っており onset detection 層の問題
-- streaming/causal 化の際に最も大きな再設計が必要になる可能性
+**最終更新: 2026-04-06 (コミット 7e2b6f8, #140 SR正規化調査)**
 
-### 未評価項目
-- active range 検出の楽譜非依存性
-- multi-onset gap collector の汎用性
-- attack profile validation の閾値がBWV147固有かどうか
+### 良い点
+
+- **Active range 検出**: RMS ベースで楽譜非依存。threshold = max(0.18*max_rms, 2.2*median_rms) は adaptive で楽器特性に追従
+- **Attack profile validation**: broadband_gain + high_band_flux の組み合わせ判定。moderate gain-flux gate (gain≥3.0, flux≥0.8) の追加で 34-key の genuine attack 2件を救済済み。閾値は物理量ベースで fixture-specific でない
+- **Gap collector (AVC)**: onset の attack profile で判定しており因果的・楽譜非依存
+- **librosa onset_strength + onset_detect**: 標準的な broadband spectral flux。大半の onset を正しく検出（17-key 160/163, 34-key 156/163）
+
+### 懸念点
+
+- **SR 依存性 (#140)**: FRAME_LENGTH=2048, HOP_LENGTH=256 が固定サンプル数。sr=44100 で STFT窓=46.4ms、sr=96000 で 21.3ms。onset 検出の時間分解能が楽器/録音環境で異なる。リサンプル実験で -5 exact 回帰、n_fft 変更で -4 exact — チューニング再調整なしの単独投入は不可
+- **Polyphonic onset の限界**: 単音 attack が他の音の残響に埋もれると onset_strength に現れない（E162 B4: onset_strength=0.6 vs background 0.3-0.5）。per-note onset detection で補完する設計を策定済み（docs/per-note-onset-detection-design.md）
+- **Streaming 再設計**: librosa.onset.onset_strength は batch 処理。streaming 化には incremental spectral flux + peak picking の再実装が必要。per-note onset の部品（`_note_band_energy()` 等）は因果的で streaming 互換
 
 ---
 
@@ -110,13 +116,43 @@
 
 ## Stage 7: Final Merging & Adjacency (`events.py`)
 
-**評価: TBD**
+**評価: Ready（merge 系） / Needs Work（collapse/suppress 系）**
 
-- `merge_adjacent_events()`, `merge_short_chord_clusters()`
-- ascending run での dyad split
+**最終更新: 2026-04-06 (Stage 7 棚卸し)**
 
-### 未評価項目
-- merge 判定がチューニング依存のみか、文脈依存があるか
+27 個の suppress/collapse/merge/split 関数が line 191-229 で逐次適用される。`merge_adjacent_events()` が3回挟まれ、各 collapse の結果を吸収する構造。
+
+### Merge 系（4関数）— Ready
+
+| 関数 | 判定条件 | Free Performance 依存 |
+|------|---------|----------------------|
+| `merge_adjacent_events()` | 同一 notes + gap ≤ 120ms | なし |
+| `merge_short_chord_clusters()` | singleton+dyad → triad, gap ≤ 80ms, 連続キー | なし |
+| `merge_short_gliss_clusters()` | 2-3音 gliss, gap ≤ 60ms, 連続キー | なし |
+| `merge_four_note_gliss_clusters()` | 4音 gliss, gap ≤ 60ms, 連続キー | なし |
+
+時間閾値 + ノート構造（連続キー、ノート数）のみで判定。楽譜知識を使わない。
+
+### Collapse 系（6関数）— Mostly Ready ～ Needs Work
+
+| 関数 | 依存度 | 懸念 |
+|------|--------|------|
+| `collapse_same_start_primary_singletons()` | 中 | phrase_reset_lower が周波数パターンに依存 |
+| `collapse_high_register_adjacent_bridge_dyads()` | 中 | octave ≥ 6 の楽器レジスター制限 |
+| `collapse_restart_tail_subset_into_following_chord()` | 中 | `is_adjacent_tuning_step()` による tuning チェック |
+| `collapse_late_descending_step_handoffs()` | 高 | cents_distance による音程パターン認識 |
+| `collapse_ascending_restart_lower_residue_singletons()` | 高 | 再開パターン + tuning step 認識 |
+| `split_adjacent_step_dyads_in_ascending_runs()` | 高 | 上昇ラン構造の認識 |
+
+高依存の3関数は recognizer-local-rules.md で fixture-specific debt として既に記録されている。
+
+### Suppress 系（17関数）— 個別評価未実施
+
+line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比較ベースだが、一部に fixture-specific なパターン認識が含まれる可能性がある。棚卸しは Stage 5 評価と合わせて実施が効率的。
+
+### per-note onset Pass 3 (post-merge) との関係
+
+`merge_adjacent_events()` の条件「同一 notes + gap ≤ 120ms」は、per-note onset splitting で生じた誤分割（異なる notes の sub-segments）を吸収しない。`merge_short_chord_clusters()` は部分的にカバーするが連続キー条件がある。既存 merge だけでは Pass 2 の誤分割吸収は不十分な可能性が高く、Pass 3 の設計検討が必要。
 
 ---
 
