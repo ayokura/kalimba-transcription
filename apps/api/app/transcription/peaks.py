@@ -1133,6 +1133,7 @@ GATE_CATEGORIES: dict[str, str] = {
     # Rescue (Layer 3.5: final decision)
     "evidence-rescue-weak-secondary-onset": "rescue",
     "evidence-rescue-weak-lower-secondary": "rescue",
+    "evidence-rescue-tertiary-score-override": "rescue",
     "evidence-rescue-recent-carryover": "rescue",
 }
 
@@ -2179,7 +2180,8 @@ def _apply_final_decisions(
         if hypothesis.candidate.note_name in selected_names:
             continue
         if any(are_harmonic_related(hypothesis.candidate, s) for s in selection.selected):
-            continue
+            if not decision.octave_dyad_allowed:
+                continue
         test_keys = [n.key for n in selection.selected] + [hypothesis.candidate.key]
         if not is_physically_playable_chord(test_keys, key_layers=ctx.key_layers):
             continue
@@ -2245,6 +2247,18 @@ def _evidence_rescue_gate(
         ):
             return "evidence-rescue-recent-carryover"
         return None
+
+    # Score+FR override for tertiary evidence gates: when backward_gain is
+    # low but onset_gain confirms a genuine attack and spectral evidence is
+    # strong, rescue tertiary candidates rejected only by evidence gates.
+    if (
+        backward_gain < RESCUE_MIN_BACKWARD_GAIN
+        and onset_gain >= RESCUE_CARRYOVER_MIN_ONSET_GAIN
+        and hypothesis.score >= primary.score * RESCUE_SCORE_FR_OVERRIDE_MIN_SCORE_RATIO
+        and hypothesis.fundamental_ratio >= RESCUE_SCORE_FR_OVERRIDE_MIN_FR
+    ):
+        if "tertiary-weak-onset" in reasons or "tertiary-weak-backward-attack" in reasons:
+            return "evidence-rescue-tertiary-score-override"
 
     if backward_gain < RESCUE_MIN_BACKWARD_GAIN:
         return None
