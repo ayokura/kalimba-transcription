@@ -83,18 +83,52 @@
 
 ## Stage 5: Event Post-Processing (`events.py`)
 
-**評価: Needs Work**
+**評価: Mostly Ready（suppress/simplify 大半） / Needs Work（パターン依存 3関数）**
 
-- 27 個の suppression/collapse/simplify 関数が逐次適用される
-- `recognizer-local-rules.md` に記録されている fixture-specific ルールが複数含まれる
-- 適用順序に結果が依存する
+**最終更新: 2026-04-06 (suppress 系全関数棚卸し)**
+
+27 個の suppression/collapse/simplify/merge 関数が line 191-229 で逐次適用される。個別評価の結果、大半は汎用的だが一部にパターン依存あり。
+
+### 依存度別分類
+
+**なし（時間 + ノート構造のみ）— 8関数:**
+- `suppress_onset_decaying_carryover` — onset_gain < 1.0 の減衰二次ノート削除
+- `suppress_leading_single_transient` — 先頭の短い transient 削除 (≤0.1s)
+- `suppress_leading_gliss_subset_transients` — gliss 前の低信頼 transient 削除
+- `suppress_low_confidence_dyad_transients` — 低信頼 dyad 削除 (score ≤ 0.5)
+- `simplify_short_gliss_prefix_to_contiguous_singleton` — gliss 前の 2-note → 1-note
+- `suppress_leading_gliss_neighbor_noise` — gliss 前の noise 削除
+- `suppress_subset_decay_events` — subset decay 削除 (gap ≤ 0.02s)
+- `suppress_short_residual_tails` — 短い residual tail 削除 (≤0.14s)
+
+**低（tuning step / cents 距離チェック）— 6関数:**
+- `suppress_leading_descending_overlap` — 下降 dyad の上位ノート絞り込み
+- `simplify_descending_adjacent_dyad_residue` — 下降隣接 dyad の単純化
+- `suppress_descending_upper_singleton_spikes` — 下降ランのスパイク削除
+- `suppress_short_descending_return_singletons` — 上位 octave キャリーオーバー抑制
+- `suppress_descending_upper_return_overlap` — 下降リターンの dyad 単純化
+- `suppress_post_tail_gap_bridge_dyads` — post-tail gap bridge 削除
+
+**中（周波数パターン認識）— 2関数:**
+- `simplify_short_secondary_bleed` — dyad bleed の単純化（cents 範囲 + score ratio）
+- `suppress_bridging_octave_pairs` — octave pair bridge 削除（harmonic relation 判定）
+
+**高（fixture-specific パターン依存）— 3関数:**
+- `suppress_resonant_carryover` — 繰り返し周波数 + harmonic relation + phrase reset 検出。高域 restart-tail 特化ロジックあり
+- `suppress_descending_terminal_residual_cluster` — tuning rank ベースの terminal suffix 構築
+- `suppress_descending_restart_residual_cluster` — tuning rank ベースの restart 2-note cluster 検出
 
 ### 既知の fixture-specific debt
-- `collapse_restart_tail_subset_into_following_chord` (events.py)
-- `suppress_recent_upper_echo_mixed_clusters` (patterns.py)
-- `lower-mixed-roll-extension` (peaks.py)
-- ~~`collect_two_onset_terminal_tail_segments`~~ — #122 で削除済み（AVC trailing collector で代替）
-- `recent-upper-octave-alias-primary` promotion — Stage 3 (peaks.py) のスコープ。詳細は Stage 3 の懸念点を参照
+- `collapse_restart_tail_subset_into_following_chord` (events.py) — Stage 7 collapse 系
+- `suppress_recent_upper_echo_mixed_clusters` (patterns.py) — Stage 6
+- `lower-mixed-roll-extension` (peaks.py) — Stage 3
+- ~~`collect_two_onset_terminal_tail_segments`~~ — #122 で削除済み
+- `recent-upper-octave-alias-primary` promotion — Stage 3
+
+### 潜在的 debt 候補（今回新規特定）
+- `suppress_resonant_carryover` の `keep_high_register_repeated_lower_restart` ケース
+- `suppress_descending_terminal_residual_cluster` の tuning rank suffix ロジック
+- `suppress_descending_restart_residual_cluster` の restart-specific gap limit (0.8-1.5s)
 
 詳細は [recognizer-local-rules.md](recognizer-local-rules.md) を参照。
 
