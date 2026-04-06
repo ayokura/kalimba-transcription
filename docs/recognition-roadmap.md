@@ -22,8 +22,8 @@
 - BWV147 scoped phrases（6 sub-fixtures: late-upper-tail, lower-context-roll, lower-mixed-roll, upper-mixed-cluster, restart-prefix, restart-tail 等）
 
 ### BWV147 practical coverage
-- **17-key 163-event sequence**: pending（full-sequence 認識はまだ未完）
-- **34-key 163-event sequence**: pending（初の multi-layer kalimba fixture）
+- **17-key 163-event sequence**: pending（160/163 ~98%。full-sequence 完全一致はまだ未達）
+- **34-key 163-event sequence**: pending（156/163 ~96%。初の multi-layer kalimba fixture）
 - 6 scoped BWV sub-fixtures: 4 completed, 2 pending
 
 ### 現時点で acoustic regression target ではないもの
