@@ -89,3 +89,13 @@
 - **不採用理由**: 全 4 fixture の使用が AVC leading で完全カバーされていることを ablation で確認（全テスト pass）。AVC 自体が因果的（onset の attack profile で判定）であり、leadingOrphan を残す streaming 上の理由もない
 - **削除**: `feeb054` (-36行, 3定数, 1関数, 1 ablation フラグ)
 - **再検討条件**: AVC leading が mid_performance_start 等の条件で無効化される場面で leading onset が失われる場合
+
+## onset_strength n_fft の SR 適応 (segments.py)
+
+- **日付**: 2026-04-06
+- **概要**: `librosa.onset.onset_strength` の n_fft をサンプルレート依存にして STFT 窓の実時間を ~23ms で統一する
+- **動機**: 34-key fixture (sr=44100) で STFT 窓 = 46.4ms、17-key fixture (sr=96000) で 21.3ms。34-key E162 B4→E163 chord の ~40ms gap が窓より短く onset 分離不能
+- **実験**: n_fft を `min(2048, 2**round(log2(sr * 0.023)))` で計算（sr=44100 → 1024, sr=96000 → 2048）。E162 は改善せず（B4 attack の onset_strength=0.6 がバックグラウンド 0.3-0.5 に埋もれたまま）。一方、全イベントの onset 時刻がシフトし score alignment で -4 exact (156→152) の回帰。テストスイートは pass（34-key fixture が pending のため）
+- **不採用理由**: (1) ターゲット問題 (E162) が解決しない — B4 単音 attack の broadband spectral flux が C5 残響 (127K) に対して小さすぎ、窓サイズではなく polyphonic onset detection の限界。(2) onset_strength envelope の変化が全 segment 境界に波及し、downstream の閾値群（peak_pick, active range, gap collector 等）が n_fft=2048 前提でチューニングされているため広範な回帰が発生
+- **関連知見**: peaks.py は `_adaptive_n_fft()` で SR 適応済み。profiles.py は時間ベースパラメータ (ONSET_ENERGY_WINDOW_SECONDS) で SR 非依存。segments.py のみ固定サンプル数 (FRAME_LENGTH=2048, HOP_LENGTH=256) を使用しており SR 依存性が残っている。ただし onset_strength の n_fft 単独変更は downstream 連鎖が大きすぎるため、やるなら FRAME_LENGTH / HOP_LENGTH / 閾値群を含む包括的な SR 正規化（または入力リサンプル）が必要
+- **再検討条件**: (1) segments.py 全体の SR 正規化設計時。(2) 入力リサンプル（統一 SR）の導入時。(3) per-note onset detection（note-band energy tracking ベースの onset 検出）が実装された場合、polyphonic onset の根本問題が解消されて本変更も有効になる可能性
