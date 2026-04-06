@@ -11,6 +11,7 @@ from ..models import InstrumentTuning
 from .models import Note, Segment
 from .peaks import (
     MUTE_DIP_ENERGY_WINDOW,
+    MUTE_DIP_ENERGY_WINDOW_NARROW,
     MUTE_DIP_REATTACK_MAX_DIP_RATIO,
     MUTE_DIP_REATTACK_MIN_POST_ENERGY,
     MUTE_DIP_REATTACK_MIN_PRE_ENERGY,
@@ -44,13 +45,32 @@ def _scan_gap_for_mute_dip(
 
     Uses a sliding compact-window approach: at each coarse step where the note
     has substantial energy, checks the next 60 ms for a 100x drop and the
-    following 100 ms for recovery.  This distinguishes genuine finger-mute dips
-    (~40 ms) from gradual natural decay (seconds).
+    following 100 ms for recovery.  Tries the standard 50ms energy window
+    first, then falls back to a narrower 30ms window for fast mute-dips.
 
     Returns the recovery time (suitable as a new segment start) or ``None``.
     """
+    result = _scan_gap_for_mute_dip_with_window(
+        audio, sample_rate, gap_start, gap_end, frequency, MUTE_DIP_ENERGY_WINDOW,
+    )
+    if result is not None:
+        return result
+    return _scan_gap_for_mute_dip_with_window(
+        audio, sample_rate, gap_start, gap_end, frequency, MUTE_DIP_ENERGY_WINDOW_NARROW,
+    )
+
+
+def _scan_gap_for_mute_dip_with_window(
+    audio: np.ndarray,
+    sample_rate: int,
+    gap_start: float,
+    gap_end: float,
+    frequency: float,
+    window_seconds: float,
+) -> float | None:
+    """Scan a gap with a specific energy window size."""
     audio_duration = len(audio) / sample_rate
-    scan_end = min(gap_end, audio_duration - MUTE_DIP_ENERGY_WINDOW)
+    scan_end = min(gap_end, audio_duration - window_seconds)
 
     # Need room for at least dip_window + recovery_window.
     if scan_end - gap_start < _GAP_DIP_MAX_DIP_WINDOW + _GAP_DIP_MAX_RECOVERY_WINDOW:
@@ -60,7 +80,7 @@ def _scan_gap_for_mute_dip(
     while t < scan_end - _GAP_DIP_MAX_DIP_WINDOW - _GAP_DIP_MAX_RECOVERY_WINDOW:
         pre_energy = _note_band_energy(
             audio, sample_rate, t, frequency,
-            window_seconds=MUTE_DIP_ENERGY_WINDOW,
+            window_seconds=window_seconds,
         )
         if pre_energy < MUTE_DIP_REATTACK_MIN_PRE_ENERGY:
             t += _GAP_DIP_COARSE_STEP

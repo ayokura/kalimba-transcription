@@ -2627,10 +2627,55 @@ def _find_note_attack_time(
 
 
 MUTE_DIP_ENERGY_WINDOW = 0.05
+MUTE_DIP_ENERGY_WINDOW_NARROW = 0.03
 MUTE_DIP_REATTACK_MIN_PRE_ENERGY = 3.0
 MUTE_DIP_REATTACK_MIN_POST_ENERGY = 3.0
 MUTE_DIP_REATTACK_MAX_DIP_RATIO = 0.1
 MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO = 0.9
+
+
+def _check_mute_dip_with_window(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    frequency: float,
+    window_seconds: float,
+) -> bool:
+    """Core mute-dip check with a configurable energy window."""
+    pre_time = onset_time - 0.04
+    if pre_time < 0:
+        return False
+    pre_energy = _note_band_energy(audio, sample_rate, pre_time, frequency,
+                                   window_seconds=window_seconds)
+    if pre_energy < MUTE_DIP_REATTACK_MIN_PRE_ENERGY:
+        return False
+
+    min_energy = float("inf")
+    scan_start = max(onset_time - 0.01, 0.0)
+    scan_end = min(onset_time + 0.05, len(audio) / sample_rate - window_seconds)
+    t = scan_start
+    while t < scan_end:
+        energy = _note_band_energy(audio, sample_rate, t, frequency,
+                                   window_seconds=window_seconds)
+        if energy < min_energy:
+            min_energy = energy
+        t += 0.005
+
+    attack_time = _find_note_attack_time(audio, sample_rate, onset_time, frequency)
+    post_time = attack_time + 0.02
+    if post_time > len(audio) / sample_rate - window_seconds:
+        return False
+    post_energy = _note_band_energy(audio, sample_rate, post_time, frequency,
+                                    window_seconds=window_seconds)
+    if post_energy < MUTE_DIP_REATTACK_MIN_POST_ENERGY:
+        return False
+
+    dip_ratio = (min_energy + 1e-6) / (pre_energy + 1e-6)
+    if dip_ratio >= MUTE_DIP_REATTACK_MAX_DIP_RATIO:
+        return False
+
+    recovery_ratio = post_energy / (pre_energy + 1e-6)
+    return recovery_ratio >= MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO
 
 
 def _has_mute_dip_reattack(
@@ -2645,54 +2690,17 @@ def _has_mute_dip_reattack(
     which causes a characteristic energy profile in the note's frequency band:
         high (ringing) → low (finger mute) → high (re-attack)
 
-    Unlike ``_is_residual_decay`` (which compares pre vs post energy), this
-    function explicitly looks for the energy *dip* near the onset time.
+    Uses a two-pass approach: first tries the standard 50ms window, then
+    falls back to a narrower 30ms window for fast mute-dips (~20ms) that
+    the wider window smooths out.
     """
-    # Pre-onset: the note must have been ringing before the onset.
-    pre_time = onset_time - 0.04
-    if pre_time < 0:
-        return False
-    pre_energy = _note_band_energy(audio, sample_rate, pre_time, frequency,
-                                   window_seconds=MUTE_DIP_ENERGY_WINDOW)
-    if pre_energy < MUTE_DIP_REATTACK_MIN_PRE_ENERGY:
-        return False  # Note wasn't ringing; can't be a re-attack.
-
-    # Scan for minimum energy around the onset (the mute dip).
-    # The dip sits between pre-onset and the new attack, typically ±30ms of
-    # the detected onset.  Window (50ms) exceeds the physical dip (~40ms)
-    # but fine-step scanning still detects deep genuine dips while smoothing
-    # out narrow noise artifacts.
-    min_energy = float("inf")
-    scan_start = max(onset_time - 0.01, 0.0)
-    scan_end = min(onset_time + 0.05, len(audio) / sample_rate - MUTE_DIP_ENERGY_WINDOW)
-    t = scan_start
-    while t < scan_end:
-        energy = _note_band_energy(audio, sample_rate, t, frequency,
-                                   window_seconds=MUTE_DIP_ENERGY_WINDOW)
-        if energy < min_energy:
-            min_energy = energy
-        t += 0.005
-
-    # Post-attack: find the per-note attack time and measure energy after.
-    attack_time = _find_note_attack_time(audio, sample_rate, onset_time, frequency)
-    post_time = attack_time + 0.02
-    if post_time > len(audio) / sample_rate - MUTE_DIP_ENERGY_WINDOW:
-        return False
-    post_energy = _note_band_energy(audio, sample_rate, post_time, frequency,
-                                    window_seconds=MUTE_DIP_ENERGY_WINDOW)
-    if post_energy < MUTE_DIP_REATTACK_MIN_POST_ENERGY:
-        return False  # No meaningful re-attack energy.
-
-    dip_ratio = (min_energy + 1e-6) / (pre_energy + 1e-6)
-    if dip_ratio >= MUTE_DIP_REATTACK_MAX_DIP_RATIO:
-        return False
-
-    # Recovery check: a genuine re-attack restores the note's energy to near
-    # its pre-onset level.  Sympathetic interference from plucking a neighboring
-    # tine can cause a brief energy dip, but the note continues to decay
-    # afterwards (recovery < 1.0).
-    recovery_ratio = post_energy / (pre_energy + 1e-6)
-    return recovery_ratio >= MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO
+    if _check_mute_dip_with_window(audio, sample_rate, onset_time, frequency,
+                                    MUTE_DIP_ENERGY_WINDOW):
+        return True
+    # Fallback: narrower window catches fast mute-dips (~20ms) where the
+    # 50ms window averages the dip with surrounding high-energy frames.
+    return _check_mute_dip_with_window(audio, sample_rate, onset_time, frequency,
+                                        MUTE_DIP_ENERGY_WINDOW_NARROW)
 
 
 def _note_onset_energy_gain(
