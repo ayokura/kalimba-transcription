@@ -228,6 +228,8 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 
 ## 更新履歴
 
-| 日付 | チケット | 更新内容 |
-|------|----------|----------|
-| 2026-04-06 | #126 | 初版作成。Stage 3 (peaks.py) を詳細評価。octave dyad 閾値緩和 + rescue bypass の Free Performance 影響を記載 |
+| 日付 | 契機 | 更新内容 |
+|------|------|----------|
+| 2026-04-06 | #126 gate調整 | 初版作成。Stage 3 (peaks.py) を詳細評価。octave dyad 閾値緩和 + rescue bypass の Free Performance 影響を記載 |
+| 2026-04-06 | 34-key NO MATCH調査 | Stage 2 (segments.py) 評価追加。SR依存性 (#140)、polyphonic onset 限界、per-note onset 設計 (#141) を記載 |
+| 2026-04-06 | Stage 5/7 棚卸し | Stage 5 suppress/simplify 系 19関数の個別評価（依存度別4段階分類）。Stage 7 merge 4関数 + collapse 6関数の評価追加。潜在 debt 3件特定 |
