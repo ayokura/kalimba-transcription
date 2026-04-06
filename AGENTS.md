@@ -6,6 +6,15 @@
 - Keep `main` runnable. Do not leave `main` in a knowingly broken state.
 - Shared rules go here. Agent-specific rules go in the agent-specific Notes sections within this document, or in files referenced from those sections.
 
+## Research References
+
+- AMT (Automatic Music Transcription) の研究サーベイと現行パイプラインへの適用分析が [`docs/research/`](/docs/research/) にある。
+- 設計判断やアルゴリズム選択の際は [`20260406-research-to-implementation-mapping.md`](/docs/research/20260406-research-to-implementation-mapping.md) を参照し、研究知見との整合性を確認すること。
+- 特に以下の点は設計上の前提として意識する:
+  - カリンバの倍音は非整数比（梁振動由来）— 整数倍 harmonic comb の限界を認識する
+  - onset の有無を note-on の gate として使う設計が共鳴 FP 抑制に最も効果的
+  - attack / body / late_decay の状態遷移モデルが sympathetic resonance との区別に有効
+
 ## Product Vision and Technical Direction
 
 - The end goal is transcription of free-form kalimba performance into sheet music, without any Expected Performance or prior knowledge of what will be played.
