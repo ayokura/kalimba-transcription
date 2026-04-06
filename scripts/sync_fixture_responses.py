@@ -2,7 +2,7 @@
 """Regenerate response.json for all manual-capture fixtures using the current API.
 
 Usage:
-    PYTHONPATH=apps/api python3 scripts/sync_fixture_responses.py [--no-debug] [FIXTURE_NAME ...]
+    uv run python scripts/sync_fixture_responses.py [--no-debug] [FIXTURE_NAME ...]
 
 If FIXTURE_NAME(s) are given, only those fixtures are updated.
 Otherwise all fixtures under apps/api/tests/fixtures/manual-captures/ are processed.
@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "apps" / "api"))
 FIXTURE_ROOT = ROOT / "apps" / "api" / "tests" / "fixtures" / "manual-captures"
 
 
@@ -25,7 +26,6 @@ def main() -> int:
     parser.add_argument("--no-debug", action="store_true", help="Omit debug payload from response")
     args = parser.parse_args()
 
-    # Lazy import so PYTHONPATH can be set before invocation
     from fastapi.testclient import TestClient
     from app.main import app
 
