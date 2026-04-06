@@ -8,7 +8,7 @@ Kalimba performance to sheet music MVP.
 - `apps/api`: FastAPI transcription API with kalimba-focused analysis pipeline
 - `docs/`: project documentation
   - [architecture.md](docs/architecture.md): パイプライン構成（Stage 1-9）
-  - [recognition-roadmap.md](docs/recognition-roadmap.md): 認識精度の現状とロ���ドマップ
+  - [recognition-roadmap.md](docs/recognition-roadmap.md): 認識精度の現状とロードマップ
   - [testing.md](docs/testing.md): テスト手順・fixture 管理
   - [recognizer-local-rules.md](docs/recognizer-local-rules.md): fixture-specific ルール一覧
   - [free-performance-readiness.md](docs/free-performance-readiness.md): Free Performance 適合度評価

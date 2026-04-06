@@ -90,7 +90,7 @@
 - ~~`collect_two_onset_terminal_tail_segments`~~ — #122 で削除済み（AVC trailing collector で代替）
 - `recent-upper-octave-alias-primary` promotion — Stage 3 (peaks.py) のスコープ。詳細は Stage 3 の懸念点を参照
 
-詳細は [recognizer-local-rules.md](recognizer-local-rules.md) ��照。
+詳細は [recognizer-local-rules.md](recognizer-local-rules.md) を参照。
 
 ---
 
