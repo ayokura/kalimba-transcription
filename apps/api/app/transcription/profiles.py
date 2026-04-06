@@ -11,6 +11,8 @@ from .constants import (
     ONSET_ATTACK_GAIN_REQUIRES_MIN_FLUX,
     ONSET_ATTACK_MIN_BROADBAND_GAIN,
     ONSET_ATTACK_MIN_HIGH_BAND_FLUX,
+    ONSET_ATTACK_MODERATE_GAIN,
+    ONSET_ATTACK_MODERATE_GAIN_MIN_FLUX,
     ONSET_ENERGY_WINDOW_SECONDS,
     SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY,
 )
@@ -254,6 +256,9 @@ def compute_onset_attack_profile(
     is_valid = high_band_flux >= ONSET_ATTACK_MIN_HIGH_BAND_FLUX or (
         broadband_gain >= ONSET_ATTACK_MIN_BROADBAND_GAIN
         and high_band_flux >= ONSET_ATTACK_GAIN_REQUIRES_MIN_FLUX
+    ) or (
+        broadband_gain >= ONSET_ATTACK_MODERATE_GAIN
+        and high_band_flux >= ONSET_ATTACK_MODERATE_GAIN_MIN_FLUX
     )
 
     return OnsetAttackProfile(
