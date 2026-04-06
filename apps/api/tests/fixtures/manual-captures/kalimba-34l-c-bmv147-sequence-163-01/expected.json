@@ -2,12 +2,12 @@
   "pending": true,
   "status": "pending",
   "assertions": {
-    "minEvents": null,
+    "minEvents": 147,
     "maxEvents": null,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "BWV147 163-event sequence on 34-key Lingting C Major. No performance mistakes. First multi-layer kalimba fixture."
+  "reason": "BWV147 163-event sequence on 34-key Lingting C Major. No performance mistakes. First multi-layer kalimba fixture. Baseline minEvents=147 (~90% of 163, current 156/163 at 2026-04-06)."
 }

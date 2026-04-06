@@ -2,14 +2,14 @@
   "pending": true,
   "status": "pending",
   "assertions": {
-    "minEvents": null,
+    "minEvents": 147,
     "maxEvents": null,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {},
     "maxEventNoteSetOccurrences": {}
   },
-  "reason": "large practical free-performance phrase awaiting recognizer evaluation; known local misplay near expected event 116 remains in-scope pending provenance review",
+  "reason": "large practical free-performance phrase awaiting recognizer evaluation; known local misplay near expected event 116 remains in-scope pending provenance review. Baseline minEvents=147 (~90% of 163, current 160/163 at 2026-04-06).",
   "ignoredRanges": [
     {
       "startSec": 197.2,
