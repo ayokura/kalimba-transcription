@@ -44,6 +44,8 @@ uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--v
 
 Rejection reasons for missing notes are shown in `[note→reason]` format (cross-referenced from segmentCandidates trail in both modes).
 
+Per-line `+N extra segments:` lines list detected events that did not match any expected event in the line.  The bottom SUMMARY block reports the total via `Extra segments: N` — useful for spotting over-detection regressions across runs.
+
 ## Known Limitations
 
 **個別イベントの failure 分析には使わないこと。** ordered matching はセグメント/イベント数と期待イベント数が一致しない場合にアライメントがずれ、誤った failure 原因を報告する。
