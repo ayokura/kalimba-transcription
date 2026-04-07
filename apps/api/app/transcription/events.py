@@ -1349,6 +1349,16 @@ def suppress_short_residual_tails(raw_events: list[RawEvent]) -> list[RawEvent]:
     for index in range(1, len(raw_events) - 1):
         event = raw_events[index]
         next_event = raw_events[index + 1]
+        # Short-segment-guarded primaries are tentative single-note attacks
+        # from windows too narrow for full FFT analysis.  They must not be
+        # treated as residual tails of recently-played same-name notes,
+        # because the carryover-overlap signature this function uses cannot
+        # distinguish a genuine new attack from a decay tail in such windows.
+        # Future per-sub-onset narrow FFT (#141 follow-up) will provide a
+        # better recovery path for these.
+        if event.from_short_segment_guard:
+            cleaned.append(event)
+            continue
         duration = event.end_time - event.start_time
         gap_to_next = next_event.start_time - event.end_time
         if len(event.notes) == 1 and duration <= 0.14 and gap_to_next <= 0.12:

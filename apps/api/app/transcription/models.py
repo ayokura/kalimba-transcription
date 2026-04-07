@@ -85,6 +85,12 @@ class RawEvent:
     is_gliss_like: bool
     primary_note_name: str = ""
     primary_score: float = 0.0
+    # True when this event came from a segment whose duration was below
+    # SHORT_SEGMENT_SECONDARY_GUARD_DURATION and only the primary survived.
+    # Downstream suppress / merge / future per-sub-onset logic should treat
+    # this primary as a tentative single-note attack from a window too narrow
+    # for full FFT analysis (typically a gap-mute-dip rescue).
+    from_short_segment_guard: bool = False
 
 
 @dataclass(frozen=True, slots=True)

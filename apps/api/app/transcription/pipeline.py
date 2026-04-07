@@ -6,7 +6,7 @@ from fastapi import HTTPException, UploadFile
 
 from ..models import InstrumentTuning, ScoreEvent, ScoreNote, TranscriptionResult
 from .audio import read_audio
-from .constants import GAP_RUN_LEAD_IN_MIN_FOLLOWUP_GAP
+from .constants import GAP_RUN_LEAD_IN_MIN_FOLLOWUP_GAP, SHORT_SEGMENT_SECONDARY_GUARD_DURATION
 from .events import (
     build_recent_ascending_primary_run_ceiling,
     build_recent_ascending_singleton_suffix,
@@ -191,6 +191,9 @@ async def transcribe_audio(
                 is_gliss_like=duration < 0.18,
                 primary_note_name=primary.candidate.note_name,
                 primary_score=primary.score,
+                # Use raw segment duration (not the clamped pipeline `duration`)
+                # so the guard fires for the actual short windows.
+                from_short_segment_guard=(end_time - start_time) < SHORT_SEGMENT_SECONDARY_GUARD_DURATION,
             )
         )
         if debug and candidate_debug:

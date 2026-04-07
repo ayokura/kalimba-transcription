@@ -1346,6 +1346,8 @@ GATE_CATEGORIES: dict[str, str] = {
     "evidence-rescue-weak-lower-secondary": "rescue",
     "evidence-rescue-tertiary-score-override": "rescue",
     "evidence-rescue-recent-carryover": "rescue",
+    # Guard (Layer 4.5: short-segment defensive guard)
+    "short-segment-secondary-guarded": "guard",
 }
 
 
@@ -2418,6 +2420,14 @@ def _build_segment_debug(
                     recent_note_names=ctx.recent_note_names,
                 )
     primary_og = evidence.get_onset_gain_if_cached(primary.candidate.frequency)
+    short_segment_guard_skipped = [
+        cd.note_name for cd in selection.candidate_decisions
+        if "short-segment-secondary-guarded" in cd.reasons
+    ]
+    short_segment_guard_active = (
+        ctx.duration < SHORT_SEGMENT_SECONDARY_GUARD_DURATION
+        and len(selection.selected) >= 1
+    )
     return {
         "startTime": round(ctx.start_time, 4),
         "endTime": round(ctx.end_time, 4),
@@ -2430,6 +2440,15 @@ def _build_segment_debug(
         "rankedCandidates": build_debug_candidates(spectral.ranked, attack_profiles=attack_profiles),
         "residualCandidates": build_debug_candidates(selection.residual_ranked, attack_profiles=attack_profiles),
         "secondaryDecisionTrail": [d.to_debug_dict() for d in selection.candidate_decisions],
+        # Short-segment guard markers (#152 follow-up).
+        # When active, this segment's primary is the only selected note because
+        # the FFT window is too narrow to resolve secondaries.  Downstream
+        # merge / per-sub-onset logic can use this flag as a hint that this
+        # primary may need to be combined with an adjacent segment to recover
+        # the full chord.  shortSegmentGuardSkipped lists what would have been
+        # selected (for diagnostic / future-recovery use).
+        "shortSegmentGuardActive": short_segment_guard_active,
+        "shortSegmentGuardSkipped": short_segment_guard_skipped,
         "rawPeaks": build_raw_peaks(spectral.frequencies, spectral.spectrum, ctx.tuning),
     }
 
@@ -2829,6 +2848,45 @@ def segment_peaks(
     _extend_gliss_tertiary(ctx, primary, selection, evidence)
     _extend_lower_mixed_roll(ctx, primary, selection, evidence)
     _extend_lower_roll_tail(ctx, primary, selection, evidence)
+
+    # Layer 4.5: Short-segment secondary guard.
+    # Below SHORT_SEGMENT_SECONDARY_GUARD_DURATION the FFT window is too narrow
+    # to reliably resolve secondary peaks; observed cases (e.g., gap-mute-dip
+    # 6.7ms segments at octave-coincident chord attacks) include noise-level
+    # spectral leakage that gets promoted via evidence-rescue paths.  Strip
+    # non-primary notes here and mark them in the trail so downstream logic
+    # (e.g., per-sub-onset narrow FFT) can re-attempt their detection.
+    if (
+        ctx.duration < SHORT_SEGMENT_SECONDARY_GUARD_DURATION
+        and len(selection.selected) > 1
+    ):
+        primary_name = primary.candidate.note_name
+        skipped_notes = [n for n in selection.selected if n.note_name != primary_name]
+        skipped_names = {n.note_name for n in skipped_notes}
+        selection.selected = [n for n in selection.selected if n.note_name == primary_name]
+        # Demote any existing accepted decisions for the skipped notes.
+        decision_names: set[str] = set()
+        for cd in selection.candidate_decisions:
+            decision_names.add(cd.note_name)
+            if cd.note_name in skipped_names and cd.accepted:
+                cd.accepted = False
+                cd.reasons.append("short-segment-secondary-guarded")
+        # Synthesize decisions for notes added by extension phases (which do
+        # not always have a corresponding _CandidateDecision entry).
+        for note in skipped_notes:
+            if note.note_name in decision_names:
+                continue
+            selection.candidate_decisions.append(_CandidateDecision(
+                note_name=note.note_name,
+                frequency=note.frequency,
+                score=0.0,
+                fundamental_ratio=0.0,
+                onset_gain=note.onset_gain,
+                accepted=False,
+                reasons=["short-segment-secondary-guarded"],
+                octave_dyad_allowed=False,
+                source="extension",
+            ))
 
     # Layer 5: Evidence freeze + trace assembly + debug
     for note in selection.selected:

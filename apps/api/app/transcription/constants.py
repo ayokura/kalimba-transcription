@@ -67,6 +67,16 @@ ONSET_ATTACK_MODERATE_GAIN_MIN_FLUX = 0.8
 ATTACK_VALIDATED_GAP_SEGMENT_DURATION = 0.24
 ATTACK_REFINED_ONSET_MAX_INTERVAL = 0.15
 
+# Short-segment secondary guard.
+# When segment duration is below this threshold, FFT analysis cannot reliably
+# distinguish secondary peaks from spectral leakage / pre-attack noise.
+# Restrict candidate selection to primary only and mark skipped notes in the
+# trail so downstream logic (e.g., per-sub-onset narrow FFT, future #141 work)
+# can recover them via a different analysis path.
+# Threshold rationale: kalimba C4 (~261 Hz) needs ~30 ms (8 fundamental periods)
+# for minimal FFT resolution; below this, secondary detections are unreliable.
+SHORT_SEGMENT_SECONDARY_GUARD_DURATION = 0.030
+
 # Residual-decay and recent-primary replacement thresholds.
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RESIDUAL_DECAY_MIN_ONSET_GAIN = 1.5
