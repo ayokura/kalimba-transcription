@@ -44,6 +44,21 @@ ATTACK_ANALYSIS_SECONDS = 0.16
 ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
 SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY = 2000.0
+
+# Sub-onset based per-note attack window anchoring (#152).
+# When a segment contains multiple sub-onsets, per-note attack measurement
+# (onset_energy_gain) anchors its window at the sub-onset showing the
+# strongest energy increase for the target note, instead of always using
+# segment start.  This handles slide chords where notes attack staggered
+# within a single segment.
+SUB_ONSET_ANCHOR_ENABLED = True
+SUB_ONSET_ANCHOR_MEASUREMENT_WINDOW = 0.04
+SUB_ONSET_ANCHOR_MIN_RATIO = 2.0
+# Minimum post-onset peak energy required to consider a sub-onset a real
+# attack for the target note.  Filters out FFT spectral leakage from
+# attacks of nearby (different) notes, which produce huge post/pre ratios
+# from near-zero values.  Calibrated against fixture per-note energies.
+SUB_ONSET_ANCHOR_MIN_POST_ENERGY = 1.0
 ONSET_ATTACK_MIN_BROADBAND_GAIN = 10.0
 ONSET_ATTACK_MIN_HIGH_BAND_FLUX = 1.5
 ONSET_ATTACK_GAIN_REQUIRES_MIN_FLUX = 0.5

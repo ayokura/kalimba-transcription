@@ -76,10 +76,11 @@ async def transcribe_audio(
 
     raw_events: list[RawEvent] = []
     segment_candidates_debug: list[dict[str, Any]] = []
+    all_onset_times = [float(value) for value in segment_debug.get("onsetTimes", [])]
     segment_contexts = build_segment_debug_contexts(
         segments,
         [tuple(item) for item in segment_debug.get("activeRanges", [])],
-        [float(value) for value in segment_debug.get("onsetTimes", [])],
+        all_onset_times,
         [float(value) for value in segment_debug.get("gapValidatedOnsetTimes", [])] if segment_debug.get("gapValidatedOnsetTimes") else None,
     ) if debug else {}
     def _segment_keys(key: str) -> set[tuple[float, float]]:
@@ -97,6 +98,9 @@ async def transcribe_audio(
     for segment in segments:
         start_time, end_time = segment
         duration = max(end_time - start_time, 0.08)
+        sub_onsets = tuple(
+            t for t in all_onset_times if start_time <= t <= end_time
+        )
         recent_note_names = build_recent_note_names(raw_events)
         ascending_primary_run_ceiling = build_recent_ascending_primary_run_ceiling(raw_events)
         ascending_singleton_suffix_ceiling, ascending_singleton_suffix_note_names = build_recent_ascending_singleton_suffix(raw_events)
@@ -125,6 +129,7 @@ async def transcribe_audio(
             previous_primary_frequency=previous_primary_frequency,
             previous_primary_was_singleton=previous_primary_was_singleton,
             confirmed_primary=segment.confirmed_primary,
+            sub_onsets=sub_onsets,
         )
         if not candidates or primary is None:
             if debug and candidate_debug:

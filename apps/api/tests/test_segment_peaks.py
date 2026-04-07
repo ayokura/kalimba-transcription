@@ -247,7 +247,7 @@ def test_segment_peaks_suppresses_descending_stale_upper_adjacent_carryover(monk
             NoteHypothesis(b5, 40.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
         ]
 
-    def fake_onset_energy_gain(_audio, _sample_rate, _start_time, _end_time, frequency):
+    def fake_onset_energy_gain(_audio, _sample_rate, _start_time, _end_time, frequency, **_kwargs):
         if abs(frequency - a5.frequency) < 1e-6:
             return 6.0
         if abs(frequency - b5.frequency) < 1e-6:
@@ -294,7 +294,7 @@ def test_segment_peaks_replaces_descending_repeated_stale_primary(monkeypatch: p
             NoteHypothesis(e4, 60.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
         ]
 
-    def fake_onset_energy_gain(_audio, _sample_rate, _start_time, _end_time, frequency):
+    def fake_onset_energy_gain(_audio, _sample_rate, _start_time, _end_time, frequency, **_kwargs):
         if abs(frequency - f4.frequency) < 1e-6:
             return 0.9
         if abs(frequency - e4.frequency) < 1e-6:
@@ -345,7 +345,7 @@ def test_segment_peaks_suppresses_descending_restart_upper_carryover(monkeypatch
             NoteHypothesis(e5, 15.0, 0.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
         ]
 
-    def fake_onset_energy_gain(_audio, _sample_rate, _start_time, _end_time, frequency):
+    def fake_onset_energy_gain(_audio, _sample_rate, _start_time, _end_time, frequency, **_kwargs):
         if abs(frequency - g4.frequency) < 1e-6:
             return 60.0
         if abs(frequency - e5.frequency) < 1e-6:
@@ -440,7 +440,7 @@ def test_rejected_primary_rescued_by_alternative_branch(
             NoteHypothesis(e6, 5.0, 0.0, 0.0, 0.3, 0.0, 0.0, 0.0, 0.0),
         ]
 
-    def fake_onset_energy_gain(_audio, _sr, _start, _end, frequency):
+    def fake_onset_energy_gain(_audio, _sr, _start, _end, frequency, **_kwargs):
         if abs(frequency - d5.frequency) < 1:
             return 15.0  # Strong onset for D5
         return 0.5
@@ -486,7 +486,7 @@ def test_rejected_primary_not_rescued_when_flag_off(
             NoteHypothesis(e6, 5.0, 0.0, 0.0, 0.3, 0.0, 0.0, 0.0, 0.0),
         ]
 
-    def fake_onset_energy_gain(_audio, _sr, _start, _end, frequency):
+    def fake_onset_energy_gain(_audio, _sr, _start, _end, frequency, **_kwargs):
         if abs(frequency - d5.frequency) < 1:
             return 15.0
         return 0.5
@@ -604,11 +604,16 @@ def _build_iterative_suppression_fakes():
             NoteHypothesis(c4, 110.0, 0.0, 0.0, 0.80, 0.0, 0.0, 0.0, 0.0),
         ]
 
-    def fake_onset_gain(_audio, _sr, _start, _end, freq):
-        return 5.0  # all notes have genuine onset
+    def fake_onset_gain(_audio, _sr, _start, _end, freq, **_kwargs):
+        # High onset_gain so iterative suppression's tertiary gates pass via
+        # the onset side (TERTIARY_BACKWARD_GATE_ONSET_OVERRIDE).
+        return 25.0
 
     def fake_backward_gain(_audio, _sr, _start, freq):
-        return 50.0  # all notes are fresh attacks
+        # Low backward_gain (< TERTIARY_MIN_BACKWARD_ATTACK_GAIN=20) so the
+        # #152 harmonic-related bypass does not trigger; this scenario must
+        # validate iterative suppression as the only recovery path for C4.
+        return 5.0
 
     return c4, a4, c5, fake_rank, fake_onset_gain, fake_backward_gain
 

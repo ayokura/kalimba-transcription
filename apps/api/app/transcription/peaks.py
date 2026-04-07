@@ -348,22 +348,145 @@ def extend_contiguous_gliss_cluster(
 
     return sorted(extended, key=lambda item: item.frequency), debug_entries
 
-def onset_energy_gain(
+def _aligned_band_energy(
     audio: np.ndarray,
     sample_rate: int,
     start_time: float,
     end_time: float,
     target_frequency: float,
 ) -> float:
+    """Compute peak band energy for *target_frequency* in [start_time, end_time].
+
+    Unlike :func:`_note_band_energy`, this uses an explicit time range (not
+    centered on a point), so callers can construct strictly non-overlapping
+    pre/post windows around an onset.
+    """
+    start_sample = max(int(start_time * sample_rate), 0)
+    end_sample = min(int(end_time * sample_rate), len(audio))
+    chunk = audio[start_sample:end_sample]
+    if len(chunk) < 256:
+        return 0.0
+    n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk), min_bins=1)
+    spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
+    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    return peak_energy_near(frequencies, spectrum, target_frequency)
+
+
+def pick_matching_sub_onset(
+    audio: np.ndarray,
+    sample_rate: int,
+    target_frequency: float,
+    sub_onsets: tuple[float, ...],
+    *,
+    measurement_window: float = SUB_ONSET_ANCHOR_MEASUREMENT_WINDOW,
+    min_energy_ratio: float = SUB_ONSET_ANCHOR_MIN_RATIO,
+    min_post_energy: float = SUB_ONSET_ANCHOR_MIN_POST_ENERGY,
+) -> float | None:
+    """Pick the sub-onset where *target_frequency* has the strongest attack.
+
+    For each sub-onset, measures per-note energy in a window strictly before
+    (``[onset - measurement_window, onset)``) and strictly after
+    (``[onset, onset + measurement_window]``), then returns the sub-onset
+    whose post/pre ratio is largest.
+
+    Returns ``None`` when no sub-onset shows a meaningful energy rise — either
+    the post energy is below ``min_post_energy`` (FFT leakage from a different
+    note's attack) or the post/pre ratio is below ``min_energy_ratio`` (the
+    note was already ringing or did not actually attack at any sub-onset).
+
+    Used by :func:`onset_energy_gain` to anchor its attack window at the
+    actual attack time of *target_frequency* in slide-chord-like segments
+    where notes attack staggered.
+    """
+    if not sub_onsets:
+        return None
+
+    audio_duration = len(audio) / sample_rate
+    best_post_energy = 0.0
+    best_onset: float | None = None
+
+    for onset in sub_onsets:
+        pre_start = onset - measurement_window
+        post_end = onset + measurement_window
+        if pre_start < 0 or post_end > audio_duration:
+            continue
+        pre_energy = _aligned_band_energy(
+            audio, sample_rate, pre_start, onset, target_frequency,
+        )
+        post_energy = _aligned_band_energy(
+            audio, sample_rate, onset, post_end, target_frequency,
+        )
+        # Reject sub-onsets where the post window has negligible energy:
+        # the note isn't actually attacking here, any post/pre ratio is
+        # only large because of FFT spectral leakage from another note.
+        if post_energy < min_post_energy:
+            continue
+        ratio = (post_energy + 1e-6) / (pre_energy + 1e-6)
+        # Reject sub-onsets where the post/pre ratio is too low: the note
+        # was already ringing through this sub-onset, not attacking at it.
+        if ratio < min_energy_ratio:
+            continue
+        # Among qualifying sub-onsets, prefer the one with the strongest
+        # absolute attack energy.  Using post_energy (not ratio) avoids
+        # rewarding "first noisy appearance" over "biggest real attack",
+        # which is a problem when pre is near the noise floor.
+        if post_energy > best_post_energy:
+            best_post_energy = post_energy
+            best_onset = onset
+
+    return best_onset
+
+
+def onset_energy_gain(
+    audio: np.ndarray,
+    sample_rate: int,
+    start_time: float,
+    end_time: float,
+    target_frequency: float,
+    sub_onsets: tuple[float, ...] = (),
+    *,
+    target_note_name: str | None = None,
+    recent_note_names: set[str] | None = None,
+) -> float:
+    """Compute the early/pre energy ratio for *target_frequency* in a segment.
+
+    The pre window always sits immediately before the segment (legacy
+    semantics).  The early window normally starts at *start_time*; when
+    sub-onset anchoring is enabled AND the target note is in
+    ``recent_note_names`` (i.e., would otherwise be at risk of being rejected
+    as residual carryover), the early window slides to the sub-onset showing
+    the strongest per-note rise.  This rescues delayed attacks of recently-
+    played notes (e.g. C5 returning at the end of a slide chord) without
+    inflating onset_gain for unrelated notes whose post-attack sustain just
+    happens to leak into a neighboring note's frequency band.
+    """
     window_samples = max(int(sample_rate * ONSET_ENERGY_WINDOW_SECONDS), 512)
     start_sample = max(int(start_time * sample_rate), 0)
     end_sample = min(int(end_time * sample_rate), len(audio))
     if end_sample - start_sample < 512:
         return 0.0
 
-    early_chunk = audio[start_sample:min(start_sample + window_samples, end_sample)]
+    # Pre window is always anchored before the segment (legacy semantics).
     pre_start = max(0, start_sample - window_samples)
     pre_chunk = audio[pre_start:start_sample]
+
+    # Early window normally starts at segment start; sub-onset anchor only
+    # slides the early window forward for notes that need carryover rescue.
+    anchor_sample = start_sample
+    if (
+        SUB_ONSET_ANCHOR_ENABLED
+        and sub_onsets
+        and target_note_name is not None
+        and recent_note_names is not None
+        and target_note_name in recent_note_names
+    ):
+        matched = pick_matching_sub_onset(
+            audio, sample_rate, target_frequency, sub_onsets,
+        )
+        if matched is not None:
+            anchor_sample = max(int(matched * sample_rate), 0)
+
+    early_chunk = audio[anchor_sample:min(anchor_sample + window_samples, end_sample)]
     if len(pre_chunk) < 512 or len(early_chunk) < 512:
         return 0.0
 
@@ -467,7 +590,81 @@ def prepare_attack_debug_context(
     }
 
 
-def build_candidate_attack_debug(attack_context: dict[str, Any], target_frequency: float) -> dict[str, Any]:
+def build_candidate_attack_debug(
+    attack_context: dict[str, Any],
+    target_frequency: float,
+    *,
+    audio: np.ndarray | None = None,
+    sample_rate: int | None = None,
+    start_time: float | None = None,
+    end_time: float | None = None,
+    sub_onsets: tuple[float, ...] = (),
+    target_note_name: str | None = None,
+    recent_note_names: set[str] | None = None,
+) -> dict[str, Any]:
+    """Build per-candidate attack debug info.
+
+    Mirrors :func:`onset_energy_gain` semantics: by default uses the shared
+    segment-start-anchored spectra from *attack_context*, but when the
+    target note is in *recent_note_names* (i.e., would otherwise be at risk
+    of carryover rejection), the attack chunk is re-anchored at the matching
+    sub-onset.  This keeps debug numbers consistent with the values used by
+    carryover gates.
+    """
+    payload: dict[str, Any] = {}
+    anchor_time: float | None = None
+    if (
+        SUB_ONSET_ANCHOR_ENABLED
+        and sub_onsets
+        and audio is not None
+        and sample_rate is not None
+        and start_time is not None
+        and target_note_name is not None
+        and recent_note_names is not None
+        and target_note_name in recent_note_names
+    ):
+        matched = pick_matching_sub_onset(
+            audio, sample_rate, target_frequency, sub_onsets,
+        )
+        if matched is not None:
+            anchor_time = matched
+
+    if anchor_time is not None and end_time is not None and start_time is not None:
+        # Re-compute attack chunk anchored at the matching sub-onset, but
+        # keep pre/sustain chunks at their segment-relative positions
+        # (matches the gating logic in :func:`onset_energy_gain`).
+        window_samples = max(int(sample_rate * ONSET_ENERGY_WINDOW_SECONDS), 512)
+        start_sample = max(int(start_time * sample_rate), 0)
+        anchor_sample = max(int(anchor_time * sample_rate), 0)
+        end_sample = min(int(end_time * sample_rate), len(audio))
+        sustain_start = max(start_sample, end_sample - window_samples)
+
+        pre_chunk = audio[max(0, start_sample - window_samples):start_sample]
+        attack_chunk = audio[anchor_sample:min(anchor_sample + window_samples, end_sample)]
+        sustain_chunk = audio[sustain_start:end_sample]
+
+        if len(pre_chunk) >= 512 and len(attack_chunk) >= 512 and len(sustain_chunk) >= 512:
+            n_fft = _adaptive_n_fft(sample_rate, target_frequency, max(
+                len(pre_chunk), len(attack_chunk), len(sustain_chunk),
+            ), min_bins=1)
+            _, pre_spec = _chunk_spectrum(pre_chunk, sample_rate, n_fft)
+            _, atk_spec = _chunk_spectrum(attack_chunk, sample_rate, n_fft)
+            _, sus_spec = _chunk_spectrum(sustain_chunk, sample_rate, n_fft)
+            freqs = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+            pre_e = peak_energy_near(freqs, pre_spec, target_frequency)
+            atk_e = peak_energy_near(freqs, atk_spec, target_frequency)
+            sus_e = peak_energy_near(freqs, sus_spec, target_frequency)
+            payload["subOnsetAnchorTime"] = round(anchor_time, 6)
+            return {
+                "preAttackEnergy": round(pre_e, 6),
+                "attackEnergy": round(atk_e, 6),
+                "sustainEnergy": round(sus_e, 6),
+                "attackToSustainRatio": round((atk_e + 1e-6) / (sus_e + 1e-6), 6),
+                "candidateOnsetGain": round((atk_e + 1e-6) / (pre_e + 1e-6), 6),
+                **payload,
+            }
+
+    # Default: use shared segment-start-anchored spectra (legacy behaviour).
     frequencies = attack_context["frequencies"]
     pre_spectrum = attack_context["preSpectrum"]
     attack_spectrum = attack_context["attackSpectrum"]
@@ -522,6 +719,7 @@ def maybe_replace_stale_recent_primary(
     previous_primary_note_name: str | None = None,
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
+    sub_onsets: tuple[float, ...] = (),
 ) -> tuple[NoteHypothesis, float | None, dict[str, Any] | None]:
     if not recent_note_names or primary.candidate.note_name not in recent_note_names:
         return primary, None, None
@@ -530,7 +728,12 @@ def maybe_replace_stale_recent_primary(
     if duration > RECENT_PRIMARY_REPLACEMENT_MAX_DURATION:
         return primary, None, None
 
-    primary_onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, primary.candidate.frequency)
+    primary_onset_gain = onset_energy_gain(
+        audio, sample_rate, start_time, end_time, primary.candidate.frequency,
+        sub_onsets=sub_onsets,
+        target_note_name=primary.candidate.note_name,
+        recent_note_names=recent_note_names,
+    )
     if primary_onset_gain >= MIN_RECENT_NOTE_ONSET_GAIN:
         return primary, primary_onset_gain, None
 
@@ -547,7 +750,12 @@ def maybe_replace_stale_recent_primary(
             continue
         if hypothesis.score < primary.score * RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO:
             continue
-        onset_gain = onset_energy_gain(audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency)
+        onset_gain = onset_energy_gain(
+            audio, sample_rate, start_time, end_time, hypothesis.candidate.frequency,
+            sub_onsets=sub_onsets,
+            target_note_name=hypothesis.candidate.note_name,
+            recent_note_names=recent_note_names,
+        )
         relaxed_recent_primary = (
             hypothesis.fundamental_ratio >= RECENT_PRIMARY_REPLACEMENT_RELAXED_FUNDAMENTAL_RATIO
             and onset_gain >= RECENT_PRIMARY_REPLACEMENT_STRONG_ONSET_GAIN
@@ -793,6 +1001,8 @@ def _try_gap_fill(
     start_time: float,
     end_time: float,
     key_layers: dict[int, int] | None = None,
+    sub_onsets: tuple[float, ...] = (),
+    recent_note_names: set[str] | None = None,
 ) -> list[NoteCandidate] | None:
     """Find gap-filling candidates that make a chord physically playable.
 
@@ -822,7 +1032,12 @@ def _try_gap_fill(
                     h.score >= primary.score * TERTIARY_MIN_SCORE_RATIO
                     and h.score >= TERTIARY_MIN_SCORE
                     and h.fundamental_ratio >= TERTIARY_MIN_FUNDAMENTAL_RATIO
-                    and onset_energy_gain(audio, sample_rate, start_time, end_time, h.candidate.frequency) >= TERTIARY_MIN_ONSET_GAIN
+                    and onset_energy_gain(
+                        audio, sample_rate, start_time, end_time, h.candidate.frequency,
+                        sub_onsets=sub_onsets,
+                        target_note_name=h.candidate.note_name,
+                        recent_note_names=recent_note_names,
+                    ) >= TERTIARY_MIN_ONSET_GAIN
                 ):
                     gap_candidates.append(h.candidate)
                 break
@@ -1004,6 +1219,7 @@ class _SegmentContext:
     previous_primary_note_name: str | None
     previous_primary_frequency: float | None
     previous_primary_was_singleton: bool
+    sub_onsets: tuple[float, ...] = ()
 
     @property
     def duration(self) -> float:
@@ -1189,20 +1405,32 @@ class _NoteEvidenceCache:
         sample_rate: int,
         start_time: float,
         end_time: float,
+        sub_onsets: tuple[float, ...] = (),
+        recent_note_names: set[str] | None = None,
     ) -> None:
         self._audio = audio
         self._sr = sample_rate
         self._start = start_time
         self._end = end_time
+        self._sub_onsets = sub_onsets
+        self._recent_note_names = recent_note_names
+        self._frequency_to_note: dict[float, str] = {}
         self._onset_gains: dict[float, float] = {}
         self._backward_gains: dict[float, float] = {}
         self._mute_dip: dict[float, bool] = {}
         self._residual_decay: dict[float, bool] = {}
 
+    def register_note(self, frequency: float, note_name: str) -> None:
+        """Associate a note name with its frequency for sub-onset gating."""
+        self._frequency_to_note[frequency] = note_name
+
     def onset_gain(self, frequency: float) -> float:
         if frequency not in self._onset_gains:
             self._onset_gains[frequency] = onset_energy_gain(
                 self._audio, self._sr, self._start, self._end, frequency,
+                sub_onsets=self._sub_onsets,
+                target_note_name=self._frequency_to_note.get(frequency),
+                recent_note_names=self._recent_note_names,
             )
         return self._onset_gains[frequency]
 
@@ -1263,7 +1491,19 @@ def _acquire_spectrum(
         return None
 
     spectral = _SpectralData(frequencies=frequencies, spectrum=spectrum, ranked=ranked)
-    evidence = _NoteEvidenceCache(ctx.audio, ctx.sample_rate, ctx.start_time, ctx.end_time)
+    evidence = _NoteEvidenceCache(
+        ctx.audio, ctx.sample_rate, ctx.start_time, ctx.end_time,
+        sub_onsets=ctx.sub_onsets,
+        recent_note_names=ctx.recent_note_names,
+    )
+    # Register tuning notes so onset_gain queries can look up the note name
+    # from a frequency.  Use the frequencies on the ranked candidates (which
+    # come from Note.from_name) to avoid float precision mismatches with the
+    # rounded values stored on TuningNote.
+    for hypothesis in ranked:
+        evidence.register_note(
+            hypothesis.candidate.frequency, hypothesis.candidate.note_name,
+        )
     return spectral, evidence
 
 
@@ -1321,6 +1561,7 @@ def _resolve_primary(
         previous_primary_note_name=ctx.previous_primary_note_name,
         previous_primary_frequency=ctx.previous_primary_frequency,
         previous_primary_was_singleton=ctx.previous_primary_was_singleton,
+        sub_onsets=ctx.sub_onsets,
     )
     if primary_promotion_debug is not None:
         promotions.append(primary_promotion_debug.get("reason", "stale-recent-primary"))
@@ -1946,8 +2187,29 @@ def _select_candidates(
             # ── harmonic-related check against full selected set ──
             octave_dyad_allowed_full = allow_octave_secondary(primary, hypothesis, selected)
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not octave_dyad_allowed_full:
-                if "harmonic-related-to-selected" not in _disabled:
-                    phase_b_reasons.append("harmonic-related-to-selected")
+                # Bypass: a high backward_attack_gain is independent evidence
+                # that this note had its own recent strong attack (just before
+                # the segment), so it should not be suppressed as an alias of
+                # a different selected note.  Restrict the bypass to cases
+                # where the hypothesis is BELOW every harmonically-related
+                # selected note: subharmonic alias is physically less likely
+                # than upward harmonic leakage, so a lower-octave candidate
+                # with independent attack evidence is more likely a real
+                # note.  An upper-octave candidate (e.g., E6 vs E5) is much
+                # more often the true note's 2nd harmonic.  See #152.
+                hyp_backward_gain = evidence.backward_attack_gain(hypothesis.candidate.frequency)
+                lower_than_all_related = all(
+                    hypothesis.candidate.frequency < existing.frequency
+                    for existing in selected
+                    if are_harmonic_related(hypothesis.candidate, existing)
+                )
+                independent_attack_evidence = (
+                    lower_than_all_related
+                    and hyp_backward_gain >= TERTIARY_MIN_BACKWARD_ATTACK_GAIN
+                )
+                if not independent_attack_evidence:
+                    if "harmonic-related-to-selected" not in _disabled:
+                        phase_b_reasons.append("harmonic-related-to-selected")
             # ── Semitone leakage gate (all candidates, not just tertiary) ──
             for existing in selected:
                 interval = abs(cents_distance(hypothesis.candidate.frequency, existing.frequency))
@@ -1964,6 +2226,8 @@ def _select_candidates(
                         test_keys, selected, hypothesis, residual_ranked,
                         primary, ctx.audio, ctx.sample_rate, ctx.start_time, ctx.end_time,
                         key_layers=ctx.key_layers,
+                        sub_onsets=ctx.sub_onsets,
+                        recent_note_names=ctx.recent_note_names,
                     )
                     if gap_filled:
                         for gf_candidate in gap_filled:
@@ -1986,11 +2250,17 @@ def _select_candidates(
                 elif any(hypothesis.candidate.note_name == existing.note_name for existing in selected):
                     phase_b_reasons.append("tertiary-duplicate-note")
                 # ── Tertiary evidence gates ──
+                # The two evidence gates are symmetric: each can be overridden
+                # by the other.  tertiary-weak-onset (onset_gain low) is
+                # waived when backward_gain proves the note had a recent
+                # strong attack just before the segment.  tertiary-weak-
+                # backward-attack (backward_gain low) is waived when
+                # onset_gain proves a fresh attack inside the segment.
                 onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
-                if onset_gain < TERTIARY_MIN_ONSET_GAIN:
+                backward_gain = evidence.backward_attack_gain(hypothesis.candidate.frequency)
+                if onset_gain < TERTIARY_MIN_ONSET_GAIN and backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN:
                     if "tertiary-weak-onset" not in _disabled:
                         phase_b_reasons.append("tertiary-weak-onset")
-                backward_gain = evidence.backward_attack_gain(hypothesis.candidate.frequency)
                 if backward_gain < TERTIARY_MIN_BACKWARD_ATTACK_GAIN and onset_gain < TERTIARY_BACKWARD_GATE_ONSET_OVERRIDE:
                     if "tertiary-weak-backward-attack" not in _disabled:
                         phase_b_reasons.append("tertiary-weak-backward-attack")
@@ -2137,7 +2407,16 @@ def _build_segment_debug(
         for hypothesis in [primary, *spectral.ranked[:5], *selection.residual_ranked[:5]]:
             note_name = hypothesis.candidate.note_name
             if note_name not in attack_profiles:
-                attack_profiles[note_name] = build_candidate_attack_debug(attack_context, hypothesis.candidate.frequency)
+                attack_profiles[note_name] = build_candidate_attack_debug(
+                    attack_context, hypothesis.candidate.frequency,
+                    audio=ctx.audio,
+                    sample_rate=ctx.sample_rate,
+                    start_time=ctx.start_time,
+                    end_time=ctx.end_time,
+                    sub_onsets=ctx.sub_onsets,
+                    target_note_name=note_name,
+                    recent_note_names=ctx.recent_note_names,
+                )
     primary_og = evidence.get_onset_gain_if_cached(primary.candidate.frequency)
     return {
         "startTime": round(ctx.start_time, 4),
@@ -2439,6 +2718,7 @@ def segment_peaks(
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
     confirmed_primary: Note | None = None,
+    sub_onsets: tuple[float, ...] = (),
 ) -> SegmentPeaksResult:
     ctx = _SegmentContext(
         audio=audio, sample_rate=sample_rate,
@@ -2454,6 +2734,7 @@ def segment_peaks(
         previous_primary_note_name=previous_primary_note_name,
         previous_primary_frequency=previous_primary_frequency,
         previous_primary_was_singleton=previous_primary_was_singleton,
+        sub_onsets=sub_onsets,
     )
 
     # Layer 1: Signal acquisition
