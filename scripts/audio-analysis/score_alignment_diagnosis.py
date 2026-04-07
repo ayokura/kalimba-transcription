@@ -279,6 +279,7 @@ def main():
     total_subset = 0
     total_partial = 0
     total_miss = 0
+    total_extras = 0
     total_events = 0
 
     filter_line = args.line.upper() if args.line else None
@@ -307,6 +308,7 @@ def main():
         total_subset += subset
         total_partial += partial
         total_miss += miss
+        total_extras += len(unmatched)
         total_events += n
 
         pct = 100 * exact / n if n else 0
@@ -383,6 +385,7 @@ def main():
         print(f"  Subset match:  {total_subset:3d}/{total_events} ({100*total_subset/total_events:.0f}%)")
         print(f"  Partial match: {total_partial:3d}/{total_events} ({100*total_partial/total_events:.0f}%)")
         print(f"  No match:      {total_miss:3d}/{total_events} ({100*total_miss/total_events:.0f}%)")
+        print(f"  Extra segments: {total_extras} (detected events with no matching expected event)")
 
 
 if __name__ == "__main__":
