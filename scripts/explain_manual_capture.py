@@ -28,6 +28,23 @@ from manual_capture_helpers import (
 
 client = TestClient(app)
 
+# Cache transcription results to avoid re-running the pipeline for the same
+# fixture + parameters within a single process (e.g. pytest session).
+_transcription_cache: dict[tuple, dict] = {}
+
+
+def _cached_transcribe(request_data: dict[str, str], audio_bytes: bytes, fixture_name: str) -> dict:
+    cache_key = (fixture_name, len(audio_bytes), tuple(sorted(request_data.items())))
+    if cache_key not in _transcription_cache:
+        response = client.post(
+            "/api/transcriptions",
+            data=request_data,
+            files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+        )
+        response.raise_for_status()
+        _transcription_cache[cache_key] = response.json()
+    return _transcription_cache[cache_key]
+
 
 def _scope_for_event(start_time: float, end_time: float, evaluation_windows: list[dict[str, float]], ignored_ranges: list[dict[str, float]]) -> str:
     if evaluation_windows:
@@ -218,23 +235,11 @@ def build_explanation(fixture_dir: Path, disabled_passes: list[str] | None = Non
     if disabled_passes:
         request_data["disabledRepeatedPatternPasses"] = json.dumps(disabled_passes)
 
-    response = client.post(
-        "/api/transcriptions",
-        data=request_data,
-        files={"file": ("audio.wav", scoped_audio_bytes, "audio/wav")},
-    )
-    response.raise_for_status()
-    payload = response.json()
+    payload = _cached_transcribe(request_data, scoped_audio_bytes, fixture_dir.name)
 
     full_payload = payload
     if evaluation_windows or ignored_ranges:
-        full_response = client.post(
-            "/api/transcriptions",
-            data=request_data,
-            files={"file": ("audio.wav", source_audio_bytes, "audio/wav")},
-        )
-        full_response.raise_for_status()
-        full_payload = full_response.json()
+        full_payload = _cached_transcribe(request_data, source_audio_bytes, f"{fixture_dir.name}:full")
 
     summary = explain_fixture_output(fixture_dir, payload, expected)
     source_duration_sec = float(sf.info(source_audio_path).duration)
