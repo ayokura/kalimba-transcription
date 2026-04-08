@@ -43,6 +43,181 @@ def _lookup_onset_attack_profile(
     return onset_profiles.get(round(onset_time, 4))
 
 
+def _stack_audio_segments(
+    audio: np.ndarray,
+    starts: np.ndarray,
+    length: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Stack ``audio[starts[i]:starts[i]+length]`` as zero-padded rows.
+
+    Returns ``(matrix, lengths)`` where ``matrix`` has shape
+    ``(n_starts, length)`` with each row containing the slice (clipped to
+    audio bounds and zero-padded on the right) and ``lengths`` records the
+    number of valid leading samples per row.
+    """
+    audio_len = len(audio)
+    n = len(starts)
+    matrix = np.zeros((n, length), dtype=np.float64)
+    lengths = np.zeros(n, dtype=np.int64)
+    if length <= 0 or n == 0:
+        return matrix, lengths
+    for idx, start in enumerate(starts):
+        s = int(max(0, start))
+        e = int(min(audio_len, start + length))
+        if e > s:
+            chunk = audio[s:e]
+            matrix[idx, : chunk.size] = chunk
+            lengths[idx] = chunk.size
+    return matrix, lengths
+
+
+def _stack_onset_windows(
+    audio: np.ndarray,
+    onset_samples: np.ndarray,
+    *,
+    pre_samples: int,
+    post_samples: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Build pre/post zero-padded matrices anchored at each onset sample."""
+    pre_matrix, pre_lengths = _stack_audio_segments(
+        audio, onset_samples - pre_samples, pre_samples
+    )
+    post_matrix, post_lengths = _stack_audio_segments(
+        audio, onset_samples, post_samples
+    )
+    return pre_matrix, post_matrix, pre_lengths, post_lengths
+
+
+def _row_wise_kurtosis(rows: np.ndarray, lengths: np.ndarray) -> np.ndarray:
+    """Excess kurtosis (Fisher) per row over the leading ``lengths[i]`` samples."""
+    n_rows = rows.shape[0]
+    out = np.zeros(n_rows, dtype=np.float64)
+    valid = lengths >= 4
+    if not np.any(valid):
+        return out
+    counts = lengths.astype(np.float64)
+    sums = rows.sum(axis=1)
+    means = np.zeros(n_rows, dtype=np.float64)
+    means[valid] = sums[valid] / counts[valid]
+    centered = rows - means[:, None]
+    # Mask padded tail samples to zero so they do not contribute to moments.
+    mask = np.arange(rows.shape[1])[None, :] < lengths[:, None]
+    centered = centered * mask
+    sq = centered * centered
+    var = np.zeros(n_rows, dtype=np.float64)
+    var[valid] = sq[valid].sum(axis=1) / counts[valid]
+    safe = valid & (var > 1e-20)
+    if not np.any(safe):
+        return out
+    fourth = np.zeros(n_rows, dtype=np.float64)
+    fourth[safe] = (sq[safe] * sq[safe]).sum(axis=1) / counts[safe]
+    out[safe] = fourth[safe] / (var[safe] * var[safe]) - 3.0
+    return out
+
+
+def _row_wise_crest(rows: np.ndarray, lengths: np.ndarray) -> np.ndarray:
+    """Peak / RMS per row over the leading ``lengths[i]`` samples."""
+    n_rows = rows.shape[0]
+    out = np.zeros(n_rows, dtype=np.float64)
+    valid = lengths > 0
+    if not np.any(valid):
+        return out
+    counts = lengths.astype(np.float64)
+    sq_sum = (rows * rows).sum(axis=1)
+    rms = np.zeros(n_rows, dtype=np.float64)
+    rms[valid] = np.sqrt(sq_sum[valid] / counts[valid])
+    safe = valid & (rms > 1e-20)
+    if not np.any(safe):
+        return out
+    peaks = np.abs(rows).max(axis=1)
+    out[safe] = peaks[safe] / rms[safe]
+    return out
+
+
+def _row_wise_autocorrelation(
+    rows: np.ndarray,
+    lengths: np.ndarray,
+    min_lag: int,
+    max_lag: int,
+) -> np.ndarray:
+    """Normalized autocorrelation peak in ``[min_lag, max_lag)`` per row.
+
+    Mirrors :func:`_normalized_autocorrelation` but processes all rows in a
+    single batched FFT.
+    """
+    n_rows, width = rows.shape
+    out = np.zeros(n_rows, dtype=np.float64)
+    if width == 0 or n_rows == 0:
+        return out
+    valid = lengths > 0
+    if not np.any(valid):
+        return out
+    counts = lengths.astype(np.float64)
+    sums = rows.sum(axis=1)
+    means = np.zeros(n_rows, dtype=np.float64)
+    means[valid] = sums[valid] / counts[valid]
+    mask = np.arange(width)[None, :] < lengths[:, None]
+    centered = (rows - means[:, None]) * mask
+    energy = (centered * centered).sum(axis=1)
+    safe = valid & (energy > 1e-12)
+    if not np.any(safe):
+        return out
+    # Per-row max valid lag is min(max_lag, lengths[i]); skip rows where
+    # min_lag is already past the limit.
+    max_valid_lag = np.minimum(max_lag, lengths.astype(np.int64))
+    safe &= max_valid_lag > min_lag
+    if not np.any(safe):
+        return out
+    # Batched FFT autocorrelation: corr = IFFT(|FFT(x)|^2).
+    n_fft = 1 << int(math.ceil(math.log2(2 * width - 1))) if width > 1 else 2
+    spec = np.fft.rfft(centered[safe], n=n_fft, axis=1)
+    power = (spec.conj() * spec).real
+    corr = np.fft.irfft(power, n=n_fft, axis=1)
+    # Lag k corresponds to index k in the IFFT output (for k < width).
+    upper = int(np.max(max_valid_lag[safe]))
+    if upper <= min_lag:
+        return out
+    lag_slice = corr[:, min_lag:upper]
+    # Mask out lag bins that exceed each row's individual max_valid_lag.
+    lag_indices = np.arange(min_lag, upper)
+    safe_indices = np.where(safe)[0]
+    row_max = max_valid_lag[safe_indices][:, None]
+    valid_lag_mask = lag_indices[None, :] < row_max
+    masked = np.where(valid_lag_mask, lag_slice, -np.inf)
+    peaks = masked.max(axis=1)
+    out[safe_indices] = peaks / energy[safe_indices]
+    return out
+
+
+def _row_wise_diff_spectral_centroid(
+    pre_rows: np.ndarray,
+    post_rows: np.ndarray,
+    pre_lengths: np.ndarray,
+    post_lengths: np.ndarray,
+    sample_rate: int,
+) -> np.ndarray:
+    """Vectorised :func:`_positive_diff_spectral_centroid` over batched onsets."""
+    n_rows = pre_rows.shape[0]
+    out = np.zeros(n_rows, dtype=np.float64)
+    valid = (pre_lengths >= 256) & (post_lengths >= 256)
+    if not np.any(valid):
+        return out
+    segment_len = max(int(pre_rows.shape[1]), int(post_rows.shape[1]))
+    bounded = max(segment_len, ONSET_WAVEFORM_STATS_MIN_FFT)
+    n_fft = min(ONSET_WAVEFORM_STATS_MAX_FFT, 1 << math.ceil(math.log2(bounded)))
+    pre_spec = np.abs(np.fft.rfft(pre_rows[valid], n=n_fft, axis=1)) ** 2
+    post_spec = np.abs(np.fft.rfft(post_rows[valid], n=n_fft, axis=1)) ** 2
+    diff_spec = np.maximum(post_spec - pre_spec, 0.0)
+    diff_energy = diff_spec.sum(axis=1)
+    freqs = _rfft_frequency_bins(sample_rate, n_fft)
+    weighted = (freqs[None, :] * diff_spec).sum(axis=1)
+    safe = diff_energy >= 1e-10
+    centroid = np.zeros(diff_spec.shape[0], dtype=np.float64)
+    centroid[safe] = weighted[safe] / diff_energy[safe]
+    out[valid] = centroid
+    return out
+
+
 def precompute_onset_waveform_stats(
     audio: np.ndarray,
     sample_rate: int,
@@ -50,34 +225,58 @@ def precompute_onset_waveform_stats(
 ) -> dict[float, OnsetWaveformStats]:
     """Pre-compute simple waveform/spectral diagnostics for each onset."""
     stats: dict[float, OnsetWaveformStats] = {}
+    if not onset_times:
+        return stats
     window_samples = int(sample_rate * _KURTOSIS_WINDOW_SECONDS)
     sustain_onset_samples = int(sample_rate * 0.04)
     sustain_check_offset = int(sample_rate * 0.10)
     sustain_check_samples = int(sample_rate * 0.04)
     min_lag = int(sample_rate / 2000)
     max_lag = int(sample_rate / 150)
-    for onset_time in onset_times:
-        onset_sample = max(int(onset_time * sample_rate), 0)
-        pre_seg = np.array(audio[max(0, onset_sample - window_samples):onset_sample], copy=True)
-        seg = np.array(audio[onset_sample:min(len(audio), onset_sample + window_samples)], copy=True)
-        diff_centroid = 0.0
-        if len(pre_seg) >= 256 and len(seg) >= 256:
-            diff_centroid = _positive_diff_spectral_centroid(pre_seg, seg, sample_rate)
-        onset_chunk = audio[onset_sample:onset_sample + sustain_onset_samples]
-        sustain_start = onset_sample + sustain_check_offset
-        sustain_chunk = audio[sustain_start:sustain_start + sustain_check_samples]
-        if len(onset_chunk) >= sustain_onset_samples and len(sustain_chunk) >= sustain_check_samples:
-            onset_rms = float(np.sqrt(np.mean(onset_chunk ** 2)))
-            sustain_rms = float(np.sqrt(np.mean(sustain_chunk ** 2)))
-            post_sustain_ratio = sustain_rms / onset_rms if onset_rms > 1e-10 else 0.0
-        else:
-            post_sustain_ratio = 1.0
+
+    onset_samples = np.maximum(
+        np.asarray(onset_times, dtype=np.float64) * sample_rate, 0
+    ).astype(np.int64)
+    audio_f64 = np.asarray(audio, dtype=np.float64)
+
+    pre_seg, seg, pre_len, seg_len = _stack_onset_windows(
+        audio_f64,
+        onset_samples,
+        pre_samples=window_samples,
+        post_samples=window_samples,
+    )
+    diff_centroids = _row_wise_diff_spectral_centroid(
+        pre_seg, seg, pre_len, seg_len, sample_rate
+    )
+    kurtoses = _row_wise_kurtosis(seg, seg_len)
+    crests = _row_wise_crest(seg, seg_len)
+    autocorrs = _row_wise_autocorrelation(seg, seg_len, min_lag, max_lag)
+
+    onset_chunks, onset_chunk_lens = _stack_audio_segments(
+        audio_f64, onset_samples, sustain_onset_samples
+    )
+    sustain_chunks, sustain_chunk_lens = _stack_audio_segments(
+        audio_f64, onset_samples + sustain_check_offset, sustain_check_samples
+    )
+    full_pair = (onset_chunk_lens >= sustain_onset_samples) & (
+        sustain_chunk_lens >= sustain_check_samples
+    )
+    onset_rms = np.sqrt((onset_chunks * onset_chunks).sum(axis=1) / sustain_onset_samples)
+    sustain_rms = np.sqrt(
+        (sustain_chunks * sustain_chunks).sum(axis=1) / sustain_check_samples
+    )
+    post_sustain_ratio = np.ones(len(onset_times), dtype=np.float64)
+    safe = full_pair & (onset_rms > 1e-10)
+    post_sustain_ratio[full_pair & ~safe] = 0.0
+    post_sustain_ratio[safe] = sustain_rms[safe] / onset_rms[safe]
+
+    for idx, onset_time in enumerate(onset_times):
         stats[round(onset_time, 4)] = OnsetWaveformStats(
-            kurtosis=_waveform_kurtosis(seg),
-            crest=_waveform_crest_factor(seg),
-            post_autocorr_20ms=_normalized_autocorrelation(seg, min_lag, max_lag),
-            diff_centroid=diff_centroid,
-            post_sustain_ratio=post_sustain_ratio,
+            kurtosis=float(kurtoses[idx]),
+            crest=float(crests[idx]),
+            post_autocorr_20ms=float(autocorrs[idx]),
+            diff_centroid=float(diff_centroids[idx]),
+            post_sustain_ratio=float(post_sustain_ratio[idx]),
         )
     return stats
 
@@ -276,10 +475,87 @@ def precompute_onset_attack_profiles(
     onset_times: list[float],
 ) -> dict[float, OnsetAttackProfile]:
     profiles: dict[float, OnsetAttackProfile] = {}
-    for onset_time in onset_times:
-        profile = compute_onset_attack_profile(audio, sample_rate, onset_time)
-        if profile is not None:
-            profiles[round(onset_time, 4)] = profile
+    if not onset_times:
+        return profiles
+
+    window_samples = max(int(sample_rate * ONSET_ENERGY_WINDOW_SECONDS), 512)
+    audio_f64 = np.asarray(audio, dtype=np.float64)
+    onset_samples = np.maximum(
+        np.asarray(onset_times, dtype=np.float64) * sample_rate, 0
+    ).astype(np.int64)
+
+    pre_rows, attack_rows, pre_lens, attack_lens = _stack_onset_windows(
+        audio_f64,
+        onset_samples,
+        pre_samples=window_samples,
+        post_samples=window_samples,
+    )
+    valid = (pre_lens >= 512) & (attack_lens >= 512)
+    if not np.any(valid):
+        return profiles
+
+    # The single-onset version Hanning-windows each chunk at its own length,
+    # so partial-window rows must be handled individually to keep numerics
+    # bit-identical at audio boundaries. Full-length rows go through the
+    # batched FFT path.
+    full_mask = (pre_lens == window_samples) & (attack_lens == window_samples) & valid
+    partial_mask = valid & ~full_mask
+
+    if np.any(full_mask):
+        n_fft = max(4096, 1 << int(math.ceil(math.log2(window_samples))))
+        window = np.hanning(window_samples)
+        pre_full = pre_rows[full_mask]
+        attack_full = attack_rows[full_mask]
+        pre_spec = np.abs(np.fft.rfft(pre_full * window[None, :], n=n_fft, axis=1))
+        attack_spec = np.abs(
+            np.fft.rfft(attack_full * window[None, :], n=n_fft, axis=1)
+        )
+
+        pre_energy = (pre_full * pre_full).mean(axis=1)
+        attack_energy = (attack_full * attack_full).mean(axis=1)
+        broadband_gain = (attack_energy + 1e-6) / (pre_energy + 1e-6)
+
+        frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+        pre_sum = pre_spec.sum(axis=1)
+        delta = np.maximum(attack_spec - pre_spec, 0.0)
+        broadband_flux = delta.sum(axis=1) / (pre_sum + 1e-6)
+
+        high_band_mask = frequencies >= SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY
+        if np.any(high_band_mask):
+            pre_high_sum = pre_spec[:, high_band_mask].sum(axis=1)
+            high_band_flux = delta[:, high_band_mask].sum(axis=1) / (pre_high_sum + 1e-6)
+        else:
+            high_band_flux = np.zeros_like(broadband_flux)
+
+        is_valid_attack = (
+            (high_band_flux >= ONSET_ATTACK_MIN_HIGH_BAND_FLUX)
+            | (
+                (broadband_gain >= ONSET_ATTACK_MIN_BROADBAND_GAIN)
+                & (high_band_flux >= ONSET_ATTACK_GAIN_REQUIRES_MIN_FLUX)
+            )
+            | (
+                (broadband_gain >= ONSET_ATTACK_MODERATE_GAIN)
+                & (high_band_flux >= ONSET_ATTACK_MODERATE_GAIN_MIN_FLUX)
+            )
+        )
+
+        for row_idx, onset_idx in enumerate(np.where(full_mask)[0]):
+            onset_time = onset_times[onset_idx]
+            profiles[round(onset_time, 4)] = OnsetAttackProfile(
+                onset_time=onset_time,
+                broadband_onset_gain=float(broadband_gain[row_idx]),
+                high_band_spectral_flux=float(high_band_flux[row_idx]),
+                broadband_spectral_flux=float(broadband_flux[row_idx]),
+                is_valid_attack=bool(is_valid_attack[row_idx]),
+            )
+
+    # Partial-window rows fall back to the single-onset implementation.
+    if np.any(partial_mask):
+        for onset_idx in np.where(partial_mask)[0]:
+            onset_time = onset_times[onset_idx]
+            profile = compute_onset_attack_profile(audio, sample_rate, onset_time)
+            if profile is not None:
+                profiles[round(onset_time, 4)] = profile
     return profiles
 
 
