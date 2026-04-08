@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+from collections import OrderedDict
 from dataclasses import replace as dataclass_replace
 from time import perf_counter
 from typing import Any
@@ -24,6 +26,60 @@ from .profiles import (
     precompute_onset_waveform_stats,
     refine_onset_times_by_attack_profile,
 )
+
+
+# LRU cache for librosa results keyed by (audio hash, sample rate, hpss flag).
+# Same audio is reprocessed across ablation variants and eval-window/full-audio
+# pairs; caching the deterministic librosa outputs avoids several seconds of
+# recomputation per variant.
+_LIBROSA_CACHE: "OrderedDict[tuple[str, int, bool], dict[str, Any]]" = OrderedDict()
+_LIBROSA_CACHE_MAX = 8
+
+
+def _compute_librosa_features(
+    audio: np.ndarray, sample_rate: int, use_hpss_onset: bool
+) -> dict[str, Any]:
+    """Run librosa rms/onset routines and return cacheable outputs."""
+    rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
+    frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
+    onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=HOP_LENGTH)
+    onset_frames = librosa.onset.onset_detect(
+        onset_envelope=onset_env,
+        sr=sample_rate,
+        hop_length=HOP_LENGTH,
+        backtrack=True,
+    )
+    if use_hpss_onset:
+        _, percussive = librosa.effects.hpss(
+            audio, n_fft=FRAME_LENGTH, hop_length=HOP_LENGTH,
+        )
+        perc_env = librosa.onset.onset_strength(y=percussive, sr=sample_rate, hop_length=HOP_LENGTH)
+        perc_frames = librosa.onset.onset_detect(
+            onset_envelope=perc_env,
+            sr=sample_rate,
+            hop_length=HOP_LENGTH,
+            backtrack=True,
+        )
+        onset_frames = np.unique(np.concatenate([onset_frames, perc_frames]))
+    return {"rms": rms, "frame_times": frame_times, "onset_frames": onset_frames}
+
+
+def _get_cached_librosa_features(
+    audio: np.ndarray, sample_rate: int, use_hpss_onset: bool
+) -> dict[str, Any]:
+    """Return cached librosa outputs for ``audio``, computing them on miss."""
+    contiguous = np.ascontiguousarray(audio)
+    audio_hash = hashlib.sha256(memoryview(contiguous).cast("B")).hexdigest()[:16]
+    key = (audio_hash, int(sample_rate), bool(use_hpss_onset))
+    cached = _LIBROSA_CACHE.get(key)
+    if cached is not None:
+        _LIBROSA_CACHE.move_to_end(key)
+        return cached
+    features = _compute_librosa_features(audio, sample_rate, use_hpss_onset)
+    _LIBROSA_CACHE[key] = features
+    if len(_LIBROSA_CACHE) > _LIBROSA_CACHE_MAX:
+        _LIBROSA_CACHE.popitem(last=False)
+    return features
 
 
 def merge_time_ranges(ranges: list[tuple[float, float]], gap_tolerance: float = 0.06) -> list[tuple[float, float]]:
@@ -765,8 +821,9 @@ def detect_segments(
     mid_performance_end: bool = False,
 ) -> tuple[list[Segment], float, dict[str, Any]]:
     cfg = settings.get()
-    rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
-    frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
+    cached_features = _get_cached_librosa_features(audio, sample_rate, cfg.use_hpss_onset)
+    rms = cached_features["rms"]
+    frame_times = cached_features["frame_times"]
     max_rms = float(np.max(rms))
     median_rms = float(np.median(rms))
     threshold = max(max_rms * 0.18, min(median_rms * 2.2, max_rms * RMS_MEDIAN_THRESHOLD_MAX_PEAK_RATIO), 0.01)
@@ -789,25 +846,7 @@ def detect_segments(
     raw_active_ranges = active_ranges.copy()
     active_ranges = merge_time_ranges(active_ranges)
 
-    onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=HOP_LENGTH)
-    onset_frames = librosa.onset.onset_detect(
-        onset_envelope=onset_env,
-        sr=sample_rate,
-        hop_length=HOP_LENGTH,
-        backtrack=True,
-    )
-    if cfg.use_hpss_onset:
-        _, percussive = librosa.effects.hpss(
-            audio, n_fft=FRAME_LENGTH, hop_length=HOP_LENGTH,
-        )
-        perc_env = librosa.onset.onset_strength(y=percussive, sr=sample_rate, hop_length=HOP_LENGTH)
-        perc_frames = librosa.onset.onset_detect(
-            onset_envelope=perc_env,
-            sr=sample_rate,
-            hop_length=HOP_LENGTH,
-            backtrack=True,
-        )
-        onset_frames = np.unique(np.concatenate([onset_frames, perc_frames]))
+    onset_frames = cached_features["onset_frames"]
     onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
     onset_attack_profiles = precompute_onset_attack_profiles(audio, sample_rate, onset_times)
     onset_times = refine_onset_times_by_attack_profile(onset_times, onset_attack_profiles)
