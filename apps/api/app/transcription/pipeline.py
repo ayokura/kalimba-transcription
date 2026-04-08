@@ -25,6 +25,7 @@ from .events import (
     merge_short_gliss_clusters,
     merge_short_segment_guard_via_narrow_fft,
     recover_masked_reattack_via_narrow_fft,
+    recover_pre_segment_attack_via_narrow_fft,
     suppress_unmerged_guarded_singletons,
     simplify_descending_adjacent_dyad_residue,
     simplify_short_gliss_prefix_to_contiguous_singleton,
@@ -49,6 +50,7 @@ from .events import (
     suppress_subset_decay_events,
 )
 from .models import NoteCandidate, RawEvent
+from .noise_floor import measure_noise_floor
 from .notation import build_notation_views, format_doremi, format_number, quantize_beat
 from .patterns import apply_repeated_pattern_passes, suppress_recent_upper_echo_mixed_clusters
 from .peaks import segment_peaks
@@ -77,6 +79,14 @@ async def transcribe_audio(
         mid_performance_end=mid_performance_end,
     )
     segments = rescue_gap_mute_dips(segments, audio, sample_rate, tuning)
+
+    # #154 / #153 Phase B: per-recording per-band noise floor calibration.
+    # Sample silent gaps between segments with the same narrow-FFT window
+    # used by the Phase A merge passes so the result is directly
+    # comparable to ``measure_narrow_fft_note_scores`` output.  Returns an
+    # empty measurement on synthetic / silence-poor fixtures, in which
+    # case the merge passes fall back to their Phase A absolute thresholds.
+    noise_floor = measure_noise_floor(audio, sample_rate, tuning, segments)
 
     raw_events: list[RawEvent] = []
     segment_candidates_debug: list[dict[str, Any]] = []
@@ -234,6 +244,7 @@ async def transcribe_audio(
     # because those passes only merge identical or compatible note sets.
     processed_events = merge_short_segment_guard_via_narrow_fft(
         processed_events, audio, sample_rate, tuning,
+        noise_floor=noise_floor,
     )
     # #153 cosmetic extras follow-up: any short-segment-guarded singleton
     # that A.2 could not merge into a real chord is a spectral artefact
@@ -252,6 +263,19 @@ async def transcribe_audio(
     # by prior D5 sustain).
     processed_events = recover_masked_reattack_via_narrow_fft(
         processed_events, audio, sample_rate, tuning,
+        noise_floor=noise_floor,
+    )
+    # #154 Phase B lookback rescue: when the broadband onset detector
+    # reports an onset that the segmenter did not materialize (the
+    # onset sits in a gap between segments), narrow FFT at the
+    # unconsumed onset time can reveal a chord note that attacks in
+    # the gap and decays before the next segment starts.  E.g.,
+    # 17-key BWV147 E97 G4 attacks at 167.98s but the next segment
+    # starts at 168.152s; an unconsumed onset at 168.0827s sits in
+    # the gap with G4 as the rank-1 narrow-FFT candidate.
+    processed_events = recover_pre_segment_attack_via_narrow_fft(
+        processed_events, audio, sample_rate, tuning, all_onset_times,
+        noise_floor=noise_floor,
     )
     processed_events = suppress_descending_terminal_residual_cluster(processed_events, tuning)
     processed_events = suppress_descending_restart_residual_cluster(processed_events, tuning)
@@ -320,6 +344,7 @@ async def transcribe_audio(
             ],
             "disabledRepeatedPatternPasses": sorted(disabled_repeated_pattern_passes or ()),
             "repeatedPatternPassTrace": repeated_pattern_pass_trace,
+            "noiseFloor": noise_floor.to_debug_dict(),
         }
 
     return TranscriptionResult(

@@ -99,3 +99,25 @@
 - **不採用理由**: (1) ターゲット問題 (E162) が解決しない — B4 単音 attack の broadband spectral flux が C5 残響 (127K) に対して小さすぎ、窓サイズではなく polyphonic onset detection の限界。(2) onset_strength envelope の変化が全 segment 境界に波及し、downstream の閾値群（peak_pick, active range, gap collector 等）が n_fft=2048 前提でチューニングされているため広範な回帰が発生
 - **関連知見**: peaks.py は `_adaptive_n_fft()` で SR 適応済み。profiles.py は時間ベースパラメータ (ONSET_ENERGY_WINDOW_SECONDS) で SR 非依存。segments.py のみ固定サンプル数 (FRAME_LENGTH=2048, HOP_LENGTH=256) を使用しており SR 依存性が残っている。ただし onset_strength の n_fft 単独変更は downstream 連鎖が大きすぎるため、やるなら FRAME_LENGTH / HOP_LENGTH / 閾値群を含む包括的な SR 正規化（または入力リサンプル）が必要
 - **再検討条件**: (1) segments.py 全体の SR 正規化設計時。(2) 入力リサンプル（統一 SR）の導入時。(3) per-note onset detection（note-band energy tracking ベースの onset 検出）が実装された場合、polyphonic onset の根本問題が解消されて本変更も有効になる可能性
+
+## Pre-segment rescue: alternative discriminators (decay max ratio / rank-1 only)
+
+- **Issue**: #154 / #153 Phase B
+- **日付**: 2026-04-09
+- **背景**: `recover_pre_segment_attack_via_narrow_fft`（unconsumed broadband onset で lookback narrow FFT して chord 不足ノートを救出する pass）の false-positive 抑制で複数のアプローチを試した。最終的に「bg-ordered iteration + bg-dominance ratio gate (in-event の最大 bg と比較)」に落ち着いた。以下は採用に至らなかった代替案
+- **試行コミット**: なし（同一作業セッション内で iterate）
+
+### 案 A: rank-1 (score-by-score) only iteration
+
+- **概要**: narrow FFT score 順で並べ、最初の non-event 候補が全 gate を通過しなければ rescue を諦める（lower-ranked 候補は試さない）
+- **動機**: 17-key d4-d5-octave-dyad fixture で sympathetic resonance ノート (B4, G5 等) が複数 rank に並び、iteration で必ず何かが gate を通り抜ける問題を抑える
+- **不採用理由**: 34-key BWV147 R2 E100 C4 を rescue 不能にする。E100 では narrow FFT score の rank-1 not-in-event は D#4 (fr=0.702 で fail)、しかし C4 は score rank 5 にある。Score 順ではなく bg 順で並べると C4 が rank-1 (bg=267) になる
+- **再検討条件**: bg-ordering でも同様の sympathetic-resonance fixture で false positive が出る場合。または bg ordering の per-note bg 計算コストが性能課題になった場合
+
+### 案 B: decay max ratio bound (`fund_e_onset / fund_e_segment_start ≤ 2.0`)
+
+- **概要**: decay min ratio (rising-into-segment 排除) に加えて、上限も設ける。Real kalimba decay は ~30ms で 50% 以上下がらないという物理前提から、急激な energy drop は sympathetic transient spike と判定
+- **動機**: d4-d5 18.1173s の B4 (5.947 → 2.363, ratio 2.52) を catch する
+- **不採用理由**: G5 (1.431 → 0.911, ratio 1.57) や他の resonance 候補が 2.0 以下に収まり catch できない。閾値を 1.4 まで絞ると 34-key C4 (1.31) との margin が 7% しかなくなり不安定。bg-dominance ratio が同じ問題を **物理的により直接的な指標** (in-event note の bg と比較) で解けるため、decay 上限は不要になった
+- **再検討条件**: bg-dominance ratio が future fixture で発火しないが decay 上限が discriminator として機能する場合
+- **注**: decay min ratio (`≥ 0.8`) は採用済み。rising-into-segment 排除（34-key R5 E154 D4 ratio 0.18）は依然必要

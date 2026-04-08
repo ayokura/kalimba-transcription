@@ -157,6 +157,138 @@ NARROW_FFT_REATTACK_DOMINANCE_RATIO = 1.5
 # wrongly adds E6 to D6 events in the d6-to-e6 alternating sequence.
 NARROW_FFT_REATTACK_DISSONANCE_CENTS = 200.0
 
+# Phase B: per-recording per-band noise floor calibration (#154).
+# Silent regions in the recording are sampled with the same narrow-FFT
+# parameters used by the Phase A merge passes; the median fundamental
+# energy at each tuning note becomes a per-note noise floor.  Phase A
+# absolute thresholds are then expressed as ``noise_floor[note] * factor``
+# so the same factor adapts to mic gain, room noise, and per-band
+# differences across recordings.
+#
+# Silent region selection — gaps between segments must be at least
+# this long, and a small padding is trimmed from each edge so the
+# silent slice does not include the segment's attack/release tail.
+NOISE_FLOOR_MIN_SILENT_GAP_SECONDS = 0.10
+NOISE_FLOOR_EDGE_PADDING_SECONDS = 0.02
+# Cap on the number of silent slices; the longest regions are
+# preferred so the median is computed over real silence rather than
+# tight inter-attack pauses that may still contain decay tails.
+NOISE_FLOOR_MAX_SAMPLES = 12
+# Multipliers applied to the per-note noise floor when computing the
+# Phase B replacement thresholds.  Calibrated so:
+#   - 17-key BWV147 E148 C6 (Phase A.2 motivating case, narrow-FFT
+#     fund_e ≈ 26) still passes the guard merge with comfortable margin.
+#   - 17-key BWV147 E97 G4 (Phase B target case, very weak attack with
+#     narrow-FFT fund_e on the order of single digits) clears the lower
+#     bound when the noise floor measurement is in the expected range.
+NARROW_FFT_GUARD_MERGE_NOISE_FACTOR = 10.0
+NARROW_FFT_REATTACK_NOISE_FACTOR = 12.0
+# Hard floor under the noise-floor-derived thresholds.  Defends against
+# pathologically low noise floor measurements (e.g., heavily compressed
+# recordings or numerical underflow on a near-silent fixture).  Set
+# below the Phase A absolute thresholds (20 / 30) so the Phase B swap
+# can lower the bar for genuinely weak attacks while still rejecting
+# trivial noise picks.
+NARROW_FFT_NOISE_THRESHOLD_HARD_FLOOR = 5.0
+
+# Phase B pre-segment lookback rescue (#154 / #153 Phase B).
+# When the broadband onset detector reports an onset that the
+# segmenter did not materialize (the onset sits in a gap between
+# segments), narrow FFT at the unconsumed onset time can reveal a
+# chord note that attacks in the gap and decays before the next
+# segment starts.  The pass walks unconsumed onsets and adds the
+# rank-1 candidate to the immediately following event when a stack
+# of physical safeguards passes.
+#
+# Motivating case: 17-key BWV147 E97 <F5,D5,B4,G4>.  G4 attacks at
+# ~167.98s (narrow FFT fund_e peaks ~1.0).  The next segment starts
+# at 168.152s — well after G4 decayed — so segment_peaks rejects G4
+# as score-below-threshold,recent-carryover-candidate.  An unconsumed
+# broadband onset at 168.0827s sits in the gap; narrow FFT there
+# shows G4 as the rank-1 candidate with backward_attack_gain ~119
+# (a clean fresh attack, not sustain residue).
+NARROW_FFT_PRE_SEGMENT_LOOKBACK_SECONDS = 0.20
+# Noise floor multiplier kept low because (a) the lookback narrow FFT
+# runs in a clean gap with no competing sustain so the floor is mostly
+# a sanity check, not the primary discriminator, and (b) noise floor
+# itself varies meaningfully between full-audio and evaluation-scope
+# transcription passes (eval-scope trims silence and produces a higher
+# floor estimate), so a tight factor would gate the same fund_e in
+# only one mode.  The real discriminator is ``backward_attack_gain``
+# below — noise floor only protects against pathological undershoot.
+#
+# Calibration: 17-key BWV147 E97 G4 narrow-FFT fund_e at the unconsumed
+# onset 168.0827s is ~0.637.  noise_floor[G4] is ~0.116 in full-audio
+# and ~0.181 in evaluation-scope passes; factor=3 yields thresholds
+# 0.348 / 0.543 respectively, both below 0.637 so the rescue fires in
+# either mode.
+NARROW_FFT_PRE_SEGMENT_NOISE_FACTOR = 3.0
+NARROW_FFT_PRE_SEGMENT_HARD_FLOOR = 0.3
+# Phase A absolute fallback used when noise floor calibration is
+# unavailable (e.g., synthetic fixture with no silent gap).  Set well
+# below the merge-pass fallbacks because pre-segment rescue runs in
+# clean gaps where weak attacks are physically meaningful.
+NARROW_FFT_PRE_SEGMENT_MIN_ENERGY = 5.0
+NARROW_FFT_PRE_SEGMENT_MIN_FR = 0.85
+# Backward attack gain is the primary fresh-attack-vs-sustain
+# discriminator and the gate that catches false positives where the
+# rank-1 narrow-FFT note at the unconsumed onset is actually decay
+# from a recently played note.  Calibration data from 17-key BWV147:
+#
+#   * 168.0827s G4 (true positive, E97 rescue target) → 119.0
+#   * 116.176s  A4 (false positive, L5 E64) → 12.38
+#   * 264.2613s top-6 candidates (false positive, R5 E154) → 0.5–0.9
+#
+# Threshold 50 cleanly separates the true rescue from the false
+# positives while leaving E97 G4 with comfortable margin.
+NARROW_FFT_PRE_SEGMENT_MIN_BACKWARD_GAIN = 50.0
+# Reject candidates within this many cents of any existing event
+# note.  Slightly larger than the merge-pass 200-cent (whole step)
+# threshold for two reasons: (a) cents_distance returns 200.000…06
+# for an exact whole step under standard tuning frequencies, so the
+# strict 200 boundary suffers from a float-precision miss, and (b)
+# pre-segment rescue is more permissive on weak attacks where
+# spectral leakage from a sympathetic-resonance neighbour is more
+# likely to look like a fresh note.  250 still allows minor thirds
+# (300 cents) and any wider chord interval through.
+NARROW_FFT_PRE_SEGMENT_DISSONANCE_CENTS = 250.0
+# Decay-pattern discriminator: the candidate's fund_e at the
+# unconsumed onset must be at least this fraction of its fund_e at
+# the segment start.  Rejects notes whose energy is RISING into the
+# segment (= part of the upcoming chord and already evaluated by
+# segment_peaks).  Example: 34-key R5 E154 D4 with fund_e 1.509 at
+# onset / 8.287 at segment start = 0.18.
+NARROW_FFT_PRE_SEGMENT_DECAY_MIN_RATIO = 0.8
+# Backward-gain dominance discriminator: the candidate's bg must be
+# at least this fraction of the maximum bg among the EVENT'S OWN
+# notes at the unconsumed onset.  Physical meaning: if the in-event
+# notes are themselves mid-attack at the unconsumed onset (high bg),
+# then the unconsumed onset is just an early detection of the same
+# chord attack rather than a separate pre-segment event, so a
+# rescue would be promoting a sympathetic-resonance neighbour
+# instead of recovering a missed note.  When the in-event notes
+# have low bg (= they have not started ringing yet), any candidate
+# with a meaningful fresh-attack signature is a plausible
+# pre-segment recovery.
+#
+# Calibration:
+#   * E97 G4: rescue_bg 119 / max_event_bg 63 (B4) = 1.89  → keep
+#   * E100 C4: rescue_bg 267 / max_event_bg 260 (E4) = 1.03 → keep
+#   * d4-d5 18.1173 G5: rescue_bg 465 / max_event_bg 17037 (D5) =
+#     0.027 → drop  (D5 is itself attacking; the unconsumed onset
+#     is the leading edge of the same D4+D5 attack the segmenter
+#     captures 35 ms later, not a separate pre-segment event)
+#   * R5 E154 D4: rescue_bg 57 / max_event_bg 1051 (A4) = 0.054 → drop
+#
+# Threshold 0.5 cleanly separates true rescues (ratio ≥ 1.0) from
+# the sympathetic-resonance false positives (ratio < 0.1).
+NARROW_FFT_PRE_SEGMENT_BG_DOMINANCE_RATIO = 0.5
+# Onsets that fall inside an event's [start_time, end_time] are
+# already represented in segment processing and are skipped by the
+# rescue.  A small slack on the end accommodates floating-point
+# rounding when comparing onset times to segment boundaries.
+NARROW_FFT_PRE_SEGMENT_ONSET_CONSUMED_TOLERANCE = 0.005
+
 # Residual-decay and recent-primary replacement thresholds.
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RESIDUAL_DECAY_MIN_ONSET_GAIN = 1.5

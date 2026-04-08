@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from typing import Sequence
+
 import numpy as np
 
 from ..models import InstrumentTuning
 from .audio import cents_distance
 from .constants import *
 from .models import Note, NoteCandidate, RawEvent
+from .noise_floor import NoiseFloorMeasurement
 from .peaks import (
     are_harmonic_related,
     harmonic_relation_multiple,
@@ -1388,7 +1391,10 @@ def recover_masked_reattack_via_narrow_fft(
     sample_rate: int,
     tuning: InstrumentTuning,
     *,
+    noise_floor: NoiseFloorMeasurement | None = None,
     min_fundamental_energy: float = NARROW_FFT_REATTACK_MIN_ENERGY,
+    noise_floor_factor: float = NARROW_FFT_REATTACK_NOISE_FACTOR,
+    noise_floor_hard_floor: float = NARROW_FFT_NOISE_THRESHOLD_HARD_FLOOR,
     min_fundamental_ratio: float = NARROW_FFT_REATTACK_MIN_FR,
     min_score_dominance_ratio: float = NARROW_FFT_REATTACK_DOMINANCE_RATIO,
     dissonance_neighbor_cents: float = NARROW_FFT_REATTACK_DISSONANCE_CENTS,
@@ -1487,7 +1493,18 @@ def recover_masked_reattack_via_narrow_fft(
                 # rank: the first non-existing entry is "rank 1 among
                 # candidates", which is what we want.
                 continue
-            if fund_e < min_fundamental_energy:
+            # Phase B (#154): noise-floor-aware energy threshold; see
+            # merge_short_segment_guard_via_narrow_fft for the rationale.
+            if noise_floor is not None:
+                min_energy = noise_floor.threshold_for(
+                    note_name,
+                    factor=noise_floor_factor,
+                    fallback=min_fundamental_energy,
+                    hard_floor=noise_floor_hard_floor,
+                )
+            else:
+                min_energy = min_fundamental_energy
+            if fund_e < min_energy:
                 break
             if fr < min_fundamental_ratio:
                 # Spectral leakage signature — skip; downstream entries
@@ -1522,6 +1539,246 @@ def recover_masked_reattack_via_narrow_fft(
             # Re-attacks occur after the segment start, not at it.
             if matched_sub_onset <= event.sub_onsets[0] + 1e-6:
                 continue
+            new_candidate = NoteCandidate(
+                key=tuning_match.key,
+                note=Note.from_name(note_name),
+                score=score,
+            )
+            updated_notes = sorted(
+                [*event.notes, new_candidate],
+                key=lambda candidate: candidate.frequency,
+            )
+            recovered.append(
+                RawEvent(
+                    start_time=event.start_time,
+                    end_time=event.end_time,
+                    notes=updated_notes,
+                    is_gliss_like=event.is_gliss_like,
+                    primary_note_name=event.primary_note_name,
+                    primary_score=event.primary_score,
+                    from_short_segment_guard=event.from_short_segment_guard,
+                    sub_onsets=event.sub_onsets,
+                )
+            )
+            added = True
+            break
+        if not added:
+            recovered.append(event)
+
+    return recovered
+
+
+def recover_pre_segment_attack_via_narrow_fft(
+    raw_events: list[RawEvent],
+    audio: np.ndarray,
+    sample_rate: int,
+    tuning: InstrumentTuning,
+    onset_times: "Sequence[float]",
+    *,
+    noise_floor: NoiseFloorMeasurement | None = None,
+    lookback_seconds: float = NARROW_FFT_PRE_SEGMENT_LOOKBACK_SECONDS,
+    min_fundamental_energy: float = NARROW_FFT_PRE_SEGMENT_MIN_ENERGY,
+    noise_floor_factor: float = NARROW_FFT_PRE_SEGMENT_NOISE_FACTOR,
+    noise_floor_hard_floor: float = NARROW_FFT_PRE_SEGMENT_HARD_FLOOR,
+    min_fundamental_ratio: float = NARROW_FFT_PRE_SEGMENT_MIN_FR,
+    min_backward_attack_gain: float = NARROW_FFT_PRE_SEGMENT_MIN_BACKWARD_GAIN,
+    dissonance_neighbor_cents: float = NARROW_FFT_PRE_SEGMENT_DISSONANCE_CENTS,
+    onset_consumed_tolerance: float = NARROW_FFT_PRE_SEGMENT_ONSET_CONSUMED_TOLERANCE,
+    decay_min_ratio: float = NARROW_FFT_PRE_SEGMENT_DECAY_MIN_RATIO,
+    bg_dominance_ratio: float = NARROW_FFT_PRE_SEGMENT_BG_DOMINANCE_RATIO,
+) -> list[RawEvent]:
+    """Recover a chord note that attacks in the gap before an event from
+    a broadband onset that the segmenter did not materialize (#153
+    Phase B / #154 lookback rescue).
+
+    Motivating case: 17-key BWV147 E97 ``<F5,D5,B4,G4>``.  The broadband
+    onset detector reports an onset at 168.0827s — well inside the G4
+    attack window (167.98–168.10s).  However the segmenter starts the
+    next segment at 168.152s, after G4 has decayed, so segment_peaks
+    rejects G4 as ``score-below-threshold,recent-carryover-candidate``
+    and the merge / re-attack rescue passes never see it because no
+    segment contains the G4 attack.
+
+    The pass walks unconsumed onsets (those that do not fall inside any
+    existing event), runs a narrow FFT centred on each, and adds the
+    highest-scoring candidate not already in the event to the
+    immediately following event when every gate passes:
+
+    Candidates are evaluated in **descending backward_attack_gain
+    order** rather than narrow-FFT score order.  Score-ordered
+    iteration biases toward whatever is loudest in the early window
+    (often a sympathetic-resonance peak from an incoming attack);
+    bg-ordered iteration puts the strongest *fresh-attack signature*
+    first, which is exactly what the rescue is looking for.  The
+    first candidate that passes every gate below is added to the
+    event; later candidates are not considered.
+
+    Gates (in evaluation order):
+
+    1. ``backward_attack_gain ≥ min_backward_attack_gain`` —
+       primary fresh-attack-vs-sustain discriminator.  Iteration
+       breaks once this falls below the bar because lower-bg
+       candidates are ranked even worse.
+    2. ``fundamental_ratio ≥ min_fundamental_ratio`` — clean
+       fundamental, not spectral leakage.
+    3. ``fundamental_energy ≥ noise_floor[note] * noise_floor_factor``
+       clamped to ``noise_floor_hard_floor`` (or
+       ``min_fundamental_energy`` when calibration is unavailable).
+    4. The candidate is not within ``dissonance_neighbor_cents`` of
+       any existing event note (whole-step rejection).
+    5. ``fund_e_onset / fund_e_segment_start ≥ decay_min_ratio``:
+       the candidate's energy must not be RISING into the segment.
+       A rising candidate is part of the upcoming chord and was
+       already evaluated by segment_peaks.  Example: 34-key R5 E154
+       D4 with fund_e 1.5 → 8.3 (ratio 0.18).
+
+    6. ``rescue_bg ≥ max_in_event_bg * bg_dominance_ratio``:
+       distinguishes a *separate pre-segment attack* (in-event
+       notes have low bg, the rescue note's bg dominates) from an
+       *early sample of the same chord attack* (in-event notes are
+       themselves mid-attack with very high bg, the rescue note is
+       a sympathetic-resonance neighbour pumped up by the incoming
+       attack).  Example: 17-key d4-d5 octave-dyad fixture
+       18.1173s where D5 (in-event) has bg 17037 because the
+       segmenter is about to detect it 35 ms later — any rescue at
+       that onset would be promoting a resonance peak.
+
+    7. The candidate is not already present in the event and the
+       event has room for another note under :data:`MAX_POLYPHONY`.
+
+    The lookback window is bounded above by the previous event's
+    ``end_time`` so the rescue cannot reach back across an earlier
+    chord and steal one of its tail notes.  Within the window the
+    *latest* unconsumed onset is preferred because narrow FFT energy
+    is highest near the actual attack moment.
+    """
+    if not raw_events or not onset_times:
+        return raw_events
+
+    sorted_onsets = sorted({float(t) for t in onset_times})
+
+    def _is_consumed(onset: float) -> bool:
+        for event in raw_events:
+            if (
+                event.start_time - onset_consumed_tolerance
+                <= onset
+                <= event.end_time + onset_consumed_tolerance
+            ):
+                return True
+        return False
+
+    unconsumed = [o for o in sorted_onsets if not _is_consumed(o)]
+    if not unconsumed:
+        return raw_events
+
+    recovered: list[RawEvent] = []
+    for index, event in enumerate(raw_events):
+        if event.from_short_segment_guard or len(event.notes) >= MAX_POLYPHONY:
+            recovered.append(event)
+            continue
+        # Bound the lookback above by the previous event's end so the
+        # rescue cannot reach across an earlier chord and adopt one of
+        # its tail-decay onsets.
+        prev_event_end = raw_events[index - 1].end_time if index > 0 else 0.0
+        floor = max(event.start_time - lookback_seconds, prev_event_end)
+        candidates_in_window = [
+            o for o in unconsumed if floor < o < event.start_time
+        ]
+        if not candidates_in_window:
+            recovered.append(event)
+            continue
+        # Latest unconsumed onset within the window — narrow-FFT energy
+        # is highest near the attack moment, so picking the latest
+        # gives the strongest signal for the closest pre-event note.
+        onset_time = candidates_in_window[-1]
+
+        narrow_scores = measure_narrow_fft_note_scores(
+            audio, sample_rate, onset_time, tuning,
+        )
+        if narrow_scores is None:
+            recovered.append(event)
+            continue
+        # Computed once for the decay-pattern discriminator.  The
+        # pass should only rescue notes whose energy is DECAYING
+        # SLOWLY from the unconsumed onset to the segment start.
+        segment_start_scores = measure_narrow_fft_note_scores(
+            audio, sample_rate, event.start_time, tuning,
+        )
+
+        existing_names = {note.note_name for note in event.notes}
+        existing_freqs = [note.frequency for note in event.notes]
+
+        # Pre-compute backward_attack_gain for every tuning note
+        # that surfaced in the narrow FFT.  In-event bgs feed the
+        # bg-dominance gate (gate 6); non-event bgs are sorted in
+        # descending order so the iteration tries the strongest
+        # fresh-attack candidate first regardless of narrow-FFT
+        # score (which can be dominated by an incoming chord's
+        # loudest sustain).
+        max_in_event_bg = 0.0
+        bg_candidates: list[tuple[float, str, float, float, float, object, float]] = []
+        for note_name, (fund_e, score, fr) in narrow_scores.items():
+            tuning_match = next(
+                (n for n in tuning.notes if n.note_name == note_name),
+                None,
+            )
+            if tuning_match is None:
+                continue
+            candidate_freq = tuning_match.frequency
+            backward_gain = onset_backward_attack_gain(
+                audio, sample_rate, onset_time, candidate_freq,
+            )
+            if note_name in existing_names:
+                if backward_gain > max_in_event_bg:
+                    max_in_event_bg = backward_gain
+                continue
+            bg_candidates.append(
+                (backward_gain, note_name, fund_e, score, fr, tuning_match, candidate_freq)
+            )
+        bg_candidates.sort(key=lambda c: c[0], reverse=True)
+
+        added = False
+        for backward_gain, note_name, fund_e, score, fr, tuning_match, candidate_freq in bg_candidates:
+            # Lower-bg candidates only get worse — bail out instead of
+            # walking through a long tail of sustain residue.
+            if backward_gain < min_backward_attack_gain:
+                break
+            # Bg dominance: if any in-event note is itself mid-attack
+            # at the unconsumed onset, the onset is just an early
+            # detection of the same chord attack and the rescue
+            # would only promote a sympathetic-resonance neighbour.
+            if (
+                max_in_event_bg > 0.0
+                and backward_gain < max_in_event_bg * bg_dominance_ratio
+            ):
+                break
+            if fr < min_fundamental_ratio:
+                continue
+            if noise_floor is not None:
+                min_energy = noise_floor.threshold_for(
+                    note_name,
+                    factor=noise_floor_factor,
+                    fallback=min_fundamental_energy,
+                    hard_floor=noise_floor_hard_floor,
+                )
+            else:
+                min_energy = min_fundamental_energy
+            if fund_e < min_energy:
+                continue
+            if any(
+                cents_distance(candidate_freq, existing_freq)
+                <= dissonance_neighbor_cents
+                for existing_freq in existing_freqs
+            ):
+                continue
+            if segment_start_scores is not None:
+                start_fund_e = segment_start_scores.get(
+                    note_name, (0.0, 0.0, 0.0),
+                )[0]
+                if start_fund_e > 0.0:
+                    ratio = fund_e / start_fund_e
+                    if ratio < decay_min_ratio:
+                        continue
             new_candidate = NoteCandidate(
                 key=tuning_match.key,
                 note=Note.from_name(note_name),
@@ -1720,8 +1977,11 @@ def merge_short_segment_guard_via_narrow_fft(
     sample_rate: int,
     tuning: InstrumentTuning,
     *,
+    noise_floor: NoiseFloorMeasurement | None = None,
     max_gap_seconds: float = 0.05,
     narrow_fft_min_energy: float = NARROW_FFT_GUARD_MERGE_MIN_ENERGY,
+    noise_floor_factor: float = NARROW_FFT_GUARD_MERGE_NOISE_FACTOR,
+    noise_floor_hard_floor: float = NARROW_FFT_NOISE_THRESHOLD_HARD_FLOOR,
     next_primary_dominance_ratio: float = NARROW_FFT_GUARD_MERGE_DOMINANCE_RATIO,
     min_fundamental_ratio: float = NARROW_FFT_GUARD_MERGE_MIN_FR,
     min_backward_attack_gain: float = NARROW_FFT_GUARD_MERGE_MIN_BACKWARD_GAIN,
@@ -1803,7 +2063,22 @@ def merge_short_segment_guard_via_narrow_fft(
         guarded_energy, guarded_score, guarded_fr = narrow_scores.get(
             guarded_note.note_name, (0.0, 0.0, 0.0),
         )
-        if guarded_energy < narrow_fft_min_energy:
+        # Phase B (#154): noise-floor-aware energy threshold.  When a
+        # per-recording per-band noise floor is available, use
+        # ``floor[note] * noise_floor_factor`` (clamped to a hard
+        # floor) instead of the Phase A absolute threshold.  This lets
+        # the same factor adapt to mic gain and per-band noise across
+        # recordings while still rejecting trivial noise picks.
+        if noise_floor is not None:
+            min_energy = noise_floor.threshold_for(
+                guarded_note.note_name,
+                factor=noise_floor_factor,
+                fallback=narrow_fft_min_energy,
+                hard_floor=noise_floor_hard_floor,
+            )
+        else:
+            min_energy = narrow_fft_min_energy
+        if guarded_energy < min_energy:
             merged.append(event)
             continue
         # A real fresh attack has fundamental >> harmonics in the narrow
