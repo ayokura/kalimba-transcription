@@ -4,7 +4,7 @@
 
 各 recognizer コンポーネントについて、Free Performance（楽譜知識なし・Expected Performance なしの自由演奏転写）への適合度を評価する。チケット処理のたびに関連コンポーネントを再評価し、このドキュメントを更新する。
 
-**最終更新: 2026-04-07 (コミット 2dda614, per-note onset 基盤 + fast mute-dip)**
+**最終更新: 2026-04-08 (コミット 1f3bda4, short-segment secondary guard + #152 sub-onset aware per-note attack + #153 起票)**
 
 ## 評価基準
 
@@ -28,22 +28,25 @@
 
 ## Stage 2: Onset & Segment Detection (`segments.py`)
 
-**評価: Mostly Ready（onset/active range） / Needs Work（SR依存性）**
+**評価: Mostly Ready（onset/active range） / Needs Work（SR依存性、masked re-attack）**
 
-**最終更新: 2026-04-07 (コミット 2dda614, per-note onset 基盤実装)**
+**最終更新: 2026-04-08 (#152 sub-onset aware per-note attack + commit 1f3bda4 short-segment guard)**
 
 ### 良い点
 
 - **Active range 検出**: RMS ベースで楽譜非依存。threshold = max(0.18*max_rms, 2.2*median_rms) は adaptive で楽器特性に追従
 - **Attack profile validation**: broadband_gain + high_band_flux の組み合わせ判定。moderate gain-flux gate (gain≥3.0, flux≥0.8) の追加で 34-key の genuine attack 2件を救済済み。閾値は物理量ベースで fixture-specific でない
 - **Gap collector (AVC)**: onset の attack profile で判定しており因果的・楽譜非依存
-- **librosa onset_strength + onset_detect**: 標準的な broadband spectral flux。大半の onset を正しく検出（17-key 160/163, 34-key 156/163）
-- **Per-note onset detection (Pass 1)**: gap mute-dip rescue 実装済み (#144, コミット a936d6e)。broadband onset が見逃した same-note re-attack を per-note の mute-dip パターンで検出し、`confirmed_primary` 付き segment を生成。compact-window アルゴリズムで自然減衰の false positive を排除。楽譜非依存・因果的・WebAssembly 互換
+- **librosa onset_strength + onset_detect**: 標準的な broadband spectral flux。大半の onset を正しく検出（17-key 161/163, 34-key 159/163）
+- **Per-note onset detection (Pass 1)**: gap mute-dip rescue 実装済み (#144)。broadband onset が見逃した same-note re-attack を per-note の mute-dip パターンで検出し、`confirmed_primary` 付き segment を生成。compact-window アルゴリズムで自然減衰の false positive を排除。楽譜非依存・因果的・WebAssembly 互換
+- **Sub-onset aware per-note attack window** (#152, commit e449df8): segment 内に複数の broadband sub-onset がある場合、対象 note の actual attack を `pick_matching_sub_onset` で picked し、`onset_energy_gain` の窓をその時刻に anchor する。slide chord での staggered attack や、segment 開始よりやや遅い primary attack を救済。
+- **Short-segment secondary guard** (commit 1f3bda4): segment duration < 30ms (典型は gap-mute-dip rescue の 6.7ms) で secondary 全部を strip。FFT 窓が segment 幅未満になり secondary が信頼できないため。`from_short_segment_guard` フラグで下流から識別可能、`shortSegmentGuardActive` debug field 経由で trace 可能。`suppress_short_residual_tails` は guarded primary を carryover と誤認しないよう exempt。
 
 ### 懸念点
 
 - **SR 依存性 (#140)**: FRAME_LENGTH=2048, HOP_LENGTH=256 が固定サンプル数。sr=44100 で STFT窓=46.4ms、sr=96000 で 21.3ms。onset 検出の時間分解能が楽器/録音環境で異なる。リサンプル実験で -5 exact 回帰、n_fft 変更で -4 exact — チューニング再調整なしの単独投入は不可
 - **Polyphonic onset の限界**: 単音 attack が他の音の残響に埋もれると onset_strength に現れない（E162 B4: onset_strength=0.6 vs background 0.3-0.5）。per-note onset detection の Pass 2 (onset splitting) で補完予定 (#145)
+- **Masked re-attack** (#153 で扱う): 同一 note を短時間後に再打鍵した場合、自身の carryover (例: D5 80k baseline) 上の re-attack (140k peak) は ~60% 増しに留まり、broadband flux でも segment_peaks スコアでも「fresh attack」と認識されない。34-key BWV147 の R1 E97 / R4 E133 / R3 67.640s / R3 70.888s の gliss 4件が同じ pattern で、A3 (sub-onset narrow FFT) で per-attack window 解析しないと拾えない
 - **Streaming 再設計**: librosa.onset.onset_strength は batch 処理。streaming 化には incremental spectral flux + peak picking の再実装が必要。per-note onset の部品（`_note_band_energy()` 等）は因果的で streaming 互換
 - **HPSS onset 分離**: 試験の結果、percussive 単独置換は回帰 (76%→53%)。カリンバの撥弦 attack が harmonic/percussive に分散し、percussive のノイズフロア上昇で偽 onset 増加。パイプライン全体チューンが必要 (#148)
 
@@ -51,7 +54,9 @@
 
 ## Stage 3: Per-Segment Peak Detection & Candidate Selection (`peaks.py`)
 
-**評価: Mostly Ready（candidate ranking） / Needs Work（secondary/tertiary selection + rescue path）**
+**評価: Mostly Ready（candidate ranking） / Needs Work（secondary/tertiary selection + rescue path + octave-coincident aliasing）**
+
+**最終更新: 2026-04-08 (#152 sub-onset aware + commit 1f3bda4 short-segment guard + octave-coincident aliasing 課題追記)**
 
 ### 良い点
 
@@ -61,6 +66,8 @@
 - **Evidence gate (`onset_gain`, `backward_attack_gain`)** はセグメント内の物理的な attack 特性に基づく判定であり、楽譜に依存しない
 - **Fast mute-dip 検出**: 50ms + 30ms の2段階 FFT 窓で ~20ms の高速 mute-dip も検出 (コミット e599d4b)。E83 G4 型（segment 内で residual-decay 棄却されていた genuine re-attack）を rescue
 - **Segment provenance**: `confirmed_primary` / `hint_primary` フィールド (#143) で per-note パスから peaks 層への情報伝達基盤を確立。`confirmed_primary` 付き segment は `_resolve_primary` をスキップし residual-decay 免除
+- **Sub-onset aware per-note attack** (#152, commit e449df8): `pick_matching_sub_onset` + `onset_energy_gain` 改修。早い attack を持つ candidate に対し正しい sub-onset を picked し、early window のみ anchor。`recent_note_names` 制限で false positive 防止。Lower-octave harmonic-related-to-selected bypass で octave alias 誤棄却を回避。tertiary-weak-onset の対称化で carryover 経路の不整合解消。これにより E148 C5 (delayed within-segment attack) と C4 (octave alias 誤棄却) を救済
+- **Short-segment secondary guard** (commit 1f3bda4): 30ms 未満 segment では secondary 全 strip + `RawEvent.from_short_segment_guard` フラグ + `shortSegmentGuardActive` debug field。`GATE_CATEGORIES` に新カテゴリ `"guard"` 追加。`_CandidateDecision.reasons` に `short-segment-secondary-guarded` で trail 経由 traceable。下流 `suppress_short_residual_tails` は guarded を exempt。これにより E148 で gap-mute-dip 由来の 6.7ms segment が A5+G5 noise を拾わず C6 のみ保持
 
 ### 懸念点
 
@@ -68,7 +75,8 @@
 - **Sequential accept loop**: primary → secondary → tertiary の逐次選択は、候補の評価順序に結果が依存する。E136 の問題（E4 が先に棄却されたために C4 が playability チェックに失敗）はこの構造的制約の典型例。chord selector (#111) で根本解決の可能性あり
 - **Octave-4 fr 閾値 (0.75)**: 今回の緩和は BWV147 の2件で検証済みだが、Free Performance での広範な文脈で偽 octave dyad を生むリスクは broader fixture coverage がないと評価困難
 - **Tertiary rescue bypass (og >= 2.0)**: carryover rescue と同じ閾値の流用であり、tertiary rescue に最適な閾値かは理論的根拠が弱い
-- **Ranked candidate 不在問題**: E148 C6 のように、segment 全体の FFT では primary の倍音に吸収されて ranked に入らない genuine note がある。onset-focused FFT window 等の spectral acquisition 改善が必要 (#125)
+- **Ranked candidate 不在問題 / Octave-coincident chord aliasing** (#125, #153): カリンバの構造的物理問題。**ある音の fundamental が、その1オクターブ下の音の 2nd harmonic と完全に同一周波数を持つ** (例: C6=1046Hz, C5 の 2nd harmonic = 523×2 = 1046Hz)。segment 全体 FFT では分離不可能で、E148 C6 のような chord top が ranked に入らない。**早期 attack 窓 (~30-40ms) でしか時間分離できない** 物理的制約。E148, 34-key R1 E97/R4 E133/R3 67.640s/R3 70.888s/R2 E100 の 6 failures がすべて同一原理 (octave-coincident / gliss splitting / early-window masking) で、#153 sub-onset narrow FFT が唯一の物理的解。Free Performance を見据えた基盤として必須
+- **Masked re-attack threshold**: 同一 note の carryover decay (例: D5 80k baseline) 上の re-attack (140k peak) は ~60% 増しに留まり、segment_peaks の score-below-threshold で棄却される。34-key R1 E83 D5 extra のような既存 carryover を fresh attack と誤認する逆ケースもあり、threshold 単独調整では難しい。本質的には sub-onset narrow FFT (#153) で per-attack window の独立 spectral 評価が必要
 
 ---
 
@@ -238,3 +246,4 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 | 2026-04-06 | 34-key NO MATCH調査 | Stage 2 (segments.py) 評価追加。SR依存性 (#140)、polyphonic onset 限界、per-note onset 設計 (#141) を記載 |
 | 2026-04-06 | Stage 5/7 棚卸し | Stage 5 suppress/simplify 系 19関数の個別評価（依存度別4段階分類）。Stage 7 merge 4関数 + collapse 6関数の評価追加。潜在 debt 3件特定 |
 | 2026-04-07 | #142-144, E83分析 | Stage 2: per-note onset Pass 1 (gap mute-dip rescue) + HPSS 試験結果追加。Stage 3: fast mute-dip 30ms 窓フォールバック + Segment provenance 追加 |
+| 2026-04-08 | #152 完了 + commit 1f3bda4 + #153 起票 | Stage 2: #152 sub-onset aware per-note attack window + commit 1f3bda4 short-segment secondary guard 追加。Masked re-attack 課題 (#153 で扱う) 追記。Stage 3: #152 の3拡張 + commit 1f3bda4 のフラグ/marking 機構を「良い点」に追加。**Octave-coincident chord aliasing** を独立課題として「懸念点」に明示 (C5/C6 周波数衝突の物理的制約、#125/#153)。Masked re-attack threshold 課題追記。残り failure 6/7 が #153 一本で解決可能と確定 |
