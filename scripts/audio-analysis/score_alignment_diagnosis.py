@@ -29,6 +29,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 from functools import lru_cache
 from pathlib import Path
 
@@ -145,11 +146,21 @@ def _cached_transcribe(
     payload = json.loads(raw_text)
     if not cache_disabled:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        # Atomic write: write to a sibling temp file and rename into place so
-        # an interrupted run cannot leave a truncated cache entry behind.
-        tmp_file = cache_file.with_suffix(cache_file.suffix + ".tmp")
-        tmp_file.write_text(raw_text, encoding="utf-8")
-        os.replace(tmp_file, cache_file)
+        # Atomic write: write to a uniquely-named sibling temp file (mkstemp
+        # guarantees no collision between concurrent invocations) and rename
+        # into place so an interrupted run cannot leave a truncated cache
+        # entry behind.
+        fd, tmp_path_str = tempfile.mkstemp(
+            dir=CACHE_DIR, prefix=f"{key}.", suffix=".tmp"
+        )
+        tmp_path = Path(tmp_path_str)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(raw_text)
+            os.replace(tmp_path, cache_file)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
     return payload
 
 
