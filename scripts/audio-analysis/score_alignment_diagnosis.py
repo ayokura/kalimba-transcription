@@ -1,13 +1,14 @@
 """Compare expected events from score_structure with recognizer output using ordered matching.
 
 Usage:
-    uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose] [--mode events|segments]
+    uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose] [--mode events|segments] [--line LINE_ID]
 
 Arguments:
     fixture-name    Fixture name (e.g., bwv147-sequence-163-01)
     --verbose       Show exact matches too (default: failures only)
     --mode          Data source: 'events' (default, post-processed final output)
                     or 'segments' (raw segmentCandidates before event post-processing)
+    --line          Show only the specified line id (e.g., R6). All lines by default.
 
 Environment:
     SCORE_ALIGNMENT_NO_CACHE=1  Disable the on-disk transcription cache
@@ -86,8 +87,20 @@ def _cached_transcribe(
     cache_file = CACHE_DIR / f"{key}.json"
 
     if not cache_disabled and cache_file.exists():
-        print(f"[cache hit] {key_prefix}", file=sys.stderr)
-        return json.loads(cache_file.read_text())
+        try:
+            payload = json.loads(cache_file.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            print(
+                f"[cache invalid] {key_prefix}: {exc}; treating as cache miss",
+                file=sys.stderr,
+            )
+            try:
+                cache_file.unlink()
+            except OSError:
+                pass
+        else:
+            print(f"[cache hit] {key_prefix}", file=sys.stderr)
+            return payload
 
     print(f"[cache miss] {key_prefix}", file=sys.stderr)
     response = client.post(
@@ -102,10 +115,15 @@ def _cached_transcribe(
         )
         print(response.text[:500], file=sys.stderr)
         sys.exit(1)
-    payload = response.json()
+    raw_text = response.text
+    payload = json.loads(raw_text)
     if not cache_disabled:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        cache_file.write_text(json.dumps(payload))
+        # Atomic write: write to a sibling temp file and rename into place so
+        # an interrupted run cannot leave a truncated cache entry behind.
+        tmp_file = cache_file.with_suffix(cache_file.suffix + ".tmp")
+        tmp_file.write_text(raw_text)
+        os.replace(tmp_file, cache_file)
     return payload
 
 
