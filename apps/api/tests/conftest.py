@@ -22,7 +22,7 @@ client = TestClient(app)
 MANUAL_CAPTURE_FIXTURE_ROOT = TESTS_DIR / "fixtures" / "manual-captures"
 
 
-@lru_cache(maxsize=32)
+@lru_cache(maxsize=128)
 def _load_manual_capture_fixture_inputs(fixture_name: str, use_evaluation_scope: bool) -> tuple[dict, bytes]:
     fixture_dir = MANUAL_CAPTURE_FIXTURE_ROOT / fixture_name
     request_payload = json.loads((fixture_dir / "request.json").read_text(encoding="utf-8"))
@@ -34,7 +34,7 @@ def _load_manual_capture_fixture_inputs(fixture_name: str, use_evaluation_scope:
     return request_payload, audio_bytes
 
 
-@lru_cache(maxsize=32)
+@lru_cache(maxsize=128)
 def _transcribe_manual_capture_fixture(
     fixture_name: str,
     debug: bool,

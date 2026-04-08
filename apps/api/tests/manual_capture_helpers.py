@@ -406,7 +406,7 @@ def build_evaluation_audio_bytes(fixture_dir: Path, expected: dict[str, Any]) ->
 _CROSSFADE_SECONDS = 0.05
 
 
-@lru_cache(maxsize=32)
+@lru_cache(maxsize=128)
 def _build_evaluation_audio_bytes_cached(
     fixture_dir: Path,
     windows: tuple[tuple[float, float], ...],
