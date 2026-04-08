@@ -260,8 +260,6 @@ def match_line(expected_events, detected_segs):
             return 1
         return 0
 
-    from functools import lru_cache
-
     @lru_cache(maxsize=None)
     def dp(ei, min_di):
         """Best total score for matching expected[ei:] using detected[min_di:]."""
