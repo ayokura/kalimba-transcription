@@ -8,9 +8,16 @@ Arguments:
     --verbose       Show exact matches too (default: failures only)
     --mode          Data source: 'events' (default, post-processed final output)
                     or 'segments' (raw segmentCandidates before event post-processing)
+
+Environment:
+    SCORE_ALIGNMENT_NO_CACHE=1  Disable the on-disk transcription cache
+                                (apps/api/tests/.cache/score_alignment/). When set,
+                                transcription requests always re-run the full pipeline.
 """
 import argparse
+import hashlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -19,6 +26,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 TESTS_DIR = REPO_ROOT / "apps" / "api" / "tests"
 FIXTURE_ROOT = TESTS_DIR / "fixtures" / "manual-captures"
+CACHE_DIR = TESTS_DIR / ".cache" / "score_alignment"
 
 sys.path.insert(0, str(TESTS_DIR))
 sys.path.insert(0, str(TESTS_DIR.parent))
@@ -26,6 +34,52 @@ sys.path.insert(0, str(TESTS_DIR.parent))
 from manual_capture_helpers import build_evaluation_audio_bytes, load_fixture
 from fastapi.testclient import TestClient
 from app.main import app
+
+
+def _cache_key(audio_bytes: bytes, request_data: dict[str, str]) -> str:
+    """Compute cache key from audio bytes + request data."""
+    h = hashlib.sha256()
+    h.update(audio_bytes)
+    h.update(
+        json.dumps(sorted(request_data.items()), ensure_ascii=False).encode("utf-8")
+    )
+    return h.hexdigest()
+
+
+def _cached_transcribe(
+    client: TestClient, audio_bytes: bytes, request_data: dict[str, str]
+) -> dict:
+    """Run transcription with disk cache of the JSON response.
+
+    Set ``SCORE_ALIGNMENT_NO_CACHE=1`` to bypass the cache entirely.
+    """
+    cache_disabled = bool(os.environ.get("SCORE_ALIGNMENT_NO_CACHE"))
+    key = _cache_key(audio_bytes, request_data)
+    key_prefix = key[:12]
+    cache_file = CACHE_DIR / f"{key}.json"
+
+    if not cache_disabled and cache_file.exists():
+        print(f"[cache hit] {key_prefix}", file=sys.stderr)
+        return json.loads(cache_file.read_text())
+
+    print(f"[cache miss] {key_prefix}", file=sys.stderr)
+    response = client.post(
+        "/api/transcriptions",
+        data=request_data,
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+    if response.status_code != 200:
+        print(
+            f"Error: transcription request failed with status {response.status_code}",
+            file=sys.stderr,
+        )
+        print(response.text[:500], file=sys.stderr)
+        sys.exit(1)
+    payload = response.json()
+    if not cache_disabled:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cache_file.write_text(json.dumps(payload))
+    return payload
 
 
 def resolve_fixture(name: str) -> Path:
@@ -193,16 +247,8 @@ def main():
     request_payload, expected = load_fixture(fixture_dir)
     audio_bytes = build_evaluation_audio_bytes(fixture_dir, expected)
 
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-    if response.status_code != 200:
-        print(f"Error: transcription request failed with status {response.status_code}", file=sys.stderr)
-        print(response.text[:500], file=sys.stderr)
-        sys.exit(1)
-    payload = response.json()
+    request_data = {"tuning": json.dumps(request_payload["tuning"]), "debug": "true"}
+    payload = _cached_transcribe(client, audio_bytes, request_data)
     debug = payload.get("debug")
     if not isinstance(debug, dict) or "segmentCandidates" not in debug:
         print(f"Error: response missing debug.segmentCandidates (keys: {list(payload.keys())})", file=sys.stderr)
