@@ -1687,6 +1687,33 @@ def merge_gliss_split_segments(
     return merged
 
 
+def suppress_unmerged_guarded_singletons(
+    raw_events: list[RawEvent],
+) -> list[RawEvent]:
+    """Drop short-segment-guarded singletons that no upstream pass merged
+    into a real chord (#153 cosmetic extras follow-up).
+
+    Pre-condition: this pass runs *after*
+    :func:`merge_short_segment_guard_via_narrow_fft` (Phase A.2), which
+    rejoins guarded primaries into adjacent chords whenever the four
+    narrow-FFT safeguards (energy / fundamental_ratio / backward_gain /
+    next-primary dominance) confirm a real attack.  Any RawEvent that
+    still carries ``from_short_segment_guard=True`` at this point failed
+    that cross-validation, which is strong evidence the singleton is a
+    spectral artefact of a nearby real attack — a 6-16 ms FFT window
+    cannot resolve secondaries reliably, so the guard preserved a
+    tentative primary that none of the recovery passes could attach to
+    a real chord.
+
+    The drop is unconditional within the guard scope: the four A.2
+    disambiguators have already separated real cases (which became
+    chord notes) from artefact cases (which still have the flag).
+    """
+    if not raw_events:
+        return raw_events
+    return [event for event in raw_events if not event.from_short_segment_guard]
+
+
 def merge_short_segment_guard_via_narrow_fft(
     raw_events: list[RawEvent],
     audio: np.ndarray,

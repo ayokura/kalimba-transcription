@@ -25,6 +25,7 @@ from .events import (
     merge_short_gliss_clusters,
     merge_short_segment_guard_via_narrow_fft,
     recover_masked_reattack_via_narrow_fft,
+    suppress_unmerged_guarded_singletons,
     simplify_descending_adjacent_dyad_residue,
     simplify_short_gliss_prefix_to_contiguous_singleton,
     simplify_short_secondary_bleed,
@@ -234,6 +235,11 @@ async def transcribe_audio(
     processed_events = merge_short_segment_guard_via_narrow_fft(
         processed_events, audio, sample_rate, tuning,
     )
+    # #153 cosmetic extras follow-up: any short-segment-guarded singleton
+    # that A.2 could not merge into a real chord is a spectral artefact
+    # of the 6-16 ms FFT window, not a played note.  Drop it before the
+    # downstream merge passes can promote it into a final event.
+    processed_events = suppress_unmerged_guarded_singletons(processed_events)
     # #153 Phase A.3: rejoin gliss-split adjacent segments (e.g., E121
     # prefix splitting; E97 / E133 F5 trailing) by union with semitone
     # dedup.  Operates on non-guarded segments only.
