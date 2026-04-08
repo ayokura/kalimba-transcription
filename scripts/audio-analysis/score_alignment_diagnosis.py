@@ -1,24 +1,44 @@
 """Compare expected events from score_structure with recognizer output using ordered matching.
 
 Usage:
-    uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose] [--mode events|segments]
+    uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose] [--mode events|segments] [--line LINE_ID]
 
 Arguments:
     fixture-name    Fixture name (e.g., bwv147-sequence-163-01)
     --verbose       Show exact matches too (default: failures only)
     --mode          Data source: 'events' (default, post-processed final output)
                     or 'segments' (raw segmentCandidates before event post-processing)
+    --line          Show only the specified line id (e.g., R6). All lines by default.
+
+Environment:
+    SCORE_ALIGNMENT_NO_CACHE=1  Disable the on-disk transcription cache
+                                (apps/api/tests/.cache/score_alignment/). When set,
+                                transcription requests always re-run the full pipeline.
+
+Cache invalidation:
+    The cache key includes a fingerprint of all .py files under
+    apps/api/app/transcription/, so editing recognizer code automatically
+    invalidates stale entries on the next run. Reverting an edit restores
+    the original cache hit. Audio bytes and request data are also part of
+    the key. Old entries accumulate over time and can be cleaned manually:
+        rm -rf apps/api/tests/.cache/score_alignment/
 """
 import argparse
+import hashlib
 import json
+import os
 import re
 import sys
+import tempfile
+from functools import lru_cache
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 TESTS_DIR = REPO_ROOT / "apps" / "api" / "tests"
 FIXTURE_ROOT = TESTS_DIR / "fixtures" / "manual-captures"
+CACHE_DIR = TESTS_DIR / ".cache" / "score_alignment"
+RECOGNIZER_PKG_DIR = REPO_ROOT / "apps" / "api" / "app" / "transcription"
 
 sys.path.insert(0, str(TESTS_DIR))
 sys.path.insert(0, str(TESTS_DIR.parent))
@@ -26,6 +46,128 @@ sys.path.insert(0, str(TESTS_DIR.parent))
 from manual_capture_helpers import build_evaluation_audio_bytes, load_fixture
 from fastapi.testclient import TestClient
 from app.main import app
+
+
+@lru_cache(maxsize=1)
+def _recognizer_code_fingerprint() -> str:
+    """Hash all .py files under apps/api/app/transcription/.
+
+    Included in the cache key so that any recognizer code edit automatically
+    invalidates stale cache entries on the next run. Reverting the edit
+    restores the original cache hit. Computed once per script invocation.
+    """
+    h = hashlib.sha256()
+    for path in sorted(RECOGNIZER_PKG_DIR.rglob("*.py")):
+        h.update(path.relative_to(RECOGNIZER_PKG_DIR).as_posix().encode("utf-8"))
+        h.update(b"\0")
+        h.update(path.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def _cache_key(audio_bytes: bytes, request_data: dict[str, str]) -> str:
+    """Compute cache key from audio bytes + request data + recognizer fingerprint."""
+    h = hashlib.sha256()
+    h.update(audio_bytes)
+    h.update(
+        json.dumps(sorted(request_data.items()), ensure_ascii=False).encode("utf-8")
+    )
+    h.update(_recognizer_code_fingerprint().encode("utf-8"))
+    return h.hexdigest()
+
+
+_TRUTHY_ENV_VALUES = frozenset({"1", "true", "yes", "on"})
+
+
+def _env_flag(name: str) -> bool:
+    """Return True iff the env var is set to an explicit truthy value.
+
+    Accepts "1", "true", "yes", "on" (case-insensitive). Anything else,
+    including "0", "false", and the empty string, is treated as False.
+    """
+    raw = os.environ.get(name)
+    if raw is None:
+        return False
+    return raw.strip().lower() in _TRUTHY_ENV_VALUES
+
+
+def _cached_transcribe(
+    client: TestClient, audio_bytes: bytes, request_data: dict[str, str]
+) -> dict:
+    """Run transcription with disk cache of the JSON response.
+
+    Set ``SCORE_ALIGNMENT_NO_CACHE=1`` (or ``true``/``yes``/``on``) to bypass
+    the cache entirely. Other values, including ``0`` and ``false``, leave
+    the cache enabled.
+    """
+    cache_disabled = _env_flag("SCORE_ALIGNMENT_NO_CACHE")
+    key = _cache_key(audio_bytes, request_data)
+    key_prefix = key[:12]
+    cache_file = CACHE_DIR / f"{key}.json"
+
+    if not cache_disabled and cache_file.exists():
+        invalid_reason: str | None = None
+        payload: object = None
+        try:
+            payload = json.loads(cache_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            invalid_reason = str(exc)
+        else:
+            if not isinstance(payload, dict):
+                invalid_reason = (
+                    f"expected JSON object, got {type(payload).__name__}"
+                )
+        if invalid_reason is not None:
+            print(
+                f"[cache invalid] {key_prefix}: {invalid_reason}; treating as cache miss",
+                file=sys.stderr,
+            )
+            try:
+                cache_file.unlink()
+            except OSError:
+                pass
+        else:
+            print(f"[cache hit] {key_prefix}", file=sys.stderr)
+            return payload
+
+    print(f"[cache miss] {key_prefix}", file=sys.stderr)
+    response = client.post(
+        "/api/transcriptions",
+        data=request_data,
+        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
+    )
+    if response.status_code != 200:
+        print(
+            f"Error: transcription request failed with status {response.status_code}",
+            file=sys.stderr,
+        )
+        print(response.text[:500], file=sys.stderr)
+        sys.exit(1)
+    raw_text = response.text
+    payload = json.loads(raw_text)
+    if not cache_disabled:
+        try:
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            # Atomic write: write to a uniquely-named sibling temp file (mkstemp
+            # guarantees no collision between concurrent invocations) and rename
+            # into place so an interrupted run cannot leave a truncated cache
+            # entry behind.
+            fd, tmp_path_str = tempfile.mkstemp(
+                dir=CACHE_DIR, prefix=f"{key}.", suffix=".tmp"
+            )
+            tmp_path = Path(tmp_path_str)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                    fh.write(raw_text)
+                os.replace(tmp_path, cache_file)
+            except BaseException:
+                tmp_path.unlink(missing_ok=True)
+                raise
+        except OSError as exc:
+            print(
+                f"[cache write skipped] {key_prefix}: {exc}",
+                file=sys.stderr,
+            )
+    return payload
 
 
 def resolve_fixture(name: str) -> Path:
@@ -124,8 +266,6 @@ def match_line(expected_events, detected_segs):
             return 1
         return 0
 
-    from functools import lru_cache
-
     @lru_cache(maxsize=None)
     def dp(ei, min_di):
         """Best total score for matching expected[ei:] using detected[min_di:]."""
@@ -193,16 +333,8 @@ def main():
     request_payload, expected = load_fixture(fixture_dir)
     audio_bytes = build_evaluation_audio_bytes(fixture_dir, expected)
 
-    response = client.post(
-        "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
-        files={"file": ("audio.wav", audio_bytes, "audio/wav")},
-    )
-    if response.status_code != 200:
-        print(f"Error: transcription request failed with status {response.status_code}", file=sys.stderr)
-        print(response.text[:500], file=sys.stderr)
-        sys.exit(1)
-    payload = response.json()
+    request_data = {"tuning": json.dumps(request_payload["tuning"]), "debug": "true"}
+    payload = _cached_transcribe(client, audio_bytes, request_data)
     debug = payload.get("debug")
     if not isinstance(debug, dict) or "segmentCandidates" not in debug:
         print(f"Error: response missing debug.segmentCandidates (keys: {list(payload.keys())})", file=sys.stderr)

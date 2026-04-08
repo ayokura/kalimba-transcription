@@ -46,6 +46,19 @@ Rejection reasons for missing notes are shown in `[note→reason]` format (cross
 
 Per-line `+N extra segments:` lines list detected events that did not match any expected event in the line.  The bottom SUMMARY block reports the total via `Extra segments: N` — useful for spotting over-detection regressions across runs.
 
+## Caching
+
+スクリプトは transcription 結果を `apps/api/tests/.cache/score_alignment/` に永続化する。キャッシュキーには `audio bytes` + リクエストデータ + `apps/api/app/transcription/` 配下の `.py` ファイル全体のフィンガープリントが含まれる。
+
+- 同じ fixture を `--line` 違いで繰り返し呼ぶと 2 回目以降は **~1秒** で完了 (フルパイプライン ~30s-3min を回避)
+- recognizer コードを編集すると次回は自動的に miss → fresh run (stale を踏まない設計)
+- 編集を revert すると元のキーに戻ってヒットする
+
+無効化したいとき (デバッグ等): `SCORE_ALIGNMENT_NO_CACHE=1 uv run python scripts/audio-analysis/score_alignment_diagnosis.py ...`
+キャッシュディレクトリ削除: `rm -rf apps/api/tests/.cache/score_alignment/` (累積したエントリを掃除したい場合)
+
+stderr に `[cache hit] <key prefix>` / `[cache miss] <key prefix>` が出るので動作確認可能。
+
 ## Known Limitations
 
 **個別イベントの failure 分析には使わないこと。** ordered matching はセグメント/イベント数と期待イベント数が一致しない場合にアライメントがずれ、誤った failure 原因を報告する。
