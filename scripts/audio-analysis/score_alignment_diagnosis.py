@@ -412,7 +412,26 @@ def main():
     total_partial = 0
     total_miss = 0
     total_extras = 0
+    total_cosmetic_extras = 0
     total_events = 0
+
+    # An "extra" is "cosmetic" when it's a single-note detection from a
+    # very short window (< SHORT_SEGMENT_SECONDARY_GUARD_DURATION = 30 ms).
+    # These are recognizer artefacts of the short-segment secondary guard
+    # (commit 1f3bda4): a 6-16 ms segment whose spectral content is too
+    # narrow for the FFT to resolve secondaries, so the guard preserves
+    # only the primary as a tentative singleton.  Most of these primaries
+    # are spectral artefacts of nearby real attacks rather than actual
+    # played notes.  The metric tracks them separately so suppression
+    # progress can be measured without confusing them with structural
+    # extras (e.g., E115 spectral leakage that survives both A.2 and A.3).
+    COSMETIC_EXTRA_MAX_DURATION = 0.030
+
+    def _is_cosmetic_extra(seg: dict) -> bool:
+        notes = seg.get("notes") or set()
+        if len(notes) != 1:
+            return False
+        return seg.get("duration", float("inf")) < COSMETIC_EXTRA_MAX_DURATION
 
     filter_line = args.line.upper() if args.line else None
 
@@ -441,6 +460,7 @@ def main():
         total_partial += partial
         total_miss += miss
         total_extras += len(unmatched)
+        total_cosmetic_extras += sum(1 for u in unmatched if _is_cosmetic_extra(u))
         total_events += n
 
         pct = 100 * exact / n if n else 0
@@ -500,7 +520,8 @@ def main():
                 notes_str = '+'.join(sorted(u['notes'])) if u['notes'] else '(empty)'
                 src_str = f" [{','.join(u['source'])}]" if u.get('source') else ""
                 merge_str = f" ({u['mergeReason']})" if u.get('mergeReason') else ""
-                print(f"    t={u['time']:.3f}s {notes_str}{src_str}{merge_str}")
+                cosmetic_tag = " (cosmetic)" if _is_cosmetic_extra(u) else ""
+                print(f"    t={u['time']:.3f}s {notes_str}{src_str}{merge_str}{cosmetic_tag}")
 
     if use_events_mode:
         det_count = len(merged_events)
@@ -517,7 +538,8 @@ def main():
         print(f"  Subset match:  {total_subset:3d}/{total_events} ({100*total_subset/total_events:.0f}%)")
         print(f"  Partial match: {total_partial:3d}/{total_events} ({100*total_partial/total_events:.0f}%)")
         print(f"  No match:      {total_miss:3d}/{total_events} ({100*total_miss/total_events:.0f}%)")
-        print(f"  Extra segments: {total_extras} (detected events with no matching expected event)")
+        real_extras = total_extras - total_cosmetic_extras
+        print(f"  Extra segments: {total_extras} ({real_extras} real + {total_cosmetic_extras} cosmetic <30ms guard artefacts)")
 
 
 if __name__ == "__main__":
