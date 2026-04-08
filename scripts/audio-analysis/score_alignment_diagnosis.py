@@ -104,11 +104,20 @@ def _cached_transcribe(
     cache_file = CACHE_DIR / f"{key}.json"
 
     if not cache_disabled and cache_file.exists():
+        invalid_reason: str | None = None
+        payload: object = None
         try:
             payload = json.loads(cache_file.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
+            invalid_reason = str(exc)
+        else:
+            if not isinstance(payload, dict):
+                invalid_reason = (
+                    f"expected JSON object, got {type(payload).__name__}"
+                )
+        if invalid_reason is not None:
             print(
-                f"[cache invalid] {key_prefix}: {exc}; treating as cache miss",
+                f"[cache invalid] {key_prefix}: {invalid_reason}; treating as cache miss",
                 file=sys.stderr,
             )
             try:
