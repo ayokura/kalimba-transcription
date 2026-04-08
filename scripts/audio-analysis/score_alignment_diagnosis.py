@@ -74,21 +74,38 @@ def _cache_key(audio_bytes: bytes, request_data: dict[str, str]) -> str:
     return h.hexdigest()
 
 
+_TRUTHY_ENV_VALUES = frozenset({"1", "true", "yes", "on"})
+
+
+def _env_flag(name: str) -> bool:
+    """Return True iff the env var is set to an explicit truthy value.
+
+    Accepts "1", "true", "yes", "on" (case-insensitive). Anything else,
+    including "0", "false", and the empty string, is treated as False.
+    """
+    raw = os.environ.get(name)
+    if raw is None:
+        return False
+    return raw.strip().lower() in _TRUTHY_ENV_VALUES
+
+
 def _cached_transcribe(
     client: TestClient, audio_bytes: bytes, request_data: dict[str, str]
 ) -> dict:
     """Run transcription with disk cache of the JSON response.
 
-    Set ``SCORE_ALIGNMENT_NO_CACHE=1`` to bypass the cache entirely.
+    Set ``SCORE_ALIGNMENT_NO_CACHE=1`` (or ``true``/``yes``/``on``) to bypass
+    the cache entirely. Other values, including ``0`` and ``false``, leave
+    the cache enabled.
     """
-    cache_disabled = bool(os.environ.get("SCORE_ALIGNMENT_NO_CACHE"))
+    cache_disabled = _env_flag("SCORE_ALIGNMENT_NO_CACHE")
     key = _cache_key(audio_bytes, request_data)
     key_prefix = key[:12]
     cache_file = CACHE_DIR / f"{key}.json"
 
     if not cache_disabled and cache_file.exists():
         try:
-            payload = json.loads(cache_file.read_text())
+            payload = json.loads(cache_file.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             print(
                 f"[cache invalid] {key_prefix}: {exc}; treating as cache miss",
@@ -122,7 +139,7 @@ def _cached_transcribe(
         # Atomic write: write to a sibling temp file and rename into place so
         # an interrupted run cannot leave a truncated cache entry behind.
         tmp_file = cache_file.with_suffix(cache_file.suffix + ".tmp")
-        tmp_file.write_text(raw_text)
+        tmp_file.write_text(raw_text, encoding="utf-8")
         os.replace(tmp_file, cache_file)
     return payload
 
