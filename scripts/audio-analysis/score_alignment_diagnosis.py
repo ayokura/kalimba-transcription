@@ -145,22 +145,28 @@ def _cached_transcribe(
     raw_text = response.text
     payload = json.loads(raw_text)
     if not cache_disabled:
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        # Atomic write: write to a uniquely-named sibling temp file (mkstemp
-        # guarantees no collision between concurrent invocations) and rename
-        # into place so an interrupted run cannot leave a truncated cache
-        # entry behind.
-        fd, tmp_path_str = tempfile.mkstemp(
-            dir=CACHE_DIR, prefix=f"{key}.", suffix=".tmp"
-        )
-        tmp_path = Path(tmp_path_str)
         try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                fh.write(raw_text)
-            os.replace(tmp_path, cache_file)
-        except BaseException:
-            tmp_path.unlink(missing_ok=True)
-            raise
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            # Atomic write: write to a uniquely-named sibling temp file (mkstemp
+            # guarantees no collision between concurrent invocations) and rename
+            # into place so an interrupted run cannot leave a truncated cache
+            # entry behind.
+            fd, tmp_path_str = tempfile.mkstemp(
+                dir=CACHE_DIR, prefix=f"{key}.", suffix=".tmp"
+            )
+            tmp_path = Path(tmp_path_str)
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                    fh.write(raw_text)
+                os.replace(tmp_path, cache_file)
+            except BaseException:
+                tmp_path.unlink(missing_ok=True)
+                raise
+        except OSError as exc:
+            print(
+                f"[cache write skipped] {key_prefix}: {exc}",
+                file=sys.stderr,
+            )
     return payload
 
 
