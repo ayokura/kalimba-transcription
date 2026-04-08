@@ -75,7 +75,10 @@ def _get_cached_librosa_features(
     if cached is not None:
         _LIBROSA_CACHE.move_to_end(key)
         return cached
-    features = _compute_librosa_features(audio, sample_rate, use_hpss_onset)
+    # Pass the contiguous buffer (not the original `audio`) so the bytes that
+    # were hashed and the bytes librosa consumes are guaranteed to be the same,
+    # and any non-contiguous input is converted exactly once.
+    features = _compute_librosa_features(contiguous, sample_rate, use_hpss_onset)
     _LIBROSA_CACHE[key] = features
     if len(_LIBROSA_CACHE) > _LIBROSA_CACHE_MAX:
         _LIBROSA_CACHE.popitem(last=False)
