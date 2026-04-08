@@ -24,6 +24,7 @@ from .events import (
     merge_short_chord_clusters,
     merge_short_gliss_clusters,
     merge_short_segment_guard_via_narrow_fft,
+    recover_masked_reattack_via_narrow_fft,
     simplify_descending_adjacent_dyad_residue,
     simplify_short_gliss_prefix_to_contiguous_singleton,
     simplify_short_secondary_bleed,
@@ -196,6 +197,7 @@ async def transcribe_audio(
                 # Use raw segment duration (not the clamped pipeline `duration`)
                 # so the guard fires for the actual short windows.
                 from_short_segment_guard=(end_time - start_time) < SHORT_SEGMENT_SECONDARY_GUARD_DURATION,
+                sub_onsets=sub_onsets,
             )
         )
         if debug and candidate_debug:
@@ -236,6 +238,13 @@ async def transcribe_audio(
     # prefix splitting; E97 / E133 F5 trailing) by union with semitone
     # dedup.  Operates on non-guarded segments only.
     processed_events = merge_gliss_split_segments(
+        processed_events, audio, sample_rate, tuning,
+    )
+    # #153 Phase A.4: recover a chord note rejected by the weak-secondary
+    # gate when its narrow-FFT presence + a real attack rise within the
+    # segment's sub-onsets jointly confirm it (e.g., E97 / E133 D5 masked
+    # by prior D5 sustain).
+    processed_events = recover_masked_reattack_via_narrow_fft(
         processed_events, audio, sample_rate, tuning,
     )
     processed_events = suppress_descending_terminal_residual_cluster(processed_events, tuning)

@@ -91,6 +91,12 @@ class RawEvent:
     # this primary as a tentative single-note attack from a window too narrow
     # for full FFT analysis (typically a gap-mute-dip rescue).
     from_short_segment_guard: bool = False
+    # Sub-onset times within this segment, propagated from segment_peaks so
+    # downstream pipeline passes (e.g., #153 Phase A.4 narrow-FFT primary
+    # recovery) can re-run pick_matching_sub_onset for new candidate notes
+    # without recomputing onset detection.  Empty when the segment came from
+    # a path that did not produce sub-onset times.
+    sub_onsets: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

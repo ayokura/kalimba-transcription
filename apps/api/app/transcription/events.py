@@ -5,13 +5,14 @@ import numpy as np
 from ..models import InstrumentTuning
 from .audio import cents_distance
 from .constants import *
-from .models import NoteCandidate, RawEvent
+from .models import Note, NoteCandidate, RawEvent
 from .peaks import (
     are_harmonic_related,
     harmonic_relation_multiple,
     is_adjacent_tuning_step,
     measure_narrow_fft_note_scores,
     onset_backward_attack_gain,
+    pick_matching_sub_onset,
 )
 
 def suppress_leading_descending_overlap(raw_events: list[RawEvent], tuning: InstrumentTuning) -> list[RawEvent]:
@@ -1381,6 +1382,175 @@ def suppress_short_residual_tails(raw_events: list[RawEvent]) -> list[RawEvent]:
     return cleaned
 
 
+def recover_masked_reattack_via_narrow_fft(
+    raw_events: list[RawEvent],
+    audio: np.ndarray,
+    sample_rate: int,
+    tuning: InstrumentTuning,
+    *,
+    min_fundamental_energy: float = NARROW_FFT_REATTACK_MIN_ENERGY,
+    min_fundamental_ratio: float = NARROW_FFT_REATTACK_MIN_FR,
+    min_score_dominance_ratio: float = NARROW_FFT_REATTACK_DOMINANCE_RATIO,
+    dissonance_neighbor_cents: float = NARROW_FFT_REATTACK_DISSONANCE_CENTS,
+) -> list[RawEvent]:
+    """Recover a chord note that was rejected as ``weak-secondary-onset`` /
+    ``descending-restart-upper-carryover`` because the segment-wide FFT
+    could not separate its re-attack from prior sustain (#153 Phase A.4).
+
+    Motivating cases (34-key BWV147):
+        - R1 E97 ``<F5,D5,B4,G4>``: D5 is rank 1 in narrow FFT at the
+          segment start (fund_e ≈ 36, fr ≈ 0.99) but rejected by the
+          weak-secondary gate; pick_matching_sub_onset still locates a
+          real D5 attack at a later sub-onset of the segment.
+        - R4 E133 ``<F5,D5,B4,G4>``: same shape, with D5 rejected via
+          ``score-below-threshold,descending-restart-upper-carryover``.
+
+    Multiple complementary safeguards prevent false positives:
+
+    1. The segment must have ≥2 sub-onsets.  A single-sub-onset segment
+       cannot distinguish a re-attack from sustain residue, since the
+       only available pre/post comparison sits at the segment boundary.
+
+    2. The candidate must be the highest-scoring narrow-FFT note that
+       is not already in the event AND its score must be at least
+       ``min_score_dominance_ratio`` (default 1.5) times the highest
+       score among the event's existing notes in the same narrow FFT.
+       This signals "this rejected note dominates the early window
+       even though the segment-wide FFT picked something else".
+
+    3. fundamental_ratio ≥ 0.95 — a sharp fundamental, not spectral
+       leakage from a near-frequency neighbour.
+
+    4. fundamental_energy ≥ 30 — a meaningful absolute presence.
+
+    5. Not within ``dissonance_neighbor_cents`` (default 200 cents = whole
+       step) of any existing event note.  This also rejects whole-step
+       dissonance such as the d6-to-e6 alternating sequence where E6 from
+       a previous event would otherwise be added on top of a D6 attack.
+
+    6. ``pick_matching_sub_onset`` returns a non-first sub-onset — the
+       attack rise must occur *after* the segment start, because the
+       start sub-onset is where the segment's existing primaries already
+       attack and any post/pre rise there could be a sustained-residue
+       artefact.
+
+    Only one note is added per event per pass.
+    """
+    if not raw_events:
+        return raw_events
+
+    recovered: list[RawEvent] = []
+    for event in raw_events:
+        if event.from_short_segment_guard:
+            recovered.append(event)
+            continue
+        if len(event.notes) >= MAX_POLYPHONY:
+            recovered.append(event)
+            continue
+        # Require at least 3 sub-onsets in the segment.  This is a strong
+        # physical signal that the segmenter identified multiple attack
+        # moments inside the segment (gliss-like, slide chord, etc.) — a
+        # 2-sub-onset segment (just start + end) is a normal single-attack
+        # event where masked re-attack recovery has no temporal handle.
+        # Empirically all observed false positives in 17-key + 34-key
+        # BWV147 had 2 sub-onsets while the true E97 / E133 D5 cases had 3.
+        if len(event.sub_onsets) < 3:
+            recovered.append(event)
+            continue
+        narrow_scores = measure_narrow_fft_note_scores(
+            audio, sample_rate, event.start_time, tuning,
+        )
+        if narrow_scores is None:
+            recovered.append(event)
+            continue
+        existing_names = {note.note_name for note in event.notes}
+        existing_freqs = [note.frequency for note in event.notes]
+        # Highest score among existing notes in this narrow FFT — the
+        # bar a recovered candidate must clearly clear.
+        existing_max_score = 0.0
+        for note in event.notes:
+            entry = narrow_scores.get(note.note_name)
+            if entry is None:
+                continue
+            existing_max_score = max(existing_max_score, entry[1])
+        # The candidate must be the rank-1 narrow-FFT entry that is not
+        # already in the event.  Iterate by descending score.
+        ranked = sorted(
+            narrow_scores.items(),
+            key=lambda item: item[1][1],
+            reverse=True,
+        )
+        added = False
+        for note_name, (fund_e, score, fr) in ranked:
+            if note_name in existing_names:
+                # Skip notes already present, but they still count toward
+                # rank: the first non-existing entry is "rank 1 among
+                # candidates", which is what we want.
+                continue
+            if fund_e < min_fundamental_energy:
+                break
+            if fr < min_fundamental_ratio:
+                # Spectral leakage signature — skip; downstream entries
+                # are weaker, so break.
+                break
+            if (
+                existing_max_score > 0.0
+                and score < existing_max_score * min_score_dominance_ratio
+            ):
+                # The candidate is not dominantly stronger than the
+                # event's existing notes — likely the segment-wide
+                # selection is correct, no recovery needed.
+                break
+            tuning_match = next(
+                (n for n in tuning.notes if n.note_name == note_name),
+                None,
+            )
+            if tuning_match is None:
+                continue
+            candidate_freq = tuning_match.frequency
+            if any(
+                cents_distance(candidate_freq, existing_freq)
+                <= dissonance_neighbor_cents
+                for existing_freq in existing_freqs
+            ):
+                continue
+            matched_sub_onset = pick_matching_sub_onset(
+                audio, sample_rate, candidate_freq, event.sub_onsets,
+            )
+            if matched_sub_onset is None:
+                continue
+            # Re-attacks occur after the segment start, not at it.
+            if matched_sub_onset <= event.sub_onsets[0] + 1e-6:
+                continue
+            new_candidate = NoteCandidate(
+                key=tuning_match.key,
+                note=Note.from_name(note_name),
+                score=score,
+            )
+            updated_notes = sorted(
+                [*event.notes, new_candidate],
+                key=lambda candidate: candidate.frequency,
+            )
+            recovered.append(
+                RawEvent(
+                    start_time=event.start_time,
+                    end_time=event.end_time,
+                    notes=updated_notes,
+                    is_gliss_like=event.is_gliss_like,
+                    primary_note_name=event.primary_note_name,
+                    primary_score=event.primary_score,
+                    from_short_segment_guard=event.from_short_segment_guard,
+                    sub_onsets=event.sub_onsets,
+                )
+            )
+            added = True
+            break
+        if not added:
+            recovered.append(event)
+
+    return recovered
+
+
 def merge_gliss_split_segments(
     raw_events: list[RawEvent],
     audio: np.ndarray,
@@ -1509,6 +1679,7 @@ def merge_gliss_split_segments(
                 primary_note_name=longer_event.primary_note_name,
                 primary_score=longer_event.primary_score,
                 from_short_segment_guard=False,
+                sub_onsets=tuple(sorted(set(event.sub_onsets) | set(next_event.sub_onsets))),
             )
         )
         skip_next = True
@@ -1652,6 +1823,7 @@ def merge_short_segment_guard_via_narrow_fft(
                 primary_note_name=next_event.primary_note_name,
                 primary_score=next_event.primary_score,
                 from_short_segment_guard=False,
+                sub_onsets=tuple(sorted(set(event.sub_onsets) | set(next_event.sub_onsets))),
             )
         )
         skip_next = True

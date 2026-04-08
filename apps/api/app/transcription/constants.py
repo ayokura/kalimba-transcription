@@ -136,6 +136,27 @@ GLISS_SPLIT_MERGE_MAX_GAP = 0.05
 GLISS_SPLIT_MERGE_MAX_FIRST_DURATION = 0.20
 GLISS_SPLIT_MERGE_SEMITONE_CENTS = 100.0
 
+# Phase A.4: masked re-attack recovery via narrow FFT (#153).
+# When the segment-wide FFT rejects a chord note as weak-secondary-onset
+# because the note's prior sustain masks its re-attack signature (e.g.,
+# 34-key R1 E97 D5 with previous D5 sustain in the same R1 line), narrow
+# FFT at the segment start can still surface it as the rank-1 candidate
+# with a high fundamental_ratio.  pick_matching_sub_onset then confirms
+# the same note has a real attack rise within the segment's sub-onsets.
+# Both signals are required: spectral dominance alone could be sustained
+# residue, and onset rise alone could be a near-frequency neighbour.
+NARROW_FFT_REATTACK_MIN_ENERGY = 30.0
+NARROW_FFT_REATTACK_MIN_FR = 0.95
+# Recovery is gated on the candidate clearly dominating the event's own
+# selected notes in the early-window narrow FFT.  Without this gate the
+# pass adds a "best of the rest" note to almost every multi-sub-onset
+# event and produces tens of cosmetic regressions across both fixtures.
+NARROW_FFT_REATTACK_DOMINANCE_RATIO = 1.5
+# Reject candidates that sit within this many cents of any existing event
+# note (whole step = 200 cents).  Without the whole-step guard the pass
+# wrongly adds E6 to D6 events in the d6-to-e6 alternating sequence.
+NARROW_FFT_REATTACK_DISSONANCE_CENTS = 200.0
+
 # Residual-decay and recent-primary replacement thresholds.
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RESIDUAL_DECAY_MIN_ONSET_GAIN = 1.5
