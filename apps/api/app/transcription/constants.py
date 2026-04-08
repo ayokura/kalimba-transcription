@@ -120,6 +120,22 @@ NARROW_FFT_GUARD_MERGE_MIN_FR = 0.85
 # Threshold matches RESCUE_MIN_BACKWARD_GAIN.
 NARROW_FFT_GUARD_MERGE_MIN_BACKWARD_GAIN = 10.0
 
+# Phase A.3: gliss-split segment merge (#153).
+# Two non-guarded adjacent segments belonging to the same gliss/chord are
+# unified by a union-with-semitone-dedup rule.  Patterns covered:
+#   - Gliss prefix splitting (E121, E127): a short prefix segment with
+#     spectral-leakage semitone artifacts gets absorbed into the longer
+#     main segment; the leakage notes are dropped because they sit within
+#     a semitone of a main-segment note.
+#   - Gliss late-note splitting (E97, E133): the F5 attack of a 4-note
+#     gliss lands as a separate adjacent segment and gets merged into the
+#     gliss head as a new chord note.
+# A dissonance guard rejects merges whose result contains any whole-step
+# (≤200 cents) pair, blocking false merges between unrelated short events.
+GLISS_SPLIT_MERGE_MAX_GAP = 0.05
+GLISS_SPLIT_MERGE_MAX_FIRST_DURATION = 0.20
+GLISS_SPLIT_MERGE_SEMITONE_CENTS = 100.0
+
 # Residual-decay and recent-primary replacement thresholds.
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RESIDUAL_DECAY_MIN_ONSET_GAIN = 1.5

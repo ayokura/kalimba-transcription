@@ -1381,6 +1381,141 @@ def suppress_short_residual_tails(raw_events: list[RawEvent]) -> list[RawEvent]:
     return cleaned
 
 
+def merge_gliss_split_segments(
+    raw_events: list[RawEvent],
+    audio: np.ndarray,
+    sample_rate: int,
+    tuning: InstrumentTuning,
+    *,
+    max_gap_seconds: float = GLISS_SPLIT_MERGE_MAX_GAP,
+    max_first_duration: float = GLISS_SPLIT_MERGE_MAX_FIRST_DURATION,
+    semitone_neighbor_cents: float = GLISS_SPLIT_MERGE_SEMITONE_CENTS,
+) -> list[RawEvent]:
+    """Merge two adjacent non-guarded segments that are different parts of
+    the same gliss/chord (#153 Phase A.3).
+
+    Two patterns are unified by a single union-with-semitone-dedup rule:
+
+    Pattern A — gliss prefix splitting (e.g., 34-key R3 E121, E127):
+        A short prefix segment (~50 ms) of a chord attack is detected
+        independently with a few of the chord's notes plus spectral-leakage
+        semitone artifacts (e.g., D#4 leaking from E4, or C5 leaking from
+        B4).  The longer main segment that follows correctly captures the
+        chord.  Merging the prefix into the main, then dropping any prefix
+        notes that have a semitone neighbor in the union, eliminates the
+        spurious extras while preserving the main segment's exact match.
+
+    Pattern B — gliss late-note splitting (e.g., 34-key R1 E97, R4 E133):
+        The early head of a 4-note gliss is detected as a chord (e.g.,
+        ``[B4,G4]``) and the later F5 attack lands as a separate adjacent
+        segment ``[F5,B4]``.  The expected chord ``<F5,D5,B4,G4>`` cannot
+        match the head alone, but merging the F5 into the head segment
+        recovers a 3/4 superset (D5 still requires Phase A.4).
+
+    Both patterns share:
+        - Adjacent in time (gap below ``max_gap_seconds``).
+        - At least one shared note between the two segments — confirms
+          they are parts of the same chord/gliss rather than two unrelated
+          neighbouring events.
+        - Neither segment is short-segment-guarded (Phase A.2 handles
+          guarded singletons separately).
+        - The earlier segment is gliss-like (duration below
+          ``max_first_duration``).
+
+    Notes from the longer segment always win in semitone conflicts: the
+    longer segment has better FFT resolution and more reliable per-note
+    energies, so its primary set is the trustworthy ground.  A note from
+    the shorter segment is added only when (a) its frequency is more than
+    ``semitone_neighbor_cents`` from any note already in the merged set
+    and (b) its onset_backward_attack_gain at the segment start exceeds
+    ``new_note_min_backward_gain`` — the same residual-sustain guard used
+    in Phase A.2.
+    """
+    if len(raw_events) < 2:
+        return raw_events
+
+    merged: list[RawEvent] = []
+    skip_next = False
+    for index, event in enumerate(raw_events):
+        if skip_next:
+            skip_next = False
+            continue
+        if index == len(raw_events) - 1:
+            merged.append(event)
+            continue
+        next_event = raw_events[index + 1]
+        if event.from_short_segment_guard or next_event.from_short_segment_guard:
+            merged.append(event)
+            continue
+        gap = next_event.start_time - event.end_time
+        if gap < 0 or gap > max_gap_seconds:
+            merged.append(event)
+            continue
+        first_duration = event.end_time - event.start_time
+        if first_duration > max_first_duration:
+            merged.append(event)
+            continue
+        # Build the merged note set by union with semitone dedup.  Notes
+        # from the longer event win in semitone conflicts (better FFT
+        # resolution → more reliable per-note energies).  Both events were
+        # already validated by segment_peaks, so no extra per-note narrow
+        # FFT confirmation is needed here — the goal is to consolidate
+        # gliss-split fragments back into a single event.
+        second_duration = next_event.end_time - next_event.start_time
+        if second_duration >= first_duration:
+            longer_event, shorter_event = next_event, event
+        else:
+            longer_event, shorter_event = event, next_event
+        merged_notes = list(longer_event.notes)
+        merged_names = {note.note_name for note in merged_notes}
+        for note in shorter_event.notes:
+            if note.note_name in merged_names:
+                continue
+            if any(
+                cents_distance(note.frequency, existing.frequency)
+                <= semitone_neighbor_cents
+                for existing in merged_notes
+            ):
+                continue
+            merged_notes.append(note)
+            merged_names.add(note.note_name)
+        if len(merged_notes) > MAX_POLYPHONY:
+            merged.append(event)
+            continue
+        # Dissonance guard: reject the merge if the resulting note set
+        # contains any whole-step (≤200 cents) pair, which is the dominant
+        # signature of a false merge between two unrelated short events
+        # (e.g., end of one melodic phrase running into the start of the
+        # next).  Genuine gliss splits and chord recoveries (E97, E121,
+        # E148, etc.) all produce 3rds, 4ths, octaves and wider intervals.
+        rejected_by_dissonance = False
+        for i, note_i in enumerate(merged_notes):
+            for note_j in merged_notes[i + 1:]:
+                if cents_distance(note_i.frequency, note_j.frequency) <= 200.0:
+                    rejected_by_dissonance = True
+                    break
+            if rejected_by_dissonance:
+                break
+        if rejected_by_dissonance:
+            merged.append(event)
+            continue
+        merged_notes.sort(key=lambda candidate: candidate.frequency)
+        merged.append(
+            RawEvent(
+                start_time=event.start_time,
+                end_time=next_event.end_time,
+                notes=merged_notes,
+                is_gliss_like=event.is_gliss_like or next_event.is_gliss_like,
+                primary_note_name=longer_event.primary_note_name,
+                primary_score=longer_event.primary_score,
+                from_short_segment_guard=False,
+            )
+        )
+        skip_next = True
+
+    return merged
+
+
 def merge_short_segment_guard_via_narrow_fft(
     raw_events: list[RawEvent],
     audio: np.ndarray,

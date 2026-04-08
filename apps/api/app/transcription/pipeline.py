@@ -20,6 +20,7 @@ from .events import (
     collapse_same_start_primary_singletons,
     merge_adjacent_events,
     merge_four_note_gliss_clusters,
+    merge_gliss_split_segments,
     merge_short_chord_clusters,
     merge_short_gliss_clusters,
     merge_short_segment_guard_via_narrow_fft,
@@ -229,6 +230,12 @@ async def transcribe_audio(
     # window.  Must run before merge_adjacent_events / merge_short_chord_clusters
     # because those passes only merge identical or compatible note sets.
     processed_events = merge_short_segment_guard_via_narrow_fft(
+        processed_events, audio, sample_rate, tuning,
+    )
+    # #153 Phase A.3: rejoin gliss-split adjacent segments (e.g., E121
+    # prefix splitting; E97 / E133 F5 trailing) by union with semitone
+    # dedup.  Operates on non-guarded segments only.
+    processed_events = merge_gliss_split_segments(
         processed_events, audio, sample_rate, tuning,
     )
     processed_events = suppress_descending_terminal_residual_cluster(processed_events, tuning)
