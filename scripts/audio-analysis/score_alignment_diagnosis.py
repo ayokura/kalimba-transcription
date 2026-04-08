@@ -13,6 +13,14 @@ Environment:
     SCORE_ALIGNMENT_NO_CACHE=1  Disable the on-disk transcription cache
                                 (apps/api/tests/.cache/score_alignment/). When set,
                                 transcription requests always re-run the full pipeline.
+
+Cache invalidation:
+    The cache key includes a fingerprint of all .py files under
+    apps/api/app/transcription/, so editing recognizer code automatically
+    invalidates stale entries on the next run. Reverting an edit restores
+    the original cache hit. Audio bytes and request data are also part of
+    the key. Old entries accumulate over time and can be cleaned manually:
+        rm -rf apps/api/tests/.cache/score_alignment/
 """
 import argparse
 import hashlib
@@ -20,6 +28,7 @@ import json
 import os
 import re
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -27,6 +36,7 @@ REPO_ROOT = SCRIPT_DIR.parent.parent
 TESTS_DIR = REPO_ROOT / "apps" / "api" / "tests"
 FIXTURE_ROOT = TESTS_DIR / "fixtures" / "manual-captures"
 CACHE_DIR = TESTS_DIR / ".cache" / "score_alignment"
+RECOGNIZER_PKG_DIR = REPO_ROOT / "apps" / "api" / "app" / "transcription"
 
 sys.path.insert(0, str(TESTS_DIR))
 sys.path.insert(0, str(TESTS_DIR.parent))
@@ -36,13 +46,30 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
+@lru_cache(maxsize=1)
+def _recognizer_code_fingerprint() -> str:
+    """Hash all .py files under apps/api/app/transcription/.
+
+    Included in the cache key so that any recognizer code edit automatically
+    invalidates stale cache entries on the next run. Reverting the edit
+    restores the original cache hit. Computed once per script invocation.
+    """
+    h = hashlib.sha256()
+    for path in sorted(RECOGNIZER_PKG_DIR.rglob("*.py")):
+        h.update(path.relative_to(RECOGNIZER_PKG_DIR).as_posix().encode("utf-8"))
+        h.update(b"\0")
+        h.update(path.read_bytes())
+    return h.hexdigest()[:16]
+
+
 def _cache_key(audio_bytes: bytes, request_data: dict[str, str]) -> str:
-    """Compute cache key from audio bytes + request data."""
+    """Compute cache key from audio bytes + request data + recognizer fingerprint."""
     h = hashlib.sha256()
     h.update(audio_bytes)
     h.update(
         json.dumps(sorted(request_data.items()), ensure_ascii=False).encode("utf-8")
     )
+    h.update(_recognizer_code_fingerprint().encode("utf-8"))
     return h.hexdigest()
 
 
