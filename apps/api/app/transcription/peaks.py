@@ -1548,6 +1548,48 @@ def _narrow_fft_at_sub_onset(
     return _SpectralData(frequencies=frequencies, spectrum=spectrum, ranked=ranked)
 
 
+def measure_narrow_fft_note_scores(
+    audio: np.ndarray,
+    sample_rate: int,
+    sub_onset_time: float,
+    tuning: InstrumentTuning,
+    *,
+    window_seconds: float = NARROW_FFT_WINDOW_SECONDS,
+) -> dict[str, tuple[float, float, float]] | None:
+    """Return ``{note_name: (fundamental_energy, score, fundamental_ratio)}``
+    from a narrow FFT centred on *sub_onset_time*.
+
+    Public wrapper around :func:`_narrow_fft_at_sub_onset` for cross-module
+    use (e.g., merge passes in :mod:`events`).  The narrow FFT is computed
+    once and energies + scores + fundamental_ratio for every ranked tuning
+    candidate are returned so callers can compare arbitrary pairs of notes
+    (e.g., compare a guarded primary against the next event's primary at
+    the same instant) and apply fundamental_ratio guards (a real fresh
+    attack has fundamental >> harmonics, while spectral leakage from a
+    nearby note shows a lower fundamental ratio).
+
+    Returns ``None`` if the narrow window has no signal.  Notes that did
+    not surface in the ranked hypotheses are absent from the returned dict
+    (callers should treat their values as 0.0).
+    """
+    spectral = _narrow_fft_at_sub_onset(
+        audio, sample_rate, sub_onset_time, tuning,
+        window_seconds=window_seconds,
+    )
+    if spectral is None:
+        return None
+    by_name: dict[str, tuple[float, float, float]] = {}
+    for hypothesis in spectral.ranked:
+        name = hypothesis.candidate.note_name
+        if name not in by_name:
+            by_name[name] = (
+                float(hypothesis.fundamental_energy),
+                float(hypothesis.score),
+                float(hypothesis.fundamental_ratio),
+            )
+    return by_name
+
+
 def _resolve_confirmed_primary(
     confirmed: Note,
     spectral: _SpectralData,

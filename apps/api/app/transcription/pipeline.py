@@ -22,6 +22,7 @@ from .events import (
     merge_four_note_gliss_clusters,
     merge_short_chord_clusters,
     merge_short_gliss_clusters,
+    merge_short_segment_guard_via_narrow_fft,
     simplify_descending_adjacent_dyad_residue,
     simplify_short_gliss_prefix_to_contiguous_singleton,
     simplify_short_secondary_bleed,
@@ -222,6 +223,14 @@ async def transcribe_audio(
     processed_events = split_ambiguous_upper_octave_pairs(processed_events)
     processed_events = suppress_bridging_octave_pairs(processed_events)
     processed_events = suppress_short_residual_tails(processed_events)
+    # #153 Phase A.2: rejoin short-segment-guarded primaries (e.g., E148 C6)
+    # into adjacent chords when narrow FFT cross-validation confirms the
+    # guarded note is independently present in the next event's attack
+    # window.  Must run before merge_adjacent_events / merge_short_chord_clusters
+    # because those passes only merge identical or compatible note sets.
+    processed_events = merge_short_segment_guard_via_narrow_fft(
+        processed_events, audio, sample_rate, tuning,
+    )
     processed_events = suppress_descending_terminal_residual_cluster(processed_events, tuning)
     processed_events = suppress_descending_restart_residual_cluster(processed_events, tuning)
     processed_events = collapse_late_descending_step_handoffs(processed_events)

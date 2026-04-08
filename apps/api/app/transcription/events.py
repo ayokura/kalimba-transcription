@@ -6,7 +6,13 @@ from ..models import InstrumentTuning
 from .audio import cents_distance
 from .constants import *
 from .models import NoteCandidate, RawEvent
-from .peaks import are_harmonic_related, harmonic_relation_multiple, is_adjacent_tuning_step
+from .peaks import (
+    are_harmonic_related,
+    harmonic_relation_multiple,
+    is_adjacent_tuning_step,
+    measure_narrow_fft_note_scores,
+    onset_backward_attack_gain,
+)
 
 def suppress_leading_descending_overlap(raw_events: list[RawEvent], tuning: InstrumentTuning) -> list[RawEvent]:
     if len(raw_events) < 3:
@@ -1373,6 +1379,149 @@ def suppress_short_residual_tails(raw_events: list[RawEvent]) -> list[RawEvent]:
 
     cleaned.append(raw_events[-1])
     return cleaned
+
+
+def merge_short_segment_guard_via_narrow_fft(
+    raw_events: list[RawEvent],
+    audio: np.ndarray,
+    sample_rate: int,
+    tuning: InstrumentTuning,
+    *,
+    max_gap_seconds: float = 0.05,
+    narrow_fft_min_energy: float = NARROW_FFT_GUARD_MERGE_MIN_ENERGY,
+    next_primary_dominance_ratio: float = NARROW_FFT_GUARD_MERGE_DOMINANCE_RATIO,
+    min_fundamental_ratio: float = NARROW_FFT_GUARD_MERGE_MIN_FR,
+    min_backward_attack_gain: float = NARROW_FFT_GUARD_MERGE_MIN_BACKWARD_GAIN,
+) -> list[RawEvent]:
+    """Merge a short-segment-guarded singleton into the following event when
+    its primary note is independently confirmed by a narrow FFT centred on
+    the next event's start (#153 Phase A.2).
+
+    Motivating case: 17-key BWV147 E148 ``[C6,<C5,A4>]`` produces two
+    consecutive segments — ``[*-*]`` (≈7 ms guarded singleton with C6) and
+    ``[*-*]`` (≈1.13 s with C5+A4) — and the C6 singleton must rejoin the
+    chord to recover an exact match.  The cross-segment merge passes that
+    follow only merge identical note sets, so a dedicated pass is needed.
+
+    The narrow FFT confirmation is essential because the C6 fundamental at
+    1046 Hz is identical to C5's 2nd harmonic.  Inside the segment-wide FFT
+    of the next event the bin is already dominated by C5 sustain; only the
+    early ~30 ms window centred on the second event's start time still
+    shows the C6 attack as an independent peak.
+
+    The merge fires only when:
+        1. The first event is short-segment-guarded.
+        2. The first event has exactly one note (the guarded primary).
+        3. The gap to the next event is below ``max_gap_seconds`` (default 50 ms).
+        4. The merged note set stays within ``MAX_POLYPHONY``.
+        5. The guarded primary is not already in the next event's notes.
+        6. A narrow FFT centred on the next event's start time reports the
+           guarded primary's fundamental energy at or above
+           ``narrow_fft_min_energy`` (Phase A fixed threshold; Phase B
+           replaces this with a per-band noise floor multiplier — #154).
+        7. The guarded primary's narrow-FFT score is not dwarfed by the
+           next event's primary at the same instant — specifically,
+           ``guarded_score >= next_primary_score * next_primary_dominance_ratio``.
+           This is the key disambiguator between a fresh octave-coincident
+           attack (E148 C6: at the merge point C5 has not yet started, so
+           C5 is absent from the narrow FFT and C6 dominates as the only
+           upper-register peak) and a sustain leakage from a recently
+           played same-name note (R6 E161 cosmetic A4: at the merge point
+           C5 is already at full energy in the narrow FFT, so any A4
+           presence must be carryover, not a fresh attack).
+    """
+    if len(raw_events) < 2:
+        return raw_events
+
+    merged: list[RawEvent] = []
+    skip_next = False
+    for index, event in enumerate(raw_events):
+        if skip_next:
+            skip_next = False
+            continue
+        if index == len(raw_events) - 1:
+            merged.append(event)
+            continue
+        next_event = raw_events[index + 1]
+        if not event.from_short_segment_guard:
+            merged.append(event)
+            continue
+        if len(event.notes) != 1:
+            merged.append(event)
+            continue
+        gap = next_event.start_time - event.end_time
+        if gap < 0 or gap > max_gap_seconds:
+            merged.append(event)
+            continue
+        guarded_note = event.notes[0]
+        next_note_names = {note.note_name for note in next_event.notes}
+        if guarded_note.note_name in next_note_names:
+            merged.append(event)
+            continue
+        if len(next_event.notes) + 1 > MAX_POLYPHONY:
+            merged.append(event)
+            continue
+        narrow_scores = measure_narrow_fft_note_scores(
+            audio, sample_rate, next_event.start_time, tuning,
+        )
+        if narrow_scores is None:
+            merged.append(event)
+            continue
+        guarded_energy, guarded_score, guarded_fr = narrow_scores.get(
+            guarded_note.note_name, (0.0, 0.0, 0.0),
+        )
+        if guarded_energy < narrow_fft_min_energy:
+            merged.append(event)
+            continue
+        # A real fresh attack has fundamental >> harmonics in the narrow
+        # window.  Spectral leakage from a nearby semitone shows a much
+        # lower fundamental_ratio (e.g., 34-key L1 6.298s B4 fr=0.674
+        # leaking from A4 area, vs E148 C6 fr=0.903 as a real attack).
+        if guarded_fr < min_fundamental_ratio:
+            merged.append(event)
+            continue
+        # Sustain-vs-attack disambiguation.  Even when fundamental_ratio is
+        # high, the guarded note can still be a residual sustain from a
+        # recently played same-name note (e.g., 34-key R3 64.418s B4 with
+        # fr=0.980 is leftover sustain from E113 [<B4,G4>,D4] ~1.4s prior).
+        # onset_backward_attack_gain compares early-window energy to a
+        # 200ms-prior reference; a fresh attack shows a high ratio while a
+        # decayed-but-still-ringing sustain shows a low ratio.
+        backward_gain = onset_backward_attack_gain(
+            audio, sample_rate, next_event.start_time,
+            guarded_note.frequency,
+        )
+        if backward_gain < min_backward_attack_gain:
+            merged.append(event)
+            continue
+        next_primary_name = next_event.primary_note_name
+        _, next_primary_score, _ = narrow_scores.get(
+            next_primary_name, (0.0, 0.0, 0.0),
+        )
+        if (
+            next_primary_score > 0.0
+            and guarded_score < next_primary_score * next_primary_dominance_ratio
+        ):
+            merged.append(event)
+            continue
+        combined_notes = sorted(
+            [*next_event.notes, guarded_note],
+            key=lambda candidate: candidate.frequency,
+        )
+        merged.append(
+            RawEvent(
+                start_time=event.start_time,
+                end_time=next_event.end_time,
+                notes=combined_notes,
+                is_gliss_like=next_event.is_gliss_like,
+                primary_note_name=next_event.primary_note_name,
+                primary_score=next_event.primary_score,
+                from_short_segment_guard=False,
+            )
+        )
+        skip_next = True
+
+    return merged
 
 def suppress_descending_terminal_residual_cluster(raw_events: list[RawEvent], tuning: InstrumentTuning) -> list[RawEvent]:
     if len(raw_events) < 5:

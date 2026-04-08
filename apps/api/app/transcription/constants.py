@@ -88,12 +88,37 @@ SHORT_SEGMENT_SECONDARY_GUARD_DURATION = 0.030
 #   - early-window primary masking (e.g., C4 attack at 56.10s clearly dominant
 #     for ~80 ms before E5 takes over; segment-wide FFT shows E5 only)
 #
-# NARROW_FFT_PRIMARY_THRESHOLD is a Phase A fixed absolute energy floor used
-# for narrow-FFT-based primary acceptance.  Phase B (#154) replaces this with
-# per-recording per-band noise floor calibration.  Keep the constant accessed
-# via function arguments so the Phase B swap is straightforward.
+# Phase A uses fixed absolute energy floors below.  Phase B (#154) replaces
+# these with per-recording per-band noise floor calibration; the thresholds
+# are accessed via function arguments so the Phase B swap is straightforward.
 NARROW_FFT_WINDOW_SECONDS = 0.030
 NARROW_FFT_PRIMARY_THRESHOLD = 50.0
+# Used by merge_short_segment_guard_via_narrow_fft (Phase A.2).  Calibrated
+# from 17-key BWV147 E148 (C6 fundamental_energy ≈ 26 in narrow FFT).
+NARROW_FFT_GUARD_MERGE_MIN_ENERGY = 20.0
+# Disambiguator A: the guarded note's narrow-FFT score must be at least this
+# fraction of the next event's primary score in the same window.  E148 C6
+# (score 36) vs the next event's primary C5 (score < 5 because C5 has not
+# yet started ringing) → ratio is high, merge fires.  R6 E161 cosmetic A4
+# (score 27) vs C5 (score 98 because C5 is already dominant) → ratio 0.27,
+# merge is suppressed (carryover, not fresh attack).
+NARROW_FFT_GUARD_MERGE_DOMINANCE_RATIO = 0.5
+# Disambiguator B: the guarded note's fundamental_ratio in the narrow FFT
+# must be at least this value.  A real fresh attack has the fundamental
+# clearly dominant over its harmonics; a spectral leakage artifact from a
+# semitone-adjacent note has a depressed fundamental_ratio (e.g., 34-key
+# L1 6.298s B4 fr=0.674 leaking from A4 vs E148 C6 fr=0.903 real attack).
+NARROW_FFT_GUARD_MERGE_MIN_FR = 0.85
+# Disambiguator C: onset_backward_attack_gain (early-window vs 200ms-prior
+# reference) must exceed this threshold.  This separates a fresh attack
+# from a residual sustain — a same-name note from ~1-2s prior can still
+# show high fundamental_energy and high fundamental_ratio if its sustain
+# has not fully decayed (e.g., 34-key R3 64.418s B4 sustain from E113 at
+# ~63s shows backward gain ≈ 6.0; 34-key L1 6.298s B4 leakage shows ≈ 0.9;
+# 17-key R6 275.520s cosmetic A4 shows ≈ 6.8 — all rejected at 10).  A
+# genuine new attack like E148 256.304s C6 shows backward gain ≈ 139.
+# Threshold matches RESCUE_MIN_BACKWARD_GAIN.
+NARROW_FFT_GUARD_MERGE_MIN_BACKWARD_GAIN = 10.0
 
 # Residual-decay and recent-primary replacement thresholds.
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
