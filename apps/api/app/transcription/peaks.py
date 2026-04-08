@@ -1509,6 +1509,45 @@ def _acquire_spectrum(
     return spectral, evidence
 
 
+def _narrow_fft_at_sub_onset(
+    audio: np.ndarray,
+    sample_rate: int,
+    sub_onset_time: float,
+    tuning: InstrumentTuning,
+    *,
+    window_seconds: float = NARROW_FFT_WINDOW_SECONDS,
+    debug: bool = False,
+) -> _SpectralData | None:
+    """Compute narrow FFT centred on *sub_onset_time* and rank candidates.
+
+    #153 Phase A: detect notes that are spectrally hidden in the segment-wide
+    FFT but visible in a narrow attack window.  Motivating physics:
+    octave-coincident chord (e.g., C6 fundamental at 1046 Hz collides with
+    C5 2nd harmonic) is only separable in the early ~30 ms before C5 sustain
+    dominates the 1046 Hz bin.
+
+    Returns the same `_SpectralData` shape as `_acquire_spectrum` so existing
+    ranking / evidence logic can be reused for cross-validation.
+    """
+    window_samples = max(int(sample_rate * window_seconds), 256)
+    center_sample = int(sub_onset_time * sample_rate)
+    half = window_samples // 2
+    start = max(center_sample - half, 0)
+    end = min(start + window_samples, len(audio))
+    chunk = audio[start:end]
+    if len(chunk) < 256:
+        return None
+    min_freq = min(n.frequency for n in tuning.notes)
+    n_fft = _adaptive_n_fft(sample_rate, min_freq, len(chunk))
+    window = np.hanning(len(chunk))
+    spectrum = np.abs(np.fft.rfft(chunk * window, n=n_fft))
+    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    ranked = rank_tuning_candidates(frequencies, spectrum, tuning, debug=debug)
+    if not ranked or ranked[0].score <= 1e-6:
+        return None
+    return _SpectralData(frequencies=frequencies, spectrum=spectrum, ranked=ranked)
+
+
 def _resolve_confirmed_primary(
     confirmed: Note,
     spectral: _SpectralData,
@@ -2428,6 +2467,36 @@ def _build_segment_debug(
         ctx.duration < SHORT_SEGMENT_SECONDARY_GUARD_DURATION
         and len(selection.selected) >= 1
     )
+    # #153 Phase A.1: per-sub-onset narrow FFT (read-only observation).
+    # Compute a narrow-window FFT centred on each sub-onset and emit the
+    # ranked candidates so we can compare against energy traces for E148,
+    # E97, E100, etc. and verify that hidden notes (C6, F5, C4, ...)
+    # surface in the narrow window before wiring this into selection logic.
+    narrow_fft_by_sub_onset: list[dict[str, Any]] = []
+    for sub_onset_time in ctx.sub_onsets:
+        narrow = _narrow_fft_at_sub_onset(
+            ctx.audio, ctx.sample_rate, sub_onset_time, ctx.tuning,
+            debug=False,
+        )
+        if narrow is None:
+            narrow_fft_by_sub_onset.append({
+                "subOnsetTime": round(sub_onset_time, 4),
+                "topRanked": [],
+            })
+            continue
+        top_ranked = []
+        for hypothesis in narrow.ranked[:5]:
+            top_ranked.append({
+                "noteName": hypothesis.candidate.note_name,
+                "frequency": round(hypothesis.candidate.frequency, 2),
+                "score": round(hypothesis.score, 6),
+                "fundamentalEnergy": round(hypothesis.fundamental_energy, 6),
+                "fundamentalRatio": round(hypothesis.fundamental_ratio, 6),
+            })
+        narrow_fft_by_sub_onset.append({
+            "subOnsetTime": round(sub_onset_time, 4),
+            "topRanked": top_ranked,
+        })
     return {
         "startTime": round(ctx.start_time, 4),
         "endTime": round(ctx.end_time, 4),
@@ -2449,6 +2518,7 @@ def _build_segment_debug(
         # selected (for diagnostic / future-recovery use).
         "shortSegmentGuardActive": short_segment_guard_active,
         "shortSegmentGuardSkipped": short_segment_guard_skipped,
+        "narrowFftBySubOnset": narrow_fft_by_sub_onset,
         "rawPeaks": build_raw_peaks(spectral.frequencies, spectral.spectrum, ctx.tuning),
     }
 

@@ -77,6 +77,24 @@ ATTACK_REFINED_ONSET_MAX_INTERVAL = 0.15
 # for minimal FFT resolution; below this, secondary detections are unreliable.
 SHORT_SEGMENT_SECONDARY_GUARD_DURATION = 0.030
 
+# Sub-onset narrow FFT (#153 Phase A).
+# Used to detect notes spectrally hidden in the segment-wide FFT but visible
+# in a narrow attack window centered on a sub-onset.  Motivating cases:
+#   - octave-coincident chord (e.g., C6 fundamental at 1046 Hz collides with
+#     C5 2nd harmonic; only separable in early ~30 ms before C5 sustain
+#     dominates the bin)
+#   - gliss prefix splitting where a gliss head/tail is detected as an
+#     independent short segment that should merge with the main chord
+#   - early-window primary masking (e.g., C4 attack at 56.10s clearly dominant
+#     for ~80 ms before E5 takes over; segment-wide FFT shows E5 only)
+#
+# NARROW_FFT_PRIMARY_THRESHOLD is a Phase A fixed absolute energy floor used
+# for narrow-FFT-based primary acceptance.  Phase B (#154) replaces this with
+# per-recording per-band noise floor calibration.  Keep the constant accessed
+# via function arguments so the Phase B swap is straightforward.
+NARROW_FFT_WINDOW_SECONDS = 0.030
+NARROW_FFT_PRIMARY_THRESHOLD = 50.0
+
 # Residual-decay and recent-primary replacement thresholds.
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RESIDUAL_DECAY_MIN_ONSET_GAIN = 1.5
