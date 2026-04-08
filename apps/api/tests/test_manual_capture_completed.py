@@ -1,5 +1,6 @@
 import json
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
@@ -29,6 +30,11 @@ pytestmark = [pytest.mark.manual_capture, pytest.mark.slow]
 
 client = TestClient(app)
 COMPLETED_FIXTURES = fixture_dirs_for_status("completed")
+
+
+@lru_cache(maxsize=128)
+def _load_full_audio_bytes(fixture_dir: Path) -> bytes:
+    return (fixture_dir / "audio.wav").read_bytes()
 
 
 def assert_fixture_output(fixture_dir: Path, payload: dict, expected: dict) -> None:
@@ -62,7 +68,7 @@ def test_completed_manual_capture_regression(fixture_dir: Path) -> None:
         debug_response = client.post(
             "/api/transcriptions",
             data=debug_form_data,
-            files={"file": ("audio.wav", (fixture_dir / "audio.wav").read_bytes(), "audio/wav")},
+            files={"file": ("audio.wav", _load_full_audio_bytes(fixture_dir), "audio/wav")},
         )
         timing_failures = ground_truth_timing_failures(fixture_dir, debug_response.json(), ground_truth)
         assert not timing_failures, f"{fixture_dir.name} timing: {'; '.join(timing_failures)}"
