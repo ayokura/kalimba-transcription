@@ -11,7 +11,6 @@ from app.transcription import (
     normalize_repeated_triad_patterns,
     normalize_strict_four_note_subsets,
     suppress_isolated_triad_extensions,
-    suppress_repeated_triad_blips,
 )
 
 
@@ -125,48 +124,6 @@ def test_normalize_repeated_explicit_four_note_patterns_keeps_off_family_gliss_t
         ["B4", "D5", "F5"],
         ["G4", "D5"],
         ["E4", "D5"],
-    ]
-
-
-def test_suppress_repeated_triad_blips_drops_short_middle_burst() -> None:
-    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
-    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
-    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
-
-    raw_events = [
-        RawEvent(start_time=0.0, end_time=0.9, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=1200.0),
-        RawEvent(start_time=1.0, end_time=1.2, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="A4", primary_score=500.0),
-        RawEvent(start_time=1.4, end_time=2.2, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="F4", primary_score=1300.0),
-        RawEvent(start_time=2.5, end_time=3.1, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=1250.0),
-    ]
-
-    cleaned = suppress_repeated_triad_blips(raw_events)
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [
-        ["D4", "F4", "A4"],
-        ["D4", "F4", "A4"],
-        ["D4", "F4", "A4"],
-    ]
-
-
-def test_suppress_repeated_triad_blips_keeps_non_identical_anchor_context() -> None:
-    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
-    f4 = NoteCandidate(key=7, note=Note.from_name("F4"))
-    a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
-    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
-    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
-    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
-
-    raw_events = [
-        RawEvent(start_time=0.0, end_time=0.9, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="D4", primary_score=1200.0),
-        RawEvent(start_time=1.0, end_time=1.2, notes=[d4, f4, a4], is_gliss_like=False, primary_note_name="A4", primary_score=500.0),
-        RawEvent(start_time=1.4, end_time=2.2, notes=[c4, e4, g4], is_gliss_like=False, primary_note_name="C4", primary_score=1300.0),
-    ]
-
-    cleaned = suppress_repeated_triad_blips(raw_events)
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [
-        ["D4", "F4", "A4"],
-        ["D4", "F4", "A4"],
-        ["C4", "E4", "G4"],
     ]
 
 

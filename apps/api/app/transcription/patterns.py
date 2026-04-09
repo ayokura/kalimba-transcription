@@ -521,32 +521,6 @@ def normalize_repeated_triad_patterns(raw_events: list[RawEvent]) -> list[RawEve
     return normalized
 
 
-def suppress_repeated_triad_blips(raw_events: list[RawEvent]) -> list[RawEvent]:
-    if len(raw_events) < 3:
-        return raw_events
-
-    cleaned: list[RawEvent] = []
-    for index, event in enumerate(raw_events):
-        event_set = frozenset(note.note_name for note in event.notes)
-        if len(event_set) == 3 and 0 < index < len(raw_events) - 1:
-            previous_event = raw_events[index - 1]
-            next_event = raw_events[index + 1]
-            previous_set = frozenset(note.note_name for note in previous_event.notes)
-            next_set = frozenset(note.note_name for note in next_event.notes)
-            duration = event.end_time - event.start_time
-            previous_duration = previous_event.end_time - previous_event.start_time
-            next_duration = next_event.end_time - next_event.start_time
-            if (
-                previous_set == event_set
-                and next_set == event_set
-                and duration <= 0.35
-                and duration <= min(previous_duration, next_duration) * 0.45
-            ):
-                continue
-        cleaned.append(event)
-    return cleaned
-
-
 def suppress_isolated_triad_extensions(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 3:
         return raw_events
@@ -634,7 +608,6 @@ def repeated_pattern_passes() -> tuple[RepeatedPatternPass, ...]:
         RepeatedPatternPass("normalize_repeated_explicit_four_note_patterns", normalize_repeated_explicit_four_note_patterns, merge_after=True),
         RepeatedPatternPass("normalize_repeated_triad_patterns", normalize_repeated_triad_patterns, merge_after=True),
         RepeatedPatternPass("normalize_strict_four_note_subsets", normalize_strict_four_note_subsets, merge_after=True),
-        RepeatedPatternPass("suppress_repeated_triad_blips", suppress_repeated_triad_blips, merge_after=False),
         RepeatedPatternPass("suppress_isolated_triad_extensions", suppress_isolated_triad_extensions, merge_after=False),
     )
 
