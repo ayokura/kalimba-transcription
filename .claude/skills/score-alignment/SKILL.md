@@ -1,6 +1,6 @@
 ---
 name: score-alignment
-description: Diagnose recognition accuracy by aligning score_structure events with recognizer output
+description: Diagnose recognition accuracy by aligning expected events (score_structure.json or expectedPerformance fallback) with recognizer output
 user_invocable: true
 arguments:
   - name: fixture
@@ -13,10 +13,15 @@ arguments:
 
 <command-name>score-alignment</command-name>
 
-Compare expected events from score_structure.json with recognizer output using ordered matching within each line.
+Compare expected events with recognizer output using ordered matching. If the fixture has a `score_structure.json` (multi-line score structure, e.g. BWV147 sequence-163), use that for per-line matching. Otherwise fall back to a synthetic single line built from a simpler metadata source so the script also works on simple fixtures (e.g. `c4-repeat-01`, `mixed-sequence-01`).
 
-## Requirements
-- Fixture must have a `score_structure.json` file
+## Expected event source priority
+
+1. **`score_structure.json`** — multi-line score with `lines[].id`, `eventRange`, `content`. Used when present (e.g. BWV147 sequence-163).
+2. **`request.json:expectedPerformance.events`** — Web UI's clickable-kalimba-ui ordered event list. Set on every captured fixture. Synthesized into a single line `ALL`.
+3. **`expected.json:assertions.expectedEventNoteSetsOrdered`** — last-resort fallback. Only set on promoted (completed) fixtures; derived from recognizer output, so it requires the recognizer to already match the truth.
+
+The script logs which source was used via stderr `[synthetic-line] using <source> (N events)` when falling back.
 
 ## Instructions
 

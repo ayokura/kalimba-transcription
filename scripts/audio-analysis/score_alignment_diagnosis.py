@@ -1,14 +1,29 @@
-"""Compare expected events from score_structure with recognizer output using ordered matching.
+"""Compare expected events with recognizer output using ordered matching.
 
 Usage:
     uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose] [--mode events|segments] [--line LINE_ID]
 
 Arguments:
-    fixture-name    Fixture name (e.g., bwv147-sequence-163-01)
+    fixture-name    Fixture name (e.g., bwv147-sequence-163-01, c4-repeat-01)
     --verbose       Show exact matches too (default: failures only)
     --mode          Data source: 'events' (default, post-processed final output)
                     or 'segments' (raw segmentCandidates before event post-processing)
     --line          Show only the specified line id (e.g., R6). All lines by default.
+
+Expected event source priority:
+    1. score_structure.json — multi-line score (e.g. BWV147 sequence-163).
+       Used when present for per-line matching.
+    2. request.json:expectedPerformance.events — Web UI's clickable-kalimba-ui
+       ordered event list. Set on every captured fixture. Synthesized into
+       a single line `ALL` so the script also works on simple fixtures
+       (e.g. c4-repeat-01, mixed-sequence-01).
+    3. expected.json:assertions.expectedEventNoteSetsOrdered — last-resort
+       fallback. Only set on promoted (completed) fixtures; derived from
+       recognizer output, so it requires the recognizer to already match
+       the truth.
+
+    The script logs which source was used via stderr
+    `[synthetic-line] using <source> (N events)` when falling back.
 
 Environment:
     SCORE_ALIGNMENT_NO_CACHE=1  Disable the on-disk transcription cache
@@ -325,9 +340,6 @@ def main():
 
     fixture_dir = resolve_fixture(args.fixture)
     score_path = fixture_dir / "score_structure.json"
-    if not score_path.exists():
-        print(f"Error: {fixture_dir.name} has no score_structure.json", file=sys.stderr)
-        sys.exit(1)
 
     client = TestClient(app)
     request_payload, expected = load_fixture(fixture_dir)
@@ -342,8 +354,71 @@ def main():
     segments = debug["segmentCandidates"]
     merged_events = debug.get("mergedEvents", [])
     use_events_mode = args.mode == "events"
-    score_data = json.loads(score_path.read_text())
-    lines = score_data["lines"]
+
+    if score_path.exists():
+        score_data = json.loads(score_path.read_text())
+        lines = score_data["lines"]
+    else:
+        # Fallback: build a synthetic single-line score from a simpler
+        # fixture metadata source. This allows the diagnosis script to
+        # work on simple fixtures (e.g. c4-repeat-01) that have no
+        # multi-line score_structure.json. The synthetic line spans the
+        # entire audio and contains all expected events in order.
+        #
+        # Source priority:
+        #   1. request.json:expectedPerformance.events
+        #      — the Web UI's clickable-kalimba-ui produces this for every
+        #        captured fixture, so it is the most reliable source and the
+        #        canonical "what was supposed to be played"
+        #   2. expected.json:assertions.expectedEventNoteSetsOrdered
+        #      — only set on promoted (completed) fixtures; derived from
+        #        recognizer output by `event_note_sets()`, so it requires
+        #        the recognizer to already match the truth
+        synthetic_events: list[str] | None = None
+        source_label: str = ""
+        ep = request_payload.get("expectedPerformance") if isinstance(request_payload, dict) else None
+        if isinstance(ep, dict):
+            ep_events = ep.get("events")
+            if isinstance(ep_events, list) and ep_events:
+                tokens: list[str] = []
+                for ev in ep_events:
+                    keys = ev.get("keys") if isinstance(ev, dict) else None
+                    if not isinstance(keys, list) or not keys:
+                        continue
+                    note_set = sorted(
+                        {k["noteName"] for k in keys if isinstance(k, dict) and k.get("noteName")},
+                        key=lambda n: (int(n[1:]), n[0]),  # octave then pitch class
+                    )
+                    if note_set:
+                        tokens.append("+".join(note_set))
+                if tokens:
+                    synthetic_events = tokens
+                    source_label = "request.json:expectedPerformance"
+        if synthetic_events is None:
+            ordered = expected.get("assertions", {}).get("expectedEventNoteSetsOrdered")
+            if isinstance(ordered, list) and ordered:
+                synthetic_events = list(ordered)
+                source_label = "expected.json:expectedEventNoteSetsOrdered"
+        if synthetic_events is None:
+            print(
+                f"Error: {fixture_dir.name} has no score_structure.json and no usable "
+                f"fallback (request.json:expectedPerformance / expected.json:expectedEventNoteSetsOrdered)",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(
+            f"[synthetic-line] using {source_label} ({len(synthetic_events)} events)",
+            file=sys.stderr,
+        )
+        synthetic_content = " / ".join(synthetic_events)
+        lines = [
+            {
+                "id": "ALL",
+                "eventRange": [1, len(synthetic_events)],
+                "content": synthetic_content,
+                "estimatedStartSec": 0.0,
+            }
+        ]
 
     # Load alignment overrides (patches for events where recording differs from score)
     overrides_path = fixture_dir / "alignment_overrides.json"
