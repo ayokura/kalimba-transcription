@@ -134,5 +134,5 @@
       "E6"
     ]
   },
-  "reason": "E6 event gains spurious E5 secondary after gap collector enablement"
+  "reason": "Re-evaluated 2026-04-09 after Phase A/B + E83 fix: 45/51 exact (88%). Failure pattern is two-fold. (1) Original issue persists: E51 expected E6 detects E5+E6 (spurious E5 secondary on the top E6 event). (2) Onset/carryover shift around the high register: E29 G5→G4+G5, E43 D5 missing, E44 E5→D5+E5, E45 F5 missing, E46 G5→F5+G5; one extra at 19.464s E5. Pattern: a missing onset reappears as a secondary on the next detected event."
 }

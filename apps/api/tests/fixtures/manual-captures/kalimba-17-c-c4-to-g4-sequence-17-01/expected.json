@@ -44,5 +44,5 @@
       "G4"
     ]
   },
-  "reason": "Two known gaps: (1) D5 onset at 12.67s — recognizer picks C5 residual as primary, D5 only as secondary. (2) C5 re-attack at ~13.47s — very short re-pluck with clear mute-dip (C5: 11→0.5→13) but onset detector fires during mute (13.448s) when E5 residual dominates spectrum, masking the C5 re-attack that peaks at ~13.51s. Both require forward-scan of per-note re-attack within segment."
+  "reason": "Re-evaluated 2026-04-09 after Phase A/B + E83 fix: D5 onset at 12.67s and C5 re-attack at ~13.47s (both in the original reason) now resolve correctly (16/17 exact via score_alignment). Single remaining gap: E16 expected E4+G5 detects C6+E4+E5+G5 — spurious C6+E5 secondary on a slide-chord event."
 }
