@@ -249,9 +249,9 @@ for segment in segments:
 
 ### 既知の fixture-specific debt
 - `collapse_restart_tail_subset_into_following_chord` (events.py) — Stage 7 collapse 系
-- `lower-mixed-roll-extension` (peaks.py) — Stage 3
 - ~~`collect_two_onset_terminal_tail_segments`~~ — #122 で削除済み
 - ~~`suppress_recent_upper_echo_mixed_clusters` (patterns.py) — Stage 6~~ — 2026-04-09 削除済み (G ablation)
+- ~~`lower-mixed-roll-extension` (`_extend_lower_mixed_roll`, peaks.py) — Stage 3~~ — 2026-04-09 削除済み (G ablation)
 - `recent-upper-octave-alias-primary` promotion — Stage 3
 
 ### 潜在的 debt 候補（今回新規特定）

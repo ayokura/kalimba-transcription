@@ -1339,7 +1339,6 @@ GATE_CATEGORIES: dict[str, str] = {
     "contiguous-tertiary-extension": "extension",
     "non-slide-playable-contiguous-cluster": "extension",
     "descending-repeated-primary-tertiary-blocked": "extension",
-    "lower-mixed-roll-extension": "extension",
     "lower-roll-tail-extension": "extension",
     # Rescue (Layer 3.5: final decision)
     "evidence-rescue-weak-secondary-onset": "rescue",
@@ -1833,76 +1832,6 @@ def _extend_gliss_tertiary(
             reasons=["non-slide-playable-contiguous-cluster"],
             octave_dyad_allowed=False,
             source="extension-gliss",
-        ))
-
-
-def _extend_lower_mixed_roll(
-    ctx: _SegmentContext,
-    primary: NoteHypothesis,
-    state: _SelectionState,
-    evidence: _NoteEvidenceCache,
-) -> None:
-    """Layer 4b: Lower mixed-roll extension."""
-    if (
-        len(state.selected) != 2
-        or ctx.duration > LOWER_MIXED_ROLL_EXTENSION_MAX_DURATION
-        or primary.candidate.frequency != min(note.frequency for note in state.selected)
-        or primary.candidate.octave > 4
-    ):
-        return
-    upper_note = max(state.selected, key=lambda note: note.frequency)
-    selected_names = {note.note_name for note in state.selected}
-    if upper_note.key - primary.candidate.key < 3:
-        return
-    selected_secondary_scores = [
-        secondary.score
-        for secondary in state.residual_ranked[:4]
-        if secondary.candidate.note_name in selected_names
-    ]
-    extension_candidate: tuple[NoteHypothesis, float] | None = None
-    for hypothesis in state.residual_ranked[:8]:
-        candidate = hypothesis.candidate
-        if candidate.note_name in selected_names:
-            continue
-        if not (primary.candidate.frequency < candidate.frequency < upper_note.frequency):
-            continue
-        if upper_note.key - candidate.key > 1:
-            continue
-        if candidate.key - primary.candidate.key < 2:
-            continue
-        if hypothesis.score < primary.score * LOWER_MIXED_ROLL_EXTENSION_MIN_EXTENSION_SCORE_RATIO:
-            continue
-        if hypothesis.score < GLISS_TERTIARY_MIN_SCORE:
-            continue
-        if hypothesis.fundamental_ratio < LOWER_MIXED_ROLL_EXTENSION_MIN_FUNDAMENTAL_RATIO:
-            continue
-        if any(are_harmonic_related(candidate, existing) for existing in state.selected):
-            continue
-        if selected_secondary_scores and hypothesis.score < max(selected_secondary_scores) * LOWER_MIXED_ROLL_EXTENSION_MIN_UPPER_SCORE_RATIO:
-            continue
-        pog = evidence.onset_gain(primary.candidate.frequency)
-        if pog < LOWER_MIXED_ROLL_EXTENSION_MIN_PRIMARY_ONSET_GAIN:
-            continue
-        og = evidence.onset_gain(candidate.frequency)
-        if og < LOWER_MIXED_ROLL_EXTENSION_MIN_EXTENSION_ONSET_GAIN:
-            continue
-        extension_candidate = (hypothesis, og)
-        break
-
-    if extension_candidate is not None:
-        hypothesis, og = extension_candidate
-        hypothesis.candidate.onset_gain = og
-        state.selected.append(hypothesis.candidate)
-        state.candidate_decisions.append(_CandidateDecision(
-            note_name=hypothesis.candidate.note_name,
-            frequency=hypothesis.candidate.frequency,
-            score=hypothesis.score,
-            fundamental_ratio=hypothesis.fundamental_ratio,
-            onset_gain=og,
-            accepted=True,
-            reasons=["lower-mixed-roll-extension"],
-            octave_dyad_allowed=False,
-            source="extension-mixed-roll",
         ))
 
 
@@ -2830,7 +2759,6 @@ def _evaluate_branch(
 
     # L4: Extensions
     _extend_gliss_tertiary(ctx, primary_hyp, selection, evidence)
-    _extend_lower_mixed_roll(ctx, primary_hyp, selection, evidence)
     _extend_lower_roll_tail(ctx, primary_hyp, selection, evidence)
 
     # Evidence freeze
@@ -2988,7 +2916,6 @@ def segment_peaks(
 
     # Layer 4: Extension phases
     _extend_gliss_tertiary(ctx, primary, selection, evidence)
-    _extend_lower_mixed_roll(ctx, primary, selection, evidence)
     _extend_lower_roll_tail(ctx, primary, selection, evidence)
 
     # Layer 4.5: Short-segment secondary guard.

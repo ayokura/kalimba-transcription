@@ -42,8 +42,6 @@
 | Fixture | Status | 実質的に保護しているルール | 備考 |
 | --- | --- | --- | --- |
 | `kalimba-17-c-bwv147-restart-tail-01` | `pending` | `recent-upper-octave-alias-primary`, `collapse_restart_tail_subset_into_following_chord` | 3-note chord の検出が未完。restart-tail-specific cleanup debt の典型例 |
-| `kalimba-17-c-bwv147-lower-context-roll-01` | `completed` | `lower-mixed-roll-extension`, `_promote_gap_candidates_by_structure` による candidate promotion | context を保持した lower-roll phrase |
-| `kalimba-17-c-bwv147-lower-mixed-roll-01` | `completed` | `lower-mixed-roll-extension`, `_promote_gap_candidates_by_structure` による candidate promotion | scoped-evaluation 解消により completed に昇格 |
 
 ### local onset logic が影響する非 BWV practical coverage
 
