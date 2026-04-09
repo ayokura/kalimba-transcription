@@ -64,6 +64,16 @@ Per-line `+N extra segments:` lines list detected events that did not match any 
 
 stderr に `[cache hit] <key prefix>` / `[cache miss] <key prefix>` が出るので動作確認可能。
 
+### Cache を直接読んで recognizer 内部挙動を解析する
+
+cache JSON には `payload["debug"]["segmentCandidates"]` 以下に **全 segment の rich debug info** (primaryCandidate / rankedCandidates / secondaryDecisionTrail / 物理量) が含まれている。 これを inline Python で読むことで、 fixture を再実行せずに以下が可能:
+
+- **特定 reason を持つ event を抽出**: `secondaryDecisionTrail` の `reasons` field で `score-below-threshold` / `contiguous-tertiary-extension` 等を grep
+- **物理量比較**: false positive と true positive を `attackEnergy` / `sustainEnergy` / `fundamentalRatio` / `candidateOnsetGain` 等で比較し discriminator を発見
+- **gate 設計の calibration data 収集**: 複数 fixture の cache を読んで threshold の境界を実証的に決定
+
+詳細な構造、 inline Python パターン、 G3d (2026-04-10) での実証例は `memory/reference_score_alignment_cache.md` を参照。
+
 ## Known Limitations
 
 **個別イベントの failure 分析には使わないこと。** ordered matching はセグメント/イベント数と期待イベント数が一致しない場合にアライメントがずれ、誤った failure 原因を報告する。
