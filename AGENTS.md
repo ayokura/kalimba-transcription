@@ -115,7 +115,7 @@
 - New issues should normally get one `area:*` label and one `type:*` label.
 - Add `component:*` only when the implementation target is already clear enough to be useful for routing or filtering.
 - When package-boundary or cross-module work does not fit a narrower component cleanly, prefer a broader component label rather than forcing a misleading one.
-- See [`docs/task-management.md`](/mnt/c/src/calimba-score/docs/task-management.md) for the current label set and examples.
+- See [`docs/task-management.md`](/docs/task-management.md) for the current label set and examples.
 
 ## Test Architecture
 
@@ -135,6 +135,7 @@
 4. **Fixture 回帰の権威は parameterized テスト。** `test_manual_capture_completed.py` が全 completed fixture を自動的に検証する。個別の fixture テストを `test_api.py` に追加する前に、`expected.json` のアサーションで表現できないか検討する。
 5. **個別 fixture テストは parameterized で表現不可能な場合のみ。** pending/review_needed fixture の暫定チェック、またはイベント間の関係性など `expected.json` で表現できないアサーションに限る。
 6. **ground_truth.json でタイミング情報を管理する。** 人間が耳・スペクトログラムで確認した onset 時刻を `ground_truth.json` に記録する。librosa の onset 検出に依存しない絶対秒で記録し、自動テストでの timing 検証に使用する。
+7. **Fixture investigation: eval_scope vs full audio.** `test_manual_capture_completed.py` 系のテストは `transcribe_manual_capture_fixture(...)` 経由でデフォルト `use_evaluation_scope=True` (`evaluationWindows` / `ignoredRanges` でトリミングされた audio)。物理現象を綺麗に観察したい調査時は `transcribe_manual_capture_fixture_full_audio(...)` を使うとクリーンな silent region 分布 + splice 影響なしの状態で確認できるが、**最終的な validation は必ず eval_scope で行う** (テストはそれで動いているため)。両モードで挙動が変わるパスは特に警戒する (#154 noise floor は両モードで `noise_floor[G4]` が ~1.5x ずれた実例)。
 
 ### ground_truth.json スキーマ
 
@@ -158,6 +159,9 @@
 
 - Treat repeated-pattern normalizers as suspicious until proven necessary. Favor local/causal explanations over corpus-wide dominant-pattern rewrites.
 - Before large recognizer redesigns, add ablation controls and provenance first.
+- **Verify the physical premise before implementing rescue/suppression logic.** Before adding a new pass or tuning a gate, confirm with energy trace + narrow FFT probe + broadband onset times (`gapValidatedOnsetTimes`) that the proposed mechanism matches what the audio actually shows. The originally-stated cause is often wrong in subtle ways: e.g., #153 Phase B's E97 G4 was first thought to need a noise-floor multiplier change, but the actual cause was a broadband-detected onset that the segmenter discarded — a different mechanism entirely. Investigation-first prevents whole-day rabbit holes on the wrong rescue path.
+- **Discriminator design beats constant tuning.** When no threshold cleanly separates true positives from false positives, consider whether the candidate iteration order itself is wrong. #153 Phase B replaced narrow-FFT-score-ordered iteration with backward-attack-gain-ordered iteration, which changed the problem from "tighten the constants" to "evaluate the strongest fresh-attack signal first" — and several constants became unnecessary. Ordering by a single physical signal is often cleaner than ordering by a composite score and then patching exceptions.
+- **Heuristic constants live in `apps/api/app/transcription/constants.py` and are tracked in [#162](https://github.com/ayokura/kalimba-transcription/issues/162).** When adding a new constant, include its calibration data in the inline comment and append it to the #162 audit body so the inventory and the data-driven-replacement candidate list stay current.
 
 ## Claude Code-Specific Notes
 
