@@ -249,7 +249,7 @@ This makes later fixture review and independent audit much easier.
 
 ### Tier 1: Mechanism Tests
 
-個別の recognizer 関数（`suppress_resonant_carryover`, `simplify_short_secondary_bleed` 等）を構築した `RawEvent`/`NoteCandidate` 入力でテスト。
+個別の recognizer 関数（`simplify_short_secondary_bleed`, `collapse_same_start_primary_singletons` 等）を構築した `RawEvent`/`NoteCandidate` 入力でテスト。
 
 - ファイル: `test_event_processing.py`, `test_segment_peaks.py`, `test_detect_segments.py`, `test_repeated_patterns.py`
 - 入力: 直接構築、または `fixtures/mechanism-snapshots/` の marshal データ

@@ -94,7 +94,6 @@ Each post-processing function classified by temporal dependency:
 #### Causal (past-only reference) — real-time compatible
 
 - `suppress_low_confidence_dyad_transients` — examines each event's own properties only
-- `suppress_resonant_carryover` — references cleaned[-1] and cleaned[-2]
 - `suppress_subset_decay_events` — references cleaned[-1]
 - `merge_adjacent_events` — references merged[-1]
 

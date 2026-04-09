@@ -24,7 +24,6 @@ from app.transcription import (
     suppress_leading_descending_overlap,
     suppress_leading_gliss_neighbor_noise,
     suppress_leading_gliss_subset_transients,
-    suppress_resonant_carryover,
     suppress_short_residual_tails,
     suppress_subset_decay_events,
 )
@@ -283,21 +282,6 @@ def test_simplify_short_secondary_bleed_collapses_descending_bridge_to_upper() -
     assert [note.note_name for note in simplified[1].notes] == ["B5"]
 
 
-def test_suppress_resonant_carryover_keeps_lower_note_in_descending_adjacent_chain() -> None:
-    f4 = NoteCandidate(7, Note.from_name("F4"))
-    g4 = NoteCandidate(11, Note.from_name("G4"))
-    e4 = NoteCandidate(2, Note.from_name("E4"))
-    events = [
-        RawEvent(0.0, 0.18, [f4], False, "F4", 320.0),
-        RawEvent(0.18, 0.29, [f4, g4], False, "F4", 300.0),
-        RawEvent(0.29, 0.5, [e4], False, "E4", 290.0),
-    ]
-
-    cleaned = suppress_resonant_carryover(events)
-
-    assert [note.note_name for note in cleaned[1].notes] == ["F4"]
-
-
 def test_suppress_descending_upper_return_overlap_drops_residual_dyad() -> None:
     e6 = NoteCandidate(17, Note.from_name("E6"))
     d6 = NoteCandidate(1, Note.from_name("D6"))
@@ -399,127 +383,6 @@ def test_build_recent_note_names_collapses_consecutive_duplicates() -> None:
 
     assert build_recent_note_names(raw_events) == {"C4", "D4", "E4", "F4"}
 
-
-def test_suppress_resonant_carryover_prefers_fresh_ascending_note() -> None:
-    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
-    c5 = NoteCandidate(key=5, note=Note.from_name("C5"))
-    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
-    e5 = NoteCandidate(key=4, note=Note.from_name("E5"))
-    f5 = NoteCandidate(key=14, note=Note.from_name("F5"))
-    g5 = NoteCandidate(key=3, note=Note.from_name("G5"))
-
-    raw_events = [
-        RawEvent(start_time=0.0, end_time=0.4, notes=[c4], is_gliss_like=False),
-        RawEvent(start_time=0.4, end_time=0.8, notes=[c4, c5], is_gliss_like=False),
-        RawEvent(start_time=0.8, end_time=1.2, notes=[c4, d5], is_gliss_like=False),
-        RawEvent(start_time=1.2, end_time=1.6, notes=[c5, e5], is_gliss_like=False),
-        RawEvent(start_time=1.6, end_time=2.0, notes=[g5], is_gliss_like=False),
-        RawEvent(start_time=2.0, end_time=2.1, notes=[f5, g5], is_gliss_like=True),
-    ]
-
-    cleaned = suppress_resonant_carryover(raw_events)
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [
-        ["C4"],
-        ["C5"],
-        ["D5"],
-        ["C5", "E5"],
-        ["G5"],
-        ["F5"],
-    ]
-
-def test_suppress_resonant_carryover_keeps_true_short_octave_dyad() -> None:
-    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
-    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
-
-    raw_events = [
-        RawEvent(start_time=0.0, end_time=0.6, notes=[d4], is_gliss_like=False),
-        RawEvent(start_time=0.6, end_time=0.88, notes=[d4, d5], is_gliss_like=False),
-    ]
-
-    cleaned = suppress_resonant_carryover(raw_events)
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [
-        ["D4"],
-        ["D4", "D5"],
-    ]
-
-def test_suppress_resonant_carryover_keeps_phrase_reset_ascending_dyad() -> None:
-    c5 = NoteCandidate(key=14, note=Note.from_name("C5"))
-    e5 = NoteCandidate(key=4, note=Note.from_name("E5"))
-    g5 = NoteCandidate(key=3, note=Note.from_name("G5"))
-    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
-
-    raw_events = [
-        RawEvent(start_time=0.0, end_time=0.08, notes=[c5, e5], is_gliss_like=True, primary_note_name="C5", primary_score=121.0),
-        RawEvent(start_time=0.08, end_time=0.33, notes=[e5, g5], is_gliss_like=False, primary_note_name="G5", primary_score=554.7),
-        RawEvent(start_time=0.92, end_time=1.24, notes=[g4], is_gliss_like=False, primary_note_name="G4", primary_score=260.0),
-    ]
-
-    cleaned = suppress_resonant_carryover(raw_events)
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [
-        ["C5", "E5"],
-        ["E5", "G5"],
-        ["G4"],
-    ]
-
-
-def test_suppress_resonant_carryover_keeps_lower_note_when_high_return_is_stale() -> None:
-    e6 = NoteCandidate(key=17, note=Note.from_name("E6"))
-    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
-    d4 = NoteCandidate(key=8, note=Note.from_name("D4"))
-
-    raw_events = [
-        RawEvent(start_time=0.0, end_time=0.4, notes=[e6], is_gliss_like=False, primary_note_name="E6", primary_score=700.0),
-        RawEvent(start_time=0.4, end_time=0.78, notes=[c4], is_gliss_like=False, primary_note_name="C4", primary_score=380.0),
-        RawEvent(start_time=0.78, end_time=0.98, notes=[c4, e6], is_gliss_like=False, primary_note_name="E6", primary_score=220.0),
-        RawEvent(start_time=0.98, end_time=1.36, notes=[d4], is_gliss_like=False, primary_note_name="D4", primary_score=340.0),
-    ]
-
-    cleaned = suppress_resonant_carryover(raw_events)
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [
-        ["E6"],
-        ["C4"],
-        ["C4"],
-        ["D4"],
-    ]
-
-def test_suppress_resonant_carryover_keeps_repeated_note_for_short_restart_overlap() -> None:
-    c5 = NoteCandidate(key=5, note=Note.from_name("C5"))
-    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
-    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
-
-    raw_events = [
-        RawEvent(start_time=0.0, end_time=0.32, notes=[c5], is_gliss_like=False, primary_note_name="C5", primary_score=320.0),
-        RawEvent(start_time=0.32, end_time=0.438, notes=[c5, e4], is_gliss_like=False, primary_note_name="C5", primary_score=180.0),
-        RawEvent(start_time=0.438, end_time=0.62, notes=[d5], is_gliss_like=False, primary_note_name="D5", primary_score=260.0),
-    ]
-
-    cleaned = suppress_resonant_carryover(raw_events)
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [
-        ["C5"],
-        ["C5"],
-        ["D5"],
-    ]
-
-
-def test_suppress_resonant_carryover_keeps_repeated_note_for_short_post_triad_upper_tail() -> None:
-    tuning = next(tuning for tuning in get_default_tunings() if tuning.id == "kalimba-17-c")
-    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
-    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
-    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
-    e5 = NoteCandidate(key=4, note=Note.from_name("E5"))
-
-    raw_events = [
-        RawEvent(start_time=0.0, end_time=0.44, notes=[g4, b4, d5], is_gliss_like=False, primary_note_name="D5", primary_score=420.0),
-        RawEvent(start_time=0.44, end_time=0.556, notes=[d5, e5], is_gliss_like=False, primary_note_name="D5", primary_score=210.0),
-        RawEvent(start_time=0.556, end_time=0.76, notes=[g4], is_gliss_like=False, primary_note_name="G4", primary_score=260.0),
-    ]
-
-    cleaned = suppress_resonant_carryover(raw_events, tuning)
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [
-        ["G4", "B4", "D5"],
-        ["D5"],
-        ["G4"],
-    ]
 
 def test_collapse_same_start_primary_singletons_prefers_singleton_over_lower_carryover() -> None:
     e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
