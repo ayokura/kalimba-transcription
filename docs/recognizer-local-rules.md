@@ -41,13 +41,10 @@
 
 | Fixture | Status | 実質的に保護しているルール | 備考 |
 | --- | --- | --- | --- |
-| `kalimba-17-c-bwv147-restart-prefix-01` | `pending` | 現時点で明確に fixture 固有のものはなし | 4-note chord (C4+E4+G4+E5) の検出が未完。比較的クリーンな restart baseline |
 | `kalimba-17-c-bwv147-upper-mixed-cluster-01` | `completed` | `suppress_recent_upper_echo_mixed_clusters`, delayed-terminal-orphan path | 主なリスクは upper echo / bundle の過剰成長 |
 | `kalimba-17-c-bwv147-restart-tail-01` | `pending` | `recent-upper-octave-alias-primary`, `collapse_restart_tail_subset_into_following_chord` | 3-note chord の検出が未完。restart-tail-specific cleanup debt の典型例 |
-| `kalimba-17-c-bwv147-late-upper-tail-01` | `completed` | AVC trailing collector (terminal collectors は #122 で削除済み) | sparse terminal-tail の rescue |
 | `kalimba-17-c-bwv147-lower-context-roll-01` | `completed` | `lower-mixed-roll-extension`, `_promote_gap_candidates_by_structure` による candidate promotion | context を保持した lower-roll phrase |
 | `kalimba-17-c-bwv147-lower-mixed-roll-01` | `completed` | `lower-mixed-roll-extension`, `_promote_gap_candidates_by_structure` による candidate promotion | scoped-evaluation 解消により completed に昇格 |
-| `kalimba-17-c-bwv147-lower-f4-mixed-run-01` | `pending` | 一般的な recognizer 動作以外にはまだなし | 非重複の lower/F4 coverage fixture。現在の miss shape はまだ open |
 
 ### local onset logic が影響する非 BWV practical coverage
 

@@ -41,7 +41,7 @@ onset群を比較し、分離に最も有効な特徴量を特定。Cohen's d + 
 ```bash
 # 簡易モード（1ファイル内の2群比較）
 uv run python scripts/audio-analysis/onset_separation_analysis.py \
-  --audio bwv147-restart-prefix-01 --real 1.87,3.15,5.06 --compare 4.16
+  --audio c4-repeat-01 --real 1.87,3.15,5.06 --compare 4.16
 
 # JSON設定（複数ファイル・複数群の包括分析）
 uv run python scripts/audio-analysis/onset_separation_analysis.py --config samples.json

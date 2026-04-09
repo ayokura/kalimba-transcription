@@ -15,13 +15,13 @@ Usage:
 
   # Using fixture names (auto-resolved)
   uv run python scripts/audio-analysis/onset_separation_analysis.py \\
-    --audio bwv147-restart-prefix-01 --real 1.87,3.15,5.06 --compare 4.16
+    --audio c4-repeat-01 --real 1.87,3.15,5.06 --compare 4.16
 
 JSON config format:
   {
     "groups": {
       "real": [
-        {"audio": "bwv147-restart-prefix-01", "onset": 1.87, "label": "E5"},
+        {"audio": "c4-repeat-01", "onset": 1.87, "label": "C4"},
         {"audio": "/full/path/to/audio.wav", "onset": 3.15, "label": "C5"}
       ],
       "noise_trailing": [
