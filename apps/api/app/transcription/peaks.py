@@ -2032,6 +2032,21 @@ def _select_candidates(
             ):
                 if "recent-upper-octave-alias-secondary-blocked" not in _disabled:
                     phase_a_reasons.append("recent-upper-octave-alias-secondary-blocked")
+            # residual-forward-scan: the original primary was a recent note showing
+            # residual decay with no mute-dip reattack, so the forward-scan replaced
+            # it with a different recent note that DOES have a fresh attack. The
+            # replaced note has been internally classified as sympathetic resonance,
+            # so it should not be readmitted as a secondary. Same philosophy as the
+            # bg-ordered iteration in recover_pre_segment_attack_via_narrow_fft:
+            # once a stronger fresh-attack signal is found, earlier sustain
+            # candidates from the same sub-onset are dropped, not promoted.
+            if (
+                primary_promotion_debug is not None
+                and primary_promotion_debug.get("reason") == "residual-forward-scan"
+                and hypothesis.candidate.note_name == primary_promotion_debug.get("replacedPrimaryNote")
+            ):
+                if "residual-forward-scan-replaced-primary" not in _disabled:
+                    phase_a_reasons.append("residual-forward-scan-replaced-primary")
             if hypothesis.score < primary.score * score_ratio and not octave_dyad_allowed:
                 if "score-below-threshold" not in _disabled:
                     phase_a_reasons.append("score-below-threshold")
@@ -2302,6 +2317,20 @@ def _select_candidates(
                     break
             # ── Tertiary gates (selected-dependent) ──────────────────
             is_tertiary_or_beyond = len(selected) >= 2
+            # residual-forward-scan: the segment's original primary was internally
+            # classified as sustain (no mute-dip reattack), so the segment as a
+            # whole is carryover-prone. Force the tertiary-style evidence gates
+            # onto secondary slot candidates too, otherwise weaker carryover
+            # notes simply slide up into the secondary slot once A1 strips the
+            # strongest one (e.g., 34-key BWV147 E83: D5 stripped → B4 promoted).
+            # Same Phase B philosophy: when a segment lacks fresh broadband
+            # attack, demand explicit per-note attack evidence (onset_gain or
+            # backward_attack_gain) for every accepted note.
+            forced_evidence_gates = (
+                not is_tertiary_or_beyond
+                and primary_promotion_debug is not None
+                and primary_promotion_debug.get("reason") == "residual-forward-scan"
+            )
             if is_tertiary_or_beyond:
                 test_keys = [n.key for n in selected] + [hypothesis.candidate.key]
                 if not is_physically_playable_chord(test_keys, key_layers=ctx.key_layers):
@@ -2332,6 +2361,7 @@ def _select_candidates(
                     phase_b_reasons.append("tertiary-score-below-threshold")
                 elif any(hypothesis.candidate.note_name == existing.note_name for existing in selected):
                     phase_b_reasons.append("tertiary-duplicate-note")
+            if is_tertiary_or_beyond or forced_evidence_gates:
                 # ── Tertiary evidence gates ──
                 # The two evidence gates are symmetric: each can be overridden
                 # by the other.  tertiary-weak-onset (onset_gain low) is
