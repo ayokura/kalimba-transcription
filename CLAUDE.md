@@ -58,3 +58,16 @@ ad-hoc な event count 比較は evaluation window / ignoredRanges / expectedEve
 ### score_alignment_diagnosis.py のキャッシュ挙動
 
 `scripts/audio-analysis/score_alignment_diagnosis.py` のキャッシュキーには **recognizer source code (`apps/api/app/transcription/*.py`) の SHA256 fingerprint** が含まれる (`_recognizer_code_fingerprint()`)。コードを変更すると自動 invalidate されるので、`SCORE_ALIGNMENT_NO_CACHE=1` を常時付ける必要はない。iterative 修正 → diagnosis 走らせる workflow ではキャッシュが効いて時短になる。明示的にキャッシュを破棄したい場合のみフラグを使う。
+
+## GitHub interaction conventions
+
+### Commit SHA は GitHub 上ではバッククォートで囲わない
+
+GitHub に投稿する content (issue / PR comment, issue / PR body, commit message body 等) で commit SHA を参照する時は、**バッククォートで囲わないこと**。GitHub はバッククォートで囲った文字列を inline code として扱い、自動 commit リンクを生成しないため、せっかくの SHA がクリックできない form になる。
+
+- 悪い例: 修正は `35bca12` で入った
+- 良い例: 修正は 35bca12 で入った
+
+これは `gh issue comment`, `gh pr comment`, `gh issue create --body`, `gh pr create --body`, `git commit -m` 等、最終的に GitHub UI に表示される **すべての content** に適用する。
+
+ローカルファイル (CLAUDE.md, AGENTS.md, `memory/*.md`, `docs/*.md` 等) では GitHub のリンク化対象外なので、code 表現としてのバッククォートを残してよい。
