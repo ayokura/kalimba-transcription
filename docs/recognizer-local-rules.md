@@ -26,18 +26,27 @@
 
 現時点で有用だが、特定の practical failure shape に強く結びついている。debt として定期的に再評価すべき。
 
-| ルール / ヘルパー | コードパス | 処理概要 | 主目的 | 保護している fixture / テスト | debt シグナル | 望ましい長期的代替 |
-| --- | --- | --- | --- | --- | --- | --- |
-| ~~`collect_two_onset_terminal_tail_segments`~~ | **削除済み** (#122) — AVC trailing collector で代替。詳細は [deferred-ideas.md](deferred-ideas.md) の「Terminal collector 5種」を参照 | — | — | — | — | — |
-| `recent-upper-octave-alias-primary` promotion | `apps/api/app/transcription/peaks.py` (`maybe_promote_recent_upper_octave_alias_primary`) | current primary が直近の lower alias に見える場合、upper octave candidate を primary に昇格 | restart tail での正しい高音域ノートの復元 | `kalimba-17-c-bwv147-restart-tail-01` (pending); parametrized regression via `test_manual_capture_completed.py` | restart フレーズ tail の高音域 alias failure に強く結びつく | candidate ranking 時点でのより良い alias 解消（事後的な primary 置換ではなく） |
-| `collapse_restart_tail_subset_into_following_chord` | `apps/api/app/transcription/events.py` | 後続の chord が明らかに吸収する transient subset event を除去 | restart-tail の最終 chord 手前の subset blip を抑制 | `kalimba-17-c-bwv147-restart-tail-01` practical regression path | 1つの restart-tail failure mode に特化した post-merge cleanup | restart tail 周辺でのより良い event bundling（subset blip が生成されないようにする） |
-| `suppress_recent_upper_echo_mixed_clusters` | `apps/api/app/transcription/patterns.py` | 短い upper echo を除去し、後続 mixed cluster から繰り返し upper carryover を除去 | mixed upper BWV フレーズでの extra upper-note echo / over-bundling を防止 | `kalimba-17-c-bwv147-upper-mixed-cluster-01` (completed); parametrized regression via `test_manual_capture_completed.py` | 1つの mixed upper echo パターンに強く特化 | post-merge cleanup 前のより良い carryover / resonance モデリング |
-| `lower-mixed-roll-extension` | `apps/api/app/transcription/peaks.py` (`segment_peaks` 内 inline) | 残余 candidate から onset / score 制約を満たす lower/mixed ノートを 1つ追加 | mixed lower-roll フレーズ内の `G4` クラスの欠落ノートを復元 | `kalimba-17-c-bwv147-lower-mixed-roll-01` (completed); `kalimba-17-c-bwv147-lower-context-roll-01` (completed); parametrized regression via `test_manual_capture_completed.py` | BWV lower-roll の語彙と onset shape に狭くチューニングされている | 専用 extension ルールなしでの lower/mixed フレーズ向けのより良い multi-note selection |
-| ~~`collect_post_sparse_gap_run_segments`~~ | **削除済み** — `collect_multi_onset_gap_segments` 内の candidate fallback (`_promote_gap_candidates_by_structure`) で代替 | — | — | — | — | — |
+**2026-04-09 時点: 現時点で候補なし。**  2026-04-09 の G ablation 第 1 + 2 弾 (計 7 関数削除) により、過去に debt として記録されていた fixture-specific ルールはすべて削除済み。今後新たに狭い fixture 固有ルールを追加した場合のみ本テーブルに掲載する。
+
+過去に本テーブルに掲載されていた削除済みエントリ:
+
+| ルール | 削除 commit | 削除日 |
+| --- | --- | --- |
+| `collect_two_onset_terminal_tail_segments` | #122 | — |
+| `collect_post_sparse_gap_run_segments` | — | — |
+| `suppress_recent_upper_echo_mixed_clusters` | 9af12c3 | 2026-04-09 |
+| `lower-mixed-roll-extension` (`_extend_lower_mixed_roll`) | 3fde670 | 2026-04-09 |
+| `recent-upper-octave-alias-primary` promotion | c92b040 | 2026-04-09 |
+| `collapse_restart_tail_subset_into_following_chord` | c92b040 | 2026-04-09 |
+| `suppress_descending_restart_residual_cluster` | 2c901f4 | 2026-04-09 |
+| `suppress_descending_terminal_residual_cluster` | a47f13e | 2026-04-09 |
+| `suppress_resonant_carryover` | 677feaf | 2026-04-09 |
 
 ## Fixture Coverage Map
 
 ### local rules で保護されている BWV147 fixtures
+
+**2026-04-09 時点: 空。** 過去に local rules で保護されていた BWV147 child fixture はすべて完了 (sequence-163 に昇華) または削除済み。
 
 | Fixture | Status | 実質的に保護しているルール | 備考 |
 | --- | --- | --- | --- |
