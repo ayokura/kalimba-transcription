@@ -52,7 +52,7 @@ from .events import (
 from .models import NoteCandidate, RawEvent
 from .noise_floor import measure_noise_floor
 from .notation import build_notation_views, format_doremi, format_number, quantize_beat
-from .patterns import apply_repeated_pattern_passes, suppress_recent_upper_echo_mixed_clusters
+from .patterns import apply_repeated_pattern_passes
 from .peaks import segment_peaks
 from .per_note import rescue_gap_mute_dips
 from .segments import (
@@ -284,7 +284,6 @@ async def transcribe_audio(
     merged_events = collapse_late_descending_step_handoffs(merged_events)
     merged_events = merge_short_chord_clusters(merged_events)
     merged_events = merge_adjacent_events(merged_events)
-    merged_events = suppress_recent_upper_echo_mixed_clusters(merged_events)
     merged_events = collapse_ascending_restart_lower_residue_singletons(merged_events, tuning)
     merged_events = merge_adjacent_events(merged_events)
     merged_events, repeated_pattern_pass_trace = apply_repeated_pattern_passes(
