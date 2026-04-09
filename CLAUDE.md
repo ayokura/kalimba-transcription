@@ -18,6 +18,9 @@
 | `/audio-diagnose` | 統合 | onset判定（ノイズ vs カリンバ音） |
 | `/audio-separate` | librosa | onset群の特徴量分離分析（Cohen's d） |
 | `/audio-peak-track` | numpy | ノート帯域ピーク周波数・centsずれ追跡 |
+| `/audio-energy-trace` | librosa | per-note 帯域エネルギーの時間トレース |
+| `/score-alignment` | recognizer | 期待 events と recognizer 出力の整列 |
+| `/fixture-rejection-sweep` | pytest | rejection 閾値 sweep（実 fixture テスト経由）|
 
 ### 使用例
 

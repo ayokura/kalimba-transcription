@@ -25,7 +25,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-SRC = Path("apps/api/app/transcription.py")
+SRC = Path("apps/api/app/transcription/constants.py")
 
 SCORE_PATTERN = re.compile(r"PRIMARY_REJECTION_MAX_SCORE\s*=\s*([\d.]+)")
 FR_PATTERN = re.compile(r"PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO\s*=\s*([\d.]+)")
