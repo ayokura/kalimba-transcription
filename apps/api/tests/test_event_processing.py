@@ -20,7 +20,6 @@ from app.transcription import (
     simplify_descending_adjacent_dyad_residue,
     simplify_short_gliss_prefix_to_contiguous_singleton,
     simplify_short_secondary_bleed,
-    suppress_descending_terminal_residual_cluster,
     suppress_descending_upper_return_overlap,
     suppress_leading_descending_overlap,
     suppress_leading_gliss_neighbor_noise,
@@ -43,38 +42,6 @@ def test_is_slide_playable_contiguous_cluster_rejects_non_slide_center_crossing_
     notes = [next(note for note in tuning.notes if note.note_name == name) for name in ["C4", "D4", "F4"]]
 
     assert is_slide_playable_contiguous_cluster(notes, tuning) is False
-
-
-def test_suppress_descending_terminal_residual_cluster_drops_rebound_tail() -> None:
-    tuning = get_default_tunings()[0]
-    note_by_name = {note.note_name: note for note in tuning.notes}
-    raw_events = [
-        RawEvent(0.0, 0.2, [note_by_name["F4"]], False, "F4", 100.0),
-        RawEvent(0.2, 0.4, [note_by_name["E4"]], False, "E4", 100.0),
-        RawEvent(0.4, 0.6, [note_by_name["D4"]], False, "D4", 100.0),
-        RawEvent(0.6, 0.8, [note_by_name["C4"]], False, "C4", 100.0),
-        RawEvent(0.8, 1.0, [note_by_name["D4"], note_by_name["F4"]], False, "D4", 100.0),
-    ]
-
-    cleaned = suppress_descending_terminal_residual_cluster(raw_events, tuning)
-
-    assert cleaned == raw_events[:-1]
-
-
-def test_suppress_descending_terminal_residual_cluster_keeps_non_rebound_tail() -> None:
-    tuning = get_default_tunings()[0]
-    note_by_name = {note.note_name: note for note in tuning.notes}
-    raw_events = [
-        RawEvent(0.0, 0.2, [note_by_name["F4"]], False, "F4", 100.0),
-        RawEvent(0.2, 0.4, [note_by_name["E4"]], False, "E4", 100.0),
-        RawEvent(0.4, 0.6, [note_by_name["D4"]], False, "D4", 100.0),
-        RawEvent(0.6, 0.8, [note_by_name["C4"]], False, "C4", 100.0),
-        RawEvent(0.8, 1.0, [note_by_name["C4"], note_by_name["E4"], note_by_name["G4"]], True, "C4", 100.0),
-    ]
-
-    cleaned = suppress_descending_terminal_residual_cluster(raw_events, tuning)
-
-    assert cleaned == raw_events
 
 
 def test_select_contiguous_four_note_cluster_promotes_dense_local_family() -> None:

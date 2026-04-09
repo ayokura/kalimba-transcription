@@ -2087,48 +2087,6 @@ def merge_short_segment_guard_via_narrow_fft(
 
     return merged
 
-def suppress_descending_terminal_residual_cluster(raw_events: list[RawEvent], tuning: InstrumentTuning) -> list[RawEvent]:
-    if len(raw_events) < 5:
-        return raw_events
-
-    trailing = raw_events[-1]
-    previous = raw_events[-2]
-    if trailing.is_gliss_like or previous.is_gliss_like or len(trailing.notes) < 2 or len(trailing.notes) > 3:
-        return raw_events
-    if len(previous.notes) != 1 or (trailing.end_time - trailing.start_time) > 0.28:
-        return raw_events
-
-    rank_by_name = {
-        note.note_name: index for index, note in enumerate(sorted(tuning.notes, key=lambda item: item.frequency))
-    }
-    previous_rank = rank_by_name.get(previous.notes[0].note_name)
-    primary_rank = rank_by_name.get(trailing.primary_note_name)
-    if previous_rank is None or primary_rank is None or primary_rank != previous_rank + 1:
-        return raw_events
-
-    suffix_names: set[str] = {previous.notes[0].note_name}
-    expected_rank = previous_rank + 1
-    for event in reversed(raw_events[:-2]):
-        if len(event.notes) != 1 or event.is_gliss_like:
-            break
-        note_name = event.notes[0].note_name
-        note_rank = rank_by_name.get(note_name)
-        if note_rank != expected_rank:
-            break
-        suffix_names.add(note_name)
-        expected_rank += 1
-        if len(suffix_names) >= 4:
-            break
-
-    trailing_names = {note.note_name for note in trailing.notes}
-    if len(suffix_names) < 3 or not trailing_names.issubset(suffix_names):
-        return raw_events
-    if not any(rank_by_name.get(name, -1) > primary_rank for name in trailing_names):
-        return raw_events
-
-    return raw_events[:-1]
-
-
 def collapse_late_descending_step_handoffs(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 3:
         return raw_events
