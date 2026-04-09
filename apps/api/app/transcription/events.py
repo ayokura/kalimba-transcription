@@ -2129,59 +2129,6 @@ def suppress_descending_terminal_residual_cluster(raw_events: list[RawEvent], tu
     return raw_events[:-1]
 
 
-def suppress_descending_restart_residual_cluster(raw_events: list[RawEvent], tuning: InstrumentTuning) -> list[RawEvent]:
-    if len(raw_events) < 4:
-        return raw_events
-
-    rank_by_name = {
-        note.note_name: index for index, note in enumerate(sorted(tuning.notes, key=lambda item: item.frequency))
-    }
-    cleaned: list[RawEvent] = []
-    index = 0
-    while index < len(raw_events):
-        previous_event = cleaned[-1] if cleaned else None
-        event = raw_events[index]
-        if (
-            previous_event is not None
-            and len(previous_event.notes) == 1
-            and not previous_event.is_gliss_like
-            and len(event.notes) == 2
-            and not event.is_gliss_like
-            and (event.end_time - event.start_time) <= DESCENDING_STEP_HANDOFF_MAX_DURATION
-            and index + 1 < len(raw_events)
-        ):
-            event_names = {note.note_name for note in event.notes}
-            event_ranks = sorted(rank_by_name.get(note.note_name, -1) for note in event.notes)
-            previous_rank = rank_by_name.get(previous_event.notes[0].note_name)
-            if previous_rank is not None and len(event_ranks) == 2 and event_ranks[0] == previous_rank + 1 and event_ranks[1] == previous_rank + 2:
-                run_end = index
-                while run_end + 1 < len(raw_events) and {note.note_name for note in raw_events[run_end + 1].notes} == event_names:
-                    repeated_event = raw_events[run_end + 1]
-                    if repeated_event.is_gliss_like or (repeated_event.end_time - repeated_event.start_time) > DESCENDING_STEP_HANDOFF_MAX_DURATION:
-                        break
-                    run_end += 1
-                if run_end + 1 < len(raw_events):
-                    restart_event = raw_events[run_end + 1]
-                    restart_rank = rank_by_name.get(restart_event.primary_note_name)
-                    restart_gap = restart_event.start_time - raw_events[run_end].end_time
-                    restart_gap_limit = 0.8
-                    if restart_rank is not None and restart_rank >= event_ranks[1] + 10:
-                        restart_gap_limit = 1.5
-                    if (
-                        len(restart_event.notes) == 1
-                        and not restart_event.is_gliss_like
-                        and restart_rank is not None
-                        and restart_rank >= event_ranks[1] + 6
-                        and restart_gap <= restart_gap_limit
-                    ):
-                        index = run_end + 1
-                        continue
-        cleaned.append(event)
-        index += 1
-
-    return cleaned
-
-
 def collapse_late_descending_step_handoffs(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 3:
         return raw_events

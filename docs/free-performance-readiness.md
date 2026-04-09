@@ -242,10 +242,10 @@ for segment in segments:
 - `simplify_short_secondary_bleed` — dyad bleed の単純化（cents 範囲 + score ratio）
 - `suppress_bridging_octave_pairs` — octave pair bridge 削除（harmonic relation 判定）
 
-**高（fixture-specific パターン依存）— 3関数:**
+**高（fixture-specific パターン依存）— 2関数:**
 - `suppress_resonant_carryover` — 繰り返し周波数 + harmonic relation + phrase reset 検出。高域 restart-tail 特化ロジックあり
 - `suppress_descending_terminal_residual_cluster` — tuning rank ベースの terminal suffix 構築
-- `suppress_descending_restart_residual_cluster` — tuning rank ベースの restart 2-note cluster 検出
+- ~~`suppress_descending_restart_residual_cluster` — tuning rank ベースの restart 2-note cluster 検出~~ — 2026-04-09 削除済み (G ablation 第 2 弾)
 
 ### 既知の fixture-specific debt
 - ~~`collect_two_onset_terminal_tail_segments`~~ — #122 で削除済み
@@ -257,7 +257,7 @@ for segment in segments:
 ### 潜在的 debt 候補（今回新規特定）
 - `suppress_resonant_carryover` の `keep_high_register_repeated_lower_restart` ケース
 - `suppress_descending_terminal_residual_cluster` の tuning rank suffix ロジック
-- `suppress_descending_restart_residual_cluster` の restart-specific gap limit (0.8-1.5s)
+- ~~`suppress_descending_restart_residual_cluster` の restart-specific gap limit (0.8-1.5s)~~ — 2026-04-09 削除済み (G ablation 第 2 弾)
 
 詳細は [recognizer-local-rules.md](recognizer-local-rules.md) を参照。
 

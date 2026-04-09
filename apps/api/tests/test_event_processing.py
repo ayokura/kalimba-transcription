@@ -20,7 +20,6 @@ from app.transcription import (
     simplify_descending_adjacent_dyad_residue,
     simplify_short_gliss_prefix_to_contiguous_singleton,
     simplify_short_secondary_bleed,
-    suppress_descending_restart_residual_cluster,
     suppress_descending_terminal_residual_cluster,
     suppress_descending_upper_return_overlap,
     suppress_leading_descending_overlap,
@@ -207,41 +206,6 @@ def test_simplify_short_secondary_bleed_collapses_repeated_descending_handoff_to
     assert [note.note_name for note in simplified[1].notes] == ["B4"]
     assert [note.note_name for note in simplified[2].notes] == ["B4"]
 
-
-def test_suppress_descending_restart_residual_cluster_drops_repeated_low_register_residue() -> None:
-    tuning = get_default_tunings()[0]
-    c4 = NoteCandidate(0, Note.from_name("C4"))
-    d4 = NoteCandidate(1, Note.from_name("D4"))
-    e4 = NoteCandidate(2, Note.from_name("E4"))
-    e6 = NoteCandidate(16, Note.from_name("E6"))
-    events = [
-        RawEvent(0.0, 0.22, [c4], False, "C4", 320.0),
-        RawEvent(0.22, 0.34, [d4, e4], False, "D4", 260.0),
-        RawEvent(0.62, 0.84, [d4, e4], False, "D4", 240.0),
-        RawEvent(1.12, 1.44, [e6], False, "E6", 300.0),
-    ]
-
-    cleaned = suppress_descending_restart_residual_cluster(events, tuning)
-
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [["C4"], ["E6"]]
-
-
-def test_suppress_descending_restart_residual_cluster_drops_repeated_low_register_residue_before_large_restart_gap() -> None:
-    tuning = get_default_tunings()[0]
-    c4 = NoteCandidate(0, Note.from_name("C4"))
-    d4 = NoteCandidate(1, Note.from_name("D4"))
-    e4 = NoteCandidate(2, Note.from_name("E4"))
-    e6 = NoteCandidate(16, Note.from_name("E6"))
-    events = [
-        RawEvent(0.0, 0.22, [c4], False, "C4", 320.0),
-        RawEvent(0.22, 0.32, [d4, e4], False, "D4", 260.0),
-        RawEvent(0.74, 0.84, [d4, e4], False, "D4", 240.0),
-        RawEvent(1.55, 1.88, [e6], False, "E6", 300.0),
-    ]
-
-    cleaned = suppress_descending_restart_residual_cluster(events, tuning)
-
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [["C4"], ["E6"]]
 
 def test_simplify_descending_adjacent_dyad_residue_collapses_upper_residue_to_lower() -> None:
     a4 = NoteCandidate(10, Note.from_name("A4"))

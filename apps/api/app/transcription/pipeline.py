@@ -32,7 +32,6 @@ from .events import (
     split_adjacent_step_dyads_in_ascending_runs,
     split_ambiguous_upper_octave_pairs,
     suppress_bridging_octave_pairs,
-    suppress_descending_restart_residual_cluster,
     suppress_descending_terminal_residual_cluster,
     suppress_descending_upper_return_overlap,
     suppress_descending_upper_singleton_spikes,
@@ -276,7 +275,6 @@ async def transcribe_audio(
         noise_floor=noise_floor,
     )
     processed_events = suppress_descending_terminal_residual_cluster(processed_events, tuning)
-    processed_events = suppress_descending_restart_residual_cluster(processed_events, tuning)
     processed_events = collapse_late_descending_step_handoffs(processed_events)
     merged_events = merge_adjacent_events(processed_events)
     merged_events = collapse_late_descending_step_handoffs(merged_events)
