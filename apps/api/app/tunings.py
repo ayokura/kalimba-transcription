@@ -70,6 +70,11 @@ DEFAULT_TUNINGS = [
         ["A6", "F#6", "D6", "B5", "G5", "E5", "C5", "A4", "G4", "B4", "D5", "F#5", "A5", "C6", "E6", "G6", "B6"],
     ),
     build_tuning(
+        "kalimba-17-g-low",
+        "17 Key G Major (Low Octave)",
+        ["A5", "F#5", "D5", "B4", "G4", "E4", "C4", "A3", "G3", "B3", "D4", "F#4", "A4", "C5", "E5", "G5", "B5"],
+    ),
+    build_tuning(
         "kalimba-34l-c",
         "34 Key Lingting C Major",
         [

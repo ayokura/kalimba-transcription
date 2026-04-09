@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "description": "BWV147 full performance score line structure (G Major, 17-key G low, transposed -5 semitones from C version)",
+  "totalExpectedEvents": 163,
+  "lines": [
+    {
+      "id": "L1",
+      "eventCount": 15,
+      "eventRange": [
+        1,
+        15
+      ],
+      "content": "G3 / G4 / A4 / [B4,G3] / D5 / C5 / [C5,E4] / E5 / D5 / [D5,B3] / G5 / F#5 / [G5,E4] / D5 / B4",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "L2",
+      "eventCount": 15,
+      "eventRange": [
+        16,
+        30
+      ],
+      "content": "<G4,E4> / A4 / B4 / [C5,A3] / D5 / E5 / [D5,B3] / C5 / B4 / [A4,C4] / B4 / G4 / <F#4,D4> / G4 / A4",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "L3",
+      "eventCount": 15,
+      "eventRange": [
+        31,
+        45
+      ],
+      "content": "[D4,A3] / F#4 / A4 / C5 / B4 / A4 / [B4,G3] / G4 / A4 / <B4,G4> / D5 / C5 / [C5,E4] / E5 / D5",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "L4",
+      "eventCount": 15,
+      "eventRange": [
+        46,
+        60
+      ],
+      "content": "[D5,B3] / G5 / F#5 / [G5,E4] / D5 / B4 / [G4,D4] / A4 / B4 / <E4,C4> / D5 / C5 / [B4,D4] / A4 / G4",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "L5",
+      "eventCount": 12,
+      "eventRange": [
+        61,
+        72
+      ],
+      "content": "[D4,A3] / G4 / F#4 / [G4,<D4,B3,G3>] / B4 / D5 / G5 / D5 / B4 / G4 / B4 / [D5,B3]",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "L6",
+      "eventCount": 10,
+      "eventRange": [
+        73,
+        82
+      ],
+      "content": "[B4,G3] / F#4 / [C5,E4] / [D5,F#4] / E4 / [D5,D4] / [C5,E4] / F#4 / <B4,G4> / <A4,F#4,D4>",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "R1",
+      "eventCount": 17,
+      "eventRange": [
+        83,
+        99
+      ],
+      "content": "D4 / E4 / F#4 / A4 / G4 / A4 / C5 / B4 / [C5,A3] / A4 / F#4 / D4 / F#4 / A4 / <C5,A4,F#4,D4> / B4 / A4",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "R2",
+      "eventCount": 15,
+      "eventRange": [
+        100,
+        114
+      ],
+      "content": "[B4,<D4,B3,G3>] / G4 / A4 / [B4,G4] / D5 / C5 / [C5,<E4,C4>] / E5 / D5 / [D5,<D4,B3>] / G5 / F#5 / [G5,<G4,E4>] / D5 / B4",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "R3",
+      "eventCount": 15,
+      "eventRange": [
+        115,
+        129
+      ],
+      "content": "<G4,E4> / A4 / B4 / [C5,<C4,A3>] / D5 / E5 / [D5,<D4,B3>] / C5 / B4 / [A4,<E4,C4>] / B4 / G4 / [<F#4,D4>,A3] / G4 / A4",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "R4",
+      "eventCount": 15,
+      "eventRange": [
+        130,
+        144
+      ],
+      "content": "[D4,A3] / F#4 / A4 / <C5,A4,F#4,D4> / B4 / A4 / [B4,<D4,B3,G3>] / G4 / A4 / <B4,G4> / D5 / C5 / [C5,<E4,C4>] / E5 / D5",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "R5",
+      "eventCount": 15,
+      "eventRange": [
+        145,
+        159
+      ],
+      "content": "[D5,<D4,B3>] / G5 / F#5 / [G5,<G4,E4>] / D5 / B4 / <G4,E4> / A4 / B4 / <E4,C4> / D5 / C5 / [B4,D4] / A4 / G4",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    },
+    {
+      "id": "R6",
+      "eventCount": 4,
+      "eventRange": [
+        160,
+        163
+      ],
+      "content": "[D4,A3] / G4 / F#4 / [G4,<D4,B3,G3>]",
+      "estimatedStartSec": null,
+      "verifiedStartSec": null,
+      "verificationMethod": "pending"
+    }
+  ],
+  "knownIssues": []
+}
