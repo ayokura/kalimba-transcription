@@ -4,7 +4,7 @@
 
 各 recognizer コンポーネントについて、Free Performance（楽譜知識なし・Expected Performance なしの自由演奏転写）への適合度を評価する。チケット処理のたびに関連コンポーネントを再評価し、このドキュメントを更新する。
 
-**最終更新: 2026-04-09 (#153 Phase B (`36cb3de`) + #154 noise floor calibration + 17-key BWV147 sequence-163 promoted to completed (`400852a`) + #162 heuristic constants audit 起票)**
+**最終更新: 2026-04-09 (#153 Phase B (`36cb3de`) + #154 noise floor calibration + 17-key BWV147 sequence-163 promoted to completed (`400852a`) + #162 heuristic constants audit 起票 + 34-key BWV147 sequence-163 E83 fix (`35bca12`) → 34-key も completed promote (`7535464`))**
 
 ## 評価軸と凡例
 
@@ -142,11 +142,11 @@ for segment in segments:
 
 **評価: Free Perf 🟡 / Streaming ✅ / Browser 🟡**
 
-**最終更新: 2026-04-09 (#153 Phase A + B 完了 — narrow FFT 系 pass 経由で octave-coincident chord aliasing と masked re-attack の主要 case を解決)**
+**最終更新: 2026-04-09 (#153 Phase A + B 完了 + 34-key E83 fix `35bca12` — narrow FFT 系 pass 経由で octave-coincident chord aliasing と masked re-attack の主要 case を解決、`residual-forward-scan` を segment classifier として再利用して 演奏者/テンポ違いの carryover にも対応)**
 
 ### 3 軸サマリー
-- **Free Perf 🟡**: ranking は楽譜非依存で堅牢。Phase A.2/A.4 の merge / rescue passes で残存課題が大幅に解消。残るのは secondary/tertiary 選択経路の複雑性と #111 chord selector
-- **Streaming ✅**: per-segment 独立評価で cross-segment 依存なし。`_resolve_primary` が segment 内で完結
+- **Free Perf 🟡**: ranking は楽譜非依存で堅牢。Phase A.2/A.4 の merge / rescue passes + E83 fix で残存課題が大幅に解消。残るのは secondary/tertiary 選択経路の複雑性と #111 chord selector、および「演奏者/テンポ違いに対する robustness」の汎化検証 (現状は `residual-forward-scan` 発火 segment に限定)
+- **Streaming ✅**: per-segment 独立評価で cross-segment 依存なし。`_resolve_primary` が segment 内で完結。E83 fix の `residual-forward-scan-replaced-primary` / `forced_evidence_gates` も segment 内で完結 (cross-segment 依存なし)
 - **Browser 🟡**: numpy.fft + tuning ベースの scoring は portable だが、`rank_tuning_candidates` / `segment_peaks` の Python 実装が大規模 (2700 行+)。WebAssembly 移植は大仕事だが、algorithmic logic は数値演算のみで原理的に portable
 
 ### 良い点
@@ -159,6 +159,11 @@ for segment in segments:
 - **Segment provenance**: `confirmed_primary` / `hint_primary` フィールド (#143) で per-note パスから peaks 層への情報伝達基盤を確立。`confirmed_primary` 付き segment は `_resolve_primary` をスキップし residual-decay 免除
 - **Sub-onset aware per-note attack** (#152, commit e449df8): `pick_matching_sub_onset` + `onset_energy_gain` 改修。早い attack を持つ candidate に対し正しい sub-onset を picked し、early window のみ anchor。`recent_note_names` 制限で false positive 防止。Lower-octave harmonic-related-to-selected bypass で octave alias 誤棄却を回避。tertiary-weak-onset の対称化で carryover 経路の不整合解消。これにより E148 C5 (delayed within-segment attack) と C4 (octave alias 誤棄却) を救済
 - **Short-segment secondary guard** (commit 1f3bda4): 30ms 未満 segment では secondary 全 strip + `RawEvent.from_short_segment_guard` フラグ + `shortSegmentGuardActive` debug field。`GATE_CATEGORIES` に新カテゴリ `"guard"` 追加。`_CandidateDecision.reasons` に `short-segment-secondary-guarded` で trail 経由 traceable。下流 `suppress_short_residual_tails` は guarded を exempt。これにより E148 で gap-mute-dip 由来の 6.7ms segment が A5+G5 noise を拾わず C6 のみ保持
+- **`residual-forward-scan` を segment classifier として再利用** (`35bca12`): `residual-forward-scan` は元々 primary promotion 経路の 1 つだったが、これが発火する = 「初期 primary が recent note で residual decay を示し mute-dip reattack なし、かつ別の recent note が genuine reattack を持つ」という強い物理的判定。この情報を以下 2 箇所で再利用:
+  1. **`residual-forward-scan-replaced-primary` (Phase A structural gate)**: 置換された元 primary note を secondary candidates からも除外。内部 sustain 判定との整合性を保つ
+  2. **`forced_evidence_gates` (Phase B 上の secondary slot に tertiary 並み gate を強制適用)**: 1 だけだと「強い carryover を消すと弱い carryover が tertiary slot から secondary slot に昇格して同じ tertiary gate を回避する」モグラ叩き構造になる。`residual-forward-scan` 発火 segment は carryover-prone なので secondary slot にも `tertiary-weak-onset` / `tertiary-weak-backward-attack` を強制適用
+  
+  これにより 34-key BWV147 sequence-163 R1 E83 が解決 (162/163 → 163/163)。同じ score でも 17-key (E82→E83 1.93s) と 34-key (0.48s, 約 4 倍速) で carryover 量が異なる「演奏者/テンポ違い」に対する robustness を獲得。設計哲学は Phase B `recover_pre_segment_attack_via_narrow_fft` の bg-ordered iteration と一致 — 強い fresh-attack signature が見つかった時点で、それより前の sustain candidate は再評価して落とす。`primary_promotion_debug` field (名前に反して debug request flag から独立した制御 field) を gate 条件に使うパターンは line 2027-2034 の `recent-upper-octave-alias-secondary-blocked` と同じ既存パターンの拡張
 
 ### 懸念点
 
@@ -170,6 +175,8 @@ for segment in segments:
 - ~~**Masked re-attack threshold**~~ → **#153 Phase A.4 で解決済** (`ed729bb`)。詳細は Stage 2 の同項目参照
 - **Pre-segment attack の structural gap** → **#153 Phase B で workaround 解決** (`36cb3de`): events.py 側に新 pass `recover_pre_segment_attack_via_narrow_fft` を追加。本質的には Stage 2 で broadband onset を全部 segment 化すべきだが、その再設計は大規模なので Stage 5/7 layer での補完を採用 (詳細は Stage 2 の structural gap 節 + Stage 5 参照)
 - **Heuristic constants の環境依存性** → **#162 で audit 中**。Phase A + B で 27 個の新定数を追加した経験から、Class C (環境依存で未正規化) に該当する定数の data-driven 化候補を抽出する作業を起票済
+- **演奏者/テンポ違いに対する robustness — 汎化検証が必要**: 34-key E83 fix (`35bca12`) で、同じ score でも演奏速度が 4 倍違うと carryover の量が大きく変わり、recognizer の secondary slot の挙動が変わることが確認された (17-key の 1.93s 間隔は通り、34-key の 0.48s 間隔は通らなかった)。今回の fix は **`residual-forward-scan` が発火した segment** に対象を絞った安全な対応だが、より広い carryover-prone segment に対しては未対応。次に新しい failure case (異なる promotion path / 通常 segment での carryover) が出てきた段階で、より一般的な segment classifier (e.g. `broadbandOnsetGain < threshold`) ベースの forced evidence gates 適用を検討する。**Free Performance では演奏者/楽器/テンポの組み合わせが事前に分からない**ため、この robustness 汎化は本質的な課題
+- **tertiary / secondary 区別の本質的な是非** (将来検討): E83 fix の経験から、carryover-prone segment では「secondary slot か tertiary slot か」という区別自体が弱く、「全 candidate に物理的 attack evidence を要求すべき」という方向の設計が示唆される。現状は `forced_evidence_gates` という限定的トリガーで slot 区別を維持しているが、将来的には tertiary 固有の gate を secondary normal path にも常時適用する大規模リファクタが選択肢として残る (E83 解決時にユーザーから提示された方向)。今回は限定対応で 162/163 → 163/163 達成したため見送り
 
 ---
 
@@ -372,3 +379,4 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 | 2026-04-07 | #142-144, E83分析 | Stage 2: per-note onset Pass 1 (gap mute-dip rescue) + HPSS 試験結果追加。Stage 3: fast mute-dip 30ms 窓フォールバック + Segment provenance 追加 |
 | 2026-04-08 | #152 完了 + commit 1f3bda4 + #153 起票 | Stage 2: #152 sub-onset aware per-note attack window + commit 1f3bda4 short-segment secondary guard 追加。Masked re-attack 課題 (#153 で扱う) 追記。Stage 3: #152 の3拡張 + commit 1f3bda4 のフラグ/marking 機構を「良い点」に追加。**Octave-coincident chord aliasing** を独立課題として「懸念点」に明示 (C5/C6 周波数衝突の物理的制約、#125/#153)。Masked re-attack threshold 課題追記。残り failure 6/7 が #153 一本で解決可能と確定 |
 | 2026-04-09 | #153 Phase B + #154 + 17-key promote + #162 起票 | **3 軸評価 (Free Perf / Streaming / Browser-side) に再設計** + サマリー表追加。**Stage 2.5 (Per-Recording Calibration `noise_floor.py`) を新設** (#154)。Stage 2: masked re-attack を Phase A.4 で解決済としてマーク、broadband onset → segment 化 structural gap を新規課題として明示 (Phase B `recover_pre_segment_attack_via_narrow_fft` で workaround 解決)。Stage 3: octave-coincident aliasing / masked re-attack を解決済としてマーク。Stage 5: Phase A + B で追加した narrow-FFT 系 4 passes (`merge_short_segment_guard`, `merge_gliss_split`, `recover_masked_reattack`, `recover_pre_segment_attack`) のテーブル追加。Stage 6/7/8/9 を 3 軸表記に統一。Cross-cutting concerns を Streaming/Browser それぞれに対する stage 別ボトルネック分析に書き直し |
+| 2026-04-09 | 34-key E83 fix + 34-key promote (`35bca12`, `7535464`) | Stage 3: `residual-forward-scan` を segment classifier として再利用する 2 段構成 fix (`residual-forward-scan-replaced-primary` + `forced_evidence_gates`) を「良い点」に追加。これにより 34-key BWV147 sequence-163 が 162/163 → 163/163 完全達成し、両 BWV147 sequence-163 fixture (17-key と 34-key) が completed regression target に。「懸念点」に新規課題 2 件追加: (1) 演奏者/テンポ違いに対する robustness の汎化検証 (現状は `residual-forward-scan` 発火 segment 限定)、(2) tertiary/secondary 区別の本質的是非 (将来の大規模リファクタ候補として記録) |
