@@ -1,12 +1,12 @@
 # Recognition Roadmap
 
-## Current State (2026-04-06)
+## Current State (2026-04-09)
 
 ### Fixture カバレッジ
 
-43 fixtures total:
-- **30 completed** — strict regression target
-- **9 pending** — recognizer 改善待ち
+44 fixtures total (17-key BWV147 sequence-163 promoted to completed in #153 Phase B):
+- **31 completed** — strict regression target
+- **8 pending** — recognizer 改善待ち
 - **2 reference_only** — 参照用（regression 対象外）
 - **1 review_needed** — メタデータ要確認
 - **1 rerecord** — 再録音優先
@@ -22,8 +22,8 @@
 - BWV147 scoped phrases（6 sub-fixtures: late-upper-tail, lower-context-roll, lower-mixed-roll, upper-mixed-cluster, restart-prefix, restart-tail 等）
 
 ### BWV147 practical coverage
-- **17-key 163-event sequence**: pending（160/163 ~98%。full-sequence 完全一致はまだ未達）
-- **34-key 163-event sequence**: pending（156/163 ~96%。初の multi-layer kalimba fixture）
+- **17-key 163-event sequence**: **completed** (163/163 100%, promoted in #153 Phase B `400852a`, ordered note set list pinned)
+- **34-key 163-event sequence**: pending (162/163 99% as of #153 Phase B `36cb3de`, 残り 1 件は R1 E83 G4 → D5+G4 carryover で #153 scope 外)
 - 6 scoped BWV sub-fixtures: 4 completed, 2 pending
 
 ### 現時点で acoustic regression target ではないもの
@@ -32,19 +32,29 @@
 
 ## Current Bottleneck
 
-30 completed fixtures が安定した regression baseline を形成している。主な残課題:
+31 completed fixtures が安定した regression baseline を形成している。主な残課題:
 
-- **peaks redesign / chord selector** ([#111](https://github.com/ayokura/kalimba-transcription/issues/111)): `_evidence_rescue_gate` の複雑化、sequential accept loop の構造的制約。3-note chord の検出が restart-prefix / restart-tail の pending 理由
-- **ranked candidate 不在問題** ([#125](https://github.com/ayokura/kalimba-transcription/issues/125)): segment 全体の FFT で primary 倍音に吸収される genuine note の検出。onset-focused FFT window 等の spectral acquisition 改善が必要
-- **BWV147 full-sequence** (163-event fixture × 2 が pending): onset detection 層の問題（34-key で 4 events が NO MATCH）と post-processing の fixture-specific debt
+- **34-key R1 E83 carryover** ([#153](https://github.com/ayokura/kalimba-transcription/issues/153) scope 外): L6 E82 `<D5,B4,G4>` の D5 carryover が threshold 突破して E83 (expected `G4`) に extra D5 として追加される。`recent-carryover-candidate` / `weak-secondary-onset` 等の既存 gate 領域。次セッションで energy trace 確認 → 別 issue 起票 or override 判断
+- **heuristic constants の audit** ([#162](https://github.com/ayokura/kalimba-transcription/issues/162)): #153 Phase A + B + #154 で導入した 27 個の新定数の inventory、環境依存性の特定、data-driven 化候補の抽出。設計 audit のみ
+- **peaks redesign / chord selector** ([#111](https://github.com/ayokura/kalimba-transcription/issues/111)): `_evidence_rescue_gate` の複雑化、sequential accept loop の構造的制約。Phase A/B 完了後の再評価マイルストーン待ち
 - **`arpeggio` modeling** ([#6](https://github.com/ayokura/kalimba-transcription/issues/6)): `slide_chord` との分離。Phase 1 設計は [arpeggio-design.md](arpeggio-design.md) に記載
+
+### 解決済 (#153 Phase A + B / #154 で完了)
+- **17-key BWV147 sequence-163**: 162/163 → **163/163 (100%)** で promoted
+- **17-key R1 E97 G4** (early-window primary、broadband onset 168.0827s が gap 内): Phase B `recover_pre_segment_attack_via_narrow_fft` で解決
+- **17-key R5 E148 octave-coincident chord** (C6 vs C5 2倍音): Phase A.2 で解決
+- **34-key R1 E97 / R4 E133 D5+F5 (gliss splitting + masked re-attack)**: Phase A.3 + A.4 で解決
+- **34-key R2 E100 C4** (early-window primary): Phase B で解決
+- **34-key R3 E121 / E127 prefix splitting**: Phase A.3 で解決
+- **#125 ranked candidate 不在問題 (E148 C6)**: Phase A.2 で解決済 (要 close 確認)
+- **noise floor calibration** ([#154](https://github.com/ayokura/kalimba-transcription/issues/154)): per-recording per-band で実装、narrow-FFT 系 pass の閾値基盤として使用
 
 ## Active Fixture Policy
 
 ### ステータス分布
 
-- `completed` (30): strict regression target。`test_manual_capture_completed.py` が自動検証
-- `pending` (9): recognizer 改善待ち。smoke probe のみ実行
+- `completed` (31): strict regression target。`test_manual_capture_completed.py` が自動検証
+- `pending` (8): recognizer 改善待ち。smoke probe のみ実行
 - `reference_only` (2): 参照用。regression 対象外
 - `review_needed` (1): メタデータ要確認
 - `rerecord` (1): 再録音優先

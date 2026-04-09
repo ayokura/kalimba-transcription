@@ -102,7 +102,7 @@
 
 ## Pre-segment rescue: alternative discriminators (decay max ratio / rank-1 only)
 
-- **Issue**: #154 / #153 Phase B
+- **Issue**: #154 / #153 Phase B (audit umbrella: #162)
 - **日付**: 2026-04-09
 - **背景**: `recover_pre_segment_attack_via_narrow_fft`（unconsumed broadband onset で lookback narrow FFT して chord 不足ノートを救出する pass）の false-positive 抑制で複数のアプローチを試した。最終的に「bg-ordered iteration + bg-dominance ratio gate (in-event の最大 bg と比較)」に落ち着いた。以下は採用に至らなかった代替案
 - **試行コミット**: なし（同一作業セッション内で iterate）
