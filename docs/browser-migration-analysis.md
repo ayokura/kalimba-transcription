@@ -121,7 +121,6 @@ These scan all events to identify the dominant pattern (most frequent 3/4-note s
 - `normalize_repeated_four_note_gliss_patterns`
 - `normalize_repeated_explicit_four_note_patterns`
 - `normalize_repeated_triad_patterns`
-- `suppress_isolated_triad_extensions`
 
 ### Obstacle priority under real-time
 

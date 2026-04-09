@@ -387,6 +387,18 @@ GLISS_TERTIARY_MIN_SCORE = 20.0
 GLISS_TERTIARY_STRONG_ONSET_GAIN = 5.0
 GLISS_TERTIARY_WEAK_ONSET_GAIN = 2.0
 GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.9
+# Per-tine attack-to-sustain ratio gate added 2026-04-10 (G3d).  See
+# `_extend_gliss_tertiary` in peaks.py.  Distinguishes spurious tertiary
+# candidates (where the fundamental band shows a brief noise-like spike with
+# little sustain — high a/s ratio) from true tertiary notes (where the
+# candidate is a real plucked note with comparable sustain energy — low a/s
+# ratio).  Calibrated against:
+#   - b4-d5-double-notes-01 E2 F5: a/s = 6.7 (false positive, must reject)
+#   - bwv147 E95 G4: a/s = 1.28, E111 B4: 2.36, E155 B4: 1.45 (true)
+#   - triple-glissando E4 E4: 2.17, E6 F4: 1.29, E10 C5: 1.48 (true)
+# A threshold of 3.0 provides margin: max true a/s = 2.36 (margin 0.64 below)
+# while F5 6.7 is well above (margin 3.7).
+GLISS_TERTIARY_MAX_ATTACK_TO_SUSTAIN_RATIO = 3.0
 LOWER_ROLL_TAIL_EXTENSION_MAX_DURATION = 0.4
 LOWER_ROLL_TAIL_EXTENSION_MIN_FUNDAMENTAL_RATIO = 0.95
 LOWER_ROLL_TAIL_EXTENSION_MIN_PRIMARY_ONSET_GAIN = 25.0

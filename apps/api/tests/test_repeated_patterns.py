@@ -10,7 +10,6 @@ from app.transcription import (
     normalize_repeated_four_note_family,
     normalize_repeated_triad_patterns,
     normalize_strict_four_note_subsets,
-    suppress_isolated_triad_extensions,
 )
 
 
@@ -124,55 +123,6 @@ def test_normalize_repeated_explicit_four_note_patterns_keeps_off_family_gliss_t
         ["B4", "D5", "F5"],
         ["G4", "D5"],
         ["E4", "D5"],
-    ]
-
-
-def test_suppress_isolated_triad_extensions_rewrites_local_extension_between_dyad_anchors() -> None:
-    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
-    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
-    f5 = NoteCandidate(key=14, note=Note.from_name("F5"))
-
-    raw_events = [
-        RawEvent(start_time=0.0, end_time=0.35, notes=[b4, d5], is_gliss_like=False, primary_note_name="B4", primary_score=700.0),
-        RawEvent(start_time=0.55, end_time=0.9, notes=[d5], is_gliss_like=False, primary_note_name="D5", primary_score=320.0),
-        RawEvent(start_time=1.2, end_time=1.85, notes=[b4, d5, f5], is_gliss_like=False, primary_note_name="B4", primary_score=760.0),
-        RawEvent(start_time=2.1, end_time=2.8, notes=[b4, d5], is_gliss_like=False, primary_note_name="B4", primary_score=710.0),
-        RawEvent(start_time=3.0, end_time=3.7, notes=[b4, d5], is_gliss_like=False, primary_note_name="D5", primary_score=720.0),
-    ]
-
-    cleaned = suppress_isolated_triad_extensions(raw_events)
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [
-        ["B4", "D5"],
-        ["D5"],
-        ["B4", "D5"],
-        ["B4", "D5"],
-        ["B4", "D5"],
-    ]
-
-
-
-def test_suppress_isolated_triad_extensions_does_not_rewrite_without_bidirectional_dyad_support() -> None:
-    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
-    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
-    f5 = NoteCandidate(key=14, note=Note.from_name("F5"))
-    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
-    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
-    c5 = NoteCandidate(key=15, note=Note.from_name("C5"))
-    e4 = NoteCandidate(key=10, note=Note.from_name("E4"))
-
-    raw_events = [
-        RawEvent(start_time=0.0, end_time=0.4, notes=[c4, g4], is_gliss_like=False, primary_note_name="C4", primary_score=680.0),
-        RawEvent(start_time=0.65, end_time=0.95, notes=[d5], is_gliss_like=False, primary_note_name="D5", primary_score=310.0),
-        RawEvent(start_time=1.2, end_time=1.85, notes=[b4, d5, f5], is_gliss_like=False, primary_note_name="B4", primary_score=760.0),
-        RawEvent(start_time=2.15, end_time=2.6, notes=[e4, c5], is_gliss_like=False, primary_note_name="E4", primary_score=690.0),
-    ]
-
-    cleaned = suppress_isolated_triad_extensions(raw_events)
-    assert [[note.note_name for note in event.notes] for event in cleaned] == [
-        ["C4", "G4"],
-        ["D5"],
-        ["B4", "D5", "F5"],
-        ["E4", "C5"],
     ]
 
 

@@ -521,69 +521,6 @@ def normalize_repeated_triad_patterns(raw_events: list[RawEvent]) -> list[RawEve
     return normalized
 
 
-def suppress_isolated_triad_extensions(raw_events: list[RawEvent]) -> list[RawEvent]:
-    if len(raw_events) < 3:
-        return raw_events
-
-    cleaned: list[RawEvent] = []
-    for index, event in enumerate(raw_events):
-        if event.is_gliss_like:
-            cleaned.append(event)
-            continue
-        event_note_set = frozenset(note.note_name for note in event.notes)
-        if len(event.notes) == 3:
-            candidate_subsets = [
-                frozenset(event_note_set - {note.note_name})
-                for note in event.notes
-                if len(event_note_set - {note.note_name}) == 2
-            ]
-            best_subset: frozenset[str] | None = None
-            best_support: tuple[int, float] | None = None
-            for subset in candidate_subsets:
-                if event.primary_note_name not in subset:
-                    continue
-                previous_support: tuple[int, float] | None = None
-                for offset in range(max(0, index - 2), index):
-                    previous_event = raw_events[offset]
-                    previous_set = frozenset(note.note_name for note in previous_event.notes)
-                    if previous_event.is_gliss_like or previous_set != subset:
-                        continue
-                    previous_support = (index - offset, event.start_time - previous_event.end_time)
-                next_support: tuple[int, float] | None = None
-                for offset in range(index + 1, min(len(raw_events), index + 3)):
-                    next_event = raw_events[offset]
-                    next_set = frozenset(note.note_name for note in next_event.notes)
-                    if next_event.is_gliss_like or next_set != subset:
-                        continue
-                    next_support = (offset - index, next_event.start_time - event.end_time)
-                    break
-                if previous_support is None or next_support is None:
-                    continue
-                support_score = (
-                    previous_support[0] + next_support[0],
-                    previous_support[1] + next_support[1],
-                )
-                if best_support is None or support_score < best_support:
-                    best_support = support_score
-                    best_subset = subset
-            if best_subset is not None:
-                target_notes = [note for note in event.notes if note.note_name in best_subset]
-                cleaned.append(
-                    RawEvent(
-                        start_time=event.start_time,
-                        end_time=event.end_time,
-                        notes=sorted(target_notes, key=lambda note: note.frequency),
-                        is_gliss_like=False,
-                        primary_note_name=event.primary_note_name if event.primary_note_name in best_subset else target_notes[0].note_name,
-                        primary_score=event.primary_score,
-                    )
-                )
-                continue
-        cleaned.append(event)
-
-    return cleaned
-
-
 def _debug_event_signature(raw_event: RawEvent) -> tuple[float, float, tuple[str, ...], bool]:
     return (
         round(raw_event.start_time, 4),
@@ -608,7 +545,6 @@ def repeated_pattern_passes() -> tuple[RepeatedPatternPass, ...]:
         RepeatedPatternPass("normalize_repeated_explicit_four_note_patterns", normalize_repeated_explicit_four_note_patterns, merge_after=True),
         RepeatedPatternPass("normalize_repeated_triad_patterns", normalize_repeated_triad_patterns, merge_after=True),
         RepeatedPatternPass("normalize_strict_four_note_subsets", normalize_strict_four_note_subsets, merge_after=True),
-        RepeatedPatternPass("suppress_isolated_triad_extensions", suppress_isolated_triad_extensions, merge_after=False),
     )
 
 

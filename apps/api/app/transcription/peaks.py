@@ -1353,6 +1353,12 @@ class _NoteEvidenceCache:
         self._backward_gains: dict[float, float] = {}
         self._mute_dip: dict[float, bool] = {}
         self._residual_decay: dict[float, bool] = {}
+        self._attack_spectrum_computed: bool = False
+        self._attack_spectrum_cache: tuple[np.ndarray, np.ndarray] | None = None
+        self._attack_energies: dict[float, float] = {}
+        self._sustain_spectrum_computed: bool = False
+        self._sustain_spectrum_cache: tuple[np.ndarray, np.ndarray] | None = None
+        self._sustain_energies: dict[float, float] = {}
 
     def register_note(self, frequency: float, note_name: str) -> None:
         """Associate a note name with its frequency for sub-onset gating."""
@@ -1391,6 +1397,67 @@ class _NoteEvidenceCache:
 
     def get_onset_gain_if_cached(self, frequency: float) -> float | None:
         return self._onset_gains.get(frequency)
+
+    def attack_energy(self, frequency: float) -> float:
+        """Per-note attack energy (peak around fundamental in attack window).
+
+        Used by gates that need to distinguish a true fresh attack from a
+        candidate that only carries spectral leakage at its fundamental
+        frequency.  Computes a single attack-window spectrum lazily and
+        caches both the spectrum and per-frequency lookups.
+        """
+        if frequency in self._attack_energies:
+            return self._attack_energies[frequency]
+        if not self._attack_spectrum_computed:
+            self._attack_spectrum_cache = self._compute_chunk_spectrum(attack=True)
+            self._attack_spectrum_computed = True
+        if self._attack_spectrum_cache is None:
+            result = 0.0
+        else:
+            freqs, atk_spec = self._attack_spectrum_cache
+            result = float(peak_energy_near(freqs, atk_spec, frequency))
+        self._attack_energies[frequency] = result
+        return result
+
+    def sustain_energy(self, frequency: float) -> float:
+        """Per-note sustain energy (peak around fundamental in sustain window).
+
+        Pairs with `attack_energy` to compute attack-to-sustain ratios that
+        distinguish noise-like spurious tertiary candidates (high a/s ratio)
+        from true sustained tertiary notes (low a/s ratio).
+        """
+        if frequency in self._sustain_energies:
+            return self._sustain_energies[frequency]
+        if not self._sustain_spectrum_computed:
+            self._sustain_spectrum_cache = self._compute_chunk_spectrum(attack=False)
+            self._sustain_spectrum_computed = True
+        if self._sustain_spectrum_cache is None:
+            result = 0.0
+        else:
+            freqs, sus_spec = self._sustain_spectrum_cache
+            result = float(peak_energy_near(freqs, sus_spec, frequency))
+        self._sustain_energies[frequency] = result
+        return result
+
+    def attack_to_sustain_ratio(self, frequency: float) -> float:
+        attack = self.attack_energy(frequency)
+        sustain = self.sustain_energy(frequency)
+        return (attack + 1e-6) / (sustain + 1e-6)
+
+    def _compute_chunk_spectrum(self, *, attack: bool) -> tuple[np.ndarray, np.ndarray] | None:
+        window_samples = max(int(self._sr * ONSET_ENERGY_WINDOW_SECONDS), 512)
+        start_sample = max(int(self._start * self._sr), 0)
+        end_sample = min(int(self._end * self._sr), len(self._audio))
+        if attack:
+            chunk_end = min(start_sample + window_samples, end_sample)
+            chunk = self._audio[start_sample:chunk_end]
+        else:
+            sustain_start = max(start_sample, end_sample - window_samples)
+            chunk = self._audio[sustain_start:end_sample]
+        if len(chunk) < 512:
+            return None
+        n_fft = _adaptive_n_fft(self._sr, 40.0, len(chunk), min_bins=1)
+        return _chunk_spectrum(chunk, self._sr, n_fft)
 
 
 def _acquire_spectrum(
@@ -1686,6 +1753,8 @@ def _extend_gliss_tertiary(
         if hypothesis.fundamental_ratio < GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO:
             continue
         if any(are_harmonic_related(candidate, existing) for existing in state.selected):
+            continue
+        if evidence.attack_to_sustain_ratio(candidate.frequency) > GLISS_TERTIARY_MAX_ATTACK_TO_SUSTAIN_RATIO:
             continue
         og = evidence.onset_gain(candidate.frequency)
         bg = evidence.backward_attack_gain(candidate.frequency)
