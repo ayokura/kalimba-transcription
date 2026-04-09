@@ -4,33 +4,67 @@
 
 各 recognizer コンポーネントについて、Free Performance（楽譜知識なし・Expected Performance なしの自由演奏転写）への適合度を評価する。チケット処理のたびに関連コンポーネントを再評価し、このドキュメントを更新する。
 
-**最終更新: 2026-04-08 (コミット 1f3bda4, short-segment secondary guard + #152 sub-onset aware per-note attack + #153 起票)**
+**最終更新: 2026-04-09 (#153 Phase B (`36cb3de`) + #154 noise floor calibration + 17-key BWV147 sequence-163 promoted to completed (`400852a`) + #162 heuristic constants audit 起票)**
 
-## 評価基準
+## 評価軸と凡例
 
-| レベル | 意味 |
-|--------|------|
-| **Ready** | Free Performance でそのまま使える設計 |
-| **Mostly Ready** | 概ね汎用だが、一部に fixture/楽譜依存の前提あり |
-| **Needs Work** | 動作するが設計上の制約が Free Performance を阻害する |
-| **TBD** | 今回未評価 |
+各 stage を **3 軸独立**で評価する。1 つの stage が「Free Performance では問題ないが Streaming では再設計必要」のような nuance を表現できるようにするため。
+
+### 3 軸の意味
+
+- **Free Performance**: 楽譜知識 / Expected Performance に依存せず動作するか
+- **Streaming / Causal**: 全音声を入力に持たなくても (リアルタイム入力で先頭から逐次処理して) 動作するか
+- **Browser-side**: librosa / numpy 等のサーバ依存を取り除いて WebAudio / WebAssembly で動作するか
+
+### レベル
+
+| 記号 | レベル | 意味 |
+|---|---|---|
+| ✅ | **Ready** | そのまま使える |
+| 🟡 | **Adaptable** | 軽微な調整で対応可能 |
+| ⚠️ | **Needs Work** | 設計的な工夫が必要 |
+| ❌ | **Blocking** | 根本的な再設計が必要 |
+| — | **TBD** | 未評価 |
+
+## サマリー (2026-04-09)
+
+| Stage | コンポーネント | Free Perf | Streaming | Browser |
+|---|---|---|---|---|
+| 1 | Audio Input (`audio.py`) | — | — | — |
+| 2 | Onset & Segment Detection (`segments.py`) | 🟡 | ⚠️ | ⚠️ |
+| **2.5** | **Per-Recording Calibration (`noise_floor.py`)** ← **新設 #154** | ✅ | 🟡 | ✅ |
+| 3 | Per-Segment Peak Detection (`peaks.py`) | 🟡 | ✅ | 🟡 |
+| 4 | Raw Event Aggregation (`pipeline.py`) | — | — | — |
+| 5 | Event Post-Processing (`events.py` suppress/simplify) | 🟡 | ⚠️ | ✅ |
+| 6 | Pattern Recognition (`patterns.py`) | ⚠️ | ⚠️ | ✅ |
+| 7 | Final Merging & Adjacency (`events.py` merge/collapse) | 🟡 | ⚠️ | ✅ |
+| 8 | Quantization & Notation (`notation.py`) | ✅ | ✅ | ✅ |
+| 9 | Output Assembly (`pipeline.py`) | ✅ | ✅ | ✅ |
+
+各 stage の詳細評価は以下のセクション参照。
 
 ---
 
 ## Stage 1: Audio Input (`audio.py`)
 
-**評価: TBD**
+**評価: Free Perf — / Streaming — / Browser —**
 
 - `read_audio()`: モノラル変換、無音チェック
 - Free Performance 固有の懸念は少ないと思われるが未評価
+- Streaming / Browser についても実装を確認する必要あり (UploadFile 経由で全音声受領前提なので、streaming では別エントリポイントが必要だろう)
 
 ---
 
 ## Stage 2: Onset & Segment Detection (`segments.py`)
 
-**評価: Mostly Ready（onset/active range） / Needs Work（SR依存性、masked re-attack）**
+**評価: Free Perf 🟡 / Streaming ⚠️ / Browser ⚠️**
 
-**最終更新: 2026-04-08 (#152 sub-onset aware per-note attack + commit 1f3bda4 short-segment guard)**
+**最終更新: 2026-04-09 (#153 Phase B で broadband onset → segment 化 structural gap を downstream で補完する設計に到達)**
+
+### 3 軸サマリー
+- **Free Perf 🟡**: active range / onset 検出は楽譜非依存。ただし polyphonic onset 限界・masked re-attack・broadband onset → segment 化の structural gap が残る (Stage 3 / 5 で補完)
+- **Streaming ⚠️**: librosa.onset.onset_strength は batch 処理。incremental spectral flux + peak picking の再実装が必要
+- **Browser ⚠️**: librosa 依存。WebAudio AnalyserNode で代替可能だが精度差の検証が必要
 
 ### 良い点
 
@@ -46,17 +80,74 @@
 
 - **SR 依存性 (#140)**: FRAME_LENGTH=2048, HOP_LENGTH=256 が固定サンプル数。sr=44100 で STFT窓=46.4ms、sr=96000 で 21.3ms。onset 検出の時間分解能が楽器/録音環境で異なる。リサンプル実験で -5 exact 回帰、n_fft 変更で -4 exact — チューニング再調整なしの単独投入は不可
 - **Polyphonic onset の限界**: 単音 attack が他の音の残響に埋もれると onset_strength に現れない（E162 B4: onset_strength=0.6 vs background 0.3-0.5）。per-note onset detection の Pass 2 (onset splitting) で補完予定 (#145)
-- **Masked re-attack** (#153 で扱う): 同一 note を短時間後に再打鍵した場合、自身の carryover (例: D5 80k baseline) 上の re-attack (140k peak) は ~60% 増しに留まり、broadband flux でも segment_peaks スコアでも「fresh attack」と認識されない。34-key BWV147 の R1 E97 / R4 E133 / R3 67.640s / R3 70.888s の gliss 4件が同じ pattern で、A3 (sub-onset narrow FFT) で per-attack window 解析しないと拾えない
+- ~~**Masked re-attack**~~ → **#153 Phase A.4 で解決済** (`ed729bb`)。`recover_masked_reattack_via_narrow_fft` が `pick_matching_sub_onset` + 4 disambiguators (energy/fr/dominance/sub_onsets≥3) で per-attack window narrow FFT して救出。E97/E133 の D5 が rescue 済
+- **Broadband onset → segment 化の structural gap**: broadband onset detector (librosa) は実際には早期 attack を検出している (例: 17-key R1 E97 で broadband が 168.0827s に onset を出している) が、segmenter (active range / collector logic) がその onset を「segment の始点」として消費せず捨てるケースがある。結果として attack window 全体がどの segment にも含まれない → segment_peaks がそもそも fresh attack を見られない → carryover 扱いで棄却。**#153 Phase B (`recover_pre_segment_attack_via_narrow_fft` `36cb3de`) が downstream で補完**: event 開始前の lookback 範囲 (200ms) で「未消費 broadband onset」を見つけて narrow FFT する。これは workaround pass であり、本質的には Stage 2 の onset → segment 化ロジックを強化する余地がある (将来の課題)
 - **Streaming 再設計**: librosa.onset.onset_strength は batch 処理。streaming 化には incremental spectral flux + peak picking の再実装が必要。per-note onset の部品（`_note_band_energy()` 等）は因果的で streaming 互換
 - **HPSS onset 分離**: 試験の結果、percussive 単独置換は回帰 (76%→53%)。カリンバの撥弦 attack が harmonic/percussive に分散し、percussive のノイズフロア上昇で偽 onset 増加。パイプライン全体チューンが必要 (#148)
 
 ---
 
+## Stage 2.5: Per-Recording Calibration (`noise_floor.py`)
+
+**評価: Free Perf ✅ / Streaming 🟡 / Browser ✅**
+
+**最終更新: 2026-04-09 (#154 で新設、#153 Phase B narrow-FFT pass の閾値基盤として使用)**
+
+### 位置付け
+
+Stage 2 (segment 検出) が完了した直後、Stage 3 (segment 内の peak detection) が始まる前に **per-recording・per-band の calibration を 1 回だけ行う**新しいミニ stage。pipeline.py 上は `rescue_gap_mute_dips` (per-note Pass 1) の直後、`segment_peaks` ループの直前に `measure_noise_floor` を呼ぶ。
+
+```python
+# pipeline.py
+segments = rescue_gap_mute_dips(segments, audio, sample_rate, tuning)
+noise_floor = measure_noise_floor(audio, sample_rate, tuning, segments)  # ← Stage 2.5
+for segment in segments:
+    candidates, ... = segment_peaks(...)  # Stage 3
+```
+
+将来的に「per-band 平均 attack profile」「tuning verification」等の他の per-recording calibration が必要になればここに追加する。
+
+### 良い点
+
+- **完全に楽譜非依存**: 入力は audio + tuning + segments のみ。score / Expected Performance に一切触れない
+- **Silent region detection** が segment-gap 駆動 (`segment[i].end → segment[i+1].start` の隙間 ≥ 100ms) なので、楽譜的なヒントを必要としない
+- **同じ narrow FFT 設定 (`NARROW_FFT_WINDOW_SECONDS = 30ms`)** で計測するので、Stage 3 / Stage 5 の merge passes が比較する `fundamental_energy` と単位が完全に一致する。calibration ↔ 消費側の単位ずれによる凡ミスがない
+- **Median 集約** で transient artifact (silent region に紛れ込んだクリック等) に強い
+- **Hard floor 機構**: `NoiseFloorMeasurement.threshold_for(note, *, factor, fallback, hard_floor)` ヘルパーで「pathologically low な calibration 値が出ても下限を下回らない」safety net を持つ
+
+### 3 軸の根拠
+
+- **Free Perf ✅**: 楽譜非依存。recording のみで自己完結
+- **Streaming 🟡**: 現状の実装は **全 segment が出揃ってから silent region を集める**ので strict な streaming にはならない。ただし設計上は **leading silent region (recording 冒頭の最初の attack より前)** だけで calibration 可能 (median は十分な sample 数があれば安定するため)。streaming 化は「最初の N ms を leading silence と仮定して calibrate → その後固定値を使う」or「running median を維持」の選択。設計の方向性は明確で大規模再設計は不要
+- **Browser ✅**: librosa 依存なし。`peaks._adaptive_n_fft` (numpy.fft.rfft + 単純な算術) と `peaks.batch_peak_energies` (numpy ベース) のみを再利用。WebAssembly 移植時に numpy → JS 配列演算 + WebAudio AnalyserNode の組み合わせで等価実装可能
+
+### 設計知見 (Phase B 経由で発見)
+
+1. **eval_scope vs full audio で noise_floor 値が ~1.5x 異なる**: 17-key BWV147 で `noise_floor[G4]` が full audio 0.116 / eval scope 0.181。テスト infra の splice/zerofill が silent region の取り方を変えるため。**実用上の含意**: noise_floor multiplier に強く依存する threshold 設計は脆い → 本 calibration は「**下限ガード**」として使い、真の discriminator は時間ローカルな測定 (`backward_attack_gain` 等) に置く設計が安定する
+2. **`measure_narrow_fft_note_scores` (peaks.py 既存 API) は silent region では `None` を返す**: `rank_tuning_candidates` の rank-1 score が 1e-6 未満で弾かれる仕様。calibration では使えないため `_narrow_fft_band_energies` で `batch_peak_energies` を直接呼ぶ別ルートで実装
+
+### 懸念点
+
+- **計測値の安定性が silent region の総量に依存**: 録音が密に演奏で埋まっていて silent gap が短い fixture では `_select_samples` が `min_silent_window_seconds` 以上の slice を確保できず `NoiseFloorMeasurement.is_empty == True` になる。この場合 fallback (Phase A 固定閾値) に戻る。実用上問題が出るのは「ほぼ無音区間がない極端な録音」のみだが、streaming 化時に「leading silence 不足」の handling が必要
+- **Tuning 全 note を均等に sample しているとは限らない**: silent region の周波数特性は録音環境のノイズ特性 (HVAC、マイク self-noise 等) に依存する。音響的に高音域が空くマイクで録音すると `noise_floor[C6]` が極小になり threshold が hard floor まで貼り付く。当面は hard floor で対処、将来的には「一定値以下は集約から除外」等の robustness 強化が候補
+
+### 関連
+
+- **#154** Per-recording per-band noise floor measurement (2026-04-09 完了)
+- **#162** narrow-FFT-pass heuristic constants audit — `noise_floor` を使った threshold 置換が「Class B (環境依存だが正規化済)」の代表例
+
+---
+
 ## Stage 3: Per-Segment Peak Detection & Candidate Selection (`peaks.py`)
 
-**評価: Mostly Ready（candidate ranking） / Needs Work（secondary/tertiary selection + rescue path + octave-coincident aliasing）**
+**評価: Free Perf 🟡 / Streaming ✅ / Browser 🟡**
 
-**最終更新: 2026-04-08 (#152 sub-onset aware + commit 1f3bda4 short-segment guard + octave-coincident aliasing 課題追記)**
+**最終更新: 2026-04-09 (#153 Phase A + B 完了 — narrow FFT 系 pass 経由で octave-coincident chord aliasing と masked re-attack の主要 case を解決)**
+
+### 3 軸サマリー
+- **Free Perf 🟡**: ranking は楽譜非依存で堅牢。Phase A.2/A.4 の merge / rescue passes で残存課題が大幅に解消。残るのは secondary/tertiary 選択経路の複雑性と #111 chord selector
+- **Streaming ✅**: per-segment 独立評価で cross-segment 依存なし。`_resolve_primary` が segment 内で完結
+- **Browser 🟡**: numpy.fft + tuning ベースの scoring は portable だが、`rank_tuning_candidates` / `segment_peaks` の Python 実装が大規模 (2700 行+)。WebAssembly 移植は大仕事だが、algorithmic logic は数値演算のみで原理的に portable
 
 ### 良い点
 
@@ -75,14 +166,16 @@
 - **Sequential accept loop**: primary → secondary → tertiary の逐次選択は、候補の評価順序に結果が依存する。E136 の問題（E4 が先に棄却されたために C4 が playability チェックに失敗）はこの構造的制約の典型例。chord selector (#111) で根本解決の可能性あり
 - **Octave-4 fr 閾値 (0.75)**: 今回の緩和は BWV147 の2件で検証済みだが、Free Performance での広範な文脈で偽 octave dyad を生むリスクは broader fixture coverage がないと評価困難
 - **Tertiary rescue bypass (og >= 2.0)**: carryover rescue と同じ閾値の流用であり、tertiary rescue に最適な閾値かは理論的根拠が弱い
-- **Ranked candidate 不在問題 / Octave-coincident chord aliasing** (#125, #153): カリンバの構造的物理問題。**ある音の fundamental が、その1オクターブ下の音の 2nd harmonic と完全に同一周波数を持つ** (例: C6=1046Hz, C5 の 2nd harmonic = 523×2 = 1046Hz)。segment 全体 FFT では分離不可能で、E148 C6 のような chord top が ranked に入らない。**早期 attack 窓 (~30-40ms) でしか時間分離できない** 物理的制約。E148, 34-key R1 E97/R4 E133/R3 67.640s/R3 70.888s/R2 E100 の 6 failures がすべて同一原理 (octave-coincident / gliss splitting / early-window masking) で、#153 sub-onset narrow FFT が唯一の物理的解。Free Performance を見据えた基盤として必須
-- **Masked re-attack threshold**: 同一 note の carryover decay (例: D5 80k baseline) 上の re-attack (140k peak) は ~60% 増しに留まり、segment_peaks の score-below-threshold で棄却される。34-key R1 E83 D5 extra のような既存 carryover を fresh attack と誤認する逆ケースもあり、threshold 単独調整では難しい。本質的には sub-onset narrow FFT (#153) で per-attack window の独立 spectral 評価が必要
+- ~~**Ranked candidate 不在問題 / Octave-coincident chord aliasing**~~ → **#153 Phase A.2 で解決済** (`933d088`)。`merge_short_segment_guard_via_narrow_fft` が短い guarded singleton (例: E148 の C6 6.7ms gap-mute-dip 由来 segment) を後続 segment に narrow FFT cross-validation で rejoin する。E148 の他 E121/E127 prefix splitting / E97/E133 D5+F5 / E100 C4 / E97 G4 も Phase A.3/A.4 + Phase B で解決済 (詳細は recognition-roadmap.md の "解決済" 節)
+- ~~**Masked re-attack threshold**~~ → **#153 Phase A.4 で解決済** (`ed729bb`)。詳細は Stage 2 の同項目参照
+- **Pre-segment attack の structural gap** → **#153 Phase B で workaround 解決** (`36cb3de`): events.py 側に新 pass `recover_pre_segment_attack_via_narrow_fft` を追加。本質的には Stage 2 で broadband onset を全部 segment 化すべきだが、その再設計は大規模なので Stage 5/7 layer での補完を採用 (詳細は Stage 2 の structural gap 節 + Stage 5 参照)
+- **Heuristic constants の環境依存性** → **#162 で audit 中**。Phase A + B で 27 個の新定数を追加した経験から、Class C (環境依存で未正規化) に該当する定数の data-driven 化候補を抽出する作業を起票済
 
 ---
 
 ## Stage 4: Raw Event Aggregation (`pipeline.py`)
 
-**評価: TBD**
+**評価: Free Perf — / Streaming — / Browser —**
 
 - `recent_note_names`, `ascending_run_ceiling` 等の文脈状態を構築
 - sparse gap tail filtering にレジスタ・下降パターンのヒューリスティクスあり
@@ -90,14 +183,31 @@
 ### 未評価項目
 - 文脈状態の構築が Expected Performance に依存しないか
 - sparse gap tail filtering の汎用性
+- 文脈状態を「過去 N events のみ」に制限すれば streaming OK か
 
 ---
 
 ## Stage 5: Event Post-Processing (`events.py`)
 
-**評価: Mostly Ready（suppress/simplify 大半） / Needs Work（パターン依存 3関数）**
+**評価: Free Perf 🟡 / Streaming ⚠️ / Browser ✅**
 
-**最終更新: 2026-04-06 (suppress 系全関数棚卸し)**
+**最終更新: 2026-04-09 (#153 Phase A + B で narrow-FFT 系 4 passes 追加。`recover_pre_segment_attack_via_narrow_fft` は本 stage に属する)**
+
+### 3 軸サマリー
+- **Free Perf 🟡**: 大半の suppress/simplify は時間 + ノート構造のみで汎用的。fixture-specific debt 3 関数 + Phase A/B で追加した 4 narrow-FFT 系 passes はいずれも楽譜非依存だが、heuristic constants の環境依存性 (#162) が懸念
+- **Streaming ⚠️**: event post-processing は前後の event 文脈に依存するため strict streaming にはならない。「lookahead/lookbehind window を有限にする」工夫でほぼ causal 化可能だが本格的な再設計が必要
+- **Browser ✅**: pure list operations のみ (audio 処理は narrow-FFT 系 4 passes が唯一だが、これも numpy/portable)
+
+### #153 Phase A + B で本 stage に追加した passes (新規 4 passes)
+
+| Pass | Phase | 役割 |
+|---|---|---|
+| `merge_short_segment_guard_via_narrow_fft` | A.2 (`933d088`) | 短い (gap-mute-dip 由来 6.7ms 等) guarded primary singleton を後続 segment に narrow FFT cross-validation で rejoin (E148 C6 救出) |
+| `merge_gliss_split_segments` | A.3 (`2fd433e`) | gliss prefix splitting / late-note splitting を union + semitone dedup で統合 (E121/E127 prefix, E97/E133 F5 trailing 救出) |
+| `recover_masked_reattack_via_narrow_fft` | A.4 (`ed729bb`) | 同一 note の carryover decay 上の masked re-attack を `pick_matching_sub_onset` + 4 disambiguators で救出 (E97/E133 D5 救出) |
+| `recover_pre_segment_attack_via_narrow_fft` | B (`36cb3de`) | broadband onset → segment 化の structural gap を埋める。event 直前 lookback の未消費 onset で narrow FFT、bg-ordered iteration + bg dominance ratio で sympathetic resonance を排除 (E97 G4 / E100 C4 救出) |
+
+これら 4 passes はすべて Stage 2.5 (`noise_floor`) を消費して per-band 閾値を持つ。設計上の依存関係は **Stage 2 → Stage 2.5 → Stage 3 → Stage 5 (本 passes)** の順で計算される。
 
 27 個の suppression/collapse/simplify/merge 関数が line 191-229 で逐次適用される。個別評価の結果、大半は汎用的だが一部にパターン依存あり。
 
@@ -148,11 +258,14 @@
 
 ## Stage 6: Pattern Recognition (`patterns.py`)
 
-**評価: Needs Work**
+**評価: Free Perf ⚠️ / Streaming ⚠️ / Browser ✅**
+
+### 3 軸サマリー
+- **Free Perf ⚠️**: corpus-wide な dominant pattern 書き換えに依存。Free Performance ではパターンの事前知識がない。AGENTS.md に「Treat repeated-pattern normalizers as suspicious until proven necessary」と記載
+- **Streaming ⚠️**: multi-event pattern detection は lookahead が必要。strict streaming には再設計が必要
+- **Browser ✅**: pure logic のみ
 
 - `apply_repeated_pattern_passes()`: repeated four-note, triad, gliss パターンの正規化
-- 「繰り返しパターン」の検出は corpus-wide な dominant pattern 書き換えに依存しており、Free Performance ではパターンの事前知識がない
-- AGENTS.md に「Treat repeated-pattern normalizers as suspicious until proven necessary」と記載あり
 
 ### 未評価項目
 - ablation で各パスの影響度がどの程度か
@@ -162,9 +275,14 @@
 
 ## Stage 7: Final Merging & Adjacency (`events.py`)
 
-**評価: Ready（merge 系） / Needs Work（collapse/suppress 系）**
+**評価: Free Perf 🟡 / Streaming ⚠️ / Browser ✅**
 
 **最終更新: 2026-04-06 (Stage 7 棚卸し)**
+
+### 3 軸サマリー
+- **Free Perf 🟡**: merge 系 4 関数は時間 + ノート構造ベースで Ready。collapse 系 6 関数のうち 3 関数が高依存 (cents/tuning step pattern)
+- **Streaming ⚠️**: cross-event merging は lookahead が必要。Stage 5 と同じ課題
+- **Browser ✅**: pure list operations のみ
 
 27 個の suppress/collapse/merge/split 関数が line 191-229 で逐次適用される。`merge_adjacent_events()` が3回挟まれ、各 collapse の結果を吸収する構造。
 
@@ -204,37 +322,43 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 
 ## Stage 8: Quantization & Notation (`notation.py`)
 
-**評価: Ready**
+**評価: Free Perf ✅ / Streaming ✅ / Browser ✅**
 
 - beat-quantized representation へのマッピング
 - 入力はイベントの timing と note set のみ
 - 楽譜知識不要、Free Performance でそのまま使用可能
+- pure 数値処理 → streaming / browser ともに自然に対応
 
 ---
 
 ## Stage 9: Output Assembly (`pipeline.py`)
 
-**評価: Ready**
+**評価: Free Perf ✅ / Streaming ✅ / Browser ✅**
 
 - `ScoreEvent` 構築と `TranscriptionResult` パッケージング
-- 楽譜知識不要
+- 楽譜知識不要、pure データ構造変換
 
 ---
 
 ## Cross-cutting concerns
 
-### Streaming/Causal 化
+### Streaming / Causal 化
 
-- 現在のパイプラインはバッチ処理。segment detection が全音声を必要とする
-- `detect_segments` の active range 検出と onset detection が最大のボトルネック
-- peaks.py の candidate selection は segment 単位で独立しており、streaming 親和性が高い
-- event post-processing は前後の event 文脈に依存するため causal 化に工夫が必要
+ボトルネック順:
+
+1. **Stage 2 onset detection**: `librosa.onset.onset_strength` が batch 処理。incremental spectral flux + peak picking の再実装が必須 (#140 参照)
+2. **Stage 5/7 event post-processing**: 27 個の suppress/merge 関数が前後 event の文脈に依存。lookahead/lookbehind window を有限化する設計改修が必要 (cf. patterns.py の `apply_repeated_pattern_passes` も同類)
+3. **Stage 2.5 noise_floor**: 現状は全 segment 出揃い後に silent gap を集めるが、設計上は **leading silent region (録音冒頭の最初の attack より前)** だけで calibration 可能。streaming 版の方針は明確 (大規模再設計不要)
+4. **Stage 3 peaks.py / Stage 8 / Stage 9**: それぞれ自然に streaming 互換 (per-segment 独立 / pure 数値変換)
 
 ### Browser-side 実装
 
-- librosa (onset detection), numpy (FFT) への依存が core algorithm にある
-- peaks.py の scoring logic は数値演算のみで WebAssembly/WebAudio に移植可能
-- segments.py の RMS/onset detection は WebAudio API の AnalyserNode で代替可能だが精度差の検証が必要
+- **librosa への依存** が segments.py (Stage 2 onset detection) に集中。それ以外の stage は numpy + 標準 Python のみ
+- **noise_floor.py (Stage 2.5)** は意図的に librosa を使わず `peaks._adaptive_n_fft` (numpy.fft) + `peaks.batch_peak_energies` (numpy 算術) のみで実装 → WebAssembly 移植は直接的
+- **peaks.py の scoring logic (Stage 3)** は数値演算のみで原理的に portable だが、Python 実装が大規模 (2700 行+) なので移植コストは大きい
+- **events.py の suppress/merge (Stage 5/7)** は pure list operations で、WebAssembly 不要 (素の JS で動く)
+- **patterns.py (Stage 6)** も同様に pure logic
+- segments.py の RMS/onset detection は WebAudio API の `AnalyserNode` で代替可能だが、librosa との数値一致は別途検証が必要
 
 ---
 
@@ -247,3 +371,4 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 | 2026-04-06 | Stage 5/7 棚卸し | Stage 5 suppress/simplify 系 19関数の個別評価（依存度別4段階分類）。Stage 7 merge 4関数 + collapse 6関数の評価追加。潜在 debt 3件特定 |
 | 2026-04-07 | #142-144, E83分析 | Stage 2: per-note onset Pass 1 (gap mute-dip rescue) + HPSS 試験結果追加。Stage 3: fast mute-dip 30ms 窓フォールバック + Segment provenance 追加 |
 | 2026-04-08 | #152 完了 + commit 1f3bda4 + #153 起票 | Stage 2: #152 sub-onset aware per-note attack window + commit 1f3bda4 short-segment secondary guard 追加。Masked re-attack 課題 (#153 で扱う) 追記。Stage 3: #152 の3拡張 + commit 1f3bda4 のフラグ/marking 機構を「良い点」に追加。**Octave-coincident chord aliasing** を独立課題として「懸念点」に明示 (C5/C6 周波数衝突の物理的制約、#125/#153)。Masked re-attack threshold 課題追記。残り failure 6/7 が #153 一本で解決可能と確定 |
+| 2026-04-09 | #153 Phase B + #154 + 17-key promote + #162 起票 | **3 軸評価 (Free Perf / Streaming / Browser-side) に再設計** + サマリー表追加。**Stage 2.5 (Per-Recording Calibration `noise_floor.py`) を新設** (#154)。Stage 2: masked re-attack を Phase A.4 で解決済としてマーク、broadband onset → segment 化 structural gap を新規課題として明示 (Phase B `recover_pre_segment_attack_via_narrow_fft` で workaround 解決)。Stage 3: octave-coincident aliasing / masked re-attack を解決済としてマーク。Stage 5: Phase A + B で追加した narrow-FFT 系 4 passes (`merge_short_segment_guard`, `merge_gliss_split`, `recover_masked_reattack`, `recover_pre_segment_attack`) のテーブル追加。Stage 6/7/8/9 を 3 軸表記に統一。Cross-cutting concerns を Streaming/Browser それぞれに対する stage 別ボトルネック分析に書き直し |
