@@ -39,9 +39,6 @@ fixture名（例: `d5-repeat-01`）は自動的にフルパスに展開される
 
 - `spectrum_stats.py` - スペクトル特徴量計算
 - `pitch_detect.praat` - Praatピッチ検出スクリプト
-- `analyze_spectral_spread.py` - 複数fixtureのスペクトル比較
-- `analyze_kalimba_signature.py` - カリンバ倍音構造検出
-- `find_real_first_note.py` - 最初の本当のカリンバ音を特定
 - `onset_separation_analysis.py` - onset群の特徴量分離分析
 - `note_peak_track.py` - ノート帯域ピーク周波数・centsずれ追跡
 - `energy_trace.py` - ノート帯域エネルギーの時間推移トレース (rescue/suppression 設計の前提検証で頻用)
