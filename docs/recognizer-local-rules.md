@@ -48,9 +48,6 @@
 | `kalimba-17-c-bwv147-lower-context-roll-01` | `completed` | `lower-mixed-roll-extension`, `_promote_gap_candidates_by_structure` による candidate promotion | context を保持した lower-roll phrase |
 | `kalimba-17-c-bwv147-lower-mixed-roll-01` | `completed` | `lower-mixed-roll-extension`, `_promote_gap_candidates_by_structure` による candidate promotion | scoped-evaluation 解消により completed に昇格 |
 | `kalimba-17-c-bwv147-lower-f4-mixed-run-01` | `pending` | 一般的な recognizer 動作以外にはまだなし | 非重複の lower/F4 coverage fixture。現在の miss shape はまだ open |
-| `kalimba-17-c-bwv147-mid-gesture-cluster-01` | `review_needed` | 現時点で追加すべきではない | 主な blocker は boundary contamination と re-windowing 失敗（recognizer logic ではない） |
-| `kalimba-17-c-bwv147-upper-transition-01` | `reference_only` | 現時点で追加すべきではない | provenance/scoping の不一致。active な recognizer target ではない |
-| `kalimba-17-c-bwv147-restart-high-register-01` | `reference_only` | 現時点で追加すべきではない | よりクリーンな restart subset に置き換えられた |
 
 ### local onset logic が影響する非 BWV practical coverage
 
