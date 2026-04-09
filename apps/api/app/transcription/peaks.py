@@ -924,72 +924,6 @@ def maybe_promote_stale_primary_to_upper_octave(
     }
 
 
-def maybe_promote_recent_upper_octave_alias_primary(
-    primary: NoteHypothesis,
-    ranked: list[NoteHypothesis],
-    segment_duration: float,
-    recent_note_names: set[str] | None,
-) -> tuple[NoteHypothesis, dict[str, Any] | None]:
-    if segment_duration > RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MAX_DURATION:
-        return primary, None
-    if not recent_note_names:
-        return primary, None
-    if primary.candidate.octave >= 6:
-        return primary, None
-    if primary.fundamental_ratio > RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MAX_PRIMARY_FUNDAMENTAL_RATIO:
-        return primary, None
-
-    target_octave = primary.candidate.octave + 1
-    upper_candidate: NoteHypothesis | None = None
-    for hypothesis in ranked[1:6]:
-        if hypothesis.candidate.pitch_class != primary.candidate.pitch_class:
-            continue
-        if hypothesis.candidate.octave != target_octave:
-            continue
-        if hypothesis.candidate.note_name not in recent_note_names:
-            continue
-        if hypothesis.score < primary.score * RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_UPPER_SCORE_RATIO:
-            continue
-        if hypothesis.fundamental_ratio < RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO:
-            continue
-        if hypothesis.octave_alias_ratio < RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_UPPER_ALIAS_RATIO:
-            continue
-        upper_candidate = hypothesis
-        break
-    if upper_candidate is None:
-        return primary, None
-
-    has_supporting_lower = any(
-        hypothesis.candidate.note_name != upper_candidate.candidate.note_name
-        and hypothesis.candidate.frequency < upper_candidate.candidate.frequency
-        and not are_harmonic_related(hypothesis.candidate, upper_candidate.candidate)
-        and hypothesis.score >= primary.score * RECENT_UPPER_OCTAVE_ALIAS_PROMOTION_MIN_SUPPORTING_LOWER_SCORE_RATIO
-        for hypothesis in ranked[1:6]
-    )
-    if not has_supporting_lower:
-        return primary, None
-
-    promoted = NoteHypothesis(
-        candidate=upper_candidate.candidate,
-        score=upper_candidate.score,
-        fundamental_energy=upper_candidate.fundamental_energy,
-        overtone_energy=upper_candidate.overtone_energy,
-        fundamental_ratio=upper_candidate.fundamental_ratio,
-        subharmonic_alias_energy=upper_candidate.subharmonic_alias_energy,
-        octave_alias_energy=upper_candidate.octave_alias_energy,
-        octave_alias_ratio=upper_candidate.octave_alias_ratio,
-        octave_alias_penalty=upper_candidate.octave_alias_penalty,
-        second_harmonic_energy=upper_candidate.second_harmonic_energy,
-        harmonics=upper_candidate.harmonics,
-        subharmonics=upper_candidate.subharmonics,
-    )
-    return promoted, {
-        'replacedPrimaryNote': primary.candidate.note_name,
-        'replacementNote': promoted.candidate.note_name,
-        'reason': 'recent-upper-octave-alias-primary',
-    }
-
-
 def _try_gap_fill(
     test_keys: list[int],
     selected: list[NoteCandidate],
@@ -1308,7 +1242,6 @@ GATE_CATEGORIES: dict[str, str] = {
     "tertiary-duplicate-note": "structural",
     "semitone-leakage": "structural",
     "same-as-primary": "structural",
-    "recent-upper-octave-alias-secondary-blocked": "structural",
     "score-below-threshold": "structural",
     "fundamental-ratio-too-low": "structural",
     "harmonic-related-to-selected": "structural",
@@ -1657,15 +1590,6 @@ def _resolve_primary(
     if stale_upper_promotion_debug is not None:
         primary_promotion_debug = stale_upper_promotion_debug
         promotions.append(stale_upper_promotion_debug.get("reason", "stale-upper-octave"))
-    primary, recent_upper_alias_promotion_debug = maybe_promote_recent_upper_octave_alias_primary(
-        primary,
-        ranked,
-        ctx.duration,
-        ctx.recent_note_names,
-    )
-    if recent_upper_alias_promotion_debug is not None:
-        primary_promotion_debug = recent_upper_alias_promotion_debug
-        promotions.append(recent_upper_alias_promotion_debug.get("reason", "recent-upper-octave-alias"))
     # Rejection is deferred: record reason but continue so secondary
     # evaluation always runs.  _apply_final_decisions handles the final call.
     _rejected = False
@@ -1953,14 +1877,6 @@ def _select_candidates(
             if hypothesis.candidate.note_name == primary.candidate.note_name:
                 if "same-as-primary" not in _disabled:
                     phase_a_reasons.append("same-as-primary")
-            if (
-                primary_promotion_debug is not None
-                and primary_promotion_debug.get("reason") == "recent-upper-octave-alias-primary"
-                and hypothesis.candidate.pitch_class == primary.candidate.pitch_class
-                and hypothesis.candidate.octave == primary.candidate.octave - 1
-            ):
-                if "recent-upper-octave-alias-secondary-blocked" not in _disabled:
-                    phase_a_reasons.append("recent-upper-octave-alias-secondary-blocked")
             # residual-forward-scan: the original primary was a recent note showing
             # residual decay with no mute-dip reattack, so the forward-scan replaced
             # it with a different recent note that DOES have a fresh attack. The

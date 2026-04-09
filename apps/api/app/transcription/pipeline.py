@@ -16,7 +16,6 @@ from .events import (
     collapse_ascending_restart_lower_residue_singletons,
     collapse_high_register_adjacent_bridge_dyads,
     collapse_late_descending_step_handoffs,
-    collapse_restart_tail_subset_into_following_chord,
     collapse_same_start_primary_singletons,
     merge_adjacent_events,
     merge_four_note_gliss_clusters,
@@ -217,7 +216,6 @@ async def transcribe_audio(
     processed_events = suppress_low_confidence_dyad_transients(raw_events)
     processed_events = suppress_onset_decaying_carryover(processed_events)
     processed_events = suppress_resonant_carryover(processed_events, tuning)
-    processed_events = collapse_restart_tail_subset_into_following_chord(processed_events, tuning)
     processed_events = collapse_same_start_primary_singletons(processed_events)
     processed_events = simplify_short_secondary_bleed(processed_events)
     processed_events = suppress_post_tail_gap_bridge_dyads(processed_events)

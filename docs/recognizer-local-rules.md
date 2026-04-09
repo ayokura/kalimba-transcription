@@ -41,7 +41,6 @@
 
 | Fixture | Status | 実質的に保護しているルール | 備考 |
 | --- | --- | --- | --- |
-| `kalimba-17-c-bwv147-restart-tail-01` | `pending` | `recent-upper-octave-alias-primary`, `collapse_restart_tail_subset_into_following_chord` | 3-note chord の検出が未完。restart-tail-specific cleanup debt の典型例 |
 
 ### local onset logic が影響する非 BWV practical coverage
 

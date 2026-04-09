@@ -715,51 +715,6 @@ def collapse_same_start_primary_singletons(raw_events: list[RawEvent]) -> list[R
     return cleaned
 
 
-def collapse_restart_tail_subset_into_following_chord(
-    raw_events: list[RawEvent],
-    tuning: InstrumentTuning,
-) -> list[RawEvent]:
-    if len(raw_events) < 3:
-        return raw_events
-
-    cleaned: list[RawEvent] = []
-    index = 0
-    while index < len(raw_events):
-        current = raw_events[index]
-        if index + 2 >= len(raw_events):
-            cleaned.append(current)
-            index += 1
-            continue
-
-        following = raw_events[index + 1]
-        trailing = raw_events[index + 2]
-        if len(current.notes) == 1 and len(following.notes) == 1 and len(trailing.notes) == 2:
-            current_note = current.notes[0]
-            following_note = following.notes[0]
-            trailing_note_names = {note.note_name for note in trailing.notes}
-            trailing_lower_notes = [note for note in trailing.notes if note.frequency < following_note.frequency]
-            following_duration = following.end_time - following.start_time
-            gap_to_trailing = trailing.start_time - following.end_time
-            if (
-                following_note.note_name in trailing_note_names
-                and trailing.primary_note_name == following_note.note_name
-                and current_note.frequency < following_note.frequency
-                and is_adjacent_tuning_step(current_note, following_note, tuning)
-                and trailing_lower_notes
-                and gap_to_trailing <= 0.04
-                and following_duration <= 0.32
-                and all(note.frequency < current_note.frequency for note in trailing_lower_notes)
-            ):
-                cleaned.append(current)
-                cleaned.append(trailing)
-                index += 3
-                continue
-
-        cleaned.append(current)
-        index += 1
-
-    return cleaned
-
 def suppress_leading_single_transient(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 2:
         return raw_events
