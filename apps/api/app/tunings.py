@@ -72,19 +72,62 @@ def build_tuning(
     note_names: list[str],
     *,
     default_partials: list[TuningNotePartial] | None = None,
+    partial_overrides: dict[str, list[TuningNotePartial]] | None = None,
 ) -> InstrumentTuning:
     notes = []
     for index, note_name in enumerate(note_names):
         pitch, octave = parse_note_name(note_name)
         canonical_name = f"{pitch}{octave}"
+        partials = (partial_overrides or {}).get(canonical_name, default_partials)
         notes.append(TuningNote(
             key=index + 1,
             noteName=canonical_name,
             frequency=note_name_to_frequency(canonical_name),
-            partials=default_partials,
+            partials=partials,
         ))
     return InstrumentTuning(id=tuning_id, name=name, keyCount=len(notes), notes=notes)
 
+
+# Per-tine partial overrides for 17-C, measured from single-note repeat
+# fixtures and c4-to-e6 separated notes.
+# Only notes with confirmed non-standard partials are overridden; all others
+# fall back to KALIMBA_DEFAULT_PARTIALS.
+_P = TuningNotePartial
+KALIMBA_17C_PARTIAL_OVERRIDES: dict[str, list[TuningNotePartial]] = {
+    # C4: P2≈2.0 (1.993), P3=2.908×, P4=3.672× (c4-repeat-01, high confidence)
+    "C4": [
+        _P(ratio=1.0, weight=1.0),
+        _P(ratio=1.5, weight=0.35),
+        _P(ratio=2.0, weight=0.55),
+        _P(ratio=2.908, weight=0.3),    # measured P3 (not 3.0)
+        _P(ratio=3.672, weight=0.15),   # measured P4 (not 4.0)
+    ],
+    # D5: P2=1.508× dominant (d5-repeat-01, high confidence)
+    "D5": [
+        _P(ratio=1.0, weight=1.0),
+        _P(ratio=1.5, weight=0.55),     # dominant P2 (swapped with 2.0×)
+        _P(ratio=2.0, weight=0.35),
+        _P(ratio=3.0, weight=0.3),
+        _P(ratio=4.0, weight=0.15),
+    ],
+    # F5: P2=1.506× dominant (c4-to-e6 separated, confirmed)
+    "F5": [
+        _P(ratio=1.0, weight=1.0),
+        _P(ratio=1.5, weight=0.55),     # dominant P2 (swapped with 2.0×)
+        _P(ratio=2.0, weight=0.35),
+        _P(ratio=3.0, weight=0.3),
+        _P(ratio=4.0, weight=0.15),
+    ],
+    # C5: P2=2.247× (c4-to-e6 separated, non-standard)
+    "C5": [
+        _P(ratio=1.0, weight=1.0),
+        _P(ratio=1.5, weight=0.35),
+        _P(ratio=2.0, weight=0.3),      # still present but not dominant
+        _P(ratio=2.247, weight=0.55),   # measured dominant P2
+        _P(ratio=3.0, weight=0.3),
+        _P(ratio=4.0, weight=0.15),
+    ],
+}
 
 DEFAULT_TUNINGS = [
     build_tuning(
@@ -92,6 +135,7 @@ DEFAULT_TUNINGS = [
         "17 Key C Major",
         ["D6", "B5", "G5", "E5", "C5", "A4", "F4", "D4", "C4", "E4", "G4", "B4", "D5", "F5", "A5", "C6", "E6"],
         default_partials=KALIMBA_DEFAULT_PARTIALS,
+        partial_overrides=KALIMBA_17C_PARTIAL_OVERRIDES,
     ),
     build_tuning(
         "kalimba-17-g",
