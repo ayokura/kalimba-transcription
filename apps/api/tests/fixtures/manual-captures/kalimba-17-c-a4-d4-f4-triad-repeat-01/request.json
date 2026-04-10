@@ -1,5 +1,6 @@
 {
   "capturedAt": "2026-03-22T06:03:21.880Z",
+  "recordingMethod": "mic",
   "scenario": "2026-03-22-a4-plus-f4-plus-d4-repeat-05-kalimba-17-c",
   "expectedNote": "A4 + F4 + D4 x 5",
   "expectedPerformance": {

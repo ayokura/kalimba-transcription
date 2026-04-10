@@ -1,5 +1,6 @@
 {
   "capturedAt": "2026-03-21T08:44:21.800Z",
+  "recordingMethod": "mic",
   "scenario": "2026-03-21-b4-d5-double-notes",
   "expectedNote": "B4 + D5 x 5",
   "expectedPerformance": {

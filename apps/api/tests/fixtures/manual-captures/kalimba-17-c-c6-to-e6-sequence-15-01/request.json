@@ -1,5 +1,6 @@
 {
   "capturedAt": "2026-03-25T11:48:14.575Z",
+  "recordingMethod": "mic",
   "scenario": "2026-03-25-c6-to-e6-sequence-15-separated-notes-kalimba-17-c",
   "expectedNote": "C6 x 5 / D6 x 5 / E6 x 5",
   "expectedPerformance": {

@@ -1,5 +1,6 @@
 {
   "capturedAt": "2026-03-22T15:56:41.076Z",
+  "recordingMethod": "mic",
   "scenario": "2026-03-22-e4-plus-g4-plus-b4-plus-d5-repeat-05-gliss-ascending-kalimba-17-c",
   "expectedNote": "E4 + G4 + B4 + D5 x 5",
   "expectedPerformance": {

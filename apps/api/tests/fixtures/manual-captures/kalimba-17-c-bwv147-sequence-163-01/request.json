@@ -1,5 +1,6 @@
 {
   "capturedAt": "2026-03-25T13:49:01.459Z",
+  "recordingMethod": "mic",
   "scenario": "2026-03-25-BWV147-sequence-163-kalimba-17-c",
   "expectedNote": "C4 / C5 x 14 / D5 x 21 / [E5,C4] x 3 / G5 x 18 / F5 x 10 / [F5,A4] x 4 / A5 x 6 / [G5,E4] x 4 / C6 x 5 / B5 x 4 / [C6,A4] x 2 / E5 x 19 / <C5,A4> x 3 / [F5,D4] x 2 / [D5,F4] / <B4,G4> / [G4,D4] x 4 / B4 x 9 / <E5,C5> x 3 / [C5,G4] / <A4,F4> x 2 / [E5,G4] x 2 / [C5,<G4,E4,C4>] x 2 / [G5,B4] / A4 x 2 / [G5,G4] / <D5,B4,G4> / G4 x 2 / <F5,D5,B4,G4> x 2 / [E5,<G4,E4,C4>] x 2 / [E5,C5] / [F5,<A4,F4>] x 2 / [G5,<G4,E4>] x 3 / [C6,<E5,D4>] / [F5,<F5,D4>] / [D5,<A4,F4>] / [<B4,G4>,D4] / [C6,<C5,A4>]",
   "expectedPerformance": {
@@ -2632,7 +2633,7 @@
       }
     ]
   },
-  "memo": "116\u97f3\u76ee\u524d\u5f8c\u306b\u6f14\u594f\u30df\u30b9\u304c\u3042\u308a\u3001C5D5E5\u3068\u5f3e\u304f\u3079\u304d\u3068\u3053\u308d\u3092C5E5\u3068\u5f3e\u3044\u3066\u304b\u3089\u3001\u6539\u3081\u3066\u6b63\u3057\u304f\u5f3e\u304d\u76f4\u3057\u3066\u3044\u308b\u90e8\u5206\u304c\u3042\u308b\u306e\u3067\u305d\u306e\u90e8\u5206\u3092ignore\u3059\u308b\u304bExpected performance\u306e\u7de8\u96c6\u306e\u5fc5\u8981\u304c\u3042\u308a",
+  "memo": "116音目前後に演奏ミスがあり、C5D5E5と弾くべきところをC5E5と弾いてから、改めて正しく弾き直している部分があるのでその部分をignoreするかExpected performanceの編集の必要があり",
   "captureIntent": "unknown",
   "sourceProfile": "acoustic_real",
   "tuning": {
