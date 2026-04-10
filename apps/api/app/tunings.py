@@ -129,6 +129,46 @@ KALIMBA_17C_PARTIAL_OVERRIDES: dict[str, list[TuningNotePartial]] = {
     ],
 }
 
+# G-low (magnetic pickup): beam partial 1.5× is dominant P2 for most tines.
+# Measured from BWV147 solo segments — all tines except G4 show P2≈1.5×.
+# Pickup captures tine vibration directly, bypassing the resonance box filter
+# that emphasizes integer harmonics in mic recordings.
+KALIMBA_GLOW_DEFAULT_PARTIALS = [
+    _P(ratio=1.0, weight=1.0),
+    _P(ratio=1.5, weight=0.55),     # dominant P2 for pickup recordings
+    _P(ratio=2.0, weight=0.35),
+    _P(ratio=3.0, weight=0.3),
+    _P(ratio=4.0, weight=0.15),
+]
+
+KALIMBA_GLOW_PARTIAL_OVERRIDES: dict[str, list[TuningNotePartial]] = {
+    # G3: P2=2.020× — G tines show 2.0× dominant (same as G4)
+    "G3": [
+        _P(ratio=1.0, weight=1.0),
+        _P(ratio=1.5, weight=0.35),
+        _P(ratio=2.0, weight=0.55),     # dominant (G-tine pattern)
+        _P(ratio=3.0, weight=0.3),
+        _P(ratio=4.0, weight=0.15),
+    ],
+    # G4: P2=2.019× — same G-tine pattern
+    "G4": [
+        _P(ratio=1.0, weight=1.0),
+        _P(ratio=1.5, weight=0.35),
+        _P(ratio=2.0, weight=0.55),     # dominant (G-tine pattern)
+        _P(ratio=3.0, weight=0.3),
+        _P(ratio=4.0, weight=0.15),
+    ],
+    # B3: P2=2.391× — non-standard, related to #166 (fR=0.599)
+    "B3": [
+        _P(ratio=1.0, weight=1.0),
+        _P(ratio=1.5, weight=0.35),
+        _P(ratio=2.0, weight=0.3),      # present but not dominant
+        _P(ratio=2.391, weight=0.55),   # measured dominant P2 (BWV147 solo)
+        _P(ratio=3.0, weight=0.3),
+        _P(ratio=4.0, weight=0.15),
+    ],
+}
+
 DEFAULT_TUNINGS = [
     build_tuning(
         "kalimba-17-c",
@@ -147,7 +187,8 @@ DEFAULT_TUNINGS = [
         "kalimba-17-g-low",
         "17 Key G Major (Low Octave)",
         ["A5", "F#5", "D5", "B4", "G4", "E4", "C4", "A3", "G3", "B3", "D4", "F#4", "A4", "C5", "E5", "G5", "B5"],
-        default_partials=KALIMBA_DEFAULT_PARTIALS,
+        default_partials=KALIMBA_GLOW_DEFAULT_PARTIALS,
+        partial_overrides=KALIMBA_GLOW_PARTIAL_OVERRIDES,
     ),
     build_tuning(
         "kalimba-34l-c",

@@ -216,9 +216,16 @@ def main():
     print()
     print("-" * (16 + args.max_partials * 19))
 
-    for note_name in ["C4", "D4", "E4", "F4", "G4", "A4", "B4",
-                       "C5", "D5", "E5", "F5", "G5", "A5", "B5",
-                       "C6", "D6", "E6"]:
+    # List notes from the actual tuning (not hardcoded 17-C layout)
+    tuning_note_names = [n.note_name for n in tuning.notes]
+    # Deduplicate (34-key has repeats) while preserving order
+    seen: set[str] = set()
+    display_notes = []
+    for nn in sorted(set(tuning_note_names), key=lambda n: (int(n[-1]), n[:-1])):
+        if nn not in seen:
+            seen.add(nn)
+            display_notes.append(nn)
+    for note_name in display_notes:
         if note_name not in all_partials:
             print(f"{note_name:<5} {'—':>8} |")
             continue
