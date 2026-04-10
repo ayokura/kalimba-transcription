@@ -70,19 +70,11 @@ def batch_peak_energies(frequencies: np.ndarray, spectrum: np.ndarray, center_fr
             results[i] = float(np.max(positive_spectrum[masks[i]]))
     return results
 
-def suppress_harmonics(
-    spectrum: np.ndarray,
-    frequencies: np.ndarray,
-    base_frequency: float,
-    *,
-    skip_second_harmonic: bool = False,
-) -> np.ndarray:
+def suppress_harmonics(spectrum: np.ndarray, frequencies: np.ndarray, base_frequency: float) -> np.ndarray:
     residual = spectrum.copy()
     valid = frequencies > 0
     positive_freqs = frequencies[valid]
     for multiple in range(1, MAX_HARMONIC_MULTIPLE + 1):
-        if skip_second_harmonic and multiple == 2:
-            continue
         center_freq = base_frequency * multiple
         if center_freq > frequencies[-1]:
             break
@@ -251,15 +243,6 @@ def allow_octave_secondary(primary: NoteHypothesis, hypothesis: NoteHypothesis, 
             return False
         if hypothesis.candidate.frequency > existing.frequency:
             primary_octave_energy = primary.second_harmonic_energy
-            # When the primary has very low fundamental ratio, it is likely
-            # an alias/sub-harmonic of the upper octave rather than a real
-            # note.  Both the hypothesis fR check and the harmonic energy
-            # check below use the RESIDUAL spectrum which has the upper
-            # octave's energy suppressed — making them unreliable.  Bypass
-            # both: the upper octave with high original fR is the more
-            # trustworthy candidate.
-            if primary.fundamental_ratio < LOW_FR_PRIMARY_OCTAVE_DYAD_THRESHOLD:
-                return True
             if hypothesis.fundamental_ratio < OCTAVE_DYAD_UPPER_MIN_FUNDAMENTAL_RATIO:
                 return False
             if primary_octave_energy > 0.0 and hypothesis.fundamental_energy < primary_octave_energy * OCTAVE_DYAD_UPPER_HARMONIC_ENERGY_RATIO:
@@ -1947,14 +1930,7 @@ def _select_candidates(
     _disabled = settings.get().disabled_gates
 
     if MAX_POLYPHONY > 1 and contiguous_four_note_cluster is None:
-        # When primary has very low fR it is likely an alias of the upper
-        # octave; preserve the 2nd harmonic (= octave-above frequency) in the
-        # residual so the real note keeps its score for secondary evaluation.
-        _skip_2nd = primary.fundamental_ratio < LOW_FR_PRIMARY_OCTAVE_DYAD_THRESHOLD
-        residual_spectrum = suppress_harmonics(
-            spectral.spectrum, spectral.frequencies, primary.candidate.frequency,
-            skip_second_harmonic=_skip_2nd,
-        )
+        residual_spectrum = suppress_harmonics(spectral.spectrum, spectral.frequencies, primary.candidate.frequency)
         residual_ranked = rank_tuning_candidates(spectral.frequencies, residual_spectrum, ctx.tuning, debug=ctx.debug)
         # ══ Phase A: Independent candidate evaluation (selected-independent) ══
         verdicts: list[_CandidateVerdict] = []
