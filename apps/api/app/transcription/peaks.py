@@ -76,12 +76,17 @@ def suppress_harmonics(
     base_frequency: float,
     *,
     partial_ratios: list[float] | None = None,
+    tuning_fundamentals: np.ndarray | None = None,
 ) -> np.ndarray:
     """Suppress energy at harmonic/partial positions of *base_frequency*.
 
     When *partial_ratios* is provided (e.g. [1.0, 1.5, 2.0, 3.0, 4.0]),
     suppress at those positions.  Otherwise fall back to integer multiples
     1..MAX_HARMONIC_MULTIPLE.
+
+    When *tuning_fundamentals* is provided, skip suppression at positions
+    that coincide with another note's fundamental (within ±SUPPRESSION_BAND_CENTS).
+    This prevents e.g. D5's 1.5× partial from suppressing A5's fundamental.
     """
     residual = spectrum.copy()
     valid = frequencies > 0
@@ -94,6 +99,18 @@ def suppress_harmonics(
         center_freq = base_frequency * ratio
         if center_freq > frequencies[-1]:
             continue
+        # Guard: skip suppression when a *non-integer* partial (beam vibration
+        # ratio like 1.5×) overlaps another note's fundamental.  Integer
+        # harmonics (2×, 3×, 4×) are left alone — the pipeline's octave dyad
+        # rescue and secondary selection logic already handle those overlaps.
+        if ratio != 1.0 and tuning_fundamentals is not None and abs(ratio - round(ratio)) > 0.05:
+            other_funds = tuning_fundamentals[
+                np.abs(tuning_fundamentals - base_frequency) >= 0.01
+            ]
+            if len(other_funds) > 0:
+                dists = np.abs(1200.0 * np.log2(other_funds / center_freq))
+                if np.min(dists) <= SUPPRESSION_BAND_CENTS:
+                    continue
         distances = np.abs(1200.0 * np.log2(positive_freqs / center_freq))
         positive_mask = distances <= SUPPRESSION_BAND_CENTS
         if np.any(positive_mask):
@@ -2015,7 +2032,8 @@ def _select_candidates(
 
     if MAX_POLYPHONY > 1 and contiguous_four_note_cluster is None:
         _primary_partials = _get_partial_ratios(ctx.tuning, primary.candidate.frequency)
-        residual_spectrum = suppress_harmonics(spectral.spectrum, spectral.frequencies, primary.candidate.frequency, partial_ratios=_primary_partials)
+        _tuning_funds = np.array([n.frequency for n in ctx.tuning.notes])
+        residual_spectrum = suppress_harmonics(spectral.spectrum, spectral.frequencies, primary.candidate.frequency, partial_ratios=_primary_partials, tuning_fundamentals=_tuning_funds)
         residual_ranked = rank_tuning_candidates(spectral.frequencies, residual_spectrum, ctx.tuning, debug=ctx.debug)
         # ══ Phase A: Independent candidate evaluation (selected-independent) ══
         verdicts: list[_CandidateVerdict] = []
@@ -2434,8 +2452,9 @@ def _select_candidates(
             and len(selected) < MAX_POLYPHONY
         ):
             _iter_residual = spectral.spectrum
+            _iter_tuning_funds = np.array([n.frequency for n in ctx.tuning.notes])
             for _sel_note in selected:
-                _iter_residual = suppress_harmonics(_iter_residual, spectral.frequencies, _sel_note.frequency, partial_ratios=_get_partial_ratios(ctx.tuning, _sel_note.frequency))
+                _iter_residual = suppress_harmonics(_iter_residual, spectral.frequencies, _sel_note.frequency, partial_ratios=_get_partial_ratios(ctx.tuning, _sel_note.frequency), tuning_fundamentals=_iter_tuning_funds)
             _iter_ranked = rank_tuning_candidates(spectral.frequencies, _iter_residual, ctx.tuning, debug=ctx.debug)
             _already_selected = {n.note_name for n in selected}
             _iter_round_accepted = False
