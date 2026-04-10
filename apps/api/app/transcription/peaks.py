@@ -70,14 +70,30 @@ def batch_peak_energies(frequencies: np.ndarray, spectrum: np.ndarray, center_fr
             results[i] = float(np.max(positive_spectrum[masks[i]]))
     return results
 
-def suppress_harmonics(spectrum: np.ndarray, frequencies: np.ndarray, base_frequency: float) -> np.ndarray:
+def suppress_harmonics(
+    spectrum: np.ndarray,
+    frequencies: np.ndarray,
+    base_frequency: float,
+    *,
+    partial_ratios: list[float] | None = None,
+) -> np.ndarray:
+    """Suppress energy at harmonic/partial positions of *base_frequency*.
+
+    When *partial_ratios* is provided (e.g. [1.0, 1.5, 2.0, 3.0, 4.0]),
+    suppress at those positions.  Otherwise fall back to integer multiples
+    1..MAX_HARMONIC_MULTIPLE.
+    """
     residual = spectrum.copy()
     valid = frequencies > 0
     positive_freqs = frequencies[valid]
-    for multiple in range(1, MAX_HARMONIC_MULTIPLE + 1):
-        center_freq = base_frequency * multiple
+    if partial_ratios is not None:
+        ratios = partial_ratios
+    else:
+        ratios = [float(m) for m in range(1, MAX_HARMONIC_MULTIPLE + 1)]
+    for ratio in ratios:
+        center_freq = base_frequency * ratio
         if center_freq > frequencies[-1]:
-            break
+            continue
         distances = np.abs(1200.0 * np.log2(positive_freqs / center_freq))
         positive_mask = distances <= SUPPRESSION_BAND_CENTS
         if np.any(positive_mask):
@@ -127,19 +143,72 @@ def build_raw_peaks(
 
 def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning: InstrumentTuning, *, debug: bool = False) -> list[NoteHypothesis]:
     note_freqs = np.array([note.frequency for note in tuning.notes])
-    harmonic_targets = np.concatenate([note_freqs * m for m in range(1, MAX_HARMONIC_MULTIPLE + 1)])
-    sub_half_targets = note_freqs / 2.0
-    sub_third_targets = note_freqs / 3.0
-    sub_half_targets[sub_half_targets < 40.0] = 0.0
-    sub_third_targets[sub_third_targets < 40.0] = 0.0
-    all_target_freqs = np.concatenate([harmonic_targets, sub_half_targets, sub_third_targets])
-    all_energies = batch_peak_energies(frequencies, spectrum, all_target_freqs)
-
     n_notes = len(tuning.notes)
-    harmonic_energy_matrix = all_energies[: n_notes * MAX_HARMONIC_MULTIPLE].reshape(MAX_HARMONIC_MULTIPLE, n_notes)
-    sub_half_energies = all_energies[n_notes * MAX_HARMONIC_MULTIPLE : n_notes * MAX_HARMONIC_MULTIPLE + n_notes]
-    sub_third_energies = all_energies[n_notes * MAX_HARMONIC_MULTIPLE + n_notes :]
 
+    # ── Build per-note partial targets ────────────────────────────
+    # When a note has explicit partials, use those ratios + weights.
+    # Otherwise fall back to the integer harmonic comb.
+    has_any_partials = any(note.partials for note in tuning.notes)
+
+    if has_any_partials:
+        # Collect all partial targets and their weights per note
+        partial_targets: list[list[tuple[float, float]]] = []  # per note: [(freq, weight), ...]
+        all_freqs_list: list[float] = []
+        for note in tuning.notes:
+            if note.partials:
+                pts = [(note.frequency * p.ratio, p.weight) for p in note.partials]
+            else:
+                # Fallback to integer comb for notes without explicit partials
+                pts = [(note.frequency * m, HARMONIC_WEIGHTS[m - 1])
+                       for m in range(1, MAX_HARMONIC_MULTIPLE + 1)]
+            partial_targets.append(pts)
+            all_freqs_list.extend(f for f, _w in pts)
+
+        # Subharmonic targets (shared across both paths)
+        sub_half_targets = note_freqs / 2.0
+        sub_third_targets = note_freqs / 3.0
+        sub_half_targets[sub_half_targets < 40.0] = 0.0
+        sub_third_targets[sub_third_targets < 40.0] = 0.0
+        all_freqs_list.extend(sub_half_targets)
+        all_freqs_list.extend(sub_third_targets)
+
+        all_target_freqs = np.array(all_freqs_list)
+        all_energies = batch_peak_energies(frequencies, spectrum, all_target_freqs)
+
+        # Unpack energies
+        offset = 0
+        per_note_energies: list[list[tuple[float, float, float]]] = []  # [(energy, weight, freq), ...]
+        for pts in partial_targets:
+            note_e = []
+            for i, (freq, weight) in enumerate(pts):
+                note_e.append((float(all_energies[offset + i]), weight, freq))
+            per_note_energies.append(note_e)
+            offset += len(pts)
+        sub_half_energies_arr = all_energies[offset:offset + n_notes]
+        sub_third_energies_arr = all_energies[offset + n_notes:offset + 2 * n_notes]
+    else:
+        # Fast path: no partials defined, use original integer comb
+        harmonic_targets = np.concatenate([note_freqs * m for m in range(1, MAX_HARMONIC_MULTIPLE + 1)])
+        sub_half_targets = note_freqs / 2.0
+        sub_third_targets = note_freqs / 3.0
+        sub_half_targets[sub_half_targets < 40.0] = 0.0
+        sub_third_targets[sub_third_targets < 40.0] = 0.0
+        all_target_freqs = np.concatenate([harmonic_targets, sub_half_targets, sub_third_targets])
+        all_energies = batch_peak_energies(frequencies, spectrum, all_target_freqs)
+
+        harmonic_energy_matrix = all_energies[:n_notes * MAX_HARMONIC_MULTIPLE].reshape(MAX_HARMONIC_MULTIPLE, n_notes)
+        sub_half_energies_arr = all_energies[n_notes * MAX_HARMONIC_MULTIPLE:n_notes * MAX_HARMONIC_MULTIPLE + n_notes]
+        sub_third_energies_arr = all_energies[n_notes * MAX_HARMONIC_MULTIPLE + n_notes:]
+
+        per_note_energies = []
+        for note_index, note in enumerate(tuning.notes):
+            note_e = [
+                (float(harmonic_energy_matrix[h, note_index]), HARMONIC_WEIGHTS[h], note.frequency * (h + 1))
+                for h in range(MAX_HARMONIC_MULTIPLE)
+            ]
+            per_note_energies.append(note_e)
+
+    # ── Score each candidate ──────────────────────────────────────
     hypotheses: list[NoteHypothesis] = []
 
     for note_index, note in enumerate(tuning.notes):
@@ -148,12 +217,11 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
             note=Note.from_name(note.note_name),
         )
 
-        harmonic_energies = [float(harmonic_energy_matrix[h, note_index]) for h in range(MAX_HARMONIC_MULTIPLE)]
-        subharmonic_frequencies = [note.frequency / 2.0, note.frequency / 3.0]
-        subharmonic_energies = [float(sub_half_energies[note_index]), float(sub_third_energies[note_index])]
+        energies_weights = per_note_energies[note_index]
+        subharmonic_energies = [float(sub_half_energies_arr[note_index]), float(sub_third_energies_arr[note_index])]
 
-        fundamental_energy = harmonic_energies[0]
-        overtone_energy = sum(weight * energy for weight, energy in zip(HARMONIC_WEIGHTS[1:], harmonic_energies[1:]))
+        fundamental_energy = energies_weights[0][0]  # First partial is always fundamental
+        overtone_energy = sum(w * e for e, w, _f in energies_weights[1:])
         harmonic_support = fundamental_energy + overtone_energy
         fundamental_ratio = fundamental_energy / max(harmonic_support, 1e-9)
         subharmonic_alias_energy = (0.7 * subharmonic_energies[0]) + (0.45 * subharmonic_energies[1])
@@ -172,25 +240,33 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
         if fundamental_ratio < OVERTONE_DOMINANT_FUNDAMENTAL_RATIO:
             score -= OVERTONE_DOMINANT_PENALTY_WEIGHT * overtone_energy
 
+        # second_harmonic_energy: find the partial closest to 2.0× for backward compat
+        second_harmonic_energy = 0.0
+        for e, _w, f in energies_weights[1:]:
+            ratio = f / note.frequency
+            if abs(ratio - 2.0) < 0.1:
+                second_harmonic_energy = e
+                break
+
         harmonics = None
         subharmonics = None
         if debug:
             harmonics = [
                 {
-                    "multiple": float(index),
-                    "frequency": round(note.frequency * index, 3),
-                    "energy": round(energy, 6),
-                    "weight": HARMONIC_WEIGHTS[index - 1],
+                    "multiple": round(f / note.frequency, 3),
+                    "frequency": round(f, 3),
+                    "energy": round(e, 6),
+                    "weight": w,
                 }
-                for index, energy in enumerate(harmonic_energies, start=1)
+                for e, w, f in energies_weights
             ]
             subharmonics = [
                 {
-                    "multiple": 1.0 / float(index + 1),
-                    "frequency": round(subharmonic_frequencies[index], 3),
+                    "multiple": 1.0 / float(index + 2),
+                    "frequency": round(note.frequency / (index + 2), 3),
                     "energy": round(subharmonic_energies[index], 6),
                 }
-                for index in range(len(subharmonic_frequencies))
+                for index in range(len(subharmonic_energies))
             ]
 
         candidate.score = score
@@ -205,13 +281,21 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
                 octave_alias_energy=octave_alias_energy,
                 octave_alias_ratio=octave_alias_ratio,
                 octave_alias_penalty=octave_alias_penalty,
-                second_harmonic_energy=harmonic_energies[1] if len(harmonic_energies) > 1 else 0.0,
+                second_harmonic_energy=second_harmonic_energy,
                 harmonics=harmonics,
                 subharmonics=subharmonics,
             )
         )
 
     return sorted(hypotheses, key=lambda item: item.score, reverse=True)
+
+def _get_partial_ratios(tuning: InstrumentTuning, frequency: float) -> list[float] | None:
+    """Look up partial ratios for a note by frequency from the tuning definition."""
+    for note in tuning.notes:
+        if abs(note.frequency - frequency) < 0.01 and note.partials:
+            return [p.ratio for p in note.partials]
+    return None
+
 
 def are_harmonic_related(note_a: NoteCandidate, note_b: NoteCandidate) -> bool:
     high = max(note_a.frequency, note_b.frequency)
@@ -1930,7 +2014,8 @@ def _select_candidates(
     _disabled = settings.get().disabled_gates
 
     if MAX_POLYPHONY > 1 and contiguous_four_note_cluster is None:
-        residual_spectrum = suppress_harmonics(spectral.spectrum, spectral.frequencies, primary.candidate.frequency)
+        _primary_partials = _get_partial_ratios(ctx.tuning, primary.candidate.frequency)
+        residual_spectrum = suppress_harmonics(spectral.spectrum, spectral.frequencies, primary.candidate.frequency, partial_ratios=_primary_partials)
         residual_ranked = rank_tuning_candidates(spectral.frequencies, residual_spectrum, ctx.tuning, debug=ctx.debug)
         # ══ Phase A: Independent candidate evaluation (selected-independent) ══
         verdicts: list[_CandidateVerdict] = []
@@ -2350,7 +2435,7 @@ def _select_candidates(
         ):
             _iter_residual = spectral.spectrum
             for _sel_note in selected:
-                _iter_residual = suppress_harmonics(_iter_residual, spectral.frequencies, _sel_note.frequency)
+                _iter_residual = suppress_harmonics(_iter_residual, spectral.frequencies, _sel_note.frequency, partial_ratios=_get_partial_ratios(ctx.tuning, _sel_note.frequency))
             _iter_ranked = rank_tuning_candidates(spectral.frequencies, _iter_residual, ctx.tuning, debug=ctx.debug)
             _already_selected = {n.note_name for n in selected}
             _iter_round_accepted = False

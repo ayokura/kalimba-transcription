@@ -5,11 +5,24 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class TuningNotePartial(BaseModel):
+    """A single partial (overtone) of a kalimba tine.
+
+    Beam vibration produces non-integer partials alongside integer harmonics.
+    Each partial is defined by its frequency ratio to the fundamental and a
+    scoring weight.  When partials are specified on a TuningNote, they replace
+    the default integer harmonic comb in scoring and harmonic suppression.
+    """
+    ratio: float  # frequency ratio to fundamental (e.g. 1.0, 1.5, 2.0)
+    weight: float  # scoring weight (1.0 = fundamental, lower for overtones)
+
+
 class TuningNote(BaseModel):
     key: int
     note_name: str = Field(alias="noteName")
     frequency: float
     layer: int = Field(default=0, alias="layer")
+    partials: list[TuningNotePartial] | None = Field(default=None)
 
     model_config = {"populate_by_name": True}
 

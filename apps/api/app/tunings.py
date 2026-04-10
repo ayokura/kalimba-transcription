@@ -6,7 +6,7 @@ from typing import Sequence
 
 from fastapi import HTTPException
 
-from .models import InstrumentTuning, TuningNote
+from .models import InstrumentTuning, TuningNote, TuningNotePartial
 
 
 NOTE_TO_MIDI = {
@@ -49,12 +49,40 @@ def note_name_to_frequency(note_name: str) -> float:
     return 440.0 * pow(2.0, (midi - 69) / 12.0)
 
 
-def build_tuning(tuning_id: str, name: str, note_names: list[str]) -> InstrumentTuning:
+# Default kalimba partials: integer harmonics + beam vibration partial at 1.5×.
+# Beam vibration in rectangular tines produces non-integer partials alongside
+# integer ones.  Measured across 3 instruments (17-C, 17-G-low, 34L-C):
+# - 1.5× partial is present in most tines (dominant in pickup recordings,
+#   substantial in mic recordings)
+# - Integer 2×, 3×, 4× are also present
+# - The relative strength of 1.5× vs 2.0× varies per tine and recording method
+# Weight 0.35 for beam partial is conservative — between P2 (0.55) and P3 (0.3).
+KALIMBA_DEFAULT_PARTIALS = [
+    TuningNotePartial(ratio=1.0, weight=1.0),
+    TuningNotePartial(ratio=1.5, weight=0.35),
+    TuningNotePartial(ratio=2.0, weight=0.55),
+    TuningNotePartial(ratio=3.0, weight=0.3),
+    TuningNotePartial(ratio=4.0, weight=0.15),
+]
+
+
+def build_tuning(
+    tuning_id: str,
+    name: str,
+    note_names: list[str],
+    *,
+    default_partials: list[TuningNotePartial] | None = None,
+) -> InstrumentTuning:
     notes = []
     for index, note_name in enumerate(note_names):
         pitch, octave = parse_note_name(note_name)
         canonical_name = f"{pitch}{octave}"
-        notes.append(TuningNote(key=index + 1, noteName=canonical_name, frequency=note_name_to_frequency(canonical_name)))
+        notes.append(TuningNote(
+            key=index + 1,
+            noteName=canonical_name,
+            frequency=note_name_to_frequency(canonical_name),
+            partials=default_partials,
+        ))
     return InstrumentTuning(id=tuning_id, name=name, keyCount=len(notes), notes=notes)
 
 
@@ -63,16 +91,19 @@ DEFAULT_TUNINGS = [
         "kalimba-17-c",
         "17 Key C Major",
         ["D6", "B5", "G5", "E5", "C5", "A4", "F4", "D4", "C4", "E4", "G4", "B4", "D5", "F5", "A5", "C6", "E6"],
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
     ),
     build_tuning(
         "kalimba-17-g",
         "17 Key G Major",
         ["A6", "F#6", "D6", "B5", "G5", "E5", "C5", "A4", "G4", "B4", "D5", "F#5", "A5", "C6", "E6", "G6", "B6"],
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
     ),
     build_tuning(
         "kalimba-17-g-low",
         "17 Key G Major (Low Octave)",
         ["A5", "F#5", "D5", "B4", "G4", "E4", "C4", "A3", "G3", "B3", "D4", "F#4", "A4", "C5", "E5", "G5", "B5"],
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
     ),
     build_tuning(
         "kalimba-34l-c",
@@ -87,6 +118,7 @@ DEFAULT_TUNINGS = [
             "C#4",
             "F4", "G#4", "C5", "D#5", "F#5", "A#5", "C#6", "F6",
         ],
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
     ),
     build_tuning(
         "kalimba-21-c",
@@ -114,6 +146,7 @@ DEFAULT_TUNINGS = [
             "F6",
             "A6"
         ],
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
     ),
 ]
 

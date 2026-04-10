@@ -255,7 +255,7 @@ def test_segment_peaks_suppresses_descending_stale_upper_adjacent_carryover(monk
         return 0.0
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
-    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda spectrum, frequencies, _frequency: spectrum)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda spectrum, frequencies, _frequency, **kw: spectrum)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
     candidates, debug, primary, _trace = segment_peaks(
@@ -353,7 +353,7 @@ def test_segment_peaks_suppresses_descending_restart_upper_carryover(monkeypatch
         return 0.0
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
-    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda spectrum, frequencies, _frequency: spectrum)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda spectrum, frequencies, _frequency, **kw: spectrum)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
     candidates, debug, primary, _trace = segment_peaks(
@@ -446,7 +446,7 @@ def test_rejected_primary_rescued_by_alternative_branch(
         return 0.5
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
-    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq: s)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq, **kw: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
     candidates, _debug, result_primary, trace = segment_peaks(
@@ -492,7 +492,7 @@ def test_rejected_primary_not_rescued_when_flag_off(
         return 0.5
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
-    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq: s)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq, **kw: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
     with settings.override(use_multi_primary_branching=False):
@@ -626,7 +626,7 @@ def test_iterative_suppression_recovers_octave_tertiary(monkeypatch: pytest.Monk
     tuning = get_default_tunings()[0]
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
-    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _: s)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _, **kw: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
     monkeypatch.setattr(transcription.peaks, "onset_backward_attack_gain", fake_backward)
 
@@ -658,7 +658,7 @@ def test_iterative_suppression_ablation_flag_off(monkeypatch: pytest.MonkeyPatch
     tuning = get_default_tunings()[0]
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
-    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _: s)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _, **kw: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
     monkeypatch.setattr(transcription.peaks, "onset_backward_attack_gain", fake_backward)
 
@@ -725,7 +725,7 @@ def test_broadband_transient_leak_rejects_high_as_low_score_secondary(
         return 0.5  # below threshold
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
-    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq: s)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq, **kw: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
     monkeypatch.setattr(transcription.peaks._NoteEvidenceCache, "attack_to_sustain_ratio", fake_as)
 
@@ -783,7 +783,7 @@ def test_broadband_transient_leak_allows_low_as_secondary(
         return BROADBAND_TRANSIENT_LEAK_MIN_AS_RATIO - 0.5  # below threshold
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
-    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq: s)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq, **kw: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
     monkeypatch.setattr(transcription.peaks._NoteEvidenceCache, "attack_to_sustain_ratio", fake_as)
 
@@ -834,7 +834,7 @@ def test_broadband_transient_leak_skipped_on_long_segment(
         return BROADBAND_TRANSIENT_LEAK_MIN_AS_RATIO + 0.5  # high AS — would trigger on short
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
-    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq: s)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq, **kw: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
     monkeypatch.setattr(transcription.peaks._NoteEvidenceCache, "attack_to_sustain_ratio", fake_as)
 
