@@ -47,6 +47,15 @@ class ScoreNote(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class AlternateGrouping(BaseModel):
+    combines_with: list[str] = Field(alias="combinesWith")
+    combined_notes: list[ScoreNote] = Field(alias="combinedNotes")
+    reason: str
+    confidence: float
+
+    model_config = {"populate_by_name": True}
+
+
 class ScoreEvent(BaseModel):
     id: str
     start_beat: float = Field(alias="startBeat")
@@ -54,6 +63,9 @@ class ScoreEvent(BaseModel):
     notes: list[ScoreNote]
     is_gliss_like: bool = Field(alias="isGlissLike")
     gesture: str = "ambiguous"
+    alternate_groupings: list[AlternateGrouping] | None = Field(
+        default=None, alias="alternateGroupings",
+    )
 
     model_config = {"populate_by_name": True}
 

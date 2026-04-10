@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import HTTPException, UploadFile
 
-from ..models import InstrumentTuning, ScoreEvent, ScoreNote, TranscriptionResult
+from ..models import AlternateGrouping, InstrumentTuning, ScoreEvent, ScoreNote, TranscriptionResult
 from .audio import read_audio
 from .constants import GAP_RUN_LEAD_IN_MIN_FOLLOWUP_GAP, SHORT_SEGMENT_SECONDARY_GUARD_DURATION
 from .events import (
@@ -305,6 +305,44 @@ async def transcribe_audio(
             )
             for candidate in event.notes
         ]
+        alt_groupings = None
+        if event.alternate_groupings:
+            alt_groupings = []
+            for alt in event.alternate_groupings:
+                # Resolve the partner event's id (index may have shifted after
+                # merges, but the partner should still be in merged_events at
+                # a position relative to the current event).
+                partner_idx = alt.combine_with_index
+                partner_id = f"evt-{partner_idx + 1}" if partner_idx < len(merged_events) else "evt-?"
+                # Find the actual partner in merged_events by matching the
+                # original combine_with_index against merged_events order.
+                # Since merge passes may reorder, we search by start_time overlap.
+                for mi, me in enumerate(merged_events):
+                    if mi != index - 1 and me.start_time >= event.start_time - 0.01 and any(
+                        n.note_name in {c.note_name for c in alt.combined_notes}
+                        for n in me.notes
+                    ):
+                        partner_id = f"evt-{mi + 1}"
+                        break
+                alt_groupings.append(
+                    AlternateGrouping(
+                        combinesWith=[partner_id],
+                        combinedNotes=[
+                            ScoreNote(
+                                key=c.key,
+                                pitchClass=c.pitch_class,
+                                octave=c.octave,
+                                labelDoReMi=format_doremi(c),
+                                labelNumber=format_number(c),
+                                frequency=round(c.frequency, 3),
+                            )
+                            for c in alt.combined_notes
+                        ],
+                        reason=alt.reason,
+                        confidence=alt.confidence,
+                    )
+                )
+
         events.append(
             ScoreEvent(
                 id=f"evt-{index}",
@@ -313,6 +351,7 @@ async def transcribe_audio(
                 notes=notes,
                 isGlissLike=event.is_gliss_like,
                 gesture=classify_event_gesture(event, index - 1, raw_events, merged_events),
+                alternateGroupings=alt_groupings,
             )
         )
 

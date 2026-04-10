@@ -78,6 +78,20 @@ class NoteCandidate:
 
 
 @dataclass
+class RawAlternateGrouping:
+    """Internal representation of an alternate event grouping.
+
+    Records that a merge was suppressed (e.g. due to dissonance) and
+    provides the hypothetical merged result for downstream propagation
+    to the response schema.
+    """
+    combine_with_index: int          # index of the other event in the list at merge time
+    combined_notes: list["NoteCandidate"]  # hypothetical merged note set
+    reason: str                      # e.g. "dissonant_merge_suppressed"
+    confidence: float = 0.5
+
+
+@dataclass
 class RawEvent:
     start_time: float
     end_time: float
@@ -97,6 +111,12 @@ class RawEvent:
     # without recomputing onset detection.  Empty when the segment came from
     # a path that did not produce sub-onset times.
     sub_onsets: tuple[float, ...] = ()
+    # Alternate groupings: merge passes may record "this event could also be
+    # combined with an adjacent event" when a merge was suppressed due to
+    # ambiguity (e.g. dissonant interval).  Propagated to ScoreEvent.alternateGroupings.
+    alternate_groupings: list[RawAlternateGrouping] = dataclass_field(
+        default_factory=list,
+    )
 
 
 @dataclass(frozen=True, slots=True)

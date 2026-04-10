@@ -5,9 +5,10 @@ from typing import Sequence
 import numpy as np
 
 from ..models import InstrumentTuning
+from . import settings
 from .audio import cents_distance
 from .constants import *
-from .models import Note, NoteCandidate, RawEvent
+from .models import Note, NoteCandidate, RawAlternateGrouping, RawEvent
 from .noise_floor import NoiseFloorMeasurement
 from .peaks import (
     are_harmonic_related,
@@ -17,6 +18,22 @@ from .peaks import (
     onset_backward_attack_gain,
     pick_matching_sub_onset,
 )
+
+DISSONANT_SEMITONE_THRESHOLD = 2  # minor 2nd (1) and major 2nd (2)
+
+
+def min_semitone_distance(notes: Sequence[NoteCandidate]) -> int:
+    """Return the smallest semitone interval between any two notes."""
+    if len(notes) < 2:
+        return 999
+    midi_values = sorted(n.note.midi for n in notes)
+    return min(midi_values[i + 1] - midi_values[i] for i in range(len(midi_values) - 1))
+
+
+def has_dissonant_interval(notes: Sequence[NoteCandidate]) -> bool:
+    """True when the note set contains a minor or major 2nd interval."""
+    return min_semitone_distance(notes) <= DISSONANT_SEMITONE_THRESHOLD
+
 
 def suppress_leading_descending_overlap(raw_events: list[RawEvent], tuning: InstrumentTuning) -> list[RawEvent]:
     if len(raw_events) < 3:
@@ -954,11 +971,25 @@ def merge_short_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
             and merge_pattern_ok
         )
         if can_merge:
+            combined_list = sorted(combined_notes.values(), key=lambda note: note.frequency)
+            # Dissonance guard (#151)
+            if settings.get().use_alternate_groupings and has_dissonant_interval(combined_list):
+                alt = RawAlternateGrouping(
+                    combine_with_index=index + 1,
+                    combined_notes=combined_list,
+                    reason="dissonant_merge_suppressed",
+                    confidence=0.4,
+                )
+                current.alternate_groupings.append(alt)
+                merged.append(current)
+                index += 1
+                continue
+
             merged.append(
                 RawEvent(
                     start_time=current.start_time,
                     end_time=following.end_time,
-                    notes=sorted(combined_notes.values(), key=lambda note: note.frequency),
+                    notes=combined_list,
                     is_gliss_like=True,
                     primary_note_name=current.primary_note_name,
                     primary_score=max(current.primary_score, following.primary_score),
@@ -2195,18 +2226,34 @@ def merge_short_chord_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
             and (current_names < following_names or following_names < current_names)
             and max(len(current.notes), len(following.notes)) == 3
         )
-        if (
+        merge_eligible = (
             gap <= CHORD_CLUSTER_MAX_GAP
             and total_duration <= CHORD_CLUSTER_MAX_TOTAL_DURATION
             and combined_count == 3
             and contiguous_keys
             and (is_singleton_plus_dyad or is_subset_to_triad)
-        ):
+        )
+        if merge_eligible:
+            combined_list = sorted(combined.values(), key=lambda note: note.frequency)
+            # Dissonance guard: if the merged result contains a minor/major 2nd,
+            # keep events separate and record the alternate grouping (#151).
+            if settings.get().use_alternate_groupings and has_dissonant_interval(combined_list):
+                alt = RawAlternateGrouping(
+                    combine_with_index=index + 1,
+                    combined_notes=combined_list,
+                    reason="dissonant_merge_suppressed",
+                    confidence=0.4,
+                )
+                current.alternate_groupings.append(alt)
+                merged.append(current)
+                index += 1
+                continue
+
             merged.append(
                 RawEvent(
                     start_time=current.start_time,
                     end_time=following.end_time,
-                    notes=sorted(combined.values(), key=lambda note: note.frequency),
+                    notes=combined_list,
                     is_gliss_like=current.is_gliss_like or following.is_gliss_like,
                     primary_note_name=following.primary_note_name,
                     primary_score=max(current.primary_score, following.primary_score),
