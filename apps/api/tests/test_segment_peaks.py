@@ -679,3 +679,178 @@ def test_iterative_suppression_ablation_flag_off(monkeypatch: pytest.MonkeyPatch
         if any("iterative" in r for r in e.get("reasons", []))
     ]
     assert len(iter_entries) == 0, "no iterative trail entries when flag is off"
+
+
+# ══ Broadband transient leak gate tests ═══════════════════════════
+
+def test_broadband_transient_leak_rejects_high_as_low_score_secondary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Low-frequency secondary with high AS ratio + low score ratio is rejected."""
+    import app.transcription as transcription
+    from app.transcription.constants import (
+        BROADBAND_TRANSIENT_LEAK_MAX_DURATION,
+        BROADBAND_TRANSIENT_LEAK_MIN_AS_RATIO,
+        BROADBAND_TRANSIENT_LEAK_MAX_SCORE_RATIO,
+    )
+
+    tuning = get_default_tunings()[0]
+    # D4 (primary, higher freq), B3 (secondary, lower freq — broadband leak)
+    d4 = NoteCandidate(key=11, note=Note.from_name("D4"))
+    b3 = NoteCandidate(key=10, note=Note.from_name("B3"))
+
+    ranked_calls = 0
+
+    def fake_rank(_frequencies, _spectrum, _tuning, debug=False):
+        nonlocal ranked_calls
+        ranked_calls += 1
+        if ranked_calls == 1:
+            return [
+                NoteHypothesis(d4, 270.0, 100.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(b3, 100.0, 50.0, 0.0, 0.60, 0.0, 0.0, 0.0, 0.0),
+            ]
+        return [
+            NoteHypothesis(b3, 100.0, 50.0, 0.0, 0.60, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    def fake_onset(_audio, _sr, _start, _end, frequency, **_kw):
+        return 5.0
+
+    # Patch AS ratio to return high value for B3, low for D4
+    original_as = transcription.peaks._NoteEvidenceCache.attack_to_sustain_ratio
+
+    def fake_as(self, frequency):
+        if abs(frequency - b3.frequency) < 1:
+            return BROADBAND_TRANSIENT_LEAK_MIN_AS_RATIO + 0.5  # above threshold
+        return 0.5  # below threshold
+
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq: s)
+    monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
+    monkeypatch.setattr(transcription.peaks._NoteEvidenceCache, "attack_to_sustain_ratio", fake_as)
+
+    duration = BROADBAND_TRANSIENT_LEAK_MAX_DURATION - 0.01  # short segment
+    audio = synthesize_note(d4.frequency, duration=duration)
+
+    candidates, debug, primary, _trace = segment_peaks(
+        audio, 44100, 0.0, duration, tuning, debug=True,
+    )
+
+    assert primary is not None
+    assert primary.candidate.note_name == "D4"
+    assert [c.note_name for c in candidates] == ["D4"]
+    assert debug is not None
+    assert any(
+        item["noteName"] == "B3"
+        and not item.get("accepted")
+        and "broadband-transient-leak" in item.get("reasons", [])
+        for item in debug["secondaryDecisionTrail"]
+    )
+
+
+def test_broadband_transient_leak_allows_low_as_secondary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Low-frequency secondary with low AS ratio passes the gate (true note)."""
+    import app.transcription as transcription
+    from app.transcription.constants import (
+        BROADBAND_TRANSIENT_LEAK_MAX_DURATION,
+        BROADBAND_TRANSIENT_LEAK_MIN_AS_RATIO,
+    )
+
+    tuning = get_default_tunings()[0]
+    d4 = NoteCandidate(key=11, note=Note.from_name("D4"))
+    b3 = NoteCandidate(key=10, note=Note.from_name("B3"))
+
+    ranked_calls = 0
+
+    def fake_rank(_frequencies, _spectrum, _tuning, debug=False):
+        nonlocal ranked_calls
+        ranked_calls += 1
+        if ranked_calls == 1:
+            return [
+                NoteHypothesis(d4, 270.0, 100.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(b3, 100.0, 50.0, 0.0, 0.80, 0.0, 0.0, 0.0, 0.0),
+            ]
+        return [
+            NoteHypothesis(b3, 100.0, 50.0, 0.0, 0.80, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    def fake_onset(_audio, _sr, _start, _end, frequency, **_kw):
+        return 5.0
+
+    def fake_as(self, frequency):
+        return BROADBAND_TRANSIENT_LEAK_MIN_AS_RATIO - 0.5  # below threshold
+
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq: s)
+    monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
+    monkeypatch.setattr(transcription.peaks._NoteEvidenceCache, "attack_to_sustain_ratio", fake_as)
+
+    duration = BROADBAND_TRANSIENT_LEAK_MAX_DURATION - 0.01
+    audio = synthesize_note(d4.frequency, duration=duration)
+
+    candidates, debug, primary, _trace = segment_peaks(
+        audio, 44100, 0.0, duration, tuning, debug=True,
+    )
+
+    assert primary is not None
+    note_names = [c.note_name for c in candidates]
+    assert "B3" in note_names, "B3 with low AS should NOT be rejected by broadband gate"
+
+
+def test_broadband_transient_leak_skipped_on_long_segment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Broadband gate only fires on short segments; long segment allows the secondary."""
+    import app.transcription as transcription
+    from app.transcription.constants import (
+        BROADBAND_TRANSIENT_LEAK_MAX_DURATION,
+        BROADBAND_TRANSIENT_LEAK_MIN_AS_RATIO,
+    )
+
+    tuning = get_default_tunings()[0]
+    d4 = NoteCandidate(key=11, note=Note.from_name("D4"))
+    b3 = NoteCandidate(key=10, note=Note.from_name("B3"))
+
+    ranked_calls = 0
+
+    def fake_rank(_frequencies, _spectrum, _tuning, debug=False):
+        nonlocal ranked_calls
+        ranked_calls += 1
+        if ranked_calls == 1:
+            return [
+                NoteHypothesis(d4, 270.0, 100.0, 0.0, 0.95, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(b3, 100.0, 50.0, 0.0, 0.60, 0.0, 0.0, 0.0, 0.0),
+            ]
+        return [
+            NoteHypothesis(b3, 100.0, 50.0, 0.0, 0.60, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    def fake_onset(_audio, _sr, _start, _end, frequency, **_kw):
+        return 5.0
+
+    def fake_as(self, frequency):
+        return BROADBAND_TRANSIENT_LEAK_MIN_AS_RATIO + 0.5  # high AS — would trigger on short
+
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
+    monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq: s)
+    monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset)
+    monkeypatch.setattr(transcription.peaks._NoteEvidenceCache, "attack_to_sustain_ratio", fake_as)
+
+    duration = BROADBAND_TRANSIENT_LEAK_MAX_DURATION + 0.05  # long segment
+    audio = synthesize_note(d4.frequency, duration=duration)
+
+    candidates, debug, primary, _trace = segment_peaks(
+        audio, 44100, 0.0, duration, tuning, debug=True,
+    )
+
+    assert primary is not None
+    note_names = [c.note_name for c in candidates]
+    # On a long segment, broadband-transient-leak should NOT fire
+    trail = debug["secondaryDecisionTrail"]
+    btl_entries = [
+        e for e in trail
+        if e.get("noteName") == "B3" and "broadband-transient-leak" in e.get("reasons", [])
+    ]
+    assert len(btl_entries) == 0, "broadband-transient-leak should not fire on long segments"
