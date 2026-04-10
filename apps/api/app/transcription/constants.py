@@ -492,8 +492,19 @@ VERY_LOW_CONFIDENCE_EVENT_MAX_SCORE = 2.0
 RESCUE_CARRYOVER_MAX_AS_RATIO = 3.5
 RESCUE_MIN_BACKWARD_GAIN = 10.0
 RESCUE_MIN_SCORE_RATIO = 0.12
-RESCUE_CARRYOVER_MIN_ONSET_GAIN = 2.0
+# Onset gain for carryover rescue: a recently-played note that is re-attacked
+# (e.g., in a slide_chord) has elevated pre-attack energy from the prior
+# sustain, making onset_gain lower than a cold attack.  Threshold 1.8 (was 2.0)
+# accommodates this while requiring fR guard to block alias rescue.
+# Calibrated: E97 F#4 OG=1.9 is the tightest true positive; lowering from 2.0
+# to 1.8 with fR≥0.80 guard selects only 1 new rescue from 27 OG[1.5,2.0] candidates.
+RESCUE_CARRYOVER_MIN_ONSET_GAIN = 1.8
 RESCUE_CARRYOVER_MIN_SCORE_RATIO = 0.15
+# fR guard: block rescue of alias candidates (e.g., E4 fR=0.13) that happen
+# to have moderate onset_gain from broadband transient.  Threshold 0.60 is
+# conservative: real low-register notes typically have fR≥0.60 (e.g., 34l-c
+# E130 D4 fR=0.642), while alias candidates are much lower (0.13, 0.34).
+RESCUE_CARRYOVER_MIN_FUNDAMENTAL_RATIO = 0.60
 RESCUE_WEAK_ONSET_MIN_FUNDAMENTAL_RATIO = 0.45
 RESCUE_WEAK_LOWER_MIN_FUNDAMENTAL_RATIO = 0.50
 RESCUE_SCORE_FR_OVERRIDE_MIN_SCORE_RATIO = 0.15

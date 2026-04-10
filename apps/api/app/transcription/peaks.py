@@ -2660,6 +2660,7 @@ def _evidence_rescue_gate(
         if (
             onset_gain >= RESCUE_CARRYOVER_MIN_ONSET_GAIN
             and hypothesis.score >= primary.score * RESCUE_CARRYOVER_MIN_SCORE_RATIO
+            and hypothesis.fundamental_ratio >= RESCUE_CARRYOVER_MIN_FUNDAMENTAL_RATIO
         ):
             return "evidence-rescue-recent-carryover"
         return None
