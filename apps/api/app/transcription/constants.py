@@ -450,6 +450,13 @@ OCTAVE_DYAD_LOWER_OCTAVE4_MIN_FUNDAMENTAL_RATIO = 0.75
 OCTAVE_DYAD_MIN_PRIMARY_ENERGY_RATIO = 0.06
 OCTAVE_DYAD_UPPER_MIN_FUNDAMENTAL_RATIO = 0.95
 OCTAVE_DYAD_UPPER_HARMONIC_ENERGY_RATIO = 0.05
+# When the primary's fR is below this threshold, it is likely an alias of the
+# upper octave note.  Bypass the harmonic-energy check for the upper octave
+# candidate so it is allowed as an octave dyad.  Calibrated:
+#   E100 B3 (fR=0.599): B4 (fR=0.979) should be allowed — B3 is B4 alias
+#   Completed G4+G5 (fR=0.619): G5 already accepted, no behavior change
+#   Completed D4+D5 (fR=0.625): D5 already accepted, no behavior change
+LOW_FR_PRIMARY_OCTAVE_DYAD_THRESHOLD = 0.70
 OCTAVE_DYAD_UPPER_SCORE_RATIO = 0.03
 LOW_CONFIDENCE_DYAD_MAX_DURATION = 0.25
 LOW_CONFIDENCE_DYAD_MAX_SCORE = 120.0
