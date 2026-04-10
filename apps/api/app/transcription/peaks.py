@@ -1259,6 +1259,7 @@ GATE_CATEGORIES: dict[str, str] = {
     "descending-repeated-primary-stale-upper": "context",
     "ascending-singleton-carryover": "context",
     "repeated-primary-carryover": "context",
+    "broadband-transient-leak": "evidence",
     # Iterative suppression
     "iterative-tertiary-physically-impossible": "iterative",
     "iterative-tertiary-score-below-threshold": "iterative",
@@ -2123,6 +2124,15 @@ def _select_candidates(
                     ):
                         if "weak-lower-secondary" not in _disabled:
                             phase_a_reasons.append("weak-lower-secondary")
+            # ── Broadband transient leak gate ─────────────────────────
+            if (
+                hypothesis.candidate.frequency < primary.candidate.frequency
+                and segment_duration <= BROADBAND_TRANSIENT_LEAK_MAX_DURATION
+                and evidence.attack_to_sustain_ratio(hypothesis.candidate.frequency) > BROADBAND_TRANSIENT_LEAK_MIN_AS_RATIO
+                and hypothesis.score < primary.score * BROADBAND_TRANSIENT_LEAK_MAX_SCORE_RATIO
+            ):
+                if "broadband-transient-leak" not in _disabled:
+                    phase_a_reasons.append("broadband-transient-leak")
             # ── Score rescue (clears structural rejection) ─────────────
             if (
                 _structural_snapshot == ["score-below-threshold"]
@@ -2618,6 +2628,9 @@ def _evidence_rescue_gate(
     # (note was present in past) but onset_gain confirms a genuine re-attack,
     # rescue based on onset + score instead of backward_gain.
     if "recent-carryover-candidate" in reasons:
+        # Block rescue for obvious broadband transients (high attack, no sustain)
+        if evidence.attack_to_sustain_ratio(hypothesis.candidate.frequency) > RESCUE_CARRYOVER_MAX_AS_RATIO:
+            return None
         if backward_gain >= RESCUE_MIN_BACKWARD_GAIN:
             return "evidence-rescue-recent-carryover"
         if (

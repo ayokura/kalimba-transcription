@@ -399,6 +399,17 @@ GLISS_TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.9
 # A threshold of 3.0 provides margin: max true a/s = 2.36 (margin 0.64 below)
 # while F5 6.7 is well above (margin 3.7).
 GLISS_TERTIARY_MAX_ATTACK_TO_SUSTAIN_RATIO = 3.0
+# Broadband transient leak gate (Phase A secondary): short segments where a
+# low-frequency secondary shows high attack energy but no sustain.  Signature
+# of a broadband strike transient leaking into adjacent frequency bands, not a
+# real played note.  Calibrated against kalimba-17-g-low E82:
+#   B3: AS=2.03 score_ratio=0.387 sustain=21 (false positive, broadband leak)
+#   C4: AS=2.12 score_ratio=0.309 sustain=15 (false positive, broadband leak)
+#   A3: AS=0.57 (true positive, sustain=80 — must NOT be rejected)
+#   D4: AS=0.88 (true positive, primary — not evaluated)
+BROADBAND_TRANSIENT_LEAK_MAX_DURATION = 0.15
+BROADBAND_TRANSIENT_LEAK_MIN_AS_RATIO = 1.8
+BROADBAND_TRANSIENT_LEAK_MAX_SCORE_RATIO = 0.45
 LOWER_ROLL_TAIL_EXTENSION_MAX_DURATION = 0.4
 LOWER_ROLL_TAIL_EXTENSION_MIN_FUNDAMENTAL_RATIO = 0.95
 LOWER_ROLL_TAIL_EXTENSION_MIN_PRIMARY_ONSET_GAIN = 25.0
@@ -459,6 +470,11 @@ LEADING_SINGLE_TRANSIENT_NEXT_SCORE_RATIO = 8.0
 VERY_LOW_CONFIDENCE_EVENT_MAX_SCORE = 2.0
 
 # Evidence gate rescue thresholds (Layer 3.5: _apply_final_decisions)
+# Rescue carryover AS ratio cap: don't rescue candidates whose attack energy
+# dwarfs sustain (broadband transient blip, not a real re-attack).  Calibrated:
+#   kalimba-17-g-low E55 D4: AS=4.52 (false rescue, broadband transient)
+#   GLISS_TERTIARY true positives max AS=2.36 — 3.5 gives safe margin.
+RESCUE_CARRYOVER_MAX_AS_RATIO = 3.5
 RESCUE_MIN_BACKWARD_GAIN = 10.0
 RESCUE_MIN_SCORE_RATIO = 0.12
 RESCUE_CARRYOVER_MIN_ONSET_GAIN = 2.0
