@@ -135,6 +135,14 @@ NARROW_FFT_GUARD_MERGE_MIN_BACKWARD_GAIN = 10.0
 GLISS_SPLIT_MERGE_MAX_GAP = 0.05
 GLISS_SPLIT_MERGE_MAX_FIRST_DURATION = 0.20
 GLISS_SPLIT_MERGE_SEMITONE_CENTS = 100.0
+# Contiguous-key subset extraction: when a naive gliss-split merge exceeds
+# MAX_POLYPHONY, attempt to find a contiguous-key subset that strips noise
+# notes (broadband leak / sympathetic) while preserving the real chord.
+# Minimum run length of 3 avoids merging into trivial dyads.
+# Calibrated on kalimba-17-g-low BWV147:
+#   E133: union {C4(7),D4(11),F#4(12),A4(13),C5(14)} → best subset {11-14} (4 notes)
+#   E82:  union {A3(8),G3(9),D4(11),F#4(12),A4(13)} → best subset {11-13} (3 notes)
+GLISS_SPLIT_CONTIGUOUS_SUBSET_MIN_RUN = 3
 
 # Phase A.4: masked re-attack recovery via narrow FFT (#153).
 # When the segment-wide FFT rejects a chord note as weak-secondary-onset

@@ -1602,6 +1602,51 @@ def recover_pre_segment_attack_via_narrow_fft(
     return recovered
 
 
+def _extract_contiguous_key_subset(
+    merged_notes: list[NoteCandidate],
+    max_count: int,
+    longer_notes: list[NoteCandidate],
+    min_run_length: int = GLISS_SPLIT_CONTIGUOUS_SUBSET_MIN_RUN,
+) -> list[NoteCandidate] | None:
+    """Extract the best contiguous-key subset when a naive merge exceeds polyphony.
+
+    Finds contiguous runs of adjacent kalimba keys among *merged_notes* and
+    returns the best subset (preferring longer runs with more notes from the
+    longer event).  Returns ``None`` if no run of at least *min_run_length*
+    exists.
+    """
+    key_to_note: dict[int, NoteCandidate] = {n.key: n for n in merged_notes}
+    sorted_keys = sorted(key_to_note)
+    longer_keys = {n.key for n in longer_notes}
+
+    # Collect maximal contiguous runs
+    runs: list[list[int]] = []
+    run = [sorted_keys[0]]
+    for k in sorted_keys[1:]:
+        if k == run[-1] + 1:
+            run.append(k)
+        else:
+            if len(run) >= min_run_length:
+                runs.append(run)
+            run = [k]
+    if len(run) >= min_run_length:
+        runs.append(run)
+
+    # Evaluate all windows of size min_run_length..max_count within each run
+    best: list[NoteCandidate] | None = None
+    best_score = (-1, -1)  # (longer_coverage, window_size)
+    for run in runs:
+        for size in range(min(len(run), max_count), min_run_length - 1, -1):
+            for start in range(len(run) - size + 1):
+                window = run[start : start + size]
+                coverage = sum(1 for k in window if k in longer_keys)
+                score = (coverage, size)
+                if score > best_score:
+                    best_score = score
+                    best = [key_to_note[k] for k in window]
+    return best
+
+
 def merge_gliss_split_segments(
     raw_events: list[RawEvent],
     audio: np.ndarray,
@@ -1701,8 +1746,14 @@ def merge_gliss_split_segments(
             merged_notes.append(note)
             merged_names.add(note.note_name)
         if len(merged_notes) > MAX_POLYPHONY:
-            merged.append(event)
-            continue
+            subset = _extract_contiguous_key_subset(
+                merged_notes, MAX_POLYPHONY, list(longer_event.notes),
+            )
+            if subset is None:
+                merged.append(event)
+                continue
+            merged_notes = subset
+            merged_names = {n.note_name for n in merged_notes}
         # Dissonance guard: reject the merge if the resulting note set
         # contains any whole-step (≤200 cents) pair, which is the dominant
         # signature of a false merge between two unrelated short events
