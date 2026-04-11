@@ -1040,6 +1040,75 @@ def maybe_promote_stale_primary_to_upper_octave(
     }
 
 
+def maybe_promote_onset_strong_sibling(
+    primary: NoteHypothesis,
+    primary_onset_gain: float | None,
+    ranked: list[NoteHypothesis],
+    evidence: "_NoteEvidenceCache",
+) -> tuple[NoteHypothesis, float | None, dict[str, Any] | None]:
+    """#166: Narrow onset-based primary rescue.
+
+    When the top-ranked candidate has both a very weak attack and a diluted
+    fundamental ratio (signs of spectral leakage rather than a genuine
+    pluck), search the top-K siblings for a candidate with clean fR AND
+    strong attack evidence.  If found, promote the sibling to primary.
+
+    Target pattern (E100 in kalimba-17-g-low-bwv147-sequence-163-01):
+        primary  B3: score=270.7  fR=0.599  onsetGain=1.8   (alias of B4)
+        sibling  B4: score=229.4  fR=0.979  onsetGain=62.0  (real attack)
+
+    Conditions are intentionally narrow to avoid disturbing well-tuned
+    solo-note cases where the top-ranked candidate is legitimately primary.
+    """
+    # fR gate runs first so we can skip the (cached but still non-trivial)
+    # onset_gain lookup for clearly-clean primaries.
+    if primary.fundamental_ratio >= ONSET_RESCUE_PRIMARY_MAX_FUNDAMENTAL_RATIO:
+        return primary, primary_onset_gain, None
+    # If the caller didn't compute a primary onset_gain (the stale-recent
+    # rescue path only computes it for recent notes), look it up now via
+    # the evidence cache so this rescue isn't unable to evaluate fresh
+    # primaries like B3 at E100 in the G-low BWV147 fixture.
+    effective_gain = (
+        primary_onset_gain
+        if primary_onset_gain is not None
+        else evidence.onset_gain(primary.candidate.frequency)
+    )
+    if effective_gain is None or effective_gain >= ONSET_RESCUE_PRIMARY_MAX_ONSET_GAIN:
+        return primary, primary_onset_gain, None
+    # Use the effective gain for the sibling comparison.
+    primary_gain_for_check = effective_gain
+
+    best_sibling: NoteHypothesis | None = None
+    best_sibling_gain: float | None = None
+    for hypothesis in ranked[1:ONSET_RESCUE_MAX_SIBLING_RANK + 1]:
+        if hypothesis.fundamental_ratio < ONSET_RESCUE_SIBLING_MIN_FUNDAMENTAL_RATIO:
+            continue
+        if hypothesis.score < primary.score * ONSET_RESCUE_SIBLING_MIN_SCORE_RATIO:
+            continue
+        sibling_gain = evidence.onset_gain(hypothesis.candidate.frequency)
+        if sibling_gain < ONSET_RESCUE_SIBLING_MIN_ONSET_GAIN:
+            continue
+        if sibling_gain < primary_gain_for_check * ONSET_RESCUE_SIBLING_GAIN_RATIO:
+            continue
+        if best_sibling is None or sibling_gain > (best_sibling_gain or 0.0):
+            best_sibling = hypothesis
+            best_sibling_gain = sibling_gain
+
+    if best_sibling is None:
+        return primary, primary_onset_gain, None
+
+    debug = {
+        "reason": "onset-strong-sibling",
+        "replacedPrimaryNote": primary.candidate.note_name,
+        "replacementNote": best_sibling.candidate.note_name,
+        "primaryOnsetGain": round(primary_gain_for_check, 2),
+        "siblingOnsetGain": round(best_sibling_gain or 0.0, 2),
+        "primaryFundamentalRatio": round(primary.fundamental_ratio, 3),
+        "siblingFundamentalRatio": round(best_sibling.fundamental_ratio, 3),
+    }
+    return best_sibling, best_sibling_gain, debug
+
+
 def _try_gap_fill(
     test_keys: list[int],
     selected: list[NoteCandidate],
@@ -1774,6 +1843,20 @@ def _resolve_primary(
     if stale_upper_promotion_debug is not None:
         primary_promotion_debug = stale_upper_promotion_debug
         promotions.append(stale_upper_promotion_debug.get("reason", "stale-upper-octave"))
+    # #166: Onset-strong sibling rescue — catches the pattern where the
+    # top-ranked candidate has weak attack + diluted fR (spectral alias) and
+    # a top-K sibling has clean fR + strong attack.  Runs AFTER the existing
+    # rescue paths so their specific patterns take precedence.
+    primary, rescued_onset_gain, onset_rescue_debug = maybe_promote_onset_strong_sibling(
+        primary,
+        primary_onset_gain,
+        ranked,
+        evidence,
+    )
+    if onset_rescue_debug is not None:
+        primary_promotion_debug = onset_rescue_debug
+        primary_onset_gain = rescued_onset_gain
+        promotions.append(onset_rescue_debug.get("reason", "onset-strong-sibling"))
     # Rejection is deferred: record reason but continue so secondary
     # evaluation always runs.  _apply_final_decisions handles the final call.
     _rejected = False

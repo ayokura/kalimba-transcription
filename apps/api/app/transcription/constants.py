@@ -372,6 +372,20 @@ SUPPRESSION_BAND_CENTS = 45.0
 MAX_POLYPHONY = 4
 PRIMARY_REJECTION_MAX_SCORE = 30.0
 PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO = 0.97
+# #166: narrow onset-based primary rescue.  When the top-ranked candidate
+# has very weak attack evidence AND a diluted fundamentalRatio, a top-K
+# sibling with clean fR and strong attack is promoted to primary.
+# Calibrated against E100 in kalimba-17-g-low-bwv147-sequence-163-01:
+#   B3 (primary): score=270.7, fR=0.599, onsetGain=1.8
+#   B4 (sibling): score=229.4, fR=0.979, onsetGain=62.0
+# See #166 for context.
+ONSET_RESCUE_PRIMARY_MAX_ONSET_GAIN = 5.0
+ONSET_RESCUE_PRIMARY_MAX_FUNDAMENTAL_RATIO = 0.75
+ONSET_RESCUE_SIBLING_MIN_FUNDAMENTAL_RATIO = 0.85
+ONSET_RESCUE_SIBLING_MIN_ONSET_GAIN = 20.0
+ONSET_RESCUE_SIBLING_GAIN_RATIO = 10.0
+ONSET_RESCUE_SIBLING_MIN_SCORE_RATIO = 0.70
+ONSET_RESCUE_MAX_SIBLING_RANK = 4
 TERTIARY_MIN_SCORE_RATIO = 0.12
 TERTIARY_MIN_FUNDAMENTAL_RATIO = 0.85
 TERTIARY_MIN_SCORE = 20.0
