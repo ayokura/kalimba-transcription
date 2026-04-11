@@ -41,6 +41,14 @@ class RecognizerSettings:
     use_multi_primary_branching: bool = True
     use_hpss_onset: bool = False
     use_alternate_groupings: bool = True  # #151: dissonance-aware merge guard
+    # #149: per-tine partial scoring in rank_tuning_candidates.
+    # Currently disabled because kalimba tunings contain fifths as adjacent
+    # tines, so beam partials (e.g. 1.5×) collide with other notes' fundamentals.
+    # The existing fR-based alias detection is not designed for this collision
+    # case and mis-penalises legitimate chords.  Per-tine partials remain
+    # active in suppress_harmonics (which handles collisions via the
+    # fundamental guard) — see 2cd5a7a.
+    use_per_tine_partial_scoring: bool = False
 
     # Ablation switches (True = disable the feature)
     ablate_sparse_gap_tail: bool = False

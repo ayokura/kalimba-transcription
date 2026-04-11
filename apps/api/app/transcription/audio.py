@@ -10,7 +10,7 @@ import soundfile as sf
 from fastapi import HTTPException, UploadFile
 
 from ..models import InstrumentTuning
-from ..tunings import build_custom_tuning
+from ..tunings import build_custom_tuning, get_default_tunings
 from .models import Note, NoteCandidate
 
 
@@ -38,6 +38,26 @@ def parse_tuning_json(tuning_json: str) -> InstrumentTuning:
     name = payload.get("name", "Custom Tuning")
     if not isinstance(name, str):
         raise HTTPException(status_code=400, detail="Tuning name must be a string.")
+
+    # If the request's tuning id matches a known default tuning and the note
+    # names also match, return the server-side default tuning directly so that
+    # per-tine partial configurations (see `apps/api/app/tunings.py`) are
+    # applied.  Requests built from the web client typically send standard
+    # note sets with the matching id, so this path is the common case.
+    tuning_id = payload.get("id")
+    if (
+        isinstance(tuning_id, str)
+        and tuning_id
+        and all(isinstance(n, str) for n in note_names)
+    ):
+        for default in get_default_tunings():
+            if default.id != tuning_id:
+                continue
+            default_names = [n.note_name for n in default.notes]
+            if default_names == note_names:
+                return default
+            # id matched but notes diverged — treat as a custom variant
+            break
 
     return build_custom_tuning(name, note_names)
 

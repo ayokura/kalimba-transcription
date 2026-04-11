@@ -165,7 +165,11 @@ def rank_tuning_candidates(frequencies: np.ndarray, spectrum: np.ndarray, tuning
     # ── Build per-note partial targets ────────────────────────────
     # When a note has explicit partials, use those ratios + weights.
     # Otherwise fall back to the integer harmonic comb.
-    has_any_partials = any(note.partials for note in tuning.notes)
+    # Gated behind a feature flag — see settings.use_per_tine_partial_scoring.
+    has_any_partials = (
+        settings.get().use_per_tine_partial_scoring
+        and any(note.partials for note in tuning.notes)
+    )
 
     if has_any_partials:
         # Collect all partial targets and their weights per note
