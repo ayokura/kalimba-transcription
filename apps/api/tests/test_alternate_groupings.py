@@ -92,15 +92,16 @@ class TestChordClusterDissonanceGuard:
         assert {n.note_name for n in result[0].notes} == {"C4", "E4", "G4"}
 
     def test_dissonant_merge_proceeds_when_flag_off(self) -> None:
-        """Without the flag, dissonant merges proceed as before."""
+        """With the flag explicitly disabled, dissonant merges proceed
+        as before the #151 implementation (ablation path)."""
         events = [
             RawEvent(0.0, 0.12, [_nc("B4", key=1)], False, "B4", 300.0),
             RawEvent(0.13, 0.30, [_nc("C5", key=2), _nc("E5", key=3)], False, "C5", 280.0),
         ]
-        # Default: use_alternate_groupings=False
-        result = merge_short_chord_clusters(events)
+        with override(use_alternate_groupings=False):
+            result = merge_short_chord_clusters(events)
 
-        # Should merge (original behavior)
+        # Should merge (pre-#151 behavior)
         assert len(result) == 1
         assert {n.note_name for n in result[0].notes} == {"B4", "C5", "E5"}
 

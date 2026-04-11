@@ -40,7 +40,7 @@ class RecognizerSettings:
     use_evidence_gate_rescue: bool = True
     use_multi_primary_branching: bool = True
     use_hpss_onset: bool = False
-    use_alternate_groupings: bool = False  # #151: dissonance-aware merge guard
+    use_alternate_groupings: bool = True  # #151: dissonance-aware merge guard
 
     # Ablation switches (True = disable the feature)
     ablate_sparse_gap_tail: bool = False
