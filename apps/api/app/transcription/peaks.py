@@ -80,9 +80,13 @@ def suppress_harmonics(
 ) -> np.ndarray:
     """Suppress energy at harmonic/partial positions of *base_frequency*.
 
-    When *partial_ratios* is provided (e.g. [1.0, 1.5, 2.0, 3.0, 4.0]),
-    suppress at those positions.  Otherwise fall back to integer multiples
-    1..MAX_HARMONIC_MULTIPLE.
+    When *partial_ratios* is provided (e.g. [1.0, 1.5, 2.0, 2.908, 3.672]),
+    suppress at those positions *in addition to* integer multiples
+    1..MAX_HARMONIC_MULTIPLE.  Integer harmonics always carry some energy on
+    kalimba tines (alongside beam partials), so suppressing only the measured
+    beam positions would leak C4's 4× at C6 into the residual and confuse
+    downstream secondary selection.  Union of integer comb and beam partials
+    is the safe choice.
 
     When *tuning_fundamentals* is provided, skip suppression at positions
     that coincide with another note's fundamental (within ±SUPPRESSION_BAND_CENTS).
@@ -92,7 +96,14 @@ def suppress_harmonics(
     valid = frequencies > 0
     positive_freqs = frequencies[valid]
     if partial_ratios is not None:
-        ratios = partial_ratios
+        # Union of per-tine partials and integer comb, deduped with ~0.005
+        # tolerance so 1.0/2.0 etc. from the partial list don't get counted
+        # twice alongside their integer equivalents.
+        ratios: list[float] = list(partial_ratios)
+        for m in range(1, MAX_HARMONIC_MULTIPLE + 1):
+            integer_ratio = float(m)
+            if not any(abs(r - integer_ratio) <= 0.005 for r in ratios):
+                ratios.append(integer_ratio)
     else:
         ratios = [float(m) for m in range(1, MAX_HARMONIC_MULTIPLE + 1)]
     for ratio in ratios:
