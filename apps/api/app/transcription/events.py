@@ -2226,12 +2226,26 @@ def merge_short_chord_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
             and (current_names < following_names or following_names < current_names)
             and max(len(current.notes), len(following.notes)) == 3
         )
+        # Two-hand chord completion: triad + singleton = 4 notes.
+        # The singleton arrives on the opposite hand slightly later (e.g.
+        # BWV147 G-low E163: right-hand [G3,B3,D4] + left-hand G4).
+        # No contiguous_keys requirement — the triad side is normally
+        # contiguous in practice, but enforcing it would over-narrow the
+        # condition without observable benefit, and would block hypothetical
+        # dyad+dyad (2+2) chords if the pattern is later generalised.
+        is_singleton_plus_triad = (
+            combined_count == 4
+            and {len(current.notes), len(following.notes)} == {1, 3}
+            and not current_names.intersection(following_names)
+            and min(current.end_time - current.start_time, following.end_time - following.start_time) <= CHORD_CLUSTER_MAX_SINGLETON_DURATION
+        )
         merge_eligible = (
             gap <= CHORD_CLUSTER_MAX_GAP
             and total_duration <= CHORD_CLUSTER_MAX_TOTAL_DURATION
-            and combined_count == 3
-            and contiguous_keys
-            and (is_singleton_plus_dyad or is_subset_to_triad)
+            and (
+                (combined_count == 3 and contiguous_keys and (is_singleton_plus_dyad or is_subset_to_triad))
+                or is_singleton_plus_triad
+            )
         )
         if merge_eligible:
             combined_list = sorted(combined.values(), key=lambda note: note.frequency)
