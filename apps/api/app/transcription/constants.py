@@ -297,6 +297,40 @@ NARROW_FFT_PRE_SEGMENT_BG_DOMINANCE_RATIO = 0.5
 # rounding when comparing onset times to segment boundaries.
 NARROW_FFT_PRE_SEGMENT_ONSET_CONSUMED_TOLERANCE = 0.005
 
+# Phase C: spread-chord segment-start rescue (#167).
+# Recovers notes that attack between the broadband onset and the segment
+# start (rolled / arpeggiated chords).  Unlike Phase B, these notes are
+# *rising* into the segment, so probing at onset_time shows nothing; the
+# correct probe point is event.start_time with a lookback long enough to
+# reach before the earliest individual attack.
+#
+# Motivating case: G-low BWV147 E136 <B4,D4,B3,G3>.  B3/G3 attack at
+# ~81.15-81.20s, segment starts at 81.276s; backward_attack_gain at
+# segment start with 0.20s lookback (reference: 81.076s, before all
+# attacks) is 83 / 48 — strong fresh-attack signal.
+# Calibrated on G-low E136: G3 bg=48.2, B3 bg=83.1.  45.0 admits G3
+# with 7% margin while Phase B's 50.0 (calibrated for onset-time probe)
+# would miss it.  The rise discriminator (gate 5) provides additional
+# false-positive protection absent from Phase B.
+NARROW_FFT_SPREAD_CHORD_MIN_BACKWARD_GAIN = 45.0
+NARROW_FFT_SPREAD_CHORD_MIN_ENERGY = 5.0
+NARROW_FFT_SPREAD_CHORD_NOISE_FACTOR = 3.0
+NARROW_FFT_SPREAD_CHORD_HARD_FLOOR = 0.3
+# Sustain-phase fr is lower than attack-phase fr; G3 at segment start
+# has fr=0.738.  0.70 gives 5% margin.
+NARROW_FFT_SPREAD_CHORD_MIN_FR = 0.70
+# Rise discriminator: fund_e_segment / fund_e_onset >= 2.0.
+# Separates rising notes (ratio >> 2, e.g. G3=23.8, B3=33.2) from
+# notes already sustaining at onset (ratio ~1.0).
+NARROW_FFT_SPREAD_CHORD_RISE_MIN_RATIO = 2.0
+NARROW_FFT_SPREAD_CHORD_DISSONANCE_CENTS = 250.0
+NARROW_FFT_SPREAD_CHORD_LOOKBACK_SECONDS = 0.20
+# Bg dominance guard: relaxed vs Phase B (0.25 vs 0.5) because the
+# rise discriminator (gate 5) already rejects resonance that was
+# present at onset time.  Calibrated: G3 bg=46.9, B4 (in-event)
+# bg=174.6 → ratio 0.269; 0.25 admits G3 with ~8% margin.
+NARROW_FFT_SPREAD_CHORD_BG_DOMINANCE_RATIO = 0.25
+
 # Residual-decay and recent-primary replacement thresholds.
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RESIDUAL_DECAY_MIN_ONSET_GAIN = 1.5

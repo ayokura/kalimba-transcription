@@ -25,6 +25,7 @@ from .events import (
     merge_short_segment_guard_via_narrow_fft,
     recover_masked_reattack_via_narrow_fft,
     recover_pre_segment_attack_via_narrow_fft,
+    recover_spread_chord_via_segment_start_probe,
     suppress_unmerged_guarded_singletons,
     simplify_descending_adjacent_dyad_residue,
     simplify_short_gliss_prefix_to_contiguous_singleton,
@@ -301,6 +302,18 @@ async def transcribe_audio(
     # the gap and decays before the next segment starts.
     _pp("recover_pre_segment_attack_via_narrow_fft",
         recover_pre_segment_attack_via_narrow_fft,
+        audio, sample_rate, tuning, all_onset_times, noise_floor=noise_floor)
+    # #167 Phase C spread-chord rescue: recover notes that attacked
+    # between the broadband onset and the segment start (rolled /
+    # arpeggiated chords).  Unlike Phase B, these notes are RISING
+    # into the segment, so the probe point is segment start, not
+    # onset time.  Run twice to recover up to two notes per event
+    # (e.g. G-low E136: B3 then G3).
+    _pp("recover_spread_chord_via_segment_start_probe",
+        recover_spread_chord_via_segment_start_probe,
+        audio, sample_rate, tuning, all_onset_times, noise_floor=noise_floor)
+    _pp("recover_spread_chord_via_segment_start_probe_2",
+        recover_spread_chord_via_segment_start_probe,
         audio, sample_rate, tuning, all_onset_times, noise_floor=noise_floor)
     _pp("collapse_late_descending_step_handoffs", collapse_late_descending_step_handoffs)
 

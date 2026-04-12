@@ -1633,6 +1633,216 @@ def recover_pre_segment_attack_via_narrow_fft(
     return recovered
 
 
+def recover_spread_chord_via_segment_start_probe(
+    raw_events: list[RawEvent],
+    audio: np.ndarray,
+    sample_rate: int,
+    tuning: InstrumentTuning,
+    onset_times: "Sequence[float]",
+    *,
+    noise_floor: NoiseFloorMeasurement | None = None,
+    lookback_seconds: float = NARROW_FFT_SPREAD_CHORD_LOOKBACK_SECONDS,
+    min_fundamental_energy: float = NARROW_FFT_SPREAD_CHORD_MIN_ENERGY,
+    noise_floor_factor: float = NARROW_FFT_SPREAD_CHORD_NOISE_FACTOR,
+    noise_floor_hard_floor: float = NARROW_FFT_SPREAD_CHORD_HARD_FLOOR,
+    min_fundamental_ratio: float = NARROW_FFT_SPREAD_CHORD_MIN_FR,
+    min_backward_attack_gain: float = NARROW_FFT_SPREAD_CHORD_MIN_BACKWARD_GAIN,
+    dissonance_neighbor_cents: float = NARROW_FFT_SPREAD_CHORD_DISSONANCE_CENTS,
+    onset_consumed_tolerance: float = NARROW_FFT_PRE_SEGMENT_ONSET_CONSUMED_TOLERANCE,
+    rise_min_ratio: float = NARROW_FFT_SPREAD_CHORD_RISE_MIN_RATIO,
+    bg_dominance_ratio: float = NARROW_FFT_SPREAD_CHORD_BG_DOMINANCE_RATIO,
+) -> list[RawEvent]:
+    """Recover a chord note whose attack falls between the broadband
+    onset and the segment start (spread / rolled chord, #167 Phase C).
+
+    Unlike Phase B (:func:`recover_pre_segment_attack_via_narrow_fft`),
+    the rescue note is *rising* into the segment — its energy at the
+    broadband onset is negligible, peaking by the segment start.
+    Probing at onset_time (Phase B's strategy) finds nothing because
+    the note hasn't attacked yet.  This pass probes at
+    ``event.start_time`` and uses ``backward_attack_gain`` there with
+    a lookback that reaches before the earliest individual attack in
+    the rolled chord.
+
+    Motivating case: G-low BWV147 E136 ``<B4,D4,B3,G3>``.  G3 attacks
+    at ~81.15 s, B3 at ~81.20 s, D4 at ~81.23 s, B4 at 81.276 s
+    (segment start).  At the broadband onset (81.125 s) G3/B3 have
+    fund_e < 1; by segment start they are fully established.
+
+    Gates (in evaluation order):
+
+    1. ``backward_attack_gain`` at segment start ≥ threshold.
+    2. bg dominance: candidate bg ≥ max in-event bg × ratio.
+       Relaxed vs Phase B (0.25 vs 0.5) because gate 4 already
+       rejects resonance present at onset time.
+    3. ``fundamental_ratio`` at segment start ≥ threshold.
+    4. ``fundamental_energy`` at segment start ≥ noise-floor threshold.
+    5. Rise discriminator: ``fund_e_segment / fund_e_onset ≥ rise_min_ratio``.
+       The note must be RISING into the segment; decaying notes belong
+       to Phase B.
+    6. Not within ``dissonance_neighbor_cents`` of any existing note.
+
+    Only one note is added per event per pass.
+    """
+    if not raw_events or not onset_times:
+        return raw_events
+
+    sorted_onsets = sorted({float(t) for t in onset_times})
+
+    def _is_consumed(onset: float) -> bool:
+        for event in raw_events:
+            if (
+                event.start_time - onset_consumed_tolerance
+                <= onset
+                <= event.end_time + onset_consumed_tolerance
+            ):
+                return True
+        return False
+
+    unconsumed = [o for o in sorted_onsets if not _is_consumed(o)]
+    if not unconsumed:
+        return raw_events
+
+    recovered: list[RawEvent] = []
+    for index, event in enumerate(raw_events):
+        if event.from_short_segment_guard or len(event.notes) >= MAX_POLYPHONY:
+            recovered.append(event)
+            continue
+
+        prev_event_end = raw_events[index - 1].end_time if index > 0 else 0.0
+        floor = max(event.start_time - lookback_seconds, prev_event_end)
+        candidates_in_window = [
+            o for o in unconsumed if floor < o < event.start_time
+        ]
+        if not candidates_in_window:
+            recovered.append(event)
+            continue
+
+        onset_time = candidates_in_window[-1]
+
+        # Probe at segment start — spread-chord notes are established here.
+        segment_start_scores = measure_narrow_fft_note_scores(
+            audio, sample_rate, event.start_time, tuning,
+        )
+        if segment_start_scores is None:
+            recovered.append(event)
+            continue
+
+        # Probe at onset time for the rise discriminator (gate 5).
+        onset_scores = measure_narrow_fft_note_scores(
+            audio, sample_rate, onset_time, tuning,
+        )
+
+        existing_names = {note.note_name for note in event.notes}
+        existing_freqs = [note.frequency for note in event.notes]
+
+        # Compute backward_attack_gain at segment start for all notes.
+        max_in_event_bg = 0.0
+        bg_candidates: list[
+            tuple[float, str, float, float, float, object, float]
+        ] = []
+        for note_name, (fund_e, score, fr) in segment_start_scores.items():
+            tuning_match = next(
+                (n for n in tuning.notes if n.note_name == note_name),
+                None,
+            )
+            if tuning_match is None:
+                continue
+            candidate_freq = tuning_match.frequency
+            backward_gain = onset_backward_attack_gain(
+                audio, sample_rate, event.start_time, candidate_freq,
+            )
+            if note_name in existing_names:
+                if backward_gain > max_in_event_bg:
+                    max_in_event_bg = backward_gain
+                continue
+            bg_candidates.append(
+                (backward_gain, note_name, fund_e, score, fr,
+                 tuning_match, candidate_freq)
+            )
+        bg_candidates.sort(key=lambda c: c[0], reverse=True)
+
+        added = False
+        for (
+            backward_gain, note_name, fund_e, score, fr,
+            tuning_match, candidate_freq,
+        ) in bg_candidates:
+            # Gate 1: fresh-attack discriminator at segment start.
+            if backward_gain < min_backward_attack_gain:
+                break
+            # Gate 2: bg dominance guard — if in-event notes are
+            # mid-attack at segment start, the candidate may be a
+            # sympathetic-resonance peak rather than an independent
+            # spread-chord attack.  Relaxed vs Phase B (0.5 → 0.25)
+            # because the rise discriminator (gate 4) already rejects
+            # resonance that was present at onset time.
+            if (
+                max_in_event_bg > 0.0
+                and backward_gain < max_in_event_bg * bg_dominance_ratio
+            ):
+                break
+            # Gate 3: clean fundamental at segment start.
+            if fr < min_fundamental_ratio:
+                continue
+            # Gate 4: meaningful energy.
+            if noise_floor is not None:
+                min_energy = noise_floor.threshold_for(
+                    note_name,
+                    factor=noise_floor_factor,
+                    fallback=min_fundamental_energy,
+                    hard_floor=noise_floor_hard_floor,
+                )
+            else:
+                min_energy = min_fundamental_energy
+            if fund_e < min_energy:
+                continue
+            # Gate 5: rise discriminator — note must be RISING into the
+            # segment (attacked between onset and segment start).
+            if onset_scores is not None:
+                fund_e_onset = onset_scores.get(
+                    note_name, (0.0, 0.0, 0.0),
+                )[0]
+                if fund_e_onset > 0.0:
+                    rise_ratio = fund_e / fund_e_onset
+                    if rise_ratio < rise_min_ratio:
+                        continue
+            # Gate 6: dissonance guard.
+            if any(
+                cents_distance(candidate_freq, existing_freq)
+                <= dissonance_neighbor_cents
+                for existing_freq in existing_freqs
+            ):
+                continue
+
+            new_candidate = NoteCandidate(
+                key=tuning_match.key,
+                note=Note.from_name(note_name),
+                score=score,
+            )
+            updated_notes = sorted(
+                [*event.notes, new_candidate],
+                key=lambda candidate: candidate.frequency,
+            )
+            recovered.append(
+                RawEvent(
+                    start_time=event.start_time,
+                    end_time=event.end_time,
+                    notes=updated_notes,
+                    is_gliss_like=event.is_gliss_like,
+                    primary_note_name=event.primary_note_name,
+                    primary_score=event.primary_score,
+                    from_short_segment_guard=event.from_short_segment_guard,
+                    sub_onsets=event.sub_onsets,
+                )
+            )
+            added = True
+            break
+        if not added:
+            recovered.append(event)
+
+    return recovered
+
+
 def _extract_contiguous_key_subset(
     merged_notes: list[NoteCandidate],
     max_count: int,
