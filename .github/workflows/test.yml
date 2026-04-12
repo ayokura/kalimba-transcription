@@ -10,9 +10,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      id-token: write # Required for OIDC (takumi-guard)
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
+
+      - uses: flatt-security/setup-takumi-guard-pypi@v1
+        with:
+          bot-id: "BT01KP0J2WVXM2XRECK5RCT62XRH" # ayokura
 
       - uses: astral-sh/setup-uv@v6
         with:
