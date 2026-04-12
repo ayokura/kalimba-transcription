@@ -1786,20 +1786,12 @@ def merge_gliss_split_segments(
             merged_notes = subset
             merged_names = {n.note_name for n in merged_notes}
         # Dissonance guard: reject the merge if the resulting note set
-        # contains any whole-step (≤200 cents) pair, which is the dominant
-        # signature of a false merge between two unrelated short events
-        # (e.g., end of one melodic phrase running into the start of the
-        # next).  Genuine gliss splits and chord recoveries (E97, E121,
-        # E148, etc.) all produce 3rds, 4ths, octaves and wider intervals.
-        rejected_by_dissonance = False
-        for i, note_i in enumerate(merged_notes):
-            for note_j in merged_notes[i + 1:]:
-                if cents_distance(note_i.frequency, note_j.frequency) <= 200.0:
-                    rejected_by_dissonance = True
-                    break
-            if rejected_by_dissonance:
-                break
-        if rejected_by_dissonance:
+        # contains a minor or major 2nd.  Uses MIDI-integer arithmetic
+        # (has_dissonant_interval) to avoid the float-precision edge case
+        # where cents_distance returns 200.000…06 for an exact whole step
+        # and slips past a <= 200.0 threshold.  Matches the guards in
+        # merge_short_gliss_clusters and merge_short_chord_clusters.
+        if has_dissonant_interval(merged_notes):
             merged.append(event)
             continue
         merged_notes.sort(key=lambda candidate: candidate.frequency)
