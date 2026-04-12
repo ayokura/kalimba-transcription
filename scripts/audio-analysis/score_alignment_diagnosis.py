@@ -430,9 +430,13 @@ def main():
 
     orig_to_eval = build_time_converter(expected)
 
-    # Build per-segment trail lookup for rejection reason cross-referencing
-    seg_trail_by_time: list[tuple[float, list[dict]]] = [
-        (s["startTime"], s.get("secondaryDecisionTrail", []))
+    # Build per-segment trail lookup for rejection reason cross-referencing.
+    # Each entry carries the segment's selectedNotes so we can distinguish
+    # "note was selected at segment level but dropped by post-processing"
+    # from "note was rejected at segment level".
+    seg_info_by_time: list[tuple[float, list[dict], set[str]]] = [
+        (s["startTime"], s.get("secondaryDecisionTrail", []),
+         set(s.get("selectedNotes", [])))
         for s in segments if s.get("selectedNotes")
     ]
 
@@ -440,12 +444,30 @@ def main():
         """Find the segment trail closest in time to *t*."""
         best_trail: list[dict] = []
         best_dist = float("inf")
-        for seg_t, trail in seg_trail_by_time:
+        for seg_t, trail, _selected in seg_info_by_time:
             d = abs(seg_t - t)
             if d < best_dist:
                 best_dist = d
                 best_trail = trail
         return best_trail if best_dist < 0.1 else []
+
+    def _was_selected_in_nearby_segment(t: float, note_name: str) -> bool:
+        """Check if note_name was in selectedNotes of any segment near t."""
+        for seg_t, _trail, selected in seg_info_by_time:
+            if abs(seg_t - t) < 0.2 and note_name in selected:
+                return True
+        return False
+
+    # Post-processing trace lookup: which pass dropped a note near a given time?
+    pp_trace: list[dict] = payload.get("debug", {}).get("postProcessingTrace", [])
+
+    def _find_drop_pass(t: float, note_name: str) -> str | None:
+        """Find the post-processing pass that removed a note near time t."""
+        for entry in pp_trace:
+            for removed in entry.get("removed", []):
+                if abs(removed["startTime"] - t) < 0.2 and note_name in removed.get("notes", []):
+                    return entry["pass"]
+        return None
 
     # Classify segments by line time boundaries
     line_bounds = []
@@ -565,13 +587,23 @@ def main():
             missing = exp_notes - det_notes
             extra = det_notes - exp_notes
 
-            # Look up rejection reasons for missing notes
+            # Look up rejection reasons for missing notes.
+            # Priority: (1) postProcessingTrace drop pass, (2) secondaryDecisionTrail.
+            # If a note was selected at the segment level but dropped by a
+            # post-processing merge/suppress, show the pass name instead of
+            # the misleading segment-level trail reason.
             trail_parts = []
             for m in sorted(missing):
-                for entry in seg["trail"]:
-                    if entry["noteName"] == m and not entry["accepted"]:
-                        trail_parts.append(f"{m}→{','.join(entry['reasons'][:2])}")
-                        break
+                drop_pass = _find_drop_pass(seg["time"], m) if use_events_mode else None
+                if drop_pass:
+                    trail_parts.append(f"{m}→dropped-by:{drop_pass}")
+                elif use_events_mode and _was_selected_in_nearby_segment(seg["time"], m):
+                    trail_parts.append(f"{m}→dropped-by-post-processing")
+                else:
+                    for entry in seg["trail"]:
+                        if entry["noteName"] == m and not entry["accepted"]:
+                            trail_parts.append(f"{m}→{','.join(entry['reasons'][:2])}")
+                            break
             trail_str = " " + " ".join(f"[{t}]" for t in trail_parts) if trail_parts else ""
 
             miss_str = f" miss={'+'.join(sorted(missing))}" if missing else ""

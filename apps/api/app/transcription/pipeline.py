@@ -59,6 +59,31 @@ from .segments import (
 )
 
 
+def _event_sig(ev: RawEvent) -> tuple[float, float, tuple[str, ...]]:
+    return (round(ev.start_time, 4), round(ev.end_time, 4),
+            tuple(sorted(n.note_name for n in ev.notes)))
+
+
+def _trace_post_processing_step(
+    name: str,
+    before: list[RawEvent],
+    after: list[RawEvent],
+    trace: list[dict[str, Any]],
+) -> None:
+    """Record removed/added events when a post-processing step changes the list."""
+    before_sigs = [_event_sig(e) for e in before]
+    after_sigs = [_event_sig(e) for e in after]
+    if before_sigs == after_sigs:
+        return
+    after_set = set(after_sigs)
+    before_set = set(before_sigs)
+    removed = [{"startTime": s[0], "endTime": s[1], "notes": list(s[2])}
+               for s in before_sigs if s not in after_set]
+    added = [{"startTime": s[0], "endTime": s[1], "notes": list(s[2])}
+             for s in after_sigs if s not in before_set]
+    trace.append({"pass": name, "removed": removed, "added": added})
+
+
 async def transcribe_audio(
     upload: UploadFile,
     tuning: InstrumentTuning,
@@ -210,80 +235,100 @@ async def transcribe_audio(
         if debug and candidate_debug:
             segment_candidates_debug.append(candidate_debug)
 
-    processed_events = suppress_low_confidence_dyad_transients(raw_events)
-    processed_events = suppress_onset_decaying_carryover(processed_events)
-    processed_events = collapse_same_start_primary_singletons(processed_events)
-    processed_events = simplify_short_secondary_bleed(processed_events)
-    processed_events = suppress_post_tail_gap_bridge_dyads(processed_events)
-    processed_events = suppress_leading_descending_overlap(processed_events, tuning)
-    processed_events = simplify_descending_adjacent_dyad_residue(processed_events)
-    processed_events = collapse_high_register_adjacent_bridge_dyads(processed_events, tuning)
-    processed_events = suppress_descending_upper_singleton_spikes(processed_events)
-    processed_events = suppress_short_descending_return_singletons(processed_events, tuning)
-    processed_events = suppress_descending_upper_return_overlap(processed_events)
-    processed_events = merge_short_gliss_clusters(processed_events)
-    processed_events = simplify_short_gliss_prefix_to_contiguous_singleton(processed_events)
-    processed_events = merge_four_note_gliss_clusters(processed_events)
-    processed_events = suppress_leading_gliss_subset_transients(processed_events)
-    processed_events = suppress_leading_gliss_neighbor_noise(processed_events)
-    processed_events = suppress_leading_single_transient(processed_events)
-    processed_events = suppress_subset_decay_events(processed_events)
-    processed_events = split_ambiguous_upper_octave_pairs(processed_events)
-    processed_events = suppress_bridging_octave_pairs(processed_events)
-    processed_events = suppress_short_residual_tails(processed_events)
+    post_processing_trace: list[dict[str, Any]] = []
+    _t = post_processing_trace  # short alias for trace list
+
+    def _pp(name: str, fn, *args, **kwargs) -> list[RawEvent]:
+        """Run a post-processing step and trace changes."""
+        nonlocal processed_events
+        before = processed_events
+        result = fn(before, *args, **kwargs)
+        _trace_post_processing_step(name, before, result, _t)
+        processed_events = result
+        return result
+
+    processed_events = raw_events
+    _pp("suppress_low_confidence_dyad_transients", suppress_low_confidence_dyad_transients)
+    _pp("suppress_onset_decaying_carryover", suppress_onset_decaying_carryover)
+    _pp("collapse_same_start_primary_singletons", collapse_same_start_primary_singletons)
+    _pp("simplify_short_secondary_bleed", simplify_short_secondary_bleed)
+    _pp("suppress_post_tail_gap_bridge_dyads", suppress_post_tail_gap_bridge_dyads)
+    _pp("suppress_leading_descending_overlap", suppress_leading_descending_overlap, tuning)
+    _pp("simplify_descending_adjacent_dyad_residue", simplify_descending_adjacent_dyad_residue)
+    _pp("collapse_high_register_adjacent_bridge_dyads", collapse_high_register_adjacent_bridge_dyads, tuning)
+    _pp("suppress_descending_upper_singleton_spikes", suppress_descending_upper_singleton_spikes)
+    _pp("suppress_short_descending_return_singletons", suppress_short_descending_return_singletons, tuning)
+    _pp("suppress_descending_upper_return_overlap", suppress_descending_upper_return_overlap)
+    _pp("merge_short_gliss_clusters", merge_short_gliss_clusters)
+    _pp("simplify_short_gliss_prefix_to_contiguous_singleton", simplify_short_gliss_prefix_to_contiguous_singleton)
+    _pp("merge_four_note_gliss_clusters", merge_four_note_gliss_clusters)
+    _pp("suppress_leading_gliss_subset_transients", suppress_leading_gliss_subset_transients)
+    _pp("suppress_leading_gliss_neighbor_noise", suppress_leading_gliss_neighbor_noise)
+    _pp("suppress_leading_single_transient", suppress_leading_single_transient)
+    _pp("suppress_subset_decay_events", suppress_subset_decay_events)
+    _pp("split_ambiguous_upper_octave_pairs", split_ambiguous_upper_octave_pairs)
+    _pp("suppress_bridging_octave_pairs", suppress_bridging_octave_pairs)
+    _pp("suppress_short_residual_tails", suppress_short_residual_tails)
     # #153 Phase A.2: rejoin short-segment-guarded primaries (e.g., E148 C6)
     # into adjacent chords when narrow FFT cross-validation confirms the
     # guarded note is independently present in the next event's attack
     # window.  Must run before merge_adjacent_events / merge_short_chord_clusters
     # because those passes only merge identical or compatible note sets.
-    processed_events = merge_short_segment_guard_via_narrow_fft(
-        processed_events, audio, sample_rate, tuning,
-        noise_floor=noise_floor,
-    )
+    _pp("merge_short_segment_guard_via_narrow_fft",
+        merge_short_segment_guard_via_narrow_fft,
+        audio, sample_rate, tuning, noise_floor=noise_floor)
     # #153 cosmetic extras follow-up: any short-segment-guarded singleton
     # that A.2 could not merge into a real chord is a spectral artefact
     # of the 6-16 ms FFT window, not a played note.  Drop it before the
     # downstream merge passes can promote it into a final event.
-    processed_events = suppress_unmerged_guarded_singletons(processed_events)
+    _pp("suppress_unmerged_guarded_singletons", suppress_unmerged_guarded_singletons)
     # #153 Phase A.3: rejoin gliss-split adjacent segments (e.g., E121
     # prefix splitting; E97 / E133 F5 trailing) by union with semitone
     # dedup.  Operates on non-guarded segments only.
-    processed_events = merge_gliss_split_segments(
-        processed_events, audio, sample_rate, tuning,
-    )
+    _pp("merge_gliss_split_segments",
+        merge_gliss_split_segments, audio, sample_rate, tuning)
     # #153 Phase A.4: recover a chord note rejected by the weak-secondary
     # gate when its narrow-FFT presence + a real attack rise within the
     # segment's sub-onsets jointly confirm it (e.g., E97 / E133 D5 masked
     # by prior D5 sustain).
-    processed_events = recover_masked_reattack_via_narrow_fft(
-        processed_events, audio, sample_rate, tuning,
-        noise_floor=noise_floor,
-    )
+    _pp("recover_masked_reattack_via_narrow_fft",
+        recover_masked_reattack_via_narrow_fft,
+        audio, sample_rate, tuning, noise_floor=noise_floor)
     # #154 Phase B lookback rescue: when the broadband onset detector
     # reports an onset that the segmenter did not materialize (the
     # onset sits in a gap between segments), narrow FFT at the
     # unconsumed onset time can reveal a chord note that attacks in
-    # the gap and decays before the next segment starts.  E.g.,
-    # 17-key BWV147 E97 G4 attacks at 167.98s but the next segment
-    # starts at 168.152s; an unconsumed onset at 168.0827s sits in
-    # the gap with G4 as the rank-1 narrow-FFT candidate.
-    processed_events = recover_pre_segment_attack_via_narrow_fft(
-        processed_events, audio, sample_rate, tuning, all_onset_times,
-        noise_floor=noise_floor,
-    )
-    processed_events = collapse_late_descending_step_handoffs(processed_events)
+    # the gap and decays before the next segment starts.
+    _pp("recover_pre_segment_attack_via_narrow_fft",
+        recover_pre_segment_attack_via_narrow_fft,
+        audio, sample_rate, tuning, all_onset_times, noise_floor=noise_floor)
+    _pp("collapse_late_descending_step_handoffs", collapse_late_descending_step_handoffs)
+
+    def _mp(name: str, fn, *args, **kwargs) -> list[RawEvent]:
+        """Run a merge-phase post-processing step and trace changes."""
+        nonlocal merged_events
+        before = merged_events
+        result = fn(before, *args, **kwargs)
+        _trace_post_processing_step(name, before, result, _t)
+        merged_events = result
+        return result
+
     merged_events = merge_adjacent_events(processed_events)
-    merged_events = collapse_late_descending_step_handoffs(merged_events)
-    merged_events = merge_short_chord_clusters(merged_events)
-    merged_events = merge_adjacent_events(merged_events)
-    merged_events = collapse_ascending_restart_lower_residue_singletons(merged_events, tuning)
-    merged_events = merge_adjacent_events(merged_events)
+    _trace_post_processing_step("merge_adjacent_events", processed_events, merged_events, _t)
+    _mp("collapse_late_descending_step_handoffs_2", collapse_late_descending_step_handoffs)
+    _mp("merge_short_chord_clusters", merge_short_chord_clusters)
+    _mp("merge_adjacent_events_2", merge_adjacent_events)
+    _mp("collapse_ascending_restart_lower_residue_singletons",
+        collapse_ascending_restart_lower_residue_singletons, tuning)
+    _mp("merge_adjacent_events_3", merge_adjacent_events)
+
     merged_events, repeated_pattern_pass_trace = apply_repeated_pattern_passes(
         merged_events,
         disabled_passes=disabled_repeated_pattern_passes,
         debug=debug,
     )
-    merged_events = split_adjacent_step_dyads_in_ascending_runs(merged_events, tuning)
+    _mp("split_adjacent_step_dyads_in_ascending_runs",
+        split_adjacent_step_dyads_in_ascending_runs, tuning)
     if not merged_events:
         raise HTTPException(status_code=422, detail="No musical notes were detected. Try a clearer recording or a different tuning.")
 
@@ -372,6 +417,7 @@ async def transcribe_audio(
                 }
                 for index, event in enumerate(merged_events)
             ],
+            "postProcessingTrace": post_processing_trace,
             "disabledRepeatedPatternPasses": sorted(disabled_repeated_pattern_passes or ()),
             "repeatedPatternPassTrace": repeated_pattern_pass_trace,
             "noiseFloor": noise_floor.to_debug_dict(),
