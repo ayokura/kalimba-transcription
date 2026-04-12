@@ -25,17 +25,21 @@ Expected event source priority:
     The script logs which source was used via stderr
     `[synthetic-line] using <source> (N events)` when falling back.
 
-Environment:
-    SCORE_ALIGNMENT_NO_CACHE=1  Disable the on-disk transcription cache
-                                (apps/api/tests/.cache/score_alignment/). When set,
-                                transcription requests always re-run the full pipeline.
+Options:
+    --no-cache          Force a fresh transcription run (skip cache read).
+                        The result is still written to cache so subsequent
+                        runs benefit.  Rarely needed — recognizer code edits
+                        auto-invalidate via fingerprint.  Use only for data
+                        file changes or suspected cache corruption.
 
-Cache invalidation:
+Cache:
     The cache key includes a fingerprint of all .py files under
     apps/api/app/transcription/, so editing recognizer code automatically
     invalidates stale entries on the next run. Reverting an edit restores
     the original cache hit. Audio bytes and request data are also part of
-    the key. Old entries accumulate over time and can be cleaned manually:
+    the key. The SUMMARY block shows ``Cache: hit/miss/fresh
+    (recognizer: ...)`` so the provenance is always visible.
+    Old entries accumulate over time and can be cleaned manually:
         rm -rf apps/api/tests/.cache/score_alignment/
 """
 import argparse
@@ -106,20 +110,24 @@ def _env_flag(name: str) -> bool:
 
 
 def _cached_transcribe(
-    client: TestClient, audio_bytes: bytes, request_data: dict[str, str]
-) -> dict:
+    client: TestClient, audio_bytes: bytes, request_data: dict[str, str],
+    *, force_miss: bool = False,
+) -> tuple[dict, str]:
     """Run transcription with disk cache of the JSON response.
 
-    Set ``SCORE_ALIGNMENT_NO_CACHE=1`` (or ``true``/``yes``/``on``) to bypass
-    the cache entirely. Other values, including ``0`` and ``false``, leave
-    the cache enabled.
+    Returns ``(payload, cache_status)`` where *cache_status* is a
+    human-readable string such as ``"hit a1b2… (recognizer: 8f3a…)"``
+    suitable for the SUMMARY block.
+
+    When *force_miss* is ``True`` (``--no-cache``), the cache read is
+    skipped but the result is still written so subsequent runs benefit.
     """
-    cache_disabled = _env_flag("SCORE_ALIGNMENT_NO_CACHE")
     key = _cache_key(audio_bytes, request_data)
     key_prefix = key[:12]
+    fp_prefix = _recognizer_code_fingerprint()[:8]
     cache_file = CACHE_DIR / f"{key}.json"
 
-    if not cache_disabled and cache_file.exists():
+    if not force_miss and cache_file.exists():
         invalid_reason: str | None = None
         payload: object = None
         try:
@@ -142,9 +150,12 @@ def _cached_transcribe(
                 pass
         else:
             print(f"[cache hit] {key_prefix}", file=sys.stderr)
-            return payload
+            return payload, f"hit {key_prefix} (recognizer: {fp_prefix})"
 
-    print(f"[cache miss] {key_prefix}", file=sys.stderr)
+    if force_miss:
+        print(f"[cache fresh] {key_prefix} (--no-cache)", file=sys.stderr)
+    else:
+        print(f"[cache miss] {key_prefix}", file=sys.stderr)
     response = client.post(
         "/api/transcriptions",
         data=request_data,
@@ -159,30 +170,32 @@ def _cached_transcribe(
         sys.exit(1)
     raw_text = response.text
     payload = json.loads(raw_text)
-    if not cache_disabled:
+    # Always write to cache — even --no-cache runs benefit subsequent invocations
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        # Atomic write: write to a uniquely-named sibling temp file (mkstemp
+        # guarantees no collision between concurrent invocations) and rename
+        # into place so an interrupted run cannot leave a truncated cache
+        # entry behind.
+        fd, tmp_path_str = tempfile.mkstemp(
+            dir=CACHE_DIR, prefix=f"{key}.", suffix=".tmp"
+        )
+        tmp_path = Path(tmp_path_str)
         try:
-            CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            # Atomic write: write to a uniquely-named sibling temp file (mkstemp
-            # guarantees no collision between concurrent invocations) and rename
-            # into place so an interrupted run cannot leave a truncated cache
-            # entry behind.
-            fd, tmp_path_str = tempfile.mkstemp(
-                dir=CACHE_DIR, prefix=f"{key}.", suffix=".tmp"
-            )
-            tmp_path = Path(tmp_path_str)
-            try:
-                with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                    fh.write(raw_text)
-                os.replace(tmp_path, cache_file)
-            except BaseException:
-                tmp_path.unlink(missing_ok=True)
-                raise
-        except OSError as exc:
-            print(
-                f"[cache write skipped] {key_prefix}: {exc}",
-                file=sys.stderr,
-            )
-    return payload
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(raw_text)
+            os.replace(tmp_path, cache_file)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
+    except OSError as exc:
+        print(
+            f"[cache write skipped] {key_prefix}: {exc}",
+            file=sys.stderr,
+        )
+    label = "fresh" if force_miss else "miss"
+    tag = " [--no-cache]" if force_miss else ""
+    return payload, f"{label} {key_prefix} (recognizer: {fp_prefix}){tag}"
 
 
 def resolve_fixture(name: str) -> Path:
@@ -336,7 +349,17 @@ def main():
     parser.add_argument("--mode", choices=["events", "segments"], default="events",
                         help="Data source: 'events' (post-processed, default) or 'segments' (raw segmentCandidates)")
     parser.add_argument("--line", type=str, default=None, help="Show only this line (e.g., R6)")
+    parser.add_argument("--no-cache", action="store_true", default=False,
+                        help="Force fresh transcription (skip cache read, still writes result to cache)")
     args = parser.parse_args()
+
+    force_miss = args.no_cache
+    if not force_miss and _env_flag("SCORE_ALIGNMENT_NO_CACHE"):
+        force_miss = True
+        print(
+            "[deprecation] SCORE_ALIGNMENT_NO_CACHE env var detected; prefer --no-cache",
+            file=sys.stderr,
+        )
 
     fixture_dir = resolve_fixture(args.fixture)
     score_path = fixture_dir / "score_structure.json"
@@ -346,7 +369,8 @@ def main():
     audio_bytes = build_evaluation_audio_bytes(fixture_dir, expected)
 
     request_data = {"tuning": json.dumps(request_payload["tuning"]), "debug": "true"}
-    payload = _cached_transcribe(client, audio_bytes, request_data)
+    payload, cache_status = _cached_transcribe(client, audio_bytes, request_data,
+                                               force_miss=force_miss)
     debug = payload.get("debug")
     if not isinstance(debug, dict) or "segmentCandidates" not in debug:
         print(f"Error: response missing debug.segmentCandidates (keys: {list(payload.keys())})", file=sys.stderr)
@@ -647,6 +671,7 @@ def main():
         print(f"  No match:      {total_miss:3d}/{total_events} ({100*total_miss/total_events:.0f}%)")
         real_extras = total_extras - total_cosmetic_extras
         print(f"  Extra segments: {total_extras} ({real_extras} real + {total_cosmetic_extras} cosmetic <30ms guard artefacts)")
+    print(f"  Cache: {cache_status}")
 
 
 if __name__ == "__main__":

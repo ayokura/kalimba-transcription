@@ -57,7 +57,7 @@ ad-hoc な event count 比較は evaluation window / ignoredRanges / expectedEve
 
 ### score_alignment_diagnosis.py のキャッシュ挙動
 
-`scripts/audio-analysis/score_alignment_diagnosis.py` のキャッシュキーには **recognizer source code (`apps/api/app/transcription/*.py`) の SHA256 fingerprint** が含まれる (`_recognizer_code_fingerprint()`)。コードを変更すると自動 invalidate されるので、`SCORE_ALIGNMENT_NO_CACHE=1` を常時付ける必要はない。iterative 修正 → diagnosis 走らせる workflow ではキャッシュが効いて時短になる。明示的にキャッシュを破棄したい場合のみフラグを使う。
+`scripts/audio-analysis/score_alignment_diagnosis.py` のキャッシュキーには **recognizer source code (`apps/api/app/transcription/*.py`) の SHA256 fingerprint** が含まれる (`_recognizer_code_fingerprint()`)。コードを変更すると自動 invalidate されるので、`--no-cache` を常時付ける必要はない。iterative 修正 → diagnosis 走らせる workflow ではキャッシュが効いて時短になる。`--no-cache` はキャッシュ読み取りをスキップするが結果は書き込むので、次回は高速。データファイル変更やキャッシュ破損を疑う場合にのみ使う。SUMMARY 末尾の `Cache: hit/miss/fresh (recognizer: ...)` で結果の由来を確認可能。
 
 ## GitHub interaction conventions
 

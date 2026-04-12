@@ -7,7 +7,7 @@ arguments:
     description: Fixture name (e.g., bwv147-sequence-163-01)
     required: true
   - name: options
-    description: "Options: --verbose, --mode events|segments, --line L1"
+    description: "Options: --verbose, --mode events|segments, --line L1, --no-cache"
     required: false
 ---
 
@@ -27,7 +27,7 @@ The script logs which source was used via stderr `[synthetic-line] using <source
 
 Run the alignment diagnosis script:
 ```bash
-uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--verbose] [--mode events|segments] [--line L1]
+uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--verbose] [--mode events|segments] [--line L1] [--no-cache]
 ```
 
 ## Modes
@@ -53,16 +53,17 @@ Per-line `+N extra segments:` lines list detected events that did not match any 
 
 ## Caching
 
-スクリプトは transcription 結果を `apps/api/tests/.cache/score_alignment/` に永続化する。キャッシュキーには `audio bytes` + リクエストデータ + `apps/api/app/transcription/` 配下の `.py` ファイル全体のフィンガープリントが含まれる。
+transcription 結果は `apps/api/tests/.cache/score_alignment/` に永続化される。キャッシュキーには `audio bytes` + リクエストデータ + `apps/api/app/transcription/` 配下の `.py` ファイル全体のフィンガープリントが含まれる。
 
 - 同じ fixture を `--line` 違いで繰り返し呼ぶと 2 回目以降は **~1秒** で完了 (フルパイプライン ~30s-3min を回避)
 - recognizer コードを編集すると次回は自動的に miss → fresh run (stale を踏まない設計)
 - 編集を revert すると元のキーに戻ってヒットする
 
-無効化したいとき (デバッグ等): `SCORE_ALIGNMENT_NO_CACHE=1 uv run python scripts/audio-analysis/score_alignment_diagnosis.py ...`
-キャッシュディレクトリ削除: `rm -rf apps/api/tests/.cache/score_alignment/` (累積したエントリを掃除したい場合)
+`--no-cache` を指定するとキャッシュ読み取りをスキップして fresh run を強制するが、結果はキャッシュに書き込まれるので次回は高速。recognizer コードを変更した場合はフィンガープリントが自動で変わるため `--no-cache` は不要 — データファイル変更やキャッシュ破損を疑う場合にのみ使う。
 
-stderr に `[cache hit] <key prefix>` / `[cache miss] <key prefix>` が出るので動作確認可能。
+SUMMARY ブロックの末尾に `Cache: hit/miss/fresh <key> (recognizer: <fp>)` が出力される。`recognizer:` の値で、どのコードバージョンの結果かを確認できる。
+
+キャッシュディレクトリ削除: `rm -rf apps/api/tests/.cache/score_alignment/` (累積したエントリを掃除したい場合)
 
 ### Cache を直接読んで recognizer 内部挙動を解析する
 
