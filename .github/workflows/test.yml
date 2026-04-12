@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       id-token: write # Required for OIDC (takumi-guard)
       contents: read
@@ -24,6 +24,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           version: "latest"
+          enable-cache: true
 
       - name: Set up Python
         run: uv python install 3.13
@@ -33,3 +34,6 @@ jobs:
 
       - name: Run tests
         run: uv run pytest apps/api/tests -q
+        env:
+          OPENBLAS_NUM_THREADS: "1"
+          MKL_NUM_THREADS: "1"
