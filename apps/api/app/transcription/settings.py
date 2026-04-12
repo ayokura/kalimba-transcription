@@ -40,6 +40,7 @@ class RecognizerSettings:
     use_evidence_gate_rescue: bool = True
     use_multi_primary_branching: bool = True
     use_hpss_onset: bool = False
+    use_onset_gate: bool = True  # #141: reject primary with no onset evidence
     use_alternate_groupings: bool = True  # #151: dissonance-aware merge guard
     # #149: per-tine partial scoring in rank_tuning_candidates.
     # Currently disabled because kalimba tunings contain fifths as adjacent

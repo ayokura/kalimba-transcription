@@ -424,6 +424,14 @@ ITERATIVE_RESCUE_MIN_FUNDAMENTAL_RATIO = 0.9
 TERTIARY_MIN_ONSET_GAIN = 1.8
 TERTIARY_BACKWARD_LOOKBACK_SECONDS = 0.2
 TERTIARY_MIN_BACKWARD_ATTACK_GAIN = 20.0
+# Onset gate (#141): same physical evidence required as tertiary gates.
+# Reject primary when neither onset_gain nor backward_attack_gain shows
+# a genuine new attack, and no promotion path validated the segment.
+# broadband: P25=2.57 for completed fixtures; threshold 2.0 catches
+# segments without meaningful broadband onset.
+ONSET_GATE_MIN_BROADBAND_GAIN = 2.0
+ONSET_GATE_MIN_ONSET_GAIN = 1.8  # calibrated: same as TERTIARY_MIN_ONSET_GAIN
+ONSET_GATE_MIN_BACKWARD_GAIN = 20.0  # calibrated: same as TERTIARY_MIN_BACKWARD_ATTACK_GAIN
 TERTIARY_BACKWARD_GATE_ONSET_OVERRIDE = 20.0
 SEMITONE_LEAKAGE_MAX_CENTS = 150.0
 SEMITONE_LEAKAGE_MAX_SCORE_RATIO = 0.20

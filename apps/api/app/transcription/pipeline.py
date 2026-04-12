@@ -166,6 +166,7 @@ async def transcribe_audio(
             previous_primary_was_singleton=previous_primary_was_singleton,
             confirmed_primary=segment.confirmed_primary,
             sub_onsets=sub_onsets,
+            segment_sources=segment.sources,
         )
         if not candidates or primary is None:
             if debug and candidate_debug:

@@ -1286,6 +1286,7 @@ class _SegmentContext:
     previous_primary_frequency: float | None
     previous_primary_was_singleton: bool
     sub_onsets: tuple[float, ...] = ()
+    segment_sources: frozenset[str] = frozenset()
 
     @property
     def duration(self) -> float:
@@ -1491,6 +1492,7 @@ class _NoteEvidenceCache:
         self._sustain_spectrum_computed: bool = False
         self._sustain_spectrum_cache: tuple[np.ndarray, np.ndarray] | None = None
         self._sustain_energies: dict[float, float] = {}
+        self._broadband_onset_gain: float | None = None
 
     def register_note(self, frequency: float, note_name: str) -> None:
         """Associate a note name with its frequency for sub-onset gating."""
@@ -1529,6 +1531,21 @@ class _NoteEvidenceCache:
 
     def get_onset_gain_if_cached(self, frequency: float) -> float | None:
         return self._onset_gains.get(frequency)
+
+    def broadband_onset_gain(self) -> float:
+        """Broadband onset gain: attack_energy / pre_energy for the segment."""
+        if self._broadband_onset_gain is None:
+            chunks = _build_analysis_window_chunks(
+                self._audio, self._sr, self._start, self._end,
+            )
+            if chunks is None:
+                self._broadband_onset_gain = 0.0
+            else:
+                pre_chunk, attack_chunk, _sustain = chunks
+                pre = _broadband_chunk_energy(pre_chunk)
+                attack = _broadband_chunk_energy(attack_chunk)
+                self._broadband_onset_gain = (attack + 1e-6) / (pre + 1e-6)
+        return self._broadband_onset_gain
 
     def attack_energy(self, frequency: float) -> float:
         """Per-note attack energy (peak around fundamental in attack window).
@@ -1859,6 +1876,25 @@ def _resolve_primary(
                 "replacementNote": primary.candidate.note_name,
             }
             promotions.append("residual-forward-scan")
+    # Ensure primary_onset_gain is computed (some promotion paths leave it None).
+    if primary_onset_gain is None:
+        primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
+    # Onset gate (#141): reject primary with no onset evidence from any
+    # source — broadband, per-note, or backward attack.  Catches
+    # resonance-only segments that the residual-decay check misses
+    # (when the note is not in recent_note_names).
+    # Exempt: first segment, promoted primaries, confirmed_primary (mute-dip).
+    if (
+        not _rejected
+        and settings.get().use_onset_gate
+        and primary_promotion_debug is None
+        and ctx.start_time > 0.1
+        and evidence.broadband_onset_gain() < ONSET_GATE_MIN_BROADBAND_GAIN
+        and primary_onset_gain < ONSET_GATE_MIN_ONSET_GAIN
+        and evidence.backward_attack_gain(primary.candidate.frequency) < ONSET_GATE_MIN_BACKWARD_GAIN
+    ):
+        _rejected = True
+        _rejection_reason = "onset-gate-no-evidence"
     decision = _PrimaryDecision(
         initial_primary=initial_primary_name, final_primary=primary.candidate.note_name,
         onset_gain=primary_onset_gain, promotions=promotions,
@@ -2969,6 +3005,7 @@ def segment_peaks(
     previous_primary_was_singleton: bool = False,
     confirmed_primary: Note | None = None,
     sub_onsets: tuple[float, ...] = (),
+    segment_sources: frozenset[str] = frozenset(),
 ) -> SegmentPeaksResult:
     ctx = _SegmentContext(
         audio=audio, sample_rate=sample_rate,
@@ -2985,6 +3022,7 @@ def segment_peaks(
         previous_primary_frequency=previous_primary_frequency,
         previous_primary_was_singleton=previous_primary_was_singleton,
         sub_onsets=sub_onsets,
+        segment_sources=segment_sources,
     )
 
     # Layer 1: Signal acquisition
