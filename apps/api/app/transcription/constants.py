@@ -163,7 +163,12 @@ NARROW_FFT_REATTACK_DOMINANCE_RATIO = 1.5
 # Reject candidates that sit within this many cents of any existing event
 # note (whole step = 200 cents).  Without the whole-step guard the pass
 # wrongly adds E6 to D6 events in the d6-to-e6 alternating sequence.
-NARROW_FFT_REATTACK_DISSONANCE_CENTS = 200.0
+# 250 cents (not 200) to avoid float precision miss: cents_distance(C5,D5)
+# returns 200.000006 under standard tuning, causing strict ≤200 to reject
+# an exact whole step.  250 still blocks whole-step dissonance while
+# permitting minor thirds (300 cents) and wider intervals.  Matches
+# Phase B / Phase C dissonance thresholds.
+NARROW_FFT_REATTACK_DISSONANCE_CENTS = 250.0
 
 # Phase B: per-recording per-band noise floor calibration (#154).
 # Silent regions in the recording are sampled with the same narrow-FFT
