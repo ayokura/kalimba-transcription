@@ -1,7 +1,7 @@
 """Compare expected events with recognizer output using ordered matching.
 
 Usage:
-    uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose] [--mode events|segments] [--line LINE_ID]
+    uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose] [--mode events|segments] [--line LINE_ID] [--no-cache]
 
 Arguments:
     fixture-name    Fixture name (e.g., bwv147-sequence-163-01, c4-repeat-01)
@@ -9,6 +9,7 @@ Arguments:
     --mode          Data source: 'events' (default, post-processed final output)
                     or 'segments' (raw segmentCandidates before event post-processing)
     --line          Show only the specified line id (e.g., R6). All lines by default.
+    --no-cache      Force fresh transcription (skip cache read, still writes result)
 
 Expected event source priority:
     1. score_structure.json — multi-line score (e.g. BWV147 sequence-163).
@@ -32,13 +33,17 @@ Options:
                         auto-invalidate via fingerprint.  Use only for data
                         file changes or suspected cache corruption.
 
+Deprecated:
+    SCORE_ALIGNMENT_NO_CACHE=1 env var is still accepted for backward
+    compatibility but triggers a deprecation warning. Prefer --no-cache.
+
 Cache:
     The cache key includes a fingerprint of all .py files under
     apps/api/app/transcription/, so editing recognizer code automatically
     invalidates stale entries on the next run. Reverting an edit restores
     the original cache hit. Audio bytes and request data are also part of
-    the key. The SUMMARY block shows ``Cache: hit/miss/fresh
-    (recognizer: ...)`` so the provenance is always visible.
+    the key. The SUMMARY block shows ``Cache: hit/miss/fresh (recognizer: ...)``
+    so the provenance is always visible.
     Old entries accumulate over time and can be cleaned manually:
         rm -rf apps/api/tests/.cache/score_alignment/
 """
@@ -354,12 +359,13 @@ def main():
     args = parser.parse_args()
 
     force_miss = args.no_cache
-    if not force_miss and _env_flag("SCORE_ALIGNMENT_NO_CACHE"):
-        force_miss = True
+    if _env_flag("SCORE_ALIGNMENT_NO_CACHE"):
         print(
             "[deprecation] SCORE_ALIGNMENT_NO_CACHE env var detected; prefer --no-cache",
             file=sys.stderr,
         )
+        if not force_miss:
+            force_miss = True
 
     fixture_dir = resolve_fixture(args.fixture)
     score_path = fixture_dir / "score_structure.json"
