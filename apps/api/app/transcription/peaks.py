@@ -918,59 +918,6 @@ def maybe_replace_stale_recent_primary(
 
     return primary, primary_onset_gain, None
 
-def maybe_promote_lower_secondary_to_recent_upper_octave(
-    primary: NoteHypothesis,
-    accepted_secondary: NoteHypothesis,
-    residual_ranked: list[NoteHypothesis],
-    segment_duration: float,
-    recent_note_names: set[str] | None = None,
-) -> tuple[NoteHypothesis, str | None]:
-    if segment_duration > LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_DURATION:
-        return accepted_secondary, None
-    if accepted_secondary.candidate.frequency >= primary.candidate.frequency:
-        return accepted_secondary, None
-    if recent_note_names and accepted_secondary.candidate.note_name in recent_note_names:
-        return accepted_secondary, None
-    if accepted_secondary.score > primary.score * LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_LOWER_SCORE_RATIO:
-        return accepted_secondary, None
-    if accepted_secondary.fundamental_ratio > LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_LOWER_FUNDAMENTAL_RATIO:
-        return accepted_secondary, None
-    if (
-        abs(cents_distance(primary.candidate.frequency, accepted_secondary.candidate.frequency))
-        < LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_PRIMARY_INTERVAL_CENTS
-    ):
-        return accepted_secondary, None
-
-    target_octave = accepted_secondary.candidate.octave + 1
-    for hypothesis in residual_ranked[:8]:
-        if hypothesis.candidate.note_name == accepted_secondary.candidate.note_name:
-            continue
-        if hypothesis.candidate.pitch_class != accepted_secondary.candidate.pitch_class:
-            continue
-        if hypothesis.candidate.octave != target_octave:
-            continue
-        if hypothesis.candidate.frequency >= primary.candidate.frequency:
-            continue
-        if (
-            abs(cents_distance(primary.candidate.frequency, hypothesis.candidate.frequency))
-            > LOWER_SECONDARY_OCTAVE_PROMOTION_MAX_PRIMARY_INTERVAL_CENTS
-        ):
-            continue
-        if hypothesis.fundamental_ratio < LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_UPPER_FUNDAMENTAL_RATIO:
-            continue
-        if (
-            hypothesis.fundamental_ratio - accepted_secondary.fundamental_ratio
-            < LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_FUNDAMENTAL_RATIO_DELTA
-        ):
-            continue
-        if hypothesis.score < accepted_secondary.score * LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_UPPER_SCORE_RATIO:
-            continue
-        if hypothesis.score < primary.score * LOWER_SECONDARY_OCTAVE_PROMOTION_MIN_PRIMARY_SCORE_RATIO:
-            continue
-        return hypothesis, accepted_secondary.candidate.note_name
-
-    return accepted_secondary, None
-
 
 def maybe_promote_stale_primary_to_upper_octave(
     primary: NoteHypothesis,
@@ -1491,7 +1438,6 @@ class _SelectionState:
     selected: list[NoteCandidate]
     residual_ranked: list[NoteHypothesis]
     candidate_decisions: list[_CandidateDecision]
-    promoted_secondary_to_recent_upper_octave: bool
 
 
 @dataclass(slots=True)
@@ -1930,7 +1876,6 @@ def _extend_gliss_tertiary(
     """Layer 4a: Contiguous gliss tertiary extension."""
     if (
         len(state.selected) != 2
-        or state.promoted_secondary_to_recent_upper_octave
         or ctx.duration > GLISS_TERTIARY_MAX_DURATION
     ):
         return
@@ -2102,7 +2047,6 @@ def _select_candidates(
     primary_promotion_debug = primary_result.promotion_debug
     selected = [primary.candidate]
     residual_ranked: list[NoteHypothesis] = []
-    promoted_secondary_to_recent_upper_octave = False
     candidate_decisions: list[_CandidateDecision] = []
     contiguous_four_note_cluster = select_contiguous_four_note_cluster(primary, spectral.ranked, ctx.duration)
     if contiguous_four_note_cluster is not None:
@@ -2536,26 +2480,12 @@ def _select_candidates(
             verdict.phase_b_reasons = phase_b_reasons
             accepted = len(phase_b_reasons) == 0
             verdict.accepted = accepted
-            accepted_hypothesis = hypothesis
             debug_reasons: list[str] = phase_b_reasons
-            segment_duration = ctx.duration
-            if accepted and len(selected) == 1 and hypothesis.candidate.frequency < primary.candidate.frequency and not verdict.octave_dyad_allowed:
-                accepted_hypothesis, promoted_from = maybe_promote_lower_secondary_to_recent_upper_octave(
-                    primary,
-                    hypothesis,
-                    residual_ranked,
-                    segment_duration,
-                    ctx.recent_note_names,
-                )
-                if promoted_from is not None:
-                    promoted_secondary_to_recent_upper_octave = True
-                    debug_reasons = [f"promoted-from-{promoted_from}"]
-            _hyp = accepted_hypothesis if accepted else hypothesis
             candidate_decisions.append(_CandidateDecision(
-                note_name=_hyp.candidate.note_name,
-                frequency=_hyp.candidate.frequency,
-                score=_hyp.score,
-                fundamental_ratio=_hyp.fundamental_ratio,
+                note_name=hypothesis.candidate.note_name,
+                frequency=hypothesis.candidate.frequency,
+                score=hypothesis.score,
+                fundamental_ratio=hypothesis.fundamental_ratio,
                 onset_gain=onset_gain,
                 accepted=accepted,
                 reasons=debug_reasons,
@@ -2563,8 +2493,8 @@ def _select_candidates(
                 source="secondary",
             ))
             if accepted:
-                accepted_hypothesis.candidate.onset_gain = evidence.get_onset_gain_if_cached(accepted_hypothesis.candidate.frequency)
-                selected.append(accepted_hypothesis.candidate)
+                hypothesis.candidate.onset_gain = evidence.get_onset_gain_if_cached(hypothesis.candidate.frequency)
+                selected.append(hypothesis.candidate)
                 if len(selected) >= MAX_POLYPHONY:
                     break
 
@@ -2656,7 +2586,6 @@ def _select_candidates(
         selected=selected,
         residual_ranked=residual_ranked,
         candidate_decisions=candidate_decisions,
-        promoted_secondary_to_recent_upper_octave=promoted_secondary_to_recent_upper_octave,
     )
 
 
@@ -3115,7 +3044,6 @@ def segment_peaks(
                 _sel = _SelectionState(
                     selected=best_alt.selected, residual_ranked=best_alt.residual_ranked,
                     candidate_decisions=best_alt.candidate_decisions,
-                    promoted_secondary_to_recent_upper_octave=False,
                 )
                 debug_payload = _build_segment_debug(ctx, spectral, _pr, _sel, evidence)
             return SegmentPeaksResult(best_alt.selected, debug_payload, primary, trace)

@@ -8,7 +8,6 @@ from app.transcription import (
     NoteHypothesis,
     PRIMARY_REJECTION_MAX_SCORE,
     PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO,
-    maybe_promote_lower_secondary_to_recent_upper_octave,
     segment_peaks,
     settings,
 )
@@ -120,53 +119,6 @@ def test_segment_peaks_suppresses_recent_upper_carryover_with_weak_onset() -> No
         for item in debug["secondaryDecisionTrail"]
     )
 
-
-def test_maybe_promote_lower_secondary_to_recent_upper_octave_has_reachable_interval_window() -> None:
-    primary = NoteHypothesis(
-        NoteCandidate(14, Note.from_name("F5")),
-        100.0,
-        0.0,
-        0.0,
-        0.98,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    )
-    accepted_secondary = NoteHypothesis(
-        NoteCandidate(10, Note.from_name("E4")),
-        10.0,
-        0.0,
-        0.0,
-        0.5,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    )
-    residual_ranked = [
-        NoteHypothesis(
-            NoteCandidate(4, Note.from_name("E5")),
-            20.0,
-            0.0,
-            0.0,
-            0.95,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-        )
-    ]
-
-    promoted, promoted_from = maybe_promote_lower_secondary_to_recent_upper_octave(
-        primary,
-        accepted_secondary,
-        residual_ranked,
-        segment_duration=0.2,
-    )
-
-    assert promoted.candidate.note_name == "E5"
-    assert promoted_from == "E4"
 
 
 def test_segment_peaks_keeps_fresh_recent_upper_dyad_when_both_notes_attack() -> None:
