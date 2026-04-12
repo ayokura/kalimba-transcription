@@ -136,3 +136,80 @@ class TestGlissClusterDissonanceGuard:
 
         assert len(result) == 1
         assert {n.note_name for n in result[0].notes} == {"E4", "G4", "B4"}
+
+
+# ---------------------------------------------------------------------------
+# Layer B(2): Gap-based ambiguity
+# ---------------------------------------------------------------------------
+
+
+class TestGapAmbiguityChordCluster:
+    def test_gap_above_threshold_records_split_alternative(self) -> None:
+        """Merge proceeds but a gap_ambiguity alternateGrouping is recorded
+        when the gap is above GAP_AMBIGUITY_MIN_GAP (20ms)."""
+        # gap = 0.03s (30ms) > 20ms threshold
+        events = [
+            RawEvent(0.0, 0.12, [_nc("C4", key=1)], False, "C4", 300.0),
+            RawEvent(0.15, 0.30, [_nc("E4", key=2), _nc("G4", key=3)], False, "E4", 280.0),
+        ]
+        with override(use_alternate_groupings=True):
+            result = merge_short_chord_clusters(events)
+
+        assert len(result) == 1
+        assert {n.note_name for n in result[0].notes} == {"C4", "E4", "G4"}
+        assert len(result[0].alternate_groupings) == 1
+        alt = result[0].alternate_groupings[0]
+        assert alt.reason == "gap_ambiguity"
+        assert alt.split_into is not None
+        assert len(alt.split_into) == 2
+        assert {n.note_name for n in alt.split_into[0]} == {"C4"}
+        assert {n.note_name for n in alt.split_into[1]} == {"E4", "G4"}
+
+    def test_gap_below_threshold_no_ambiguity(self) -> None:
+        """Merge proceeds without alternateGrouping when gap < 20ms."""
+        # gap = 0.01s (10ms) < 20ms threshold
+        events = [
+            RawEvent(0.0, 0.12, [_nc("C4", key=1)], False, "C4", 300.0),
+            RawEvent(0.13, 0.30, [_nc("E4", key=2), _nc("G4", key=3)], False, "E4", 280.0),
+        ]
+        with override(use_alternate_groupings=True):
+            result = merge_short_chord_clusters(events)
+
+        assert len(result) == 1
+        assert {n.note_name for n in result[0].notes} == {"C4", "E4", "G4"}
+        assert len(result[0].alternate_groupings) == 0
+
+    def test_gap_ambiguity_confidence_decreases_with_gap(self) -> None:
+        """Confidence should be lower (more likely separate) when gap is larger."""
+        # Small gap (25ms)
+        events_small = [
+            RawEvent(0.0, 0.12, [_nc("C4", key=1)], False, "C4", 300.0),
+            RawEvent(0.145, 0.30, [_nc("E4", key=2), _nc("G4", key=3)], False, "E4", 280.0),
+        ]
+        # Large gap (60ms)
+        events_large = [
+            RawEvent(0.0, 0.12, [_nc("C4", key=1)], False, "C4", 300.0),
+            RawEvent(0.18, 0.35, [_nc("E4", key=2), _nc("G4", key=3)], False, "E4", 280.0),
+        ]
+        with override(use_alternate_groupings=True):
+            result_small = merge_short_chord_clusters(events_small)
+            result_large = merge_short_chord_clusters(events_large)
+
+        assert len(result_small) == 1 and len(result_large) == 1
+        assert result_small[0].alternate_groupings and result_large[0].alternate_groupings
+        conf_small = result_small[0].alternate_groupings[0].confidence
+        conf_large = result_large[0].alternate_groupings[0].confidence
+        # Higher confidence = more likely to be a chord; lower = more likely separate
+        assert conf_small > conf_large
+
+    def test_gap_ambiguity_disabled_by_flag(self) -> None:
+        """Gap ambiguity should not fire when flag is off."""
+        events = [
+            RawEvent(0.0, 0.12, [_nc("C4", key=1)], False, "C4", 300.0),
+            RawEvent(0.15, 0.30, [_nc("E4", key=2), _nc("G4", key=3)], False, "E4", 280.0),
+        ]
+        with override(use_alternate_groupings=False):
+            result = merge_short_chord_clusters(events)
+
+        assert len(result) == 1
+        assert len(result[0].alternate_groupings) == 0

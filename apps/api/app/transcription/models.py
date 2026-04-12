@@ -81,13 +81,16 @@ class NoteCandidate:
 class RawAlternateGrouping:
     """Internal representation of an alternate event grouping.
 
-    Records that a merge was suppressed (e.g. due to dissonance) and
-    provides the hypothetical merged result for downstream propagation
-    to the response schema.
+    Two modes:
+    - **Combine** (B1 dissonance guard): merge was suppressed; ``combine_with_index``
+      and ``combined_notes`` describe the hypothetical merged result.
+    - **Split** (B2 gap ambiguity): merge was performed; ``split_into`` describes
+      the original separate events that could be restored.
     """
-    combine_with_index: int          # index of the other event in the list at merge time
-    combined_notes: list["NoteCandidate"]  # hypothetical merged note set
-    reason: str                      # e.g. "dissonant_merge_suppressed"
+    combine_with_index: int | None = None   # index of the other event (combine mode)
+    combined_notes: list["NoteCandidate"] | None = None  # hypothetical merged notes (combine mode)
+    split_into: list[list["NoteCandidate"]] | None = None  # original separate note groups (split mode)
+    reason: str = ""                 # e.g. "dissonant_merge_suppressed", "gap_ambiguity"
     confidence: float = 0.5
 
 

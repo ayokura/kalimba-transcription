@@ -368,39 +368,54 @@ async def transcribe_audio(
         if event.alternate_groupings:
             alt_groupings = []
             for alt in event.alternate_groupings:
-                # Resolve the partner event's id (index may have shifted after
-                # merges, but the partner should still be in merged_events at
-                # a position relative to the current event).
-                partner_idx = alt.combine_with_index
-                partner_id = f"evt-{partner_idx + 1}" if partner_idx < len(merged_events) else "evt-?"
-                # Find the actual partner in merged_events by matching the
-                # original combine_with_index against merged_events order.
-                # Since merge passes may reorder, we search by start_time overlap.
-                for mi, me in enumerate(merged_events):
-                    if mi != index - 1 and me.start_time >= event.start_time - 0.01 and any(
-                        n.note_name in {c.note_name for c in alt.combined_notes}
-                        for n in me.notes
-                    ):
-                        partner_id = f"evt-{mi + 1}"
-                        break
-                alt_groupings.append(
-                    AlternateGrouping(
-                        combinesWith=[partner_id],
-                        combinedNotes=[
+                if alt.split_into is not None:
+                    # Split mode (B2 gap ambiguity): merged event records the
+                    # original separate note groups as an alternative.
+                    split_groups = [
+                        [
                             ScoreNote(
-                                key=c.key,
-                                pitchClass=c.pitch_class,
-                                octave=c.octave,
-                                labelDoReMi=format_doremi(c),
-                                labelNumber=format_number(c),
+                                key=c.key, pitchClass=c.pitch_class, octave=c.octave,
+                                labelDoReMi=format_doremi(c), labelNumber=format_number(c),
                                 frequency=round(c.frequency, 3),
                             )
-                            for c in alt.combined_notes
-                        ],
-                        reason=alt.reason,
-                        confidence=alt.confidence,
+                            for c in group
+                        ]
+                        for group in alt.split_into
+                    ]
+                    alt_groupings.append(
+                        AlternateGrouping(
+                            splitInto=split_groups,
+                            reason=alt.reason,
+                            confidence=alt.confidence,
+                        )
                     )
-                )
+                else:
+                    # Combine mode (B1 dissonance guard): separate event records
+                    # the hypothetical merged result as an alternative.
+                    partner_idx = alt.combine_with_index or 0
+                    partner_id = f"evt-{partner_idx + 1}" if partner_idx < len(merged_events) else "evt-?"
+                    for mi, me in enumerate(merged_events):
+                        if mi != index - 1 and me.start_time >= event.start_time - 0.01 and alt.combined_notes and any(
+                            n.note_name in {c.note_name for c in alt.combined_notes}
+                            for n in me.notes
+                        ):
+                            partner_id = f"evt-{mi + 1}"
+                            break
+                    alt_groupings.append(
+                        AlternateGrouping(
+                            combinesWith=[partner_id],
+                            combinedNotes=[
+                                ScoreNote(
+                                    key=c.key, pitchClass=c.pitch_class, octave=c.octave,
+                                    labelDoReMi=format_doremi(c), labelNumber=format_number(c),
+                                    frequency=round(c.frequency, 3),
+                                )
+                                for c in (alt.combined_notes or [])
+                            ],
+                            reason=alt.reason,
+                            confidence=alt.confidence,
+                        )
+                    )
 
         events.append(
             ScoreEvent(

@@ -985,16 +985,24 @@ def merge_short_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
                 index += 1
                 continue
 
-            merged.append(
-                RawEvent(
-                    start_time=current.start_time,
-                    end_time=following.end_time,
-                    notes=combined_list,
-                    is_gliss_like=True,
-                    primary_note_name=current.primary_note_name,
-                    primary_score=max(current.primary_score, following.primary_score),
-                )
+            merged_event = RawEvent(
+                start_time=current.start_time,
+                end_time=following.end_time,
+                notes=combined_list,
+                is_gliss_like=True,
+                primary_note_name=current.primary_note_name,
+                primary_score=max(current.primary_score, following.primary_score),
             )
+            # Gap ambiguity (#151 B2)
+            if settings.get().use_alternate_groupings and gap >= GAP_AMBIGUITY_MIN_GAP:
+                gap_ratio = (gap - GAP_AMBIGUITY_MIN_GAP) / max(GLISS_CLUSTER_MAX_GAP - GAP_AMBIGUITY_MIN_GAP, 1e-6)
+                confidence = GAP_AMBIGUITY_MAX_CONFIDENCE - gap_ratio * (GAP_AMBIGUITY_MAX_CONFIDENCE - GAP_AMBIGUITY_MIN_CONFIDENCE)
+                merged_event.alternate_groupings.append(RawAlternateGrouping(
+                    split_into=[list(current.notes), list(following.notes)],
+                    reason="gap_ambiguity",
+                    confidence=round(max(min(confidence, 1.0), 0.0), 3),
+                ))
+            merged.append(merged_event)
             index += 2
             continue
 
@@ -2492,16 +2500,26 @@ def merge_short_chord_clusters(raw_events: list[RawEvent]) -> list[RawEvent]:
                 index += 1
                 continue
 
-            merged.append(
-                RawEvent(
-                    start_time=current.start_time,
-                    end_time=following.end_time,
-                    notes=combined_list,
-                    is_gliss_like=current.is_gliss_like or following.is_gliss_like,
-                    primary_note_name=following.primary_note_name,
-                    primary_score=max(current.primary_score, following.primary_score),
-                )
+            merged_event = RawEvent(
+                start_time=current.start_time,
+                end_time=following.end_time,
+                notes=combined_list,
+                is_gliss_like=current.is_gliss_like or following.is_gliss_like,
+                primary_note_name=following.primary_note_name,
+                primary_score=max(current.primary_score, following.primary_score),
             )
+            # Gap ambiguity (#151 B2): if the gap that was merged is above
+            # the "clearly simultaneous" threshold, record the split alternative.
+            if settings.get().use_alternate_groupings and gap >= GAP_AMBIGUITY_MIN_GAP:
+                # Confidence decreases as gap increases (larger gap = more likely separate)
+                gap_ratio = (gap - GAP_AMBIGUITY_MIN_GAP) / max(CHORD_CLUSTER_MAX_GAP - GAP_AMBIGUITY_MIN_GAP, 1e-6)
+                confidence = GAP_AMBIGUITY_MAX_CONFIDENCE - gap_ratio * (GAP_AMBIGUITY_MAX_CONFIDENCE - GAP_AMBIGUITY_MIN_CONFIDENCE)
+                merged_event.alternate_groupings.append(RawAlternateGrouping(
+                    split_into=[list(current.notes), list(following.notes)],
+                    reason="gap_ambiguity",
+                    confidence=round(max(min(confidence, 1.0), 0.0), 3),
+                ))
+            merged.append(merged_event)
             index += 2
             continue
 

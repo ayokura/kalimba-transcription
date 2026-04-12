@@ -486,6 +486,12 @@ FOUR_NOTE_GLISS_EXTENSION_MIN_FUNDAMENTAL_RATIO = 0.82
 CHORD_CLUSTER_MAX_GAP = 0.08
 CHORD_CLUSTER_MAX_SINGLETON_DURATION = 0.22
 CHORD_CLUSTER_MAX_TOTAL_DURATION = 1.6
+# Gap ambiguity (#151 B2): when a merge occurs with gap in this range,
+# record a split alternative.  Below min → clearly simultaneous (no ambiguity).
+# Above max → not merged anyway (CHORD_CLUSTER_MAX_GAP controls that).
+GAP_AMBIGUITY_MIN_GAP = 0.020  # 20ms: below this, clearly a chord
+GAP_AMBIGUITY_MAX_CONFIDENCE = 0.7  # confidence when gap is at the lower edge
+GAP_AMBIGUITY_MIN_CONFIDENCE = 0.3  # confidence when gap is near max
 REPEATED_PATTERN_LOCAL_CONTEXT_MAX_GAP = 0.35
 MAX_HARMONIC_MULTIPLE = 4
 SECONDARY_SCORE_RATIO = 0.12
