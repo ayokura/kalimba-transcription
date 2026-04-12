@@ -1792,8 +1792,35 @@ def merge_gliss_split_segments(
         # and slips past a <= 200.0 threshold.  Matches the guards in
         # merge_short_gliss_clusters and merge_short_chord_clusters.
         if has_dissonant_interval(merged_notes):
-            merged.append(event)
-            continue
+            # Fallback: if the dissonance comes entirely from notes unique
+            # to the shorter segment (broadband FFT leakage in a narrow
+            # window), drop those and merge with the longer segment's notes
+            # plus any non-dissonant shorter notes.  This absorbs a short
+            # gliss-prefix into the following chord without importing its
+            # spectral artifacts (e.g., G-low E127: 60 ms gap-mute-dip
+            # [A3,B3,D4,G3] where G3/B3 are A3 broadband leakage).
+            if not has_dissonant_interval(list(longer_event.notes)):
+                cleaned = list(longer_event.notes)
+                for note in shorter_event.notes:
+                    if note.note_name in {n.note_name for n in cleaned}:
+                        continue
+                    trial = cleaned + [note]
+                    if not has_dissonant_interval(trial):
+                        cleaned.append(note)
+                if len(cleaned) > len(longer_event.notes):
+                    # Gained non-dissonant notes from the shorter segment.
+                    merged_notes = cleaned
+                elif set(n.note_name for n in cleaned) <= set(n.note_name for n in longer_event.notes):
+                    # Shorter contributed nothing new — absorb its time
+                    # range so downstream passes see one merged event
+                    # instead of a spurious extra followed by the real chord.
+                    merged_notes = cleaned
+                else:
+                    merged.append(event)
+                    continue
+            else:
+                merged.append(event)
+                continue
         merged_notes.sort(key=lambda candidate: candidate.frequency)
         merged.append(
             RawEvent(
