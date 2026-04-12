@@ -2174,6 +2174,37 @@ def _select_candidates(
                 if onset_gain < TERTIARY_MIN_ONSET_GAIN:
                     if "fundamental-ratio-too-low" not in _disabled:
                         phase_a_reasons.append("fundamental-ratio-too-low")
+            elif (
+                # Subharmonic-alias-of-recent-primary (G-low E137):
+                # candidate is a subharmonic of a recent note AND has fR
+                # suggesting alias leakage.  Force onset_gain verification.
+                # Skip when the upper octave is also genuinely playing in
+                # the current segment (current primary OR a strong residual
+                # candidate) — in that case the low fR is from a legitimate
+                # lower-octave-of-dyad, not decay leakage.  See 34L-C E163
+                # [C5,<G4,E4,C4>] where C5 is a secondary with high fR.
+                hypothesis.fundamental_ratio < SECONDARY_SUBHARMONIC_ALIAS_MAX_FUNDAMENTAL_RATIO
+                and ctx.recent_note_names
+            ):
+                upper_octave_name = (
+                    f"{hypothesis.candidate.pitch_class}{hypothesis.candidate.octave + 1}"
+                )
+                if (
+                    upper_octave_name in ctx.recent_note_names
+                    and upper_octave_name != primary.candidate.note_name
+                ):
+                    upper_is_strong_now = any(
+                        h.candidate.note_name == upper_octave_name
+                        and h.fundamental_ratio >= 0.85
+                        and evidence.onset_gain(h.candidate.frequency) >= MIN_RECENT_NOTE_ONSET_GAIN
+                        for h in residual_ranked[:6]
+                    )
+                    if not upper_is_strong_now:
+                        if onset_gain is None:
+                            onset_gain = evidence.onset_gain(hypothesis.candidate.frequency)
+                        if onset_gain < TERTIARY_MIN_ONSET_GAIN:
+                            if "subharmonic-alias-of-recent" not in _disabled:
+                                phase_a_reasons.append("subharmonic-alias-of-recent")
             _structural_snapshot = list(phase_a_reasons)
             # ── Evidence + Context gates (selected-independent) ──────
             if ctx.recent_note_names and hypothesis.candidate.note_name in ctx.recent_note_names:

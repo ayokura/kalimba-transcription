@@ -453,6 +453,11 @@ MAX_HARMONIC_MULTIPLE = 4
 SECONDARY_SCORE_RATIO = 0.12
 SECONDARY_MIN_FUNDAMENTAL_RATIO = 0.18
 SECONDARY_WEAK_ONSET_MIN_FUNDAMENTAL_RATIO = 0.5
+# G-low E137 calibration: a secondary candidate whose +1 octave is in
+# recent_note_names and whose fR is below this threshold likely represents
+# subharmonic-alias leakage from the decaying upper note rather than a fresh
+# attack.  Force onset_gain verification in that band.
+SECONDARY_SUBHARMONIC_ALIAS_MAX_FUNDAMENTAL_RATIO = 0.75
 SHORT_SEGMENT_SECONDARY_SCORE_RATIO = 0.06
 OVERTONE_DOMINANT_FUNDAMENTAL_RATIO = 0.18
 OVERTONE_DOMINANT_PENALTY_WEIGHT = 0.0
