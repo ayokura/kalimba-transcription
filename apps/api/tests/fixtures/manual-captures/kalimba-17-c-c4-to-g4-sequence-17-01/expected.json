@@ -1,6 +1,6 @@
 {
-  "pending": true,
-  "status": "pending",
+  "pending": false,
+  "status": "completed",
   "assertions": {
     "minEvents": 17,
     "maxEvents": 17,
@@ -44,5 +44,5 @@
       "G4"
     ]
   },
-  "reason": "Re-evaluated 2026-04-09 after Phase A/B + E83 fix: D5 onset at 12.67s and C5 re-attack at ~13.47s (both in the original reason) now resolve correctly (16/17 exact via score_alignment). Single remaining gap: E16 expected E4+G5 detects C6+E4+E5+G5 — spurious C6+E5 secondary on a slide-chord event."
+  "reason": "17/17 exact match after octave promotion removal (#171 3291f09) and octave-up rescue score gate. All events including E16 E4+G5 slide-chord resolve correctly."
 }

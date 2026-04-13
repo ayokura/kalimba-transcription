@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-03-23-c4-to-g4-sequence-17-kalimba-17-c
 - expected note: C4 x 4 / G4 x 5 / E5 + C5 x 3 / C5 x 2 / D5 / E5 + C4 / G5 + E4
 - capture intent: unknown

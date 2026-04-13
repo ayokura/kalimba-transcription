@@ -1858,6 +1858,10 @@ def _resolve_primary(
                 target_freq = primary.candidate.frequency * octave_mult
                 for h in ranked:
                     if abs(h.candidate.frequency - target_freq) / target_freq < 0.03:
+                        # Score gate: candidate must pass the same bar as a
+                        # normal primary — otherwise we rescue with noise.
+                        if h.score < PRIMARY_REJECTION_MAX_SCORE:
+                            break
                         octave_gain = _note_onset_energy_gain(ctx.audio, ctx.sample_rate, ctx.start_time, h.candidate.frequency)
                         if octave_gain is not None and octave_gain >= RESIDUAL_DECAY_MIN_ONSET_GAIN:
                             alternative_primary = h
