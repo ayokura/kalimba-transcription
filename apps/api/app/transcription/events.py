@@ -1172,6 +1172,13 @@ def suppress_subset_decay_events(raw_events: list[RawEvent]) -> list[RawEvent]:
     if len(raw_events) < 2:
         return raw_events
 
+    # Minimum per-note onset gain to protect a subset event from suppression.
+    # A strong per-note onset indicates a genuine re-attack even when the
+    # broadband onset is weak (previous note still resonating).
+    # Calibration: free-performance-01 E5 re-attack at 20.6s has og=808.7;
+    # residual decay subsets typically have og < 5.
+    _SUBSET_REATTACK_MIN_ONSET_GAIN = 50.0
+
     cleaned: list[RawEvent] = [raw_events[0]]
     for event in raw_events[1:]:
         previous = cleaned[-1]
@@ -1179,7 +1186,14 @@ def suppress_subset_decay_events(raw_events: list[RawEvent]) -> list[RawEvent]:
         previous_note_names = {note.note_name for note in previous.notes}
         event_note_names = {note.note_name for note in event.notes}
         if gap <= 0.02 and event_note_names < previous_note_names:
-            continue
+            # Check for per-note onset evidence: a strong onset_gain on any
+            # note means this is likely a re-attack, not residual decay.
+            max_onset_gain = max(
+                (n.onset_gain for n in event.notes if n.onset_gain is not None),
+                default=0.0,
+            )
+            if max_onset_gain < _SUBSET_REATTACK_MIN_ONSET_GAIN:
+                continue
         cleaned.append(event)
 
     return cleaned
