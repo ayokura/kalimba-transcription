@@ -1,7 +1,7 @@
 {
-  "pending": true,
-  "status": "pending",
-  "reason": "First BWV147 recording on 17-key G Major (Low Octave) kalimba (\u8b58\u5225\u540d: \u306f\u308b\u304b\u306b\u52dd\u3064). C\u7248 (kalimba-17-c-bwv147-sequence-163-01) \u3092 -5 semitone (P4 down) \u8ee2\u8abf\u3057\u305f\u9662\u6f14\u594f\u3002Phase 2 \u3067\u8033 confirm \u306b\u3088\u308a verifiedStartSec \u3092\u57cb\u3081\u3001\u8a8d\u8b58\u7d50\u679c\u3092\u898b\u3066\u304b\u3089 status \u6607\u683c\u3092\u691c\u8a0e\u3059\u308b\u3002",
+  "pending": false,
+  "status": "completed",
+  "reason": "163/163 exact match. All 12 lines ear-verified (verifiedStartSec updated 2026-04-14). Second instrument (17-key G Major Low) confirms recognizer generalization.",
   "assertions": {
     "minEvents": 163,
     "maxEvents": 163,
@@ -73,7 +73,7 @@
       "A3+D4",
       "G4",
       "F#4",
-      "B3+G4",
+      "G3+B3+D4+G4",
       "B4",
       "D5",
       "G5",
@@ -172,7 +172,7 @@
       "A3+D4",
       "G4",
       "F#4",
-      "B3+D4+G4"
+      "G3+B3+D4+G4"
     ]
   }
 }

@@ -12,8 +12,8 @@
       ],
       "content": "G3 / G4 / A4 / [B4,G3] / D5 / C5 / [C5,E4] / E5 / D5 / [D5,B3] / G5 / F#5 / [G5,E4] / D5 / B4",
       "estimatedStartSec": 0.7595,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 0.76,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "L2",
@@ -24,8 +24,8 @@
       ],
       "content": "<G4,E4> / A4 / B4 / [C5,A3] / D5 / E5 / [D5,B3] / C5 / B4 / [A4,C4] / B4 / G4 / <F#4,D4> / G4 / A4",
       "estimatedStartSec": 8.5846,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 8.59,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "L3",
@@ -36,8 +36,8 @@
       ],
       "content": "[D4,A3] / F#4 / A4 / C5 / B4 / A4 / [B4,G3] / G4 / A4 / <B4,G4> / D5 / C5 / [C5,E4] / E5 / D5",
       "estimatedStartSec": 16.6013,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 16.60,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "L4",
@@ -48,8 +48,8 @@
       ],
       "content": "[D5,B3] / G5 / F#5 / [G5,E4] / D5 / B4 / [G4,D4] / A4 / B4 / <E4,C4> / D5 / C5 / [B4,D4] / A4 / G4",
       "estimatedStartSec": 24.5251,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 24.02,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "L5",
@@ -60,8 +60,8 @@
       ],
       "content": "[D4,A3] / G4 / F#4 / [G4,<D4,B3,G3>] / B4 / D5 / G5 / D5 / B4 / G4 / B4 / [D5,B3]",
       "estimatedStartSec": 32.3908,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 31.87,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "L6",
@@ -72,8 +72,8 @@
       ],
       "content": "[B4,G3] / F#4 / [C5,E4] / [D5,F#4] / E4 / [D5,D4] / [C5,E4] / F#4 / <B4,G4> / <A4,F#4,D4>",
       "estimatedStartSec": 39.1827,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 37.93,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R1",
@@ -84,8 +84,8 @@
       ],
       "content": "D4 / E4 / F#4 / A4 / G4 / A4 / C5 / B4 / [C5,A3] / A4 / F#4 / D4 / F#4 / A4 / <C5,A4,F#4,D4> / B4 / A4",
       "estimatedStartSec": 50.543,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 50.53,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R2",
@@ -96,8 +96,8 @@
       ],
       "content": "[B4,<D4,B3,G3>] / G4 / A4 / [B4,G4] / D5 / C5 / [C5,<E4,C4>] / E5 / D5 / [D5,<D4,B3>] / G5 / F#5 / [G5,<G4,E4>] / D5 / B4",
       "estimatedStartSec": 60.4696,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 60.32,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R3",
@@ -108,8 +108,8 @@
       ],
       "content": "<G4,E4> / A4 / B4 / [C5,<C4,A3>] / D5 / E5 / [D5,<D4,B3>] / C5 / B4 / [A4,<E4,C4>] / B4 / G4 / [<F#4,D4>,A3] / G4 / A4",
       "estimatedStartSec": 68.9971,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 69.01,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R4",
@@ -120,8 +120,8 @@
       ],
       "content": "[D4,A3] / F#4 / A4 / <C5,A4,F#4,D4> / B4 / A4 / [B4,<D4,B3,G3>] / G4 / A4 / <B4,G4> / D5 / C5 / [C5,<E4,C4>] / E5 / D5",
       "estimatedStartSec": 77.6639,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 77.65,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R5",
@@ -132,8 +132,8 @@
       ],
       "content": "[D5,<D4,B3>] / G5 / F#5 / [G5,<G4,E4>] / D5 / B4 / <G4,E4> / A4 / B4 / <E4,C4> / D5 / C5 / [B4,D4] / A4 / G4",
       "estimatedStartSec": 86.3308,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 86.36,
+      "verificationMethod": "ear_verified"
     },
     {
       "id": "R6",
@@ -144,8 +144,8 @@
       ],
       "content": "[D4,A3] / G4 / F#4 / [G4,<D4,B3,G3>]",
       "estimatedStartSec": 95.1544,
-      "verifiedStartSec": null,
-      "verificationMethod": "recognizer_aligned"
+      "verifiedStartSec": 95.13,
+      "verificationMethod": "ear_verified"
     }
   ],
   "knownIssues": []
