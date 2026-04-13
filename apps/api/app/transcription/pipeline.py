@@ -147,7 +147,7 @@ async def transcribe_audio(
             previous_primary = next((note for note in raw_events[-1].notes if note.note_name == raw_events[-1].primary_note_name), None)
             previous_primary_frequency = previous_primary.frequency if previous_primary is not None else None
         previous_primary_was_singleton = bool(raw_events and len(raw_events[-1].notes) == 1)
-        candidates, candidate_debug, primary, _trace = segment_peaks(
+        candidates, candidate_debug, primary, _trace, _soft_alts = segment_peaks(
             audio,
             sample_rate,
             start_time,
@@ -232,6 +232,7 @@ async def transcribe_audio(
                 # so the guard fires for the actual short windows.
                 from_short_segment_guard=(end_time - start_time) < SHORT_SEGMENT_SECONDARY_GUARD_DURATION,
                 sub_onsets=sub_onsets,
+                alternate_groupings=list(_soft_alts),
             )
         )
         if debug and candidate_debug:
@@ -385,6 +386,21 @@ async def transcribe_audio(
                     alt_groupings.append(
                         AlternateGrouping(
                             splitInto=split_groups,
+                            reason=alt.reason,
+                            confidence=alt.confidence,
+                        )
+                    )
+                elif alt.alternate_note is not None:
+                    # AlternateNote mode (C soft candidate): a secondary candidate
+                    # that was conservatively rejected but could be valid.
+                    c = alt.alternate_note
+                    alt_groupings.append(
+                        AlternateGrouping(
+                            alternateNote=ScoreNote(
+                                key=c.key, pitchClass=c.pitch_class, octave=c.octave,
+                                labelDoReMi=format_doremi(c), labelNumber=format_number(c),
+                                frequency=round(c.frequency, 3),
+                            ),
                             reason=alt.reason,
                             confidence=alt.confidence,
                         )

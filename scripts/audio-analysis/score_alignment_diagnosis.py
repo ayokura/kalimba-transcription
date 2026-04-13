@@ -473,10 +473,24 @@ def _render_candidates(
     if not verbose:
         print(f"  (use --verbose to show dropped segments and narrow FFT detail)")
     print(f"  Cache: {cache_status}")
+    # Build alternate info from API events
+    api_events = payload.get("events", [])
+    alt_by_index: dict[int, list[dict]] = {}
+    for i, ev in enumerate(api_events):
+        alts = ev.get("alternateGroupings") or []
+        c_alts = [a for a in alts if a.get("alternateNote")]
+        if c_alts:
+            alt_by_index[i] = c_alts
+
     print(f"\nFinal events ({n_final}):")
     for i, me in enumerate(merged_events):
         notes_str = "+".join(me["notes"])
-        print(f"  E{i+1:3d}  {me['startTime']:7.2f}s  {notes_str}")
+        alts = alt_by_index.get(i, [])
+        alt_str = ""
+        if alts:
+            alt_notes = [f"{a['alternateNote']['pitchClass']}{a['alternateNote']['octave']}({a['confidence']:.2f})" for a in alts]
+            alt_str = f"  alt: {', '.join(alt_notes)}"
+        print(f"  E{i+1:3d}  {me['startTime']:7.2f}s  {notes_str}{alt_str}")
 
 
 def main():

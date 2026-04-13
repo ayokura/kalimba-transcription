@@ -51,6 +51,7 @@ class AlternateGrouping(BaseModel):
     combines_with: list[str] | None = Field(default=None, alias="combinesWith")
     combined_notes: list[ScoreNote] | None = Field(default=None, alias="combinedNotes")
     split_into: list[list[ScoreNote]] | None = Field(default=None, alias="splitInto")
+    alternate_note: ScoreNote | None = Field(default=None, alias="alternateNote")
     reason: str
     confidence: float
 

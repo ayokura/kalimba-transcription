@@ -42,6 +42,7 @@ class RecognizerSettings:
     use_hpss_onset: bool = False
     use_onset_gate: bool = True  # #141: reject primary with no onset evidence
     use_alternate_groupings: bool = True  # #151: dissonance-aware merge guard
+    use_soft_candidate_alternates: bool = True  # #178: preserve soft-rejected candidates as alternates
     # #149: per-tine partial scoring in rank_tuning_candidates.
     # Currently disabled because kalimba tunings contain fifths as adjacent
     # tines, so beam partials (e.g. 1.5×) collide with other notes' fundamentals.

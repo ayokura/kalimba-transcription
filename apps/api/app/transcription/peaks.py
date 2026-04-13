@@ -10,7 +10,7 @@ from ..models import InstrumentTuning
 from . import settings
 from .audio import cents_distance, snap_frequency_to_tuning
 from .constants import *
-from .models import Note, NoteCandidate, NoteHypothesis
+from .models import Note, NoteCandidate, NoteHypothesis, RawAlternateGrouping
 from .profiles import (
     _build_analysis_window_chunks,
     _broadband_chunk_energy,
@@ -1264,6 +1264,7 @@ class SegmentPeaksResult(NamedTuple):
     debug: dict[str, Any] | None
     primary: NoteHypothesis | None
     trace: SegmentDecisionTrace | None = None
+    soft_alternates: list[RawAlternateGrouping] = []
 
 
 @dataclass(slots=True)
@@ -1416,6 +1417,24 @@ GATE_CATEGORIES: dict[str, str] = {
     "short-segment-secondary-guarded": "guard",
 }
 
+# Rejection reasons that indicate noise or structural impossibility — these
+# candidates should never be presented as alternates (#178 Phase 1).
+HARD_REJECT_REASONS: frozenset[str] = frozenset({
+    "same-as-primary",
+    "tertiary-physically-impossible",
+    "iterative-tertiary-physically-impossible",
+    "tertiary-duplicate-note",
+    "harmonic-related-to-selected",
+    "semitone-leakage",
+    "broadband-transient-leak",
+    "residual-forward-scan-replaced-primary",
+})
+
+# Max soft alternates to keep per segment.
+_SOFT_ALT_MAX_COUNT = 3
+# Minimum score as a fraction of primary score to be considered.
+_SOFT_ALT_MIN_SCORE_RATIO = 0.05
+
 
 @dataclass(slots=True)
 class SegmentDecisionTrace:
@@ -1439,6 +1458,7 @@ class _SelectionState:
     selected: list[NoteCandidate]
     residual_ranked: list[NoteHypothesis]
     candidate_decisions: list[_CandidateDecision]
+    soft_alternates: list[RawAlternateGrouping] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -2622,10 +2642,64 @@ def _select_candidates(
                 break  # no more candidates to recover
 
 
+    # Collect soft-rejected candidates as alternates (#178 Phase 1).
+    soft_alternates: list[RawAlternateGrouping] = []
+    if settings.get().use_soft_candidate_alternates and selected:
+        primary_score = primary.score
+        selected_names = {c.note_name for c in selected}
+        seen_names: set[str] = set()
+        # Sort rejected candidates by score descending.
+        soft_candidates = [
+            d for d in candidate_decisions
+            if not d.accepted
+            and d.note_name not in selected_names
+            and d.note_name not in seen_names
+            and d.score >= primary_score * _SOFT_ALT_MIN_SCORE_RATIO
+            and not any(r in HARD_REJECT_REASONS for r in d.reasons)
+        ]
+        soft_candidates.sort(key=lambda d: d.score, reverse=True)
+        for d in soft_candidates[:_SOFT_ALT_MAX_COUNT]:
+            if d.note_name in seen_names:
+                continue
+            seen_names.add(d.note_name)
+            # Confidence: score ratio, capped at 0.4; halved if onset evidence is weak.
+            conf = min(0.4, d.score / primary_score) if primary_score > 0 else 0.1
+            if d.onset_gain is not None and d.onset_gain < 2.0:
+                conf *= 0.5
+            # Find the NoteCandidate from residual_ranked or reconstruct.
+            note_candidate: NoteCandidate | None = None
+            for hyp in residual_ranked:
+                if hyp.candidate.note_name == d.note_name:
+                    note_candidate = NoteCandidate(
+                        key=hyp.candidate.key,
+                        note=hyp.candidate.note,
+                        score=d.score,
+                        onset_gain=d.onset_gain,
+                    )
+                    break
+            if note_candidate is None:
+                # Fallback: reconstruct from spectral ranked
+                for hyp in spectral.ranked:
+                    if hyp.candidate.note_name == d.note_name:
+                        note_candidate = NoteCandidate(
+                            key=hyp.candidate.key,
+                            note=hyp.candidate.note,
+                            score=d.score,
+                            onset_gain=d.onset_gain,
+                        )
+                        break
+            if note_candidate is not None:
+                soft_alternates.append(RawAlternateGrouping(
+                    alternate_note=note_candidate,
+                    reason=f"soft_rejected:{','.join(d.reasons[:2])}",
+                    confidence=round(conf, 3),
+                ))
+
     return _SelectionState(
         selected=selected,
         residual_ranked=residual_ranked,
         candidate_decisions=candidate_decisions,
+        soft_alternates=soft_alternates,
     )
 
 
@@ -3176,6 +3250,7 @@ def segment_peaks(
         debug_payload,
         primary,
         trace,
+        selection.soft_alternates,
     )
 
 def _note_band_energy(
