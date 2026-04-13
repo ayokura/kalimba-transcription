@@ -1,0 +1,13 @@
+{
+  "pending": true,
+  "status": "pending",
+  "reason": "First free performance fixture (no expectedPerformance). Initial intake for recognizer evaluation on unconstrained input.",
+  "assertions": {
+    "minEvents": null,
+    "maxEvents": null,
+    "requiredPrimaryNoteOccurrences": {},
+    "maxPrimaryNoteOccurrences": {},
+    "requiredEventNoteSetOccurrences": {},
+    "maxEventNoteSetOccurrences": {}
+  }
+}

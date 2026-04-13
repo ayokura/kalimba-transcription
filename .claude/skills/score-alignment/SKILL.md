@@ -7,7 +7,7 @@ arguments:
     description: Fixture name (e.g., bwv147-sequence-163-01)
     required: true
   - name: options
-    description: "Options: --verbose, --mode events|segments, --line L1, --no-cache"
+    description: "Options: --verbose, --mode events|segments|candidates, --line L1, --no-cache"
     required: false
 ---
 
@@ -27,7 +27,7 @@ The script logs which source was used via stderr `[synthetic-line] using <source
 
 Run the alignment diagnosis script:
 ```bash
-uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--verbose] [--mode events|segments] [--line L1] [--no-cache]
+uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--verbose] [--mode events|segments|candidates] [--line L1] [--no-cache]
 ```
 
 ## Modes
@@ -36,6 +36,15 @@ uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--v
 |------|-------------|
 | `events` (default) | Post-processed final output (mergedEvents). Reflects all event-level corrections. |
 | `segments` | Raw segmentCandidates before event post-processing. Shows segment_peaks output directly. |
+| `candidates` | All segments with full candidate lists. No expected data required. Designed for Free Performance fixtures. |
+
+### candidates mode
+
+Free Performance fixture 等、期待データのない fixture でも使用可能。各セグメントの全候補（採用・棄却とも）をスコア・onset証拠・棄却理由付きで一覧表示する。
+
+- デフォルトでは active segments のみ表示。`--verbose` で dropped segments と NarrowFFT detail も表示
+- 末尾に final events 一覧を出力
+- evaluation scope cropping を適用せず full audio で認識を実行
 
 ## Output symbols
 | Symbol | Meaning |
@@ -88,4 +97,6 @@ cache JSON には `payload["debug"]["segmentCandidates"]` 以下に **全 segmen
 /score-alignment bwv147-sequence-163-01 --verbose
 /score-alignment bwv147-sequence-163-01 --mode segments
 /score-alignment bwv147-sequence-163-01 --line R4
+/score-alignment kalimba-17-c-free-performance-01 --mode candidates
+/score-alignment kalimba-17-c-free-performance-01 --mode candidates --verbose
 ```

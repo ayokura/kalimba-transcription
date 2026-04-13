@@ -1,13 +1,14 @@
 """Compare expected events with recognizer output using ordered matching.
 
 Usage:
-    uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose] [--mode events|segments] [--line LINE_ID] [--no-cache]
+    uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture-name> [--verbose] [--mode events|segments|candidates] [--line LINE_ID] [--no-cache]
 
 Arguments:
     fixture-name    Fixture name (e.g., bwv147-sequence-163-01, c4-repeat-01)
     --verbose       Show exact matches too (default: failures only)
     --mode          Data source: 'events' (default, post-processed final output)
                     or 'segments' (raw segmentCandidates before event post-processing)
+                    or 'candidates' (all segments with full candidate lists; no expected data required)
     --line          Show only the specified line id (e.g., R6). All lines by default.
     --no-cache      Force fresh transcription (skip cache read, still writes result)
 
@@ -347,12 +348,143 @@ def match_line(expected_events, detected_segs):
     return results, unmatched_det
 
 
+def _render_candidates(
+    segments: list[dict],
+    merged_events: list[dict],
+    payload: dict,
+    cache_status: str,
+    *,
+    verbose: bool = False,
+) -> None:
+    """Render all segments with full candidate information (no expected data needed).
+
+    Designed for Free Performance fixtures where there is no ground truth to
+    align against.  Shows every segment the recognizer considered — both
+    accepted and dropped — with ranked candidates, secondary decisions, and
+    onset evidence so the user can evaluate candidate recall.
+    """
+
+    # Build a set of final event times for cross-referencing
+    final_event_times: set[float] = set()
+    final_events_by_time: dict[float, list[str]] = {}
+    for me in merged_events:
+        t = me["startTime"]
+        final_event_times.add(t)
+        final_events_by_time[t] = me["notes"]
+
+    n_active = 0
+    n_dropped = 0
+
+    for seg in segments:
+        t = seg["startTime"]
+        dur = seg.get("durationSec", 0)
+        selected = seg.get("selectedNotes", [])
+        dropped_by = seg.get("droppedBy", "")
+        primary_note = seg.get("primaryNote", "")
+        pc = seg.get("primaryCandidate", {})
+        source = seg.get("segmentSource", [])
+
+        is_dropped = bool(dropped_by) or not selected
+
+        if is_dropped:
+            n_dropped += 1
+            if not verbose:
+                continue
+        else:
+            n_active += 1
+
+        # Header
+        src_str = f" [{','.join(source)}]" if source else ""
+        if is_dropped:
+            print(f"\n--- {t:.3f}s ({dur:.3f}s) DROPPED: {dropped_by}{src_str} ---")
+        else:
+            notes_str = "+".join(selected)
+            # Check if this segment survived to final events
+            in_final = any(abs(t - ft) < 0.05 for ft in final_event_times)
+            final_tag = "" if in_final else " [post-processed away]"
+            print(f"\n=== {t:.3f}s ({dur:.3f}s) → {notes_str}{src_str}{final_tag} ===")
+
+        # Primary candidate
+        if pc:
+            p_name = pc.get("noteName", "?")
+            p_score = pc.get("score", 0)
+            p_fr = pc.get("fundamentalRatio", 0)
+            p_og = pc.get("candidateOnsetGain", 0)
+            p_fe = pc.get("fundamentalEnergy", 0)
+            print(f"  Primary: {p_name:4s} score={p_score:8.1f}  fr={p_fr:.3f}  og={p_og:7.1f}  fe={p_fe:.1f}")
+        elif primary_note:
+            print(f"  Primary: {primary_note} (candidate detail unavailable)")
+
+        # Broadband onset evidence
+        bb_og = seg.get("broadbandOnsetGain")
+        bb_flux = seg.get("spectralFlux")
+        hb_flux = seg.get("highBandSpectralFlux")
+        p_onset_gain = seg.get("primaryOnsetGain")
+        if bb_og is not None:
+            print(f"  Onset: bb_og={bb_og:.2f}  flux={bb_flux:.2f}  hb_flux={hb_flux:.2f}  p_og={p_onset_gain:.1f}" if p_onset_gain else f"  Onset: bb_og={bb_og:.2f}  flux={bb_flux:.2f}  hb_flux={hb_flux:.2f}")
+
+        # Primary promotion
+        promo = seg.get("primaryPromotion")
+        if promo:
+            print(f"  Promotion: {promo.get('reason', '?')} ({promo.get('replacedPrimaryNote', '?')} → {promo.get('replacementNote', '?')})")
+
+        # Ranked candidates (top spectral)
+        ranked = seg.get("rankedCandidates", [])
+        if ranked and isinstance(ranked[0], dict):
+            ranked_strs = [f"{r.get('noteName','?')}({r.get('score',0):.0f})" for r in ranked[:8]]
+            print(f"  Ranked: {' '.join(ranked_strs)}")
+        elif ranked and isinstance(ranked[0], str):
+            # Sometimes rankedCandidates is just note name strings
+            print(f"  Ranked: {' '.join(ranked[:8])}")
+
+        # Secondary decision trail
+        trail = seg.get("secondaryDecisionTrail", [])
+        if trail:
+            for entry in trail:
+                name = entry.get("noteName") or entry.get("note") or "?"
+                accepted = entry.get("accepted", False)
+                score = entry.get("score", 0)
+                fr = entry.get("fundamentalRatio", 0)
+                og = entry.get("onsetGain") or entry.get("candidateOnsetGain")
+                reasons = entry.get("reasons", [])
+                sym = "✓" if accepted else "✗"
+                og_str = f"  og={og:.1f}" if og is not None else ""
+                reason_str = f"  {','.join(reasons[:3])}" if reasons else ""
+                print(f"    {sym} {name:4s} score={score:8.1f}  fr={fr:.3f}{og_str}{reason_str}")
+
+        # Narrow FFT sub-onset (if present and verbose)
+        if verbose:
+            narrow = seg.get("narrowFftBySubOnset", [])
+            if narrow:
+                for sub in narrow:
+                    sub_t = sub.get("subOnsetTime", 0)
+                    top = sub.get("topRanked", [])
+                    top_strs = [f"{r.get('noteName','?')}({r.get('score',0):.0f})" for r in top[:5]]
+                    print(f"  NarrowFFT @{sub_t:.3f}s: {' '.join(top_strs)}")
+
+    # Summary
+    n_final = len(merged_events)
+    final_note_sets: list[str] = []
+    for me in merged_events:
+        final_note_sets.append("+".join(me["notes"]))
+
+    print(f"\n{'='*60}")
+    print(f"SUMMARY [mode=candidates]: {n_active} active segments, {n_dropped} dropped, {n_final} final events")
+    if not verbose:
+        print(f"  (use --verbose to show dropped segments and narrow FFT detail)")
+    print(f"  Cache: {cache_status}")
+    print(f"\nFinal events ({n_final}):")
+    for i, me in enumerate(merged_events):
+        notes_str = "+".join(me["notes"])
+        print(f"  E{i+1:3d}  {me['startTime']:7.2f}s  {notes_str}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Score structure alignment diagnosis")
     parser.add_argument("fixture", help="Fixture name or path")
     parser.add_argument("--verbose", action="store_true", help="Show exact matches too")
-    parser.add_argument("--mode", choices=["events", "segments"], default="events",
-                        help="Data source: 'events' (post-processed, default) or 'segments' (raw segmentCandidates)")
+    parser.add_argument("--mode", choices=["events", "segments", "candidates"], default="events",
+                        help="Data source: 'events' (post-processed, default), 'segments' (raw), or 'candidates' (all candidates, no expected data needed)")
     parser.add_argument("--line", type=str, default=None, help="Show only this line (e.g., R6)")
     parser.add_argument("--no-cache", action="store_true", default=False,
                         help="Force fresh transcription (skip cache read, still writes result to cache)")
@@ -372,7 +504,14 @@ def main():
 
     client = TestClient(app)
     request_payload, expected = load_fixture(fixture_dir)
-    audio_bytes = build_evaluation_audio_bytes(fixture_dir, expected)
+
+    if args.mode == "candidates":
+        # Candidates mode: run recognizer without evaluation scope cropping
+        # so we see the full audio. Use full audio bytes directly.
+        audio_path = fixture_dir / "audio.wav"
+        audio_bytes = audio_path.read_bytes()
+    else:
+        audio_bytes = build_evaluation_audio_bytes(fixture_dir, expected)
 
     request_data = {"tuning": json.dumps(request_payload["tuning"]), "debug": "true"}
     payload, cache_status = _cached_transcribe(client, audio_bytes, request_data,
@@ -383,6 +522,11 @@ def main():
         sys.exit(1)
     segments = debug["segmentCandidates"]
     merged_events = debug.get("mergedEvents", [])
+
+    if args.mode == "candidates":
+        _render_candidates(segments, merged_events, payload, cache_status, verbose=args.verbose)
+        return
+
     use_events_mode = args.mode == "events"
 
     if score_path.exists():
