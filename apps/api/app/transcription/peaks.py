@@ -2706,47 +2706,74 @@ def _select_candidates(
                 break  # no more candidates to recover
 
 
-    # Collect soft-rejected candidates as alternates (#178 Phase 1).
-    soft_alternates: list[RawAlternateGrouping] = []
-    if settings.get().use_soft_candidate_alternates and selected:
-        primary_score = primary.score
-        selected_names = {c.note_name for c in selected}
-        seen_names: set[str] = set()
-        # Primary filter: onset_gain + fundamental_ratio based. Candidates
-        # with strong attack evidence AND high fundamental ratio are likely
-        # real masked notes (e.g., middle of a 3-note chord); low fr signals
-        # harmonic alias of a stronger neighbor.
-        soft_candidates = [
-            d for d in candidate_decisions
-            if not d.accepted
-            and d.note_name not in selected_names
-            and d.note_name not in seen_names
-            and d.onset_gain is not None
-            and d.onset_gain >= _SOFT_ALT_MIN_ONSET_GAIN
-            and d.fundamental_ratio >= _SOFT_ALT_MIN_FUNDAMENTAL_RATIO
-            and d.score >= primary_score * _SOFT_ALT_MIN_SCORE_RATIO
-            and not any(r in HARD_REJECT_REASONS for r in d.reasons)
-        ]
-        # Sort by onset_gain (primary signal for real attack) descending.
-        soft_candidates.sort(key=lambda d: (d.onset_gain or 0), reverse=True)
-        for d in soft_candidates[:_SOFT_ALT_MAX_COUNT]:
-            if d.note_name in seen_names:
-                continue
-            seen_names.add(d.note_name)
-            # Confidence: scale by onset_gain ratio relative to a reference
-            # (og=100 → conf≈0.5, og>=500 → conf≈0.7, capped at 0.7).
-            og = d.onset_gain or 0
-            if og >= 500:
-                conf = 0.70
-            elif og >= 100:
-                conf = 0.50
-            elif og >= 30:
-                conf = 0.35
-            else:
-                conf = 0.20
-            # Find the NoteCandidate from residual_ranked or reconstruct.
-            note_candidate: NoteCandidate | None = None
-            for hyp in residual_ranked:
+    # soft_alternates are collected in _apply_final_decisions, after Phase C
+    # has had a chance to promote candidates to selected.
+    return _SelectionState(
+        selected=selected,
+        residual_ranked=residual_ranked,
+        candidate_decisions=candidate_decisions,
+        soft_alternates=[],
+    )
+
+
+def _collect_soft_alternates(
+    selection: _SelectionState,
+    primary: NoteHypothesis,
+    spectral_ranked: list[NoteHypothesis],
+) -> None:
+    """Populate selection.soft_alternates from candidate_decisions.
+
+    Runs after Phase A/B/iterative/evidence-rescue/Phase-C so candidates
+    promoted by any later stage are excluded from the alt list.
+    """
+    if not settings.get().use_soft_candidate_alternates or not selection.selected:
+        return
+    selected_names = {c.note_name for c in selection.selected}
+    seen_names: set[str] = set()
+    primary_score = primary.score
+    # Primary filter: onset_gain + fundamental_ratio based. Candidates
+    # with strong attack evidence AND high fundamental ratio are likely
+    # real masked notes (e.g., middle of a 3-note chord); low fr signals
+    # harmonic alias of a stronger neighbor.
+    soft_candidates = [
+        d for d in selection.candidate_decisions
+        if not d.accepted
+        and d.note_name not in selected_names
+        and d.note_name not in seen_names
+        and d.onset_gain is not None
+        and d.onset_gain >= _SOFT_ALT_MIN_ONSET_GAIN
+        and d.fundamental_ratio >= _SOFT_ALT_MIN_FUNDAMENTAL_RATIO
+        and d.score >= primary_score * _SOFT_ALT_MIN_SCORE_RATIO
+        and not any(r in HARD_REJECT_REASONS for r in d.reasons)
+    ]
+    soft_candidates.sort(key=lambda d: (d.onset_gain or 0), reverse=True)
+    for d in soft_candidates[:_SOFT_ALT_MAX_COUNT]:
+        if d.note_name in seen_names:
+            continue
+        seen_names.add(d.note_name)
+        # Confidence: scale by onset_gain ratio relative to a reference
+        # (og=100 → conf≈0.5, og>=500 → conf≈0.7, capped at 0.7).
+        og = d.onset_gain or 0
+        if og >= 500:
+            conf = 0.70
+        elif og >= 100:
+            conf = 0.50
+        elif og >= 30:
+            conf = 0.35
+        else:
+            conf = 0.20
+        note_candidate: NoteCandidate | None = None
+        for hyp in selection.residual_ranked:
+            if hyp.candidate.note_name == d.note_name:
+                note_candidate = NoteCandidate(
+                    key=hyp.candidate.key,
+                    note=hyp.candidate.note,
+                    score=d.score,
+                    onset_gain=d.onset_gain,
+                )
+                break
+        if note_candidate is None:
+            for hyp in spectral_ranked:
                 if hyp.candidate.note_name == d.note_name:
                     note_candidate = NoteCandidate(
                         key=hyp.candidate.key,
@@ -2755,30 +2782,12 @@ def _select_candidates(
                         onset_gain=d.onset_gain,
                     )
                     break
-            if note_candidate is None:
-                # Fallback: reconstruct from spectral ranked
-                for hyp in spectral.ranked:
-                    if hyp.candidate.note_name == d.note_name:
-                        note_candidate = NoteCandidate(
-                            key=hyp.candidate.key,
-                            note=hyp.candidate.note,
-                            score=d.score,
-                            onset_gain=d.onset_gain,
-                        )
-                        break
-            if note_candidate is not None:
-                soft_alternates.append(RawAlternateGrouping(
-                    alternate_note=note_candidate,
-                    reason=f"soft_rejected:{','.join(d.reasons[:2])}",
-                    confidence=round(conf, 3),
-                ))
-
-    return _SelectionState(
-        selected=selected,
-        residual_ranked=residual_ranked,
-        candidate_decisions=candidate_decisions,
-        soft_alternates=soft_alternates,
-    )
+        if note_candidate is not None:
+            selection.soft_alternates.append(RawAlternateGrouping(
+                alternate_note=note_candidate,
+                reason=f"soft_rejected:{','.join(d.reasons[:2])}",
+                confidence=round(conf, 3),
+            ))
 
 
 def _build_segment_debug(
@@ -2875,6 +2884,7 @@ def _build_segment_debug(
 
 def _apply_final_decisions(
     ctx: _SegmentContext,
+    spectral: _SpectralData,
     selection: _SelectionState,
     primary_result: _PrimaryResult,
     evidence: _NoteEvidenceCache,
@@ -2884,14 +2894,31 @@ def _apply_final_decisions(
     1. Deferred primary rejection → clear selected.
     2. Evidence gate rescue → re-admit candidates rejected only by
        evidence gates if they have strong spectral quality.
+    3. Phase C octave-dyad rescue → re-admit candidates rejected only by
+       structural score-below-threshold in Phase A, when allow_octave_secondary
+       now returns True against the full selected set.
+    4. soft_alternates collection (runs after every stage that may promote,
+       so alt display excludes any note now in selected).
     """
     if primary_result.decision.rejected:
         selection.selected.clear()
         return
 
-    if not settings.get().use_evidence_gate_rescue:
-        return
+    if settings.get().use_evidence_gate_rescue:
+        _apply_evidence_gate_rescue(ctx, selection, primary_result, evidence)
 
+    if settings.get().use_phase_c_octave_dyad_rescue:
+        _apply_phase_c_octave_dyad_rescue(ctx, selection, primary_result, evidence)
+
+    _collect_soft_alternates(selection, primary_result.primary, spectral.ranked)
+
+
+def _apply_evidence_gate_rescue(
+    ctx: _SegmentContext,
+    selection: _SelectionState,
+    primary_result: _PrimaryResult,
+    evidence: _NoteEvidenceCache,
+) -> None:
     _disabled = settings.get().disabled_gates
     primary = primary_result.primary
     selected_names = {n.note_name for n in selection.selected}
@@ -2948,6 +2975,76 @@ def _apply_final_decisions(
             reasons=[gate_name],
             octave_dyad_allowed=decision.octave_dyad_allowed,
             source="rescue",
+        ))
+
+
+def _apply_phase_c_octave_dyad_rescue(
+    ctx: _SegmentContext,
+    selection: _SelectionState,
+    primary_result: _PrimaryResult,
+    evidence: _NoteEvidenceCache,
+) -> None:
+    """Phase C — context-aware rescue for octave-dyad upper notes.
+
+    Upper-octave notes in octave-dyad chords (e.g., C5 in C4+C5+E5) score
+    low in rank_tuning_candidates because subharmonic_alias_energy at f/2
+    is penalised — but when the f/2 position carries a genuine simultaneous
+    note (here C4), the penalty treats a real chord partner as ghost-octave
+    evidence.  Phase A rejects such candidates with score-below-threshold
+    because allow_octave_secondary is evaluated against primary only.
+
+    Phase C revisits these candidates after Phase A/B/iterative settle,
+    and re-evaluates allow_octave_secondary against the final selected
+    set.  If an octave partner is in selected, the candidate is admitted
+    despite its low score — matching the semantics already used by the
+    existing Phase B full-selected check at harmonic-related guard.
+    """
+    if len(selection.selected) >= MAX_POLYPHONY:
+        return
+
+    _disabled = settings.get().disabled_gates
+    gate_name = "phase-c-octave-dyad-rescue"
+    if gate_name in _disabled:
+        return
+
+    primary = primary_result.primary
+    selected_names = {n.note_name for n in selection.selected}
+
+    for decision in list(selection.candidate_decisions):
+        if len(selection.selected) >= MAX_POLYPHONY:
+            break
+        if decision.accepted or decision.source != "secondary":
+            continue
+        # Strict trigger: rejected ONLY by structural score-below-threshold
+        # in Phase A.  Other rejection reasons (fundamental-ratio-too-low,
+        # harmonic-related-to-selected non-octave, semitone-leakage, etc.)
+        # remain authoritative.
+        if decision.reasons != ["score-below-threshold"]:
+            continue
+        if decision.note_name in selected_names:
+            continue
+        hyp = _find_hypothesis_by_frequency(selection.residual_ranked, decision.frequency)
+        if hyp is None:
+            continue
+        if not allow_octave_secondary(primary, hyp, selection.selected):
+            continue
+        test_keys = [n.key for n in selection.selected] + [hyp.candidate.key]
+        if not is_physically_playable_chord(test_keys, key_layers=ctx.key_layers):
+            continue
+
+        hyp.candidate.onset_gain = evidence.get_onset_gain_if_cached(hyp.candidate.frequency)
+        selection.selected.append(hyp.candidate)
+        selected_names.add(hyp.candidate.note_name)
+        selection.candidate_decisions.append(_CandidateDecision(
+            note_name=hyp.candidate.note_name,
+            frequency=hyp.candidate.frequency,
+            score=hyp.score,
+            fundamental_ratio=hyp.fundamental_ratio,
+            onset_gain=decision.onset_gain,
+            accepted=True,
+            reasons=[gate_name],
+            octave_dyad_allowed=True,
+            source="phase-c",
         ))
 
 
@@ -3099,7 +3196,7 @@ def _evaluate_branch(
     selection = _select_candidates(ctx, spectral, primary_result, evidence)
 
     # L3.5: Final decisions (evidence rescue + primary rejection)
-    _apply_final_decisions(ctx, selection, primary_result, evidence)
+    _apply_final_decisions(ctx, spectral, selection, primary_result, evidence)
 
     if not selection.selected:
         return _BranchResult(
@@ -3244,7 +3341,7 @@ def segment_peaks(
 
         # No alternative found — reject segment
         selection = _select_candidates(ctx, spectral, primary_result, evidence)
-        _apply_final_decisions(ctx, selection, primary_result, evidence)
+        _apply_final_decisions(ctx, spectral, selection, primary_result, evidence)
         trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=selection.candidate_decisions)
         rejection_debug = None
         if ctx.debug and primary_result.decision.rejection_reason == "residual-decay-no-reattack":
@@ -3280,7 +3377,7 @@ def segment_peaks(
     selection = _select_candidates(ctx, spectral, primary_result, evidence)
 
     # Layer 3.5: Final decision
-    _apply_final_decisions(ctx, selection, primary_result, evidence)
+    _apply_final_decisions(ctx, spectral, selection, primary_result, evidence)
 
     if not selection.selected:
         trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=selection.candidate_decisions)

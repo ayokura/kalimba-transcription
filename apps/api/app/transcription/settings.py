@@ -43,6 +43,14 @@ class RecognizerSettings:
     use_onset_gate: bool = True  # #141: reject primary with no onset evidence
     use_alternate_groupings: bool = True  # #151: dissonance-aware merge guard
     use_soft_candidate_alternates: bool = True  # #178: preserve soft-rejected candidates as alternates
+    # Phase C: context-aware rescue pass after Phase A/B and evidence rescue.
+    # Revisits candidates rejected in Phase A with score-below-threshold only,
+    # where allow_octave_secondary(primary, hypothesis, selected_final) now
+    # returns True.  Catches upper-octave notes in octave-dyad chords whose
+    # subharmonic_alias_energy penalty was driven by a legitimate lower-octave
+    # partner that is itself in the final selected set (see Free Performance
+    # E1 C4+C5+E5: C5 score=12 due to C4 real-note sub-alias).
+    use_phase_c_octave_dyad_rescue: bool = True
     # #149: per-tine partial scoring in rank_tuning_candidates.
     # Currently disabled because kalimba tunings contain fifths as adjacent
     # tines, so beam partials (e.g. 1.5×) collide with other notes' fundamentals.
