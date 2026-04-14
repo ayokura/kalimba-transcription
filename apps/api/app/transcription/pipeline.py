@@ -155,11 +155,14 @@ async def transcribe_audio(
     mid_performance_end: bool = False,
 ) -> TranscriptionResult:
     audio, sample_rate = await read_audio(upload)
-    segments, tempo, segment_debug = detect_segments(
+    detection = detect_segments(
         audio, sample_rate,
         mid_performance_start=mid_performance_start,
         mid_performance_end=mid_performance_end,
     )
+    segments = detection.segments
+    tempo = detection.tempo
+    segment_debug = detection.debug
     segments = rescue_gap_mute_dips(segments, audio, sample_rate, tuning)
 
     # #154 / #153 Phase B: per-recording per-band noise floor calibration.
@@ -201,14 +204,17 @@ async def transcribe_audio(
         recent_note_names = build_recent_note_names(raw_events)
         ascending_primary_run_ceiling = build_recent_ascending_primary_run_ceiling(raw_events)
         ascending_singleton_suffix_ceiling, ascending_singleton_suffix_note_names = build_recent_ascending_singleton_suffix(raw_events)
-        descending_primary_suffix_floor, descending_primary_suffix_ceiling, descending_primary_suffix_note_names = build_recent_descending_primary_suffix(raw_events)
+        descending_suffix = build_recent_descending_primary_suffix(raw_events)
+        descending_primary_suffix_floor = descending_suffix.floor
+        descending_primary_suffix_ceiling = descending_suffix.ceiling
+        descending_primary_suffix_note_names = descending_suffix.note_names
         previous_primary_note_name = raw_events[-1].primary_note_name if raw_events else None
         previous_primary_frequency = None
         if raw_events and raw_events[-1].primary_note_name is not None:
             previous_primary = next((note for note in raw_events[-1].notes if note.note_name == raw_events[-1].primary_note_name), None)
             previous_primary_frequency = previous_primary.frequency if previous_primary is not None else None
         previous_primary_was_singleton = bool(raw_events and len(raw_events[-1].notes) == 1)
-        candidates, candidate_debug, primary, _trace, _soft_alts, _dropped_primary, _dropped_ranked, _dropped_reason, _dropped_rescues = segment_peaks(
+        seg_result = segment_peaks(
             audio,
             sample_rate,
             start_time,
@@ -229,17 +235,21 @@ async def transcribe_audio(
             sub_onsets=sub_onsets,
             segment_sources=segment.sources,
         )
+        candidates = seg_result.candidates
+        candidate_debug = seg_result.debug
+        primary = seg_result.primary
         if not candidates or primary is None:
             if debug and candidate_debug:
                 segment_candidates_debug.append(candidate_debug)
             # #178 Phase 2: preserve dropped segment as candidate slot
-            if _dropped_primary is not None:
+            if seg_result.dropped_primary is not None:
+                dropped_primary_note = seg_result.dropped_primary
                 dropped_slots.append(_build_candidate_slot(
                     start_time=start_time,
                     end_time=end_time,
-                    primary=_dropped_primary,
-                    ranked_notes=_dropped_ranked,
-                    drop_reason=_dropped_reason,
+                    primary=dropped_primary_note,
+                    ranked_notes=seg_result.dropped_candidates,
+                    drop_reason=seg_result.dropped_reason,
                 ))
                 # #178 Phase 2: sub-onset rescues — mute-dip re-attack found
                 # within a rejected segment.  The mute-dip envelope (ringing
@@ -248,16 +258,16 @@ async def transcribe_audio(
                 # so we promote to a primary-bearing RawEvent rather than a
                 # candidate_slot.  Secondary-only; no harmonic/chord rerun
                 # is attempted at the rescue time.
-                for rescue_time in _dropped_rescues:
+                for rescue_time in seg_result.dropped_sub_onset_rescues:
                     rescue_end = min(rescue_time + 0.3, end_time)
                     rescue_duration = rescue_end - rescue_time
                     raw_events.append(
                         RawEvent(
                             start_time=rescue_time,
                             end_time=rescue_end,
-                            notes=[_dropped_primary],
+                            notes=[dropped_primary_note],
                             is_gliss_like=rescue_duration < 0.18,
-                            primary_note_name=_dropped_primary.note_name,
+                            primary_note_name=dropped_primary_note.note_name,
                             primary_score=0.0,
                             from_short_segment_guard=rescue_duration < SHORT_SEGMENT_SECONDARY_GUARD_DURATION,
                             sub_onsets=[],
@@ -338,7 +348,7 @@ async def transcribe_audio(
                 # so the guard fires for the actual short windows.
                 from_short_segment_guard=(end_time - start_time) < SHORT_SEGMENT_SECONDARY_GUARD_DURATION,
                 sub_onsets=sub_onsets,
-                alternate_groupings=list(_soft_alts),
+                alternate_groupings=list(seg_result.soft_alternates),
             )
         )
         if debug and candidate_debug:

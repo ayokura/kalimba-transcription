@@ -113,7 +113,7 @@ def main():
     audio, sr = load_audio(wav_path)
     tuning = get_default_tunings()[0]
 
-    segments, _, _ = detect_segments(audio, sr)
+    segments = detect_segments(audio, sr).segments
     print(f"17-C BWV147: {len(segments)} segments, {len(audio)/sr:.1f}s @ {sr}Hz")
     print()
 
@@ -132,7 +132,9 @@ def main():
             continue
 
         result = segment_peaks(audio, sr, start, end, tuning, debug=True)
-        candidates, debug, primary_hyp, _trace = result
+        candidates = result.candidates
+        debug = result.debug
+        primary_hyp = result.primary
 
         if not candidates or primary_hyp is None:
             prev_end = end
