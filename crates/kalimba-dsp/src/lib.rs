@@ -55,6 +55,12 @@ fn note_band_energy_inner(
     n_fft: usize,
     harmonic_band_cents: f64,
 ) -> f32 {
+    // Mirror Python's `peak_energy_near` early return when center freq is non-positive.
+    // Without this, log2 / negative `as usize` cast on lo_bin can produce wrap-around
+    // huge indices and out-of-bounds panics when called with malformed input.
+    if !(frequency > 0.0 && sample_rate > 0 && n_fft > 0) {
+        return 0.0;
+    }
     let chunk_len = audio_chunk.len();
     cached_hanning(chunk_len, |window| {
         for i in 0..chunk_len {
@@ -168,6 +174,15 @@ fn scan_gap_for_mute_dip_with_window(
     min_recovery_ratio: f64,
     harmonic_band_cents: f64,
 ) -> Option<f64> {
+    // Defensive validation against invalid params from the FFI boundary.
+    // Without these, fine_step <= 0 makes the n_fine count loop never terminate;
+    // coarse_step <= fine_step / 2 rounds coarse_stride to 0 and the outer
+    // `i += coarse_stride` loop never advances; non-positive frequency / sample_rate
+    // would NaN the log2-cents math in note_band_energy_inner.
+    if !(fine_step > 0.0 && coarse_step > 0.0 && frequency > 0.0 && sample_rate > 0) {
+        return None;
+    }
+
     let audio_array = audio.as_array();
     let audio_slice = audio_array.as_slice()?;
     let audio_duration = audio_slice.len() as f64 / sample_rate as f64;
@@ -193,9 +208,9 @@ fn scan_gap_for_mute_dip_with_window(
         }
         n_fine += 1;
     }
-    let dip_span = (max_dip_window / fine_step).round() as i64;
-    let recovery_span = (max_recovery_window / fine_step).round() as i64;
-    let coarse_stride = (coarse_step / fine_step).round() as i64;
+    let dip_span = (max_dip_window / fine_step).round().max(0.0) as i64;
+    let recovery_span = (max_recovery_window / fine_step).round().max(0.0) as i64;
+    let coarse_stride = ((coarse_step / fine_step).round() as i64).max(1);
     let max_i = n_fine - dip_span - recovery_span;
     if max_i <= 0 {
         return None;
