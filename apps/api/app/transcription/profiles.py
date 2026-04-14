@@ -5,6 +5,7 @@ from functools import lru_cache
 
 import numpy as np
 
+from .audio import cached_hanning, cached_rfftfreq
 from .constants import (
     ACTIVE_RANGE_START_CLUSTER_MAX_DURATION,
     ATTACK_REFINED_ONSET_MAX_INTERVAL,
@@ -320,9 +321,9 @@ def _build_analysis_window_chunks(
 
 
 def _chunk_spectrum(chunk: np.ndarray, sample_rate: int, n_fft: int) -> tuple[np.ndarray, np.ndarray]:
-    window = np.hanning(len(chunk))
+    window = cached_hanning(len(chunk))
     spectrum = np.abs(np.fft.rfft(chunk * window, n=n_fft))
-    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    frequencies = cached_rfftfreq(n_fft, sample_rate)
     return frequencies, spectrum
 
 
@@ -401,7 +402,7 @@ def _waveform_stats_n_fft(pre_signal: np.ndarray, post_signal: np.ndarray) -> in
 
 @lru_cache(maxsize=8)
 def _rfft_frequency_bins(sample_rate: int, n_fft: int) -> np.ndarray:
-    return np.fft.rfftfreq(n_fft, 1 / sample_rate)
+    return cached_rfftfreq(n_fft, sample_rate)
 
 
 def _positive_diff_spectral_centroid(
@@ -503,7 +504,7 @@ def precompute_onset_attack_profiles(
 
     if np.any(full_mask):
         n_fft = max(4096, 1 << int(math.ceil(math.log2(window_samples))))
-        window = np.hanning(window_samples)
+        window = cached_hanning(window_samples)
         pre_full = pre_rows[full_mask]
         attack_full = attack_rows[full_mask]
         pre_spec = np.abs(np.fft.rfft(pre_full * window[None, :], n=n_fft, axis=1))
@@ -515,7 +516,7 @@ def precompute_onset_attack_profiles(
         attack_energy = (attack_full * attack_full).mean(axis=1)
         broadband_gain = (attack_energy + 1e-6) / (pre_energy + 1e-6)
 
-        frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+        frequencies = cached_rfftfreq(n_fft, sample_rate)
         pre_sum = pre_spec.sum(axis=1)
         delta = np.maximum(attack_spec - pre_spec, 0.0)
         broadband_flux = delta.sum(axis=1) / (pre_sum + 1e-6)

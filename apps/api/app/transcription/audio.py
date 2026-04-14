@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import math
+from functools import lru_cache
 from typing import Any
 
 import numpy as np
@@ -12,6 +13,20 @@ from fastapi import HTTPException, UploadFile
 from ..models import InstrumentTuning
 from ..tunings import build_custom_tuning, get_default_tunings
 from .models import Note, NoteCandidate
+
+
+@lru_cache(maxsize=64)
+def cached_hanning(length: int) -> np.ndarray:
+    window = np.hanning(length)
+    window.setflags(write=False)
+    return window
+
+
+@lru_cache(maxsize=64)
+def cached_rfftfreq(n_fft: int, sample_rate: int) -> np.ndarray:
+    freqs = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    freqs.setflags(write=False)
+    return freqs
 
 
 def parse_tuning_json(tuning_json: str) -> InstrumentTuning:

@@ -44,6 +44,7 @@ from .constants import (
     NOISE_FLOOR_MIN_SILENT_GAP_SECONDS,
 )
 from .models import Segment
+from .audio import cached_hanning, cached_rfftfreq
 from .peaks import _adaptive_n_fft, batch_peak_energies
 
 
@@ -212,9 +213,9 @@ def _narrow_fft_band_energies(
     if len(chunk) < 256:
         return None
     n_fft = _adaptive_n_fft(sample_rate, min_frequency, len(chunk))
-    window = np.hanning(len(chunk))
+    window = cached_hanning(len(chunk))
     spectrum = np.abs(np.fft.rfft(chunk * window, n=n_fft))
-    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    frequencies = cached_rfftfreq(n_fft, sample_rate)
     return batch_peak_energies(
         frequencies, spectrum, note_freqs, band_cents=HARMONIC_BAND_CENTS,
     )
