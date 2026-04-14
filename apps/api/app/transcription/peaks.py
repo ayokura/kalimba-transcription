@@ -1805,7 +1805,11 @@ def measure_narrow_fft_note_scores(
     not surface in the ranked hypotheses are absent from the returned dict
     (callers should treat their values as 0.0).
     """
-    cache_key = (int(round(sub_onset_time * sample_rate)), float(window_seconds))
+    # Must match `_narrow_fft_at_sub_onset`'s `center_sample` quantization
+    # (truncation via int()); using round() here would alias distinct centers
+    # to the same key and return note scores from a different FFT window.
+    center_sample = int(sub_onset_time * sample_rate)
+    cache_key = (center_sample, float(window_seconds))
     if cache is not None and cache_key in cache:
         return cache[cache_key]
 
