@@ -50,7 +50,7 @@ from .models import NoteCandidate, RawCandidateSlot, RawEvent
 from .noise_floor import measure_noise_floor
 from .notation import build_notation_views, format_doremi, format_number, quantize_beat
 from .patterns import apply_repeated_pattern_passes
-from .peaks import segment_peaks
+from .peaks import analyze_spectrum_at_onset, segment_peaks
 from .per_note import rescue_gap_mute_dips
 from .segments import (
     build_segment_debug_contexts,
@@ -70,6 +70,10 @@ _DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
     # High confidence: mute-dip re-attack detected at sub-onset inside rejected segment.
     # This is a strong physical signal that a fresh attack occurred.
     "sub-onset-mute-dip-reattack": 0.80,
+    # Medium-high confidence: onset detected (broadband + gap-validated) but no
+    # segment constructed because RMS-based active range didn't cover it.
+    # Physical attack signal exists; just the segmenter missed it.
+    "orphan-onset-no-segment": 0.50,
     "residual-decay-no-reattack": 0.15,
     "low_register_sparse_gap_tail": 0.10,
     "primary-score-too-low": 0.05,
@@ -327,6 +331,34 @@ async def transcribe_audio(
         _trace_post_processing_step(name, before, result, _t)
         processed_events = result
         return result
+
+    # #178 Phase 2.5: orphan onset recovery — gap-validated onsets that fall
+    # outside all segments (active ranges didn't cover them). Recovered as
+    # medium-confidence candidate slots via lightweight FFT analysis.
+    gap_validated_onsets = segment_debug.get("gapValidatedOnsetTimes")
+    if gap_validated_onsets:
+        segment_ranges = [(s.start_time, s.end_time) for s in segments]
+        for onset_time in gap_validated_onsets:
+            onset_time = float(onset_time)
+            # Skip if within any existing segment
+            if any(s <= onset_time <= e for s, e in segment_ranges):
+                continue
+            # Skip if too close to segment boundary (would duplicate)
+            if any(abs(onset_time - s) < 0.02 or abs(onset_time - e) < 0.02
+                   for s, e in segment_ranges):
+                continue
+            orphan_candidates = analyze_spectrum_at_onset(
+                audio, sample_rate, onset_time, tuning,
+            )
+            if not orphan_candidates:
+                continue
+            dropped_slots.append(_build_candidate_slot(
+                start_time=onset_time,
+                end_time=onset_time + 0.2,
+                primary=orphan_candidates[0],
+                ranked_notes=orphan_candidates[1:],
+                drop_reason="orphan-onset-no-segment",
+            ))
 
     processed_events = raw_events
     _pp("suppress_low_confidence_dyad_transients", suppress_low_confidence_dyad_transients)

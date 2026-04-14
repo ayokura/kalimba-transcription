@@ -163,6 +163,21 @@
 - **Discriminator design beats constant tuning.** When no threshold cleanly separates true positives from false positives, consider whether the candidate iteration order itself is wrong. #153 Phase B replaced narrow-FFT-score-ordered iteration with backward-attack-gain-ordered iteration, which changed the problem from "tighten the constants" to "evaluate the strongest fresh-attack signal first" — and several constants became unnecessary. Ordering by a single physical signal is often cleaner than ordering by a composite score and then patching exceptions.
 - **Heuristic constants live in `apps/api/app/transcription/constants.py` and are tracked in [#162](https://github.com/ayokura/kalimba-transcription/issues/162).** When adding a new constant, include its calibration data in the inline comment and append it to the #162 audit body so the inventory and the data-driven-replacement candidate list stay current.
 
+### Broadband patch vs per-note onset detection
+
+現在の recognizer は broadband onset detection（librosa spectral flux 系）をベースに、個別の rescue/gate patch を積み上げて精度を上げている。一方 [#141](https://github.com/ayokura/kalimba-transcription/issues/141) では per-note onset detection という根本的な architecture 変更が提案されている。
+
+**既定方針**: 既存の broadband + patch で対処できるケースは patch で進める。per-note への全面移行は以下のトリガーのいずれかが発生した時点で判断する:
+
+1. **Patch が衝突する** — ある patch が別の patch の前提を壊し、全体として整合的な物理モデルにならなくなったとき
+2. **broadband で物理的に検出不能な音が出る** — weak attack で spectral flux が閾値に届かないケース。broadband detection が通っているケース (今日の 10.939s D5 など) は patch で拾える
+3. **リアルタイム要求 (streaming transcription)** — batch 前提の broadband 解析では間に合わなくなったとき。per-note state machine (`OFF → ATTACK → BODY → LATE_DECAY`) への移行が必要
+4. **Patch 数が fixture 数に近づく** — 一般化できないローカル解決が蓄積したとき
+
+**streaming / WASM 適合性は直交**: broadband patch も per-note も FFT / band energy ベースで WASM 化できる。librosa からの独立は両者で共通の作業量であり、per-note を選ぶ理由にはならない。
+
+**並行路線を推奨**: main line は patch で完成度を上げ、research line (別 branch) で per-note を実験的に検証する。patch で解けないケースを per-note 側で解く、が明確になった時点で merge を判断する。
+
 ## Claude Code-Specific Notes
 
 - Claude Code reads this file via `@AGENTS.md` in CLAUDE.md.

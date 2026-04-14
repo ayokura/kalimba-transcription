@@ -1637,6 +1637,50 @@ class _NoteEvidenceCache:
         return _chunk_spectrum(chunk, self._sr, n_fft)
 
 
+def analyze_spectrum_at_onset(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    tuning: InstrumentTuning,
+    window_seconds: float = 0.15,
+) -> list[NoteCandidate]:
+    """Lightweight FFT analysis at a time point to produce ranked note candidates.
+
+    Used for orphan onset recovery (#178 Phase 2.5) where an onset was detected
+    but no segment was constructed (falls outside all active ranges). Returns
+    top-4 NoteCandidate objects ranked by spectral score, or empty list if
+    the window is too short or contains no clear signal.
+    """
+    start_sample = int(onset_time * sample_rate)
+    end_sample = min(int((onset_time + window_seconds) * sample_rate), len(audio))
+    segment = audio[start_sample:end_sample]
+    if len(segment) < 512:
+        return []
+    min_freq = min(n.frequency for n in tuning.notes)
+    n_fft = _adaptive_n_fft(sample_rate, min_freq, len(segment))
+    window = np.hanning(len(segment))
+    spectrum = np.abs(np.fft.rfft(segment * window, n=n_fft))
+    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    ranked = rank_tuning_candidates(frequencies, spectrum, tuning)
+    if not ranked or ranked[0].score <= 1e-6:
+        return []
+    # Compute onset_gain for the top candidate (used for confidence)
+    top = ranked[0]
+    og = onset_energy_gain(
+        audio, sample_rate, onset_time, onset_time + window_seconds,
+        top.candidate.frequency,
+    )
+    return [
+        NoteCandidate(
+            key=h.candidate.key,
+            note=h.candidate.note,
+            score=h.score,
+            onset_gain=og if i == 0 else None,
+        )
+        for i, h in enumerate(ranked[:4])
+    ]
+
+
 def _acquire_spectrum(
     ctx: _SegmentContext,
 ) -> tuple[_SpectralData, _NoteEvidenceCache] | None:
