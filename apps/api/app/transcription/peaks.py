@@ -3509,23 +3509,36 @@ def has_kalimba_sustain_profile(
     onset_time: float,
     frequency: float,
     *,
-    min_sustain_ratio: float = 0.01,
-    sustain_delay: float = 0.05,
-    sustain_window: float = 0.20,
+    min_sustain_ratio: float = 0.05,
+    attack_window: float = 0.10,
+    sustain_delay: float = 0.30,
+    sustain_window: float = 0.30,
 ) -> bool:
     """Return True if *onset_time* has a kalimba-like sustain envelope on
-    *frequency* — i.e., ringing energy measured in a [onset + delay,
-    onset + delay + window] region is at least *min_sustain_ratio* of
-    the attack-window peak energy.
+    *frequency*.  Compares peak energy in the attack window
+    [onset, onset + attack_window] to peak energy in the late-sustain
+    window [onset + sustain_delay, onset + sustain_delay + sustain_window].
+    Genuine plucks ring through the late window (ratio ~30-60 %);
+    spurious broadband transients (edge clicks, non-pluck noise) decay
+    to the noise floor (ratio < 1 %).
 
-    Used by orphan-onset promote logic: a spurious broadband transient
-    (recording edge click, non-kalimba noise) may hit the correct pitch
-    bin at onset but decays to noise floor in tens of ms; a genuine
-    pluck sustains for hundreds of ms.  The ratio is measured
-    peak-to-peak (both in short FFT windows) so it is scale/gain
-    invariant; absolute sustain energy is sensitive to mic distance.
+    The default windows (attack 0-100 ms, late 300-600 ms) skip the
+    first 300 ms so any transient spike that happens to land inside a
+    short sustain window does not inflate the ratio — the early-sustain
+    region can still carry a noise peak, whereas the 300-600 ms region
+    has clearly returned to noise floor for non-pluck events.  See Free
+    Perf 10.94s D5 (ratio ~0.60) vs triple-glissando 0.03s C5
+    (ratio ~0.01) comparison.
+
+    The ratio is peak-to-peak (both measured in short FFT windows) so
+    it is scale/gain invariant; absolute sustain energy is sensitive
+    to mic distance.
     """
-    attack_peak = _note_band_energy(audio, sample_rate, onset_time, frequency)
+    attack_center = onset_time + attack_window / 2.0
+    attack_peak = _note_band_energy(
+        audio, sample_rate, attack_center, frequency,
+        window_seconds=attack_window,
+    )
     if attack_peak <= 0.0:
         return False
     sustain_center = onset_time + sustain_delay + sustain_window / 2.0

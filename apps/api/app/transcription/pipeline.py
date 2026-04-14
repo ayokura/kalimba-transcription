@@ -428,6 +428,11 @@ async def transcribe_audio(
                     drop_reason="orphan-onset-no-segment",
                 ))
 
+    # Orphan events are appended after the time-ordered segment loop,
+    # so re-sort raw_events by start_time to keep downstream
+    # post-processing (which assumes chronological order) correct.
+    raw_events.sort(key=lambda e: e.start_time)
+
     processed_events = raw_events
     _pp("suppress_low_confidence_dyad_transients", suppress_low_confidence_dyad_transients)
     _pp("suppress_onset_decaying_carryover", suppress_onset_decaying_carryover)
