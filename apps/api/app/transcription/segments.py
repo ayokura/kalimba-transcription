@@ -206,6 +206,29 @@ def trim_small_overlapping_segments(segments: list[Segment]) -> list[Segment]:
     return trimmed
 
 
+def estimate_tempo_from_onset_intervals(onset_times: list[float]) -> float:
+    """Estimate a coarse BPM from inter-onset intervals.
+
+    We avoid librosa.beat.beat_track because its numba gufunc path has shown
+    instability on Python 3.13 CI workers. For this pipeline, a robust IOI
+    estimate is sufficient as the tempo is only used as a quantization guide.
+    """
+    if len(onset_times) < 2:
+        return 90.0
+
+    intervals = np.diff(np.asarray(onset_times, dtype=float))
+    valid_intervals = intervals[(intervals >= 0.12) & (intervals <= 2.0)]
+    if valid_intervals.size == 0:
+        return 90.0
+
+    median_interval = float(np.median(valid_intervals))
+    if median_interval <= 0.0:
+        return 90.0
+
+    tempo = 60.0 / median_interval
+    return float(np.clip(tempo, 30.0, 300.0))
+
+
 def should_keep_dense_trailing_onset(
     boundary_times: list[float],
     index: int,
@@ -1005,16 +1028,8 @@ def detect_segments(
 
     tempo_audio_duration_sec = float(librosa.get_duration(y=audio, sr=sample_rate))
     tempo_start = perf_counter()
-    tempo_onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=TEMPO_ESTIMATION_HOP_LENGTH)
-    tempo_array, _ = librosa.beat.beat_track(
-        onset_envelope=tempo_onset_env,
-        sr=sample_rate,
-        hop_length=TEMPO_ESTIMATION_HOP_LENGTH,
-    )
+    tempo = estimate_tempo_from_onset_intervals(onset_times)
     tempo_estimation_ms = (perf_counter() - tempo_start) * 1000.0
-    tempo = float(np.asarray(tempo_array).reshape(-1)[0]) if np.asarray(tempo_array).size else 90.0
-    if tempo <= 1.0:
-        tempo = 90.0
 
     debug_info = {
         "onsetTimes": onset_times,
