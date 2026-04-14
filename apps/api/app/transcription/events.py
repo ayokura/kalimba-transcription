@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Sequence
 
 import numpy as np
@@ -2695,9 +2696,25 @@ def build_recent_ascending_singleton_suffix(raw_events: list[RawEvent]) -> tuple
     return recent_primary_frequencies[-1], {note.note_name for note in recent_primary_notes}
 
 
-def build_recent_descending_primary_suffix(raw_events: list[RawEvent]) -> tuple[float | None, float | None, set[str]]:
+@dataclass(frozen=True, slots=True)
+class DescendingPrimarySuffix:
+    """Recent descending-primary suffix state for ceiling/floor clamping.
+
+    floor / ceiling are None (and note_names empty) when no descending
+    suffix of the required length exists at the tail of raw_events.
+    """
+    floor: float | None
+    ceiling: float | None
+    note_names: set[str]
+
+    @classmethod
+    def empty(cls) -> "DescendingPrimarySuffix":
+        return cls(None, None, set())
+
+
+def build_recent_descending_primary_suffix(raw_events: list[RawEvent]) -> DescendingPrimarySuffix:
     if not raw_events:
-        return None, None, set()
+        return DescendingPrimarySuffix.empty()
 
     recent_primary_notes: list[NoteCandidate] = []
     for recent_event in reversed(raw_events):
@@ -2713,17 +2730,17 @@ def build_recent_descending_primary_suffix(raw_events: list[RawEvent]) -> tuple[
             break
 
     if len(recent_primary_notes) < DESCENDING_PRIMARY_SUFFIX_MIN_LENGTH:
-        return None, None, set()
+        return DescendingPrimarySuffix.empty()
 
     recent_primary_notes.reverse()
     recent_primary_frequencies = [note.frequency for note in recent_primary_notes]
     if any(current > previous for previous, current in zip(recent_primary_frequencies, recent_primary_frequencies[1:])):
-        return None, None, set()
+        return DescendingPrimarySuffix.empty()
     if recent_primary_frequencies[-1] >= recent_primary_frequencies[0]:
-        return None, None, set()
+        return DescendingPrimarySuffix.empty()
 
-    return (
-        recent_primary_frequencies[-1],
-        recent_primary_frequencies[0],
-        {note.note_name for note in recent_primary_notes},
+    return DescendingPrimarySuffix(
+        floor=recent_primary_frequencies[-1],
+        ceiling=recent_primary_frequencies[0],
+        note_names={note.note_name for note in recent_primary_notes},
     )

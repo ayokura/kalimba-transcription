@@ -204,7 +204,10 @@ async def transcribe_audio(
         recent_note_names = build_recent_note_names(raw_events)
         ascending_primary_run_ceiling = build_recent_ascending_primary_run_ceiling(raw_events)
         ascending_singleton_suffix_ceiling, ascending_singleton_suffix_note_names = build_recent_ascending_singleton_suffix(raw_events)
-        descending_primary_suffix_floor, descending_primary_suffix_ceiling, descending_primary_suffix_note_names = build_recent_descending_primary_suffix(raw_events)
+        descending_suffix = build_recent_descending_primary_suffix(raw_events)
+        descending_primary_suffix_floor = descending_suffix.floor
+        descending_primary_suffix_ceiling = descending_suffix.ceiling
+        descending_primary_suffix_note_names = descending_suffix.note_names
         previous_primary_note_name = raw_events[-1].primary_note_name if raw_events else None
         previous_primary_frequency = None
         if raw_events and raw_events[-1].primary_note_name is not None:
