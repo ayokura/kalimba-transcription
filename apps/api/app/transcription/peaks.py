@@ -824,6 +824,18 @@ def build_debug_candidates(
         payload.append(item)
     return payload
 
+@dataclass(frozen=True, slots=True)
+class PrimaryPromotion:
+    """Output of a single primary-promotion helper.
+
+    `primary_onset_gain` is None when the helper does not compute it
+    (e.g. upper-octave promotion reuses the caller's value).
+    """
+    primary: NoteHypothesis
+    primary_onset_gain: float | None = None
+    promotion_debug: dict[str, Any] | None = None
+
+
 def maybe_replace_stale_recent_primary(
     audio: np.ndarray,
     sample_rate: int,
@@ -836,13 +848,13 @@ def maybe_replace_stale_recent_primary(
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
     sub_onsets: tuple[float, ...] = (),
-) -> tuple[NoteHypothesis, float | None, dict[str, Any] | None]:
+) -> PrimaryPromotion:
     if not recent_note_names or primary.candidate.note_name not in recent_note_names:
-        return primary, None, None
+        return PrimaryPromotion(primary)
 
     duration = end_time - start_time
     if duration > RECENT_PRIMARY_REPLACEMENT_MAX_DURATION:
-        return primary, None, None
+        return PrimaryPromotion(primary)
 
     primary_onset_gain = onset_energy_gain(
         audio, sample_rate, start_time, end_time, primary.candidate.frequency,
@@ -851,13 +863,13 @@ def maybe_replace_stale_recent_primary(
         recent_note_names=recent_note_names,
     )
     if primary_onset_gain >= MIN_RECENT_NOTE_ONSET_GAIN:
-        return primary, primary_onset_gain, None
+        return PrimaryPromotion(primary, primary_onset_gain)
 
     # If the primary shows a genuine mute-dip re-attack, keep it even though
     # the broadband onset_gain is low — the per-note frequency band confirms
     # the tine was touched and replucked.
     if _has_mute_dip_reattack(audio, sample_rate, start_time, primary.candidate.frequency):
-        return primary, primary_onset_gain, None
+        return PrimaryPromotion(primary, primary_onset_gain)
 
     for hypothesis in ranked[1:6]:
         if hypothesis.candidate.note_name == primary.candidate.note_name:
@@ -910,13 +922,9 @@ def maybe_replace_stale_recent_primary(
             }
             if descending_repeated_primary:
                 replacement_debug["reason"] = "descending-repeated-primary"
-            return (
-                hypothesis,
-                onset_gain,
-                replacement_debug,
-            )
+            return PrimaryPromotion(hypothesis, onset_gain, replacement_debug)
 
-    return primary, primary_onset_gain, None
+    return PrimaryPromotion(primary, primary_onset_gain)
 
 
 def maybe_promote_stale_primary_to_upper_octave(
@@ -925,17 +933,17 @@ def maybe_promote_stale_primary_to_upper_octave(
     segment_duration: float,
     primary_onset_gain: float | None,
     recent_note_names: set[str] | None,
-) -> tuple[NoteHypothesis, dict[str, Any] | None]:
+) -> PrimaryPromotion:
     if segment_duration > STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MAX_DURATION:
-        return primary, None
+        return PrimaryPromotion(primary)
     if not recent_note_names or primary.candidate.note_name not in recent_note_names:
-        return primary, None
+        return PrimaryPromotion(primary)
     if primary.candidate.octave > 4:
-        return primary, None
+        return PrimaryPromotion(primary)
     if primary.fundamental_ratio > STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MAX_PRIMARY_FUNDAMENTAL_RATIO:
-        return primary, None
+        return PrimaryPromotion(primary)
     if primary_onset_gain is not None and primary_onset_gain > STALE_PRIMARY_UPPER_OCTAVE_PROMOTION_MAX_PRIMARY_ONSET_GAIN:
-        return primary, None
+        return PrimaryPromotion(primary)
 
     target_octave = primary.candidate.octave + 1
     upper_candidate: NoteHypothesis | None = None
@@ -953,7 +961,7 @@ def maybe_promote_stale_primary_to_upper_octave(
         upper_candidate = hypothesis
         break
     if upper_candidate is None:
-        return primary, None
+        return PrimaryPromotion(primary)
 
     has_supporting_high = any(
         hypothesis.candidate.note_name != upper_candidate.candidate.note_name
@@ -964,7 +972,7 @@ def maybe_promote_stale_primary_to_upper_octave(
         for hypothesis in ranked[1:6]
     )
     if not has_supporting_high:
-        return primary, None
+        return PrimaryPromotion(primary)
 
     upper_candidate = NoteHypothesis(
         candidate=upper_candidate.candidate,
@@ -980,11 +988,15 @@ def maybe_promote_stale_primary_to_upper_octave(
         harmonics=upper_candidate.harmonics,
         subharmonics=upper_candidate.subharmonics,
     )
-    return upper_candidate, {
-        'replacedPrimaryNote': primary.candidate.note_name,
-        'replacementNote': upper_candidate.candidate.note_name,
-        'reason': 'stale-lower-primary-promoted-to-upper-octave',
-    }
+    return PrimaryPromotion(
+        upper_candidate,
+        None,
+        {
+            'replacedPrimaryNote': primary.candidate.note_name,
+            'replacementNote': upper_candidate.candidate.note_name,
+            'reason': 'stale-lower-primary-promoted-to-upper-octave',
+        },
+    )
 
 
 def maybe_promote_onset_strong_sibling(
@@ -992,7 +1004,7 @@ def maybe_promote_onset_strong_sibling(
     primary_onset_gain: float | None,
     ranked: list[NoteHypothesis],
     evidence: "_NoteEvidenceCache",
-) -> tuple[NoteHypothesis, float | None, dict[str, Any] | None]:
+) -> PrimaryPromotion:
     """#166: Narrow onset-based primary rescue.
 
     When the top-ranked candidate has both a very weak attack and a diluted
@@ -1010,7 +1022,7 @@ def maybe_promote_onset_strong_sibling(
     # fR gate runs first so we can skip the (cached but still non-trivial)
     # onset_gain lookup for clearly-clean primaries.
     if primary.fundamental_ratio >= ONSET_RESCUE_PRIMARY_MAX_FUNDAMENTAL_RATIO:
-        return primary, primary_onset_gain, None
+        return PrimaryPromotion(primary, primary_onset_gain)
     # If the caller didn't compute a primary onset_gain (the stale-recent
     # rescue path only computes it for recent notes), look it up now via
     # the evidence cache so this rescue isn't unable to evaluate fresh
@@ -1021,7 +1033,7 @@ def maybe_promote_onset_strong_sibling(
         else evidence.onset_gain(primary.candidate.frequency)
     )
     if effective_gain is None or effective_gain >= ONSET_RESCUE_PRIMARY_MAX_ONSET_GAIN:
-        return primary, primary_onset_gain, None
+        return PrimaryPromotion(primary, primary_onset_gain)
     # Use the effective gain for the sibling comparison.
     primary_gain_for_check = effective_gain
 
@@ -1042,7 +1054,7 @@ def maybe_promote_onset_strong_sibling(
             best_sibling_gain = sibling_gain
 
     if best_sibling is None:
-        return primary, primary_onset_gain, None
+        return PrimaryPromotion(primary, primary_onset_gain)
 
     debug = {
         "reason": "onset-strong-sibling",
@@ -1053,7 +1065,7 @@ def maybe_promote_onset_strong_sibling(
         "primaryFundamentalRatio": round(primary.fundamental_ratio, 3),
         "siblingFundamentalRatio": round(best_sibling.fundamental_ratio, 3),
     }
-    return best_sibling, best_sibling_gain, debug
+    return PrimaryPromotion(best_sibling, best_sibling_gain, debug)
 
 
 def _try_gap_fill(
@@ -1861,7 +1873,7 @@ def _resolve_primary(
     initial_primary_name = ranked[0].candidate.note_name
     promotions: list[str] = []
     primary = ranked[0]
-    primary, primary_onset_gain, primary_promotion_debug = maybe_replace_stale_recent_primary(
+    stale_recent = maybe_replace_stale_recent_primary(
         ctx.audio,
         ctx.sample_rate,
         ctx.start_time,
@@ -1874,32 +1886,37 @@ def _resolve_primary(
         previous_primary_was_singleton=ctx.previous_primary_was_singleton,
         sub_onsets=ctx.sub_onsets,
     )
+    primary = stale_recent.primary
+    primary_onset_gain = stale_recent.primary_onset_gain
+    primary_promotion_debug = stale_recent.promotion_debug
     if primary_promotion_debug is not None:
         promotions.append(primary_promotion_debug.get("reason", "stale-recent-primary"))
-    primary, stale_upper_promotion_debug = maybe_promote_stale_primary_to_upper_octave(
+    stale_upper = maybe_promote_stale_primary_to_upper_octave(
         primary,
         ranked,
         ctx.duration,
         primary_onset_gain,
         ctx.recent_note_names,
     )
-    if stale_upper_promotion_debug is not None:
-        primary_promotion_debug = stale_upper_promotion_debug
-        promotions.append(stale_upper_promotion_debug.get("reason", "stale-upper-octave"))
+    primary = stale_upper.primary
+    if stale_upper.promotion_debug is not None:
+        primary_promotion_debug = stale_upper.promotion_debug
+        promotions.append(stale_upper.promotion_debug.get("reason", "stale-upper-octave"))
     # #166: Onset-strong sibling rescue — catches the pattern where the
     # top-ranked candidate has weak attack + diluted fR (spectral alias) and
     # a top-K sibling has clean fR + strong attack.  Runs AFTER the existing
     # rescue paths so their specific patterns take precedence.
-    primary, rescued_onset_gain, onset_rescue_debug = maybe_promote_onset_strong_sibling(
+    onset_rescue = maybe_promote_onset_strong_sibling(
         primary,
         primary_onset_gain,
         ranked,
         evidence,
     )
-    if onset_rescue_debug is not None:
-        primary_promotion_debug = onset_rescue_debug
-        primary_onset_gain = rescued_onset_gain
-        promotions.append(onset_rescue_debug.get("reason", "onset-strong-sibling"))
+    primary = onset_rescue.primary
+    if onset_rescue.promotion_debug is not None:
+        primary_promotion_debug = onset_rescue.promotion_debug
+        primary_onset_gain = onset_rescue.primary_onset_gain
+        promotions.append(onset_rescue.promotion_debug.get("reason", "onset-strong-sibling"))
     # Rejection is deferred: record reason but continue so secondary
     # evaluation always runs.  _apply_final_decisions handles the final call.
     _rejected = False

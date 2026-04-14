@@ -57,9 +57,10 @@ class TestOnsetStrongSiblingRescue:
             a4.candidate.frequency: 1.1,
         })
 
-        new_primary, new_gain, debug = maybe_promote_onset_strong_sibling(
+        _r = maybe_promote_onset_strong_sibling(
             b3, 1.8, ranked, evidence,
         )
+        new_primary, new_gain, debug = _r.primary, _r.primary_onset_gain, _r.promotion_debug
 
         assert new_primary.candidate.note_name == "B4"
         assert new_gain == 62.0
@@ -80,9 +81,10 @@ class TestOnsetStrongSiblingRescue:
             b4.candidate.frequency: 62.0,
         })
 
-        new_primary, _, debug = maybe_promote_onset_strong_sibling(
+        _r = maybe_promote_onset_strong_sibling(
             b3, None, ranked, evidence,
         )
+        new_primary, _, debug = _r.primary, _r.primary_onset_gain, _r.promotion_debug
         assert new_primary.candidate.note_name == "B4"
         assert debug is not None
 
@@ -96,9 +98,10 @@ class TestOnsetStrongSiblingRescue:
             e4.candidate.frequency: 80.0,
         })
 
-        new_primary, _, debug = maybe_promote_onset_strong_sibling(
+        _r = maybe_promote_onset_strong_sibling(
             c4, 2.0, ranked, evidence,
         )
+        new_primary, _, debug = _r.primary, _r.primary_onset_gain, _r.promotion_debug
         assert new_primary.candidate.note_name == "C4"
         assert debug is None
 
@@ -112,9 +115,10 @@ class TestOnsetStrongSiblingRescue:
             e4.candidate.frequency: 80.0,
         })
 
-        new_primary, _, debug = maybe_promote_onset_strong_sibling(
+        _r = maybe_promote_onset_strong_sibling(
             c4, 15.0, ranked, evidence,
         )
+        new_primary, _, debug = _r.primary, _r.primary_onset_gain, _r.promotion_debug
         assert new_primary.candidate.note_name == "C4"
         assert debug is None
 
@@ -128,9 +132,10 @@ class TestOnsetStrongSiblingRescue:
             e4.candidate.frequency: 15.0,   # < 20.0 min
         })
 
-        new_primary, _, debug = maybe_promote_onset_strong_sibling(
+        _r = maybe_promote_onset_strong_sibling(
             c4, 2.0, ranked, evidence,
         )
+        new_primary, _, debug = _r.primary, _r.primary_onset_gain, _r.promotion_debug
         assert new_primary.candidate.note_name == "C4"
         assert debug is None
 
@@ -144,9 +149,10 @@ class TestOnsetStrongSiblingRescue:
             e4.candidate.frequency: 80.0,
         })
 
-        new_primary, _, debug = maybe_promote_onset_strong_sibling(
+        _r = maybe_promote_onset_strong_sibling(
             c4, 2.0, ranked, evidence,
         )
+        new_primary, _, debug = _r.primary, _r.primary_onset_gain, _r.promotion_debug
         assert new_primary.candidate.note_name == "C4"
         assert debug is None
 
@@ -160,9 +166,10 @@ class TestOnsetStrongSiblingRescue:
             e4.candidate.frequency: 80.0,
         })
 
-        new_primary, _, debug = maybe_promote_onset_strong_sibling(
+        _r = maybe_promote_onset_strong_sibling(
             c4, 2.0, ranked, evidence,
         )
+        new_primary, _, debug = _r.primary, _r.primary_onset_gain, _r.promotion_debug
         assert new_primary.candidate.note_name == "C4"
         assert debug is None
 
@@ -178,7 +185,8 @@ class TestOnsetStrongSiblingRescue:
             g4.candidate.frequency: 50.0,   # highest
         })
 
-        new_primary, _, debug = maybe_promote_onset_strong_sibling(
+        _r = maybe_promote_onset_strong_sibling(
             c4, 2.0, ranked, evidence,
         )
+        new_primary, _, debug = _r.primary, _r.primary_onset_gain, _r.promotion_debug
         assert new_primary.candidate.note_name == "G4"
