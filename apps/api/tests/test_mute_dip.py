@@ -195,11 +195,12 @@ class TestForwardScanRecovery:
         start_time = pre_context
         end_time = pre_context + seg_duration
 
-        candidates, debug, primary_hyp, _trace, *_ = segment_peaks(
+        _r = segment_peaks(
             audio, SR, start_time, end_time, tuning,
             debug=True,
             recent_note_names={"E5", "C5"},
         )
+        candidates, debug, primary_hyp, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
         # The segment should NOT be dropped (forward-scan should recover C5)
         assert candidates, "Forward-scan should have recovered a candidate from mute-dip"

@@ -182,8 +182,8 @@ def main():
             continue
 
         result = segment_peaks(audio, sr, start, end, tuning)
-        candidates = result[0]
-        primary_hyp = result[2]  # primary NoteHypothesis
+        candidates = result.candidates
+        primary_hyp = result.primary
 
         if not candidates or primary_hyp is None:
             continue

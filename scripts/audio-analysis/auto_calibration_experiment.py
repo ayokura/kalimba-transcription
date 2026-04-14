@@ -132,7 +132,9 @@ def main():
             continue
 
         result = segment_peaks(audio, sr, start, end, tuning, debug=True)
-        candidates, debug, primary_hyp, _trace = result
+        candidates = result.candidates
+        debug = result.debug
+        primary_hyp = result.primary
 
         if not candidates or primary_hyp is None:
             prev_end = end
