@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import HTTPException, UploadFile
 
-from ..models import AlternateGrouping, InstrumentTuning, ScoreEvent, ScoreNote, TranscriptionResult
+from ..models import AlternateGrouping, CandidateSlot, InstrumentTuning, ScoreEvent, ScoreNote, TranscriptionResult
 from .audio import read_audio
 from .constants import GAP_RUN_LEAD_IN_MIN_FOLLOWUP_GAP, SHORT_SEGMENT_SECONDARY_GUARD_DURATION
 from .events import (
@@ -46,7 +46,7 @@ from .events import (
     suppress_short_residual_tails,
     suppress_subset_decay_events,
 )
-from .models import NoteCandidate, RawEvent
+from .models import NoteCandidate, RawCandidateSlot, RawEvent
 from .noise_floor import measure_noise_floor
 from .notation import build_notation_views, format_doremi, format_number, quantize_beat
 from .patterns import apply_repeated_pattern_passes
@@ -63,6 +63,48 @@ from .segments import (
 def _event_sig(ev: RawEvent) -> tuple[float, float, tuple[str, ...]]:
     return (round(ev.start_time, 4), round(ev.end_time, 4),
             tuple(sorted(n.note_name for n in ev.notes)))
+
+
+# #178 Phase 2: base confidence per drop reason for dropped-segment slots.
+_DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
+    "residual-decay-no-reattack": 0.15,
+    "low_register_sparse_gap_tail": 0.10,
+    "primary-score-too-low": 0.05,
+    "onset-gate-no-evidence": 0.05,
+}
+
+
+def _build_candidate_slot(
+    start_time: float,
+    end_time: float,
+    primary: NoteCandidate,
+    ranked_notes: list[NoteCandidate],
+    drop_reason: str,
+) -> RawCandidateSlot:
+    """Build a RawCandidateSlot from a dropped segment's primary and top-ranked notes."""
+    base_conf = _DROP_REASON_BASE_CONFIDENCE.get(drop_reason, 0.05)
+    # Boost confidence if onset evidence is present on the primary.
+    og = primary.onset_gain
+    if og is not None and og >= 10.0:
+        base_conf = min(0.35, base_conf * 2.0)
+    # Top 3 alternative candidates (excluding duplicates of primary).
+    seen = {primary.note_name}
+    alts: list[NoteCandidate] = []
+    for cand in ranked_notes:
+        if cand.note_name in seen:
+            continue
+        seen.add(cand.note_name)
+        alts.append(cand)
+        if len(alts) >= 3:
+            break
+    return RawCandidateSlot(
+        start_time=start_time,
+        end_time=end_time,
+        primary_note=primary,
+        candidates=alts,
+        drop_reason=drop_reason,
+        confidence=round(base_conf, 3),
+    )
 
 
 def _trace_post_processing_step(
@@ -112,6 +154,7 @@ async def transcribe_audio(
 
     raw_events: list[RawEvent] = []
     segment_candidates_debug: list[dict[str, Any]] = []
+    dropped_slots: list[RawCandidateSlot] = []  # #178 Phase 2: preserved dropped segments
     all_onset_times = [float(value) for value in segment_debug.get("onsetTimes", [])]
     segment_contexts = build_segment_debug_contexts(
         segments,
@@ -147,7 +190,7 @@ async def transcribe_audio(
             previous_primary = next((note for note in raw_events[-1].notes if note.note_name == raw_events[-1].primary_note_name), None)
             previous_primary_frequency = previous_primary.frequency if previous_primary is not None else None
         previous_primary_was_singleton = bool(raw_events and len(raw_events[-1].notes) == 1)
-        candidates, candidate_debug, primary, _trace, _soft_alts = segment_peaks(
+        candidates, candidate_debug, primary, _trace, _soft_alts, _dropped_primary, _dropped_ranked, _dropped_reason = segment_peaks(
             audio,
             sample_rate,
             start_time,
@@ -171,6 +214,15 @@ async def transcribe_audio(
         if not candidates or primary is None:
             if debug and candidate_debug:
                 segment_candidates_debug.append(candidate_debug)
+            # #178 Phase 2: preserve dropped segment as candidate slot
+            if _dropped_primary is not None:
+                dropped_slots.append(_build_candidate_slot(
+                    start_time=start_time,
+                    end_time=end_time,
+                    primary=_dropped_primary,
+                    ranked_notes=_dropped_ranked,
+                    drop_reason=_dropped_reason,
+                ))
             continue
 
         segment_key = (round(start_time, 4), round(end_time, 4))
@@ -205,6 +257,19 @@ async def transcribe_audio(
                 if debug and candidate_debug:
                     candidate_debug["droppedBy"] = "low_register_sparse_gap_tail"
                     segment_candidates_debug.append(candidate_debug)
+                # #178 Phase 2: preserve as candidate slot.
+                # candidates is non-empty here; use primary's note as primary_note.
+                primary_cand = next(
+                    (c for c in candidates if c.note_name == primary.candidate.note_name),
+                    candidates[0],
+                )
+                dropped_slots.append(_build_candidate_slot(
+                    start_time=start_time,
+                    end_time=end_time,
+                    primary=primary_cand,
+                    ranked_notes=[c for c in candidates if c.note_name != primary_cand.note_name],
+                    drop_reason="low_register_sparse_gap_tail",
+                ))
                 continue
             if debug and candidate_debug:
                 candidate_debug["sparseGapTailAdjustment"] = (
@@ -468,10 +533,29 @@ async def transcribe_audio(
             "noiseFloor": noise_floor.to_debug_dict(),
         }
 
+    # #178 Phase 2: convert dropped slots to API model
+    candidate_slots_api: list[CandidateSlot] = []
+    for slot in sorted(dropped_slots, key=lambda s: s.start_time):
+        def _to_score_note(c: NoteCandidate) -> ScoreNote:
+            return ScoreNote(
+                key=c.key, pitchClass=c.pitch_class, octave=c.octave,
+                labelDoReMi=format_doremi(c), labelNumber=format_number(c),
+                frequency=round(c.frequency, 3),
+            )
+        candidate_slots_api.append(CandidateSlot(
+            startTime=round(slot.start_time, 4),
+            endTime=round(slot.end_time, 4),
+            primaryNote=_to_score_note(slot.primary_note),
+            candidates=[_to_score_note(c) for c in slot.candidates],
+            dropReason=slot.drop_reason,
+            confidence=slot.confidence,
+        ))
+
     return TranscriptionResult(
         instrumentTuning=tuning,
         tempo=round(tempo, 2),
         events=events,
+        candidateSlots=candidate_slots_api,
         notationViews=build_notation_views(events),
         warnings=warnings,
         debug=result_debug,

@@ -98,6 +98,20 @@ class RawAlternateGrouping:
 
 
 @dataclass
+class RawCandidateSlot:
+    """A segment that was dropped by the recognizer, preserved as a low-confidence
+    candidate slot (#178 Phase 2). Represents "there might be an event here" and
+    lets the UI present it to the user for optional activation.
+    """
+    start_time: float
+    end_time: float
+    primary_note: "NoteCandidate"
+    candidates: list["NoteCandidate"]  # alternative candidate notes (top-N from ranked list)
+    drop_reason: str  # e.g. "residual-decay-no-reattack", "low_register_sparse_gap_tail"
+    confidence: float
+
+
+@dataclass
 class RawEvent:
     start_time: float
     end_time: float

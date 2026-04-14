@@ -482,7 +482,13 @@ def _render_candidates(
         if c_alts:
             alt_by_index[i] = c_alts
 
-    print(f"\nFinal events ({n_final}):")
+    # Build merged timeline of events + candidate slots, sorted by time
+    candidate_slots = payload.get("candidateSlots", [])
+
+    print(f"\nFinal events ({n_final})" + (f" + candidate slots ({len(candidate_slots)})" if candidate_slots else "") + ":")
+
+    # Interleave events and slots chronologically
+    timeline_items: list[tuple[float, str]] = []
     for i, me in enumerate(merged_events):
         notes_str = "+".join(me["notes"])
         alts = alt_by_index.get(i, [])
@@ -490,7 +496,20 @@ def _render_candidates(
         if alts:
             alt_notes = [f"{a['alternateNote']['pitchClass']}{a['alternateNote']['octave']}({a['confidence']:.2f})" for a in alts]
             alt_str = f"  alt: {', '.join(alt_notes)}"
-        print(f"  E{i+1:3d}  {me['startTime']:7.2f}s  {notes_str}{alt_str}")
+        line = f"  E{i+1:3d}  {me['startTime']:7.2f}s  {notes_str}{alt_str}"
+        timeline_items.append((me["startTime"], line))
+
+    for s in candidate_slots:
+        pn = s["primaryNote"]
+        primary_str = f"{pn['pitchClass']}{pn['octave']}"
+        alts = [f"{c['pitchClass']}{c['octave']}" for c in s["candidates"]]
+        alt_str = f" alts=[{','.join(alts)}]" if alts else ""
+        line = f"  ~~~  {s['startTime']:7.2f}s  {primary_str}{alt_str}  [dropped: {s['dropReason']}, conf={s['confidence']:.2f}]"
+        timeline_items.append((s["startTime"], line))
+
+    timeline_items.sort(key=lambda x: x[0])
+    for _, line in timeline_items:
+        print(line)
 
 
 def main():

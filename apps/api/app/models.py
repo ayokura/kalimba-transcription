@@ -72,6 +72,20 @@ class ScoreEvent(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class CandidateSlot(BaseModel):
+    """A segment dropped by the recognizer, preserved as a low-confidence candidate
+    slot for UI presentation (#178 Phase 2). Represents "there might be an event here".
+    """
+    start_time: float = Field(alias="startTime")
+    end_time: float = Field(alias="endTime")
+    primary_note: ScoreNote = Field(alias="primaryNote")
+    candidates: list[ScoreNote]
+    drop_reason: str = Field(alias="dropReason")
+    confidence: float
+
+    model_config = {"populate_by_name": True}
+
+
 class NotationViews(BaseModel):
     western: list[str]
     numbered: list[str]
@@ -85,6 +99,7 @@ class TranscriptionResult(BaseModel):
     instrument_tuning: InstrumentTuning = Field(alias="instrumentTuning")
     tempo: float
     events: list[ScoreEvent]
+    candidate_slots: list[CandidateSlot] = Field(default_factory=list, alias="candidateSlots")
     notation_views: NotationViews = Field(alias="notationViews")
     warnings: list[str] = []
     debug: dict[str, Any] | None = None

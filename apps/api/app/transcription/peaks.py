@@ -1265,6 +1265,11 @@ class SegmentPeaksResult(NamedTuple):
     primary: NoteHypothesis | None
     trace: SegmentDecisionTrace | None = None
     soft_alternates: list[RawAlternateGrouping] = []
+    # #178 Phase 2: when a segment is dropped, carry the rejected primary and
+    # top-ranked ranked-candidates so the pipeline can build a candidate slot.
+    dropped_primary: NoteCandidate | None = None
+    dropped_candidates: list[NoteCandidate] = []
+    dropped_reason: str = ""
 
 
 @dataclass(slots=True)
@@ -3178,7 +3183,14 @@ def segment_peaks(
                 "primaryNote": primary.candidate.note_name,
                 "droppedBy": primary_result.decision.rejection_reason,
             }
-        return SegmentPeaksResult([], rejection_debug, None, trace)
+        # #178 Phase 2: carry rejected primary + top-ranked for candidate slot.
+        dropped_ranked = [h.candidate for h in spectral.ranked[:4] if h.candidate.note_name != primary.candidate.note_name]
+        return SegmentPeaksResult(
+            [], rejection_debug, None, trace,
+            dropped_primary=primary.candidate,
+            dropped_candidates=dropped_ranked[:3],
+            dropped_reason=primary_result.decision.rejection_reason or "rejected",
+        )
 
     # Layer 3: Candidate selection
     selection = _select_candidates(ctx, spectral, primary_result, evidence)
