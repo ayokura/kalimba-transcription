@@ -112,7 +112,7 @@ class TestTruePositive:
             "B4": (12.0, 18.0, 0.99),
         }
 
-        def mock_narrow_fft(audio, sr, time, tuning):
+        def mock_narrow_fft(audio, sr, time, tuning, **kwargs):
             if abs(time - 10.4) < 0.01:
                 return seg_scores
             if abs(time - 10.25) < 0.01:
@@ -155,7 +155,7 @@ class TestGate1BackwardGain:
         seg_scores = {"B3": (30.0, 43.0, 0.87), "D4": (35.0, 50.0, 0.97), "B4": (8.0, -4.0, 0.86)}
         onset_scores = {"B3": (0.8, 1.0, 0.11)}
 
-        def mock_narrow_fft(audio, sr, time, tuning):
+        def mock_narrow_fft(audio, sr, time, tuning, **kwargs):
             if abs(time - 10.4) < 0.01:
                 return seg_scores
             if abs(time - 10.25) < 0.01:
@@ -193,7 +193,7 @@ class TestGate2BgDominance:
         seg_scores = {"B3": (30.0, 43.0, 0.87), "D4": (35.0, 50.0, 0.97), "B4": (8.0, -4.0, 0.86)}
         onset_scores = {"B3": (0.8, 1.0, 0.11)}
 
-        def mock_narrow_fft(audio, sr, time, tuning):
+        def mock_narrow_fft(audio, sr, time, tuning, **kwargs):
             if abs(time - 10.4) < 0.01:
                 return seg_scores
             if abs(time - 10.25) < 0.01:
@@ -237,7 +237,7 @@ class TestGate5RiseDiscriminator:
         seg_scores = {"B3": (30.0, 43.0, 0.87), "D4": (35.0, 50.0, 0.97), "B4": (8.0, -4.0, 0.86)}
         onset_scores = {"B3": (28.0, 40.0, 0.85)}  # rise = 30/28 ≈ 1.07 < 2.0
 
-        def mock_narrow_fft(audio, sr, time, tuning):
+        def mock_narrow_fft(audio, sr, time, tuning, **kwargs):
             if abs(time - 10.4) < 0.01:
                 return seg_scores
             if abs(time - 10.25) < 0.01:
@@ -282,7 +282,7 @@ class TestGate6Dissonance:
         }
         onset_scores = {"C4": (1.0, 1.5, 0.20)}
 
-        def mock_narrow_fft(audio, sr, time, tuning):
+        def mock_narrow_fft(audio, sr, time, tuning, **kwargs):
             if abs(time - 10.4) < 0.01:
                 return seg_scores
             if abs(time - 10.25) < 0.01:

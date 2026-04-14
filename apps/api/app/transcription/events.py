@@ -1433,6 +1433,7 @@ def recover_pre_segment_attack_via_narrow_fft(
     onset_consumed_tolerance: float = NARROW_FFT_PRE_SEGMENT_ONSET_CONSUMED_TOLERANCE,
     decay_min_ratio: float = NARROW_FFT_PRE_SEGMENT_DECAY_MIN_RATIO,
     bg_dominance_ratio: float = NARROW_FFT_PRE_SEGMENT_BG_DOMINANCE_RATIO,
+    narrow_fft_cache: dict[tuple[int, float], dict[str, tuple[float, float, float]] | None] | None = None,
 ) -> list[RawEvent]:
     """Recover a chord note that attacks in the gap before an event from
     a broadband onset that the segmenter did not materialize (#153
@@ -1540,7 +1541,7 @@ def recover_pre_segment_attack_via_narrow_fft(
         onset_time = candidates_in_window[-1]
 
         narrow_scores = measure_narrow_fft_note_scores(
-            audio, sample_rate, onset_time, tuning,
+            audio, sample_rate, onset_time, tuning, cache=narrow_fft_cache,
         )
         if narrow_scores is None:
             recovered.append(event)
@@ -1549,7 +1550,7 @@ def recover_pre_segment_attack_via_narrow_fft(
         # pass should only rescue notes whose energy is DECAYING
         # SLOWLY from the unconsumed onset to the segment start.
         segment_start_scores = measure_narrow_fft_note_scores(
-            audio, sample_rate, event.start_time, tuning,
+            audio, sample_rate, event.start_time, tuning, cache=narrow_fft_cache,
         )
 
         existing_names = {note.note_name for note in event.notes}
@@ -1673,6 +1674,7 @@ def recover_spread_chord_via_segment_start_probe(
     onset_consumed_tolerance: float = NARROW_FFT_PRE_SEGMENT_ONSET_CONSUMED_TOLERANCE,
     rise_min_ratio: float = NARROW_FFT_SPREAD_CHORD_RISE_MIN_RATIO,
     bg_dominance_ratio: float = NARROW_FFT_SPREAD_CHORD_BG_DOMINANCE_RATIO,
+    narrow_fft_cache: dict[tuple[int, float], dict[str, tuple[float, float, float]] | None] | None = None,
 ) -> list[RawEvent]:
     """Recover a chord note whose attack falls between the broadband
     onset and the segment start (spread / rolled chord, #167 Phase C).
@@ -1744,7 +1746,7 @@ def recover_spread_chord_via_segment_start_probe(
 
         # Probe at segment start — spread-chord notes are established here.
         segment_start_scores = measure_narrow_fft_note_scores(
-            audio, sample_rate, event.start_time, tuning,
+            audio, sample_rate, event.start_time, tuning, cache=narrow_fft_cache,
         )
         if segment_start_scores is None:
             recovered.append(event)
@@ -1752,7 +1754,7 @@ def recover_spread_chord_via_segment_start_probe(
 
         # Probe at onset time for the rise discriminator (gate 5).
         onset_scores = measure_narrow_fft_note_scores(
-            audio, sample_rate, onset_time, tuning,
+            audio, sample_rate, onset_time, tuning, cache=narrow_fft_cache,
         )
 
         existing_names = {note.note_name for note in event.notes}

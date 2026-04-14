@@ -1787,6 +1787,7 @@ def measure_narrow_fft_note_scores(
     tuning: InstrumentTuning,
     *,
     window_seconds: float = NARROW_FFT_WINDOW_SECONDS,
+    cache: dict[tuple[int, float], dict[str, tuple[float, float, float]] | None] | None = None,
 ) -> dict[str, tuple[float, float, float]] | None:
     """Return ``{note_name: (fundamental_energy, score, fundamental_ratio)}``
     from a narrow FFT centred on *sub_onset_time*.
@@ -1804,12 +1805,23 @@ def measure_narrow_fft_note_scores(
     not surface in the ranked hypotheses are absent from the returned dict
     (callers should treat their values as 0.0).
     """
+    # Must match `_narrow_fft_at_sub_onset`'s `center_sample` quantization
+    # (truncation via int()); using round() here would alias distinct centers
+    # to the same key and return note scores from a different FFT window.
+    center_sample = int(sub_onset_time * sample_rate)
+    cache_key = (center_sample, float(window_seconds))
+    if cache is not None and cache_key in cache:
+        return cache[cache_key]
+
     spectral = _narrow_fft_at_sub_onset(
         audio, sample_rate, sub_onset_time, tuning,
         window_seconds=window_seconds,
     )
     if spectral is None:
+        if cache is not None:
+            cache[cache_key] = None
         return None
+
     by_name: dict[str, tuple[float, float, float]] = {}
     for hypothesis in spectral.ranked:
         name = hypothesis.candidate.note_name
@@ -1819,6 +1831,8 @@ def measure_narrow_fft_note_scores(
                 float(hypothesis.score),
                 float(hypothesis.fundamental_ratio),
             )
+    if cache is not None:
+        cache[cache_key] = by_name
     return by_name
 
 
