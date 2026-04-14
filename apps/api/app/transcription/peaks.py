@@ -1258,21 +1258,17 @@ def should_block_descending_repeated_primary_tertiary_extension(
     )
 
 
-class SegmentPeaksResult(NamedTuple):
-    """Return type for segment_peaks. Supports tuple unpacking."""
+@dataclass(frozen=True, slots=True)
+class SegmentPeaksResult:
     candidates: list[NoteCandidate]
     debug: dict[str, Any] | None
     primary: NoteHypothesis | None
     trace: SegmentDecisionTrace | None = None
-    soft_alternates: list[RawAlternateGrouping] = []
-    # #178 Phase 2: when a segment is dropped, carry the rejected primary and
-    # top-ranked ranked-candidates so the pipeline can build a candidate slot.
+    soft_alternates: list[RawAlternateGrouping] = field(default_factory=list)
     dropped_primary: NoteCandidate | None = None
-    dropped_candidates: list[NoteCandidate] = []
+    dropped_candidates: list[NoteCandidate] = field(default_factory=list)
     dropped_reason: str = ""
-    # #178 Phase 2 (sub-onset rescue): times within a rejected segment where
-    # mute-dip re-attack was detected — high-confidence slots for those notes.
-    dropped_sub_onset_rescues: list[float] = []
+    dropped_sub_onset_rescues: list[float] = field(default_factory=list)
 
 
 @dataclass(slots=True)
