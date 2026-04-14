@@ -8,7 +8,7 @@ import numpy as np
 
 from ..models import InstrumentTuning
 from . import settings
-from .audio import cents_distance, snap_frequency_to_tuning
+from .audio import cached_hanning, cached_rfftfreq, cents_distance, snap_frequency_to_tuning
 from .constants import *
 from .models import Note, NoteCandidate, NoteHypothesis, RawAlternateGrouping
 from .profiles import (
@@ -483,8 +483,8 @@ def _aligned_band_energy(
     if len(chunk) < 256:
         return 0.0
     n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk), min_bins=1)
-    spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
-    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    spectrum = np.abs(np.fft.rfft(chunk * cached_hanning(len(chunk)), n=n_fft))
+    frequencies = cached_rfftfreq(n_fft, sample_rate)
     return peak_energy_near(frequencies, spectrum, target_frequency)
 
 
@@ -608,8 +608,8 @@ def onset_energy_gain(
 
     def _energy(chunk: np.ndarray) -> float:
         n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk), min_bins=1)
-        spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
-        frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+        spectrum = np.abs(np.fft.rfft(chunk * cached_hanning(len(chunk)), n=n_fft))
+        frequencies = cached_rfftfreq(n_fft, sample_rate)
         return peak_energy_near(frequencies, spectrum, target_frequency)
 
     pre_energy = _energy(pre_chunk)
@@ -646,8 +646,8 @@ def onset_backward_attack_gain(
 
     def _energy(chunk: np.ndarray) -> float:
         n_fft = _adaptive_n_fft(sample_rate, target_frequency, len(chunk))
-        spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
-        frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+        spectrum = np.abs(np.fft.rfft(chunk * cached_hanning(len(chunk)), n=n_fft))
+        frequencies = cached_rfftfreq(n_fft, sample_rate)
         return peak_energy_near(frequencies, spectrum, target_frequency)
 
     past_energy = _energy(past_chunk)
@@ -766,7 +766,7 @@ def build_candidate_attack_debug(
             _, pre_spec = _chunk_spectrum(pre_chunk, sample_rate, n_fft)
             _, atk_spec = _chunk_spectrum(attack_chunk, sample_rate, n_fft)
             _, sus_spec = _chunk_spectrum(sustain_chunk, sample_rate, n_fft)
-            freqs = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+            freqs = cached_rfftfreq(n_fft, sample_rate)
             pre_e = peak_energy_near(freqs, pre_spec, target_frequency)
             atk_e = peak_energy_near(freqs, atk_spec, target_frequency)
             sus_e = peak_energy_near(freqs, sus_spec, target_frequency)
@@ -1682,9 +1682,9 @@ def analyze_spectrum_at_onset(
         return []
     min_freq = min(n.frequency for n in tuning.notes)
     n_fft = _adaptive_n_fft(sample_rate, min_freq, len(segment))
-    window = np.hanning(len(segment))
+    window = cached_hanning(len(segment))
     spectrum = np.abs(np.fft.rfft(segment * window, n=n_fft))
-    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    frequencies = cached_rfftfreq(n_fft, sample_rate)
     ranked = rank_tuning_candidates(frequencies, spectrum, tuning)
     if not ranked or ranked[0].score <= 1e-6:
         return []
@@ -1728,9 +1728,9 @@ def _acquire_spectrum(
 
     min_freq = min(n.frequency for n in ctx.tuning.notes)
     n_fft = _adaptive_n_fft(ctx.sample_rate, min_freq, len(analysis_segment))
-    window = np.hanning(len(analysis_segment))
+    window = cached_hanning(len(analysis_segment))
     spectrum = np.abs(np.fft.rfft(analysis_segment * window, n=n_fft))
-    frequencies = np.fft.rfftfreq(n_fft, 1.0 / ctx.sample_rate)
+    frequencies = cached_rfftfreq(n_fft, ctx.sample_rate)
 
     ranked = rank_tuning_candidates(frequencies, spectrum, ctx.tuning, debug=ctx.debug)
     if not ranked or ranked[0].score <= 1e-6:
@@ -1783,9 +1783,9 @@ def _narrow_fft_at_sub_onset(
         return None
     min_freq = min(n.frequency for n in tuning.notes)
     n_fft = _adaptive_n_fft(sample_rate, min_freq, len(chunk))
-    window = np.hanning(len(chunk))
+    window = cached_hanning(len(chunk))
     spectrum = np.abs(np.fft.rfft(chunk * window, n=n_fft))
-    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    frequencies = cached_rfftfreq(n_fft, sample_rate)
     ranked = rank_tuning_candidates(frequencies, spectrum, tuning, debug=debug)
     if not ranked or ranked[0].score <= 1e-6:
         return None
@@ -3610,8 +3610,8 @@ def _note_band_energy(
     if len(chunk) < 256:
         return 0.0
     n_fft = _adaptive_n_fft(sample_rate, frequency, len(chunk))
-    spectrum = np.abs(np.fft.rfft(chunk * np.hanning(len(chunk)), n=n_fft))
-    frequencies = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+    spectrum = np.abs(np.fft.rfft(chunk * cached_hanning(len(chunk)), n=n_fft))
+    frequencies = cached_rfftfreq(n_fft, sample_rate)
     return peak_energy_near(frequencies, spectrum, frequency)
 
 

@@ -76,11 +76,26 @@ ncalls  tottime   cumtime   function
 
 ## Rust 化前に Python でできる改善 (推奨順)
 
-### Phase 0: hanning/rfftfreq のキャッシュ (即効、低リスク)
+### Phase 0: hanning/rfftfreq のキャッシュ ✅ 実装済
 
-- 期待削減: bwv147 で hanning 28.6s + rfftfreq 8.3s = **~37s (20%)**
-- 実装: `peaks.py` の module scope で `@lru_cache(maxsize=32)` の `_hanning_window(n)` と `_rfftfreq(n_fft, sr)` を用意して差し替える
-- リスク: ほぼゼロ (純粋な値 caching、変更前後で bit-exact)
+- 実装: `audio.cached_hanning(n)` と `audio.cached_rfftfreq(n_fft, sr)` を `@lru_cache(maxsize=64)` で導入し、`peaks.py` / `noise_floor.py` / `profiles.py` の全呼出箇所を置換
+- **実測削減 (bwv147)**: wall-clock 167.2s → **106.9s (-36%)**、tottime 184.6s → **112.7s (-39%)**
+- **実測削減 (free-performance)**: wall-clock 20.0s → **9.9s (-50%)**
+- 事前予想 (20%) を大きく上回る。理由は hanning/rfftfreq 単体の削減 (~37s) に加え、read-only numpy array により `chunk * hanning` の内部 copy パスが軽くなり、FFT 呼び出し自体も 56s → 48s に改善したため
+- pytest 388 件全合格 (変更前後で出力差分なし)
+- 変更範囲: [audio.py](/apps/api/app/transcription/audio.py), [peaks.py](/apps/api/app/transcription/peaks.py), [noise_floor.py](/apps/api/app/transcription/noise_floor.py), [profiles.py](/apps/api/app/transcription/profiles.py)
+
+### Phase 0 後の bwv147 top 関数 (tottime)
+
+```
+ncalls   tottime   cumtime   function
+782316   47.60s    47.98s    numpy.fft._pocketfft._raw_fft          ← 残る FFT コスト
+784036   33.20s    39.57s    peaks.peak_energy_near
+773801   13.45s   103.82s    peaks._note_band_energy
+  4822    0.57s   100.95s    per_note._scan_gap_for_mute_dip_with_window
+```
+
+以降の bottleneck は **純粋な FFT 呼び出し** と **peak_energy_near の reduce 処理**。これらは Phase 2 で `_note_band_energy` 経路自体を消すのが本筋。
 
 ### Phase 1: batch_peak_energies の活用拡大
 
