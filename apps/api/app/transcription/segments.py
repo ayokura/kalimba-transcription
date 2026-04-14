@@ -709,7 +709,7 @@ def should_keep_low_register_sparse_gap_tail(
     candidates: list[NoteCandidate],
     tuning: InstrumentTuning,
     descending_primary_suffix_floor: float | None,
-    descending_primary_suffix_note_names: set[str],
+    descending_primary_suffix_note_names: frozenset[str],
 ) -> bool:
     if len(candidates) != 1 or descending_primary_suffix_floor is None:
         return False

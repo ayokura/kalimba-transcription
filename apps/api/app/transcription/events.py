@@ -2705,11 +2705,11 @@ class DescendingPrimarySuffix:
     """
     floor: float | None
     ceiling: float | None
-    note_names: set[str]
+    note_names: frozenset[str]
 
     @classmethod
     def empty(cls) -> "DescendingPrimarySuffix":
-        return cls(None, None, set())
+        return cls(None, None, frozenset())
 
 
 def build_recent_descending_primary_suffix(raw_events: list[RawEvent]) -> DescendingPrimarySuffix:
@@ -2742,5 +2742,5 @@ def build_recent_descending_primary_suffix(raw_events: list[RawEvent]) -> Descen
     return DescendingPrimarySuffix(
         floor=recent_primary_frequencies[-1],
         ceiling=recent_primary_frequencies[0],
-        note_names={note.note_name for note in recent_primary_notes},
+        note_names=frozenset(note.note_name for note in recent_primary_notes),
     )

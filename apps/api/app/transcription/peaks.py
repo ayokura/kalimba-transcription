@@ -1253,7 +1253,7 @@ def should_block_descending_repeated_primary_tertiary_extension(
     previous_primary_was_singleton: bool,
     descending_primary_suffix_floor: float | None,
     descending_primary_suffix_ceiling: float | None,
-    descending_primary_suffix_note_names: set[str] | None,
+    descending_primary_suffix_note_names: frozenset[str] | None,
 ) -> bool:
     if len(selected) != 2:
         return False
@@ -1302,7 +1302,7 @@ class _SegmentContext:
     ascending_singleton_suffix_note_names: set[str] | None
     descending_primary_suffix_floor: float | None
     descending_primary_suffix_ceiling: float | None
-    descending_primary_suffix_note_names: set[str] | None
+    descending_primary_suffix_note_names: frozenset[str] | None
     previous_primary_note_name: str | None
     previous_primary_frequency: float | None
     previous_primary_was_singleton: bool
@@ -3331,7 +3331,7 @@ def segment_peaks(
     ascending_singleton_suffix_note_names: set[str] | None = None,
     descending_primary_suffix_floor: float | None = None,
     descending_primary_suffix_ceiling: float | None = None,
-    descending_primary_suffix_note_names: set[str] | None = None,
+    descending_primary_suffix_note_names: frozenset[str] | None = None,
     previous_primary_note_name: str | None = None,
     previous_primary_frequency: float | None = None,
     previous_primary_was_singleton: bool = False,
@@ -3360,7 +3360,7 @@ def segment_peaks(
     # Layer 1: Signal acquisition
     acquired = _acquire_spectrum(ctx)
     if acquired is None:
-        return SegmentPeaksResult([], None, None)
+        return SegmentPeaksResult(candidates=[], debug=None, primary=None)
     spectral, evidence = acquired
 
     # Layer 2: Primary resolution
@@ -3416,7 +3416,12 @@ def segment_peaks(
                     candidate_decisions=best_alt.candidate_decisions,
                 )
                 debug_payload = _build_segment_debug(ctx, spectral, _pr, _sel, evidence)
-            return SegmentPeaksResult(best_alt.selected, debug_payload, primary, trace)
+            return SegmentPeaksResult(
+                candidates=best_alt.selected,
+                debug=debug_payload,
+                primary=primary,
+                trace=trace,
+            )
 
         # No alternative found — reject segment
         selection = _select_candidates(ctx, spectral, primary_result, evidence)
@@ -3445,7 +3450,10 @@ def segment_peaks(
             if _has_sub_onset_mute_dip_reattack(ctx.audio, ctx.sample_rate, sub_onset, primary.candidate.frequency):
                 sub_onset_rescues.append(sub_onset)
         return SegmentPeaksResult(
-            [], rejection_debug, None, trace,
+            candidates=[],
+            debug=rejection_debug,
+            primary=None,
+            trace=trace,
             dropped_primary=primary.candidate,
             dropped_candidates=dropped_ranked[:3],
             dropped_reason=primary_result.decision.rejection_reason or "rejected",
@@ -3460,7 +3468,7 @@ def segment_peaks(
 
     if not selection.selected:
         trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=selection.candidate_decisions)
-        return SegmentPeaksResult([], None, None, trace)
+        return SegmentPeaksResult(candidates=[], debug=None, primary=None, trace=trace)
 
     # Layer 4: Extension phases
     _extend_gliss_tertiary(ctx, primary, selection, evidence)
@@ -3518,11 +3526,11 @@ def segment_peaks(
         debug_payload = _build_segment_debug(ctx, spectral, primary_result, selection, evidence)
 
     return SegmentPeaksResult(
-        sorted(selection.selected, key=lambda item: item.frequency),
-        debug_payload,
-        primary,
-        trace,
-        selection.soft_alternates,
+        candidates=sorted(selection.selected, key=lambda item: item.frequency),
+        debug=debug_payload,
+        primary=primary,
+        trace=trace,
+        soft_alternates=selection.soft_alternates,
     )
 
 def has_kalimba_sustain_profile(

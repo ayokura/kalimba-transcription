@@ -342,7 +342,7 @@ def test_should_block_descending_repeated_primary_tertiary_extension_requires_de
         previous_primary_was_singleton=True,
         descending_primary_suffix_floor=g4.frequency,
         descending_primary_suffix_ceiling=440.0,
-        descending_primary_suffix_note_names={"G4", "A4"},
+        descending_primary_suffix_note_names=frozenset({"G4", "A4"}),
     ) is True
 
     assert should_block_descending_repeated_primary_tertiary_extension(
@@ -352,7 +352,7 @@ def test_should_block_descending_repeated_primary_tertiary_extension_requires_de
         previous_primary_was_singleton=False,
         descending_primary_suffix_floor=g4.frequency,
         descending_primary_suffix_ceiling=440.0,
-        descending_primary_suffix_note_names={"G4", "A4"},
+        descending_primary_suffix_note_names=frozenset({"G4", "A4"}),
     ) is False
 
     assert should_block_descending_repeated_primary_tertiary_extension(
@@ -362,7 +362,7 @@ def test_should_block_descending_repeated_primary_tertiary_extension_requires_de
         previous_primary_was_singleton=True,
         descending_primary_suffix_floor=None,
         descending_primary_suffix_ceiling=440.0,
-        descending_primary_suffix_note_names={"G4", "A4"},
+        descending_primary_suffix_note_names=frozenset({"G4", "A4"}),
     ) is False
 
 
