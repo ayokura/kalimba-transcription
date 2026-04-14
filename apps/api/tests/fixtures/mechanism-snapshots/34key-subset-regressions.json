@@ -1,7 +1,7 @@
 {
   "E65_fr_artifact": {
     "description": "E65 C4: accepted with fr=0.398. Harmonic artifact from E5, not a genuine C4.",
-    "fixture": "kalimba-34l-c-bmv147-sequence-163-01",
+    "fixture": "kalimba-34l-c-bwv147-sequence-163-01",
     "startTime": 31.8752,
     "endTime": 32.3744,
     "durationSec": 0.4992,
@@ -199,7 +199,7 @@
   },
   "E145_backward_gate": {
     "description": "E145 G4: og=171 but backward_gain=15.66 < 20.0 threshold. Genuine attack rejected by tertiary-weak-backward-attack.",
-    "fixture": "kalimba-34l-c-bmv147-sequence-163-01",
+    "fixture": "kalimba-34l-c-bwv147-sequence-163-01",
     "startTime": 80.8461,
     "endTime": 81.0712,
     "durationSec": 0.2251,
