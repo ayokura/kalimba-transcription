@@ -25,8 +25,13 @@ fn cached_hanning<F: FnOnce(&[f32]) -> R, R>(n: usize, f: F) -> R {
     })
 }
 
-fn adaptive_n_fft(sample_rate: i64, frequency: f64, chunk_len: usize, min_bins: usize) -> usize {
-    let harmonic_band_cents = 40.0_f64;
+fn adaptive_n_fft(
+    sample_rate: i64,
+    frequency: f64,
+    chunk_len: usize,
+    min_bins: usize,
+    harmonic_band_cents: f64,
+) -> usize {
     let band_hz = frequency
         * ((2f64).powf(harmonic_band_cents / 1200.0)
             - (2f64).powf(-harmonic_band_cents / 1200.0));
@@ -123,7 +128,7 @@ fn note_band_energy(
     if chunk.len() < 256 {
         return 0.0;
     }
-    let n_fft = adaptive_n_fft(sample_rate, frequency, chunk.len(), 2);
+    let n_fft = adaptive_n_fft(sample_rate, frequency, chunk.len(), 2, harmonic_band_cents);
     if fft_buffer.len() != n_fft {
         fft_buffer.resize(n_fft, Complex32 { re: 0.0, im: 0.0 });
     }

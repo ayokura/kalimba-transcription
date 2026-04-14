@@ -123,7 +123,7 @@ Phase 0 後の top1 bottleneck は `_scan_gap_for_mute_dip_with_window` で cumu
 |---|---|---|---|
 | bwv147-sequence-163-01 | 106.9s | **42.1s** | **167 → 42 (4.0x)** |
 | free-performance-01 | 9.9s | **2.8s** | **20 → 2.8 (7.1x)** |
-| 全 pytest (388件, 並列) | 154s | **47s** | **~200 → 47 (4.3x)** |
+| 全 pytest (388件, 並列, Python 3.12) | 154s | **57s** | **~200 → 57 (3.5x)** |
 
 #### 意味論の変更と fixture 影響
 
@@ -157,7 +157,7 @@ Rust 実装は **integer index** で grid を生成 (`times[i] = gap_start + i *
 
 当初は「まだ早い」と判定したが、Phase 0 後の profile で bottleneck が `_scan_gap_for_mute_dip_with_window` 一本に集約されたため、その **単一 primitive のみ** を Rust 化する選択が最適と判断。結果:
 
-- 全 pytest 154s → 47s (3.3x)、bwv147 単発 167s → 42s (4x)
+- 全 pytest 154s → 57s (Python 3.12 移行込み、2.7x)、bwv147 単発 167s → 42s (4x)
 - WASM 移植の布石として `crates/kalimba-dsp/` インフラが立ち上がった (PyO3 + rustfft + maturin)
 - 次の Rust 化候補 (HPSS, STFT, peak_energy_near の batch 化) も同 crate 内で追加可能
 
