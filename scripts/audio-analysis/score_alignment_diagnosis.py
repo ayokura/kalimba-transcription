@@ -780,9 +780,25 @@ def main():
         print(f"\n=== {line_id} ({n} exp, {len(detected)} det) exact={exact} subset={subset} partial={partial} miss={miss} ({pct:.0f}% exact, {pct2:.0f}% +sub) ===")
 
         _blank_time = " " * 8
+
+        # Build a chronologically-ordered list of line items:
+        # matched pairs use the detected segment's time; NO MATCH items use
+        # the expected event's slot position (anchored by expected event num);
+        # unmatched (extra) segments use their own time.
+        line_items: list[tuple[float, int, str]] = []  # (sort_time, kind, formatted)
+
+        # Matched/unmatched-expected entries
         for exp, seg in results:
             if seg is None:
-                print(f"  ∅ {_blank_time} E{exp['num']:3d} {exp['content']:30s} → NO MATCH")
+                # Anchor NO MATCH at the next-later matched segment time, or if
+                # none, at the expected event position (kept inline by the stable
+                # sort via its list index).
+                neighbor_time = _blank_time
+                line = f"  ∅ {neighbor_time} E{exp['num']:3d} {exp['content']:30s} → NO MATCH"
+                # Sort NO MATCH just before the next matched seg if any, else
+                # at end of line window. Use a placeholder time; we'll insert
+                # them after sorting based on position.
+                line_items.append((float("inf"), 1, line))  # placeholder, fixed up below
                 continue
 
             det_notes = seg["notes"]
@@ -793,19 +809,19 @@ def main():
                 if args.verbose:
                     if exp.get("overridden"):
                         ov_notes = "+".join(sorted(exp_notes))
-                        print(f"  ✓ {time_str} E{exp['num']:3d} {exp['content']:30s} (override: {ov_notes})")
+                        line = f"  ✓ {time_str} E{exp['num']:3d} {exp['content']:30s} (override: {ov_notes})"
                     else:
-                        print(f"  ✓ {time_str} E{exp['num']:3d} {exp['content']}")
+                        line = f"  ✓ {time_str} E{exp['num']:3d} {exp['content']}"
+                    line_items.append((seg["time"], 0, line))
+                else:
+                    # Still need to record time for sort-insertion even when suppressed;
+                    # use a sentinel that produces no output.
+                    line_items.append((seg["time"], -1, ""))
                 continue
 
             missing = exp_notes - det_notes
             extra = det_notes - exp_notes
 
-            # Look up rejection reasons for missing notes.
-            # Priority: (1) postProcessingTrace drop pass, (2) secondaryDecisionTrail.
-            # If a note was selected at the segment level but dropped by a
-            # post-processing merge/suppress, show the pass name instead of
-            # the misleading segment-level trail reason.
             trail_parts = []
             for m in sorted(missing):
                 drop_pass = _find_drop_pass(seg["time"], m) if use_events_mode else None
@@ -833,16 +849,55 @@ def main():
                 sym = "✗"
 
             src_str = f" [{','.join(seg['source'])}]" if seg.get('source') else ""
-            print(f"  {sym} {time_str} E{exp['num']:3d} {exp['content']:30s}→ {'+'.join(sorted(det_notes)):15s}{miss_str}{extra_str}{trail_str}{src_str}")
+            line = f"  {sym} {time_str} E{exp['num']:3d} {exp['content']:30s}→ {'+'.join(sorted(det_notes)):15s}{miss_str}{extra_str}{trail_str}{src_str}"
+            line_items.append((seg["time"], 0, line))
 
-        if unmatched:
-            print(f"  +{len(unmatched)} extra segments:")
-            for u in unmatched:
-                notes_str = '+'.join(sorted(u['notes'])) if u['notes'] else '(empty)'
-                src_str = f" [{','.join(u['source'])}]" if u.get('source') else ""
-                merge_str = f" ({u['mergeReason']})" if u.get('mergeReason') else ""
-                cosmetic_tag = " (cosmetic)" if _is_cosmetic_extra(u) else ""
-                print(f"    t={u['time']:.3f}s {notes_str}{src_str}{merge_str}{cosmetic_tag}")
+        # Unmatched (extra) segments — interleave chronologically
+        for u in unmatched:
+            notes_str = '+'.join(sorted(u['notes'])) if u['notes'] else '(empty)'
+            src_str = f" [{','.join(u['source'])}]" if u.get('source') else ""
+            merge_str = f" ({u['mergeReason']})" if u.get('mergeReason') else ""
+            cosmetic_tag = " (cosmetic)" if _is_cosmetic_extra(u) else ""
+            line = f"  + {u['time']:7.2f}s {'(extra)':>9s} {notes_str}{src_str}{merge_str}{cosmetic_tag}"
+            line_items.append((u["time"], 0, line))
+
+        # Resolve NO MATCH placeholder times: put each at the position of its
+        # expected event (approximated by interleaving between neighboring
+        # matched times). For simplicity, anchor NO MATCH to the time of the
+        # nearest matched expected event with lower event number, or 0.
+        # Build expected->time map from matched results.
+        exp_time_by_num: dict[int, float] = {}
+        for exp, seg in results:
+            if seg is not None:
+                exp_time_by_num[exp["num"]] = seg["time"]
+        # Fix up placeholders
+        fixed_items: list[tuple[float, int, str]] = []
+        for t, kind, line in line_items:
+            if t == float("inf"):
+                # Parse expected event number from the line (e.g., "E  5 ")
+                import re as _re
+                m = _re.search(r" E\s*(\d+) ", line)
+                if m:
+                    enum = int(m.group(1))
+                    # Find nearest neighbor expected event with known time
+                    before = max((n for n in exp_time_by_num if n < enum), default=None)
+                    after = min((n for n in exp_time_by_num if n > enum), default=None)
+                    if before is not None and after is not None:
+                        # Midpoint
+                        t = (exp_time_by_num[before] + exp_time_by_num[after]) / 2
+                    elif before is not None:
+                        t = exp_time_by_num[before] + 0.001
+                    elif after is not None:
+                        t = max(0.0, exp_time_by_num[after] - 0.001)
+                    else:
+                        t = 0.0
+            fixed_items.append((t, kind, line))
+
+        fixed_items.sort(key=lambda x: x[0])
+        for _, kind, line in fixed_items:
+            if kind == -1:
+                continue  # suppressed exact match in non-verbose
+            print(line)
 
     if use_events_mode:
         det_count = len(merged_events)
