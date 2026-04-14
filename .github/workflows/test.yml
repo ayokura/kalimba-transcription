@@ -33,7 +33,7 @@ jobs:
         run: uv sync --dev
 
       - name: Run tests
-        run: uv run pytest apps/api/tests -q -n 2
+        run: uv run pytest apps/api/tests -q
         env:
           OPENBLAS_NUM_THREADS: "1"
           MKL_NUM_THREADS: "1"
