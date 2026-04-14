@@ -113,7 +113,7 @@ def main():
     audio, sr = load_audio(wav_path)
     tuning = get_default_tunings()[0]
 
-    segments, _, _ = detect_segments(audio, sr)
+    segments = detect_segments(audio, sr).segments
     print(f"17-C BWV147: {len(segments)} segments, {len(audio)/sr:.1f}s @ {sr}Hz")
     print()
 

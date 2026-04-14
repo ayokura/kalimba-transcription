@@ -28,7 +28,10 @@ def test_detect_segments_reports_tempo_debug_metrics() -> None:
         synthesize_note(523.2511306011972, sample_rate=sample_rate, duration=0.28),
     ]).astype(np.float32)
 
-    segments, tempo, debug = detect_segments(audio, sample_rate)
+    detection = detect_segments(audio, sample_rate)
+    segments = detection.segments
+    tempo = detection.tempo
+    debug = detection.debug
 
     assert len(segments) >= 3
     assert 30.0 <= tempo <= 300.0
@@ -163,7 +166,7 @@ def test_detect_segments_collapses_redundant_same_start_segments() -> None:
         synthesize_note(329.6275569128699, sample_rate=sample_rate, duration=0.22),
     ]).astype(np.float32)
 
-    segments, _, _ = detect_segments(audio, sample_rate)
+    segments = detect_segments(audio, sample_rate).segments
 
     starts = [round(start, 4) for start, _ in segments]
     assert starts.count(starts[0]) == 1
@@ -191,7 +194,7 @@ def test_detect_segments_does_not_backtrack_into_previous_active_range(monkeypat
     monkeypatch.setattr(transcription.librosa, "get_duration", lambda **kwargs: 1.08)
     monkeypatch.setattr(transcription.librosa.beat, "beat_track", lambda **kwargs: (np.array([90.0]), np.array([], dtype=np.int64)))
 
-    segments, _, _ = detect_segments(np.zeros(44100, dtype=np.float32), 44100)
+    segments = detect_segments(np.zeros(44100, dtype=np.float32), 44100).segments
 
     late_segments = [(round(start, 2), round(end, 2)) for start, end in segments if start >= 0.58]
 
@@ -311,8 +314,8 @@ def test_mid_performance_start_suppresses_leading_segments() -> None:
     audio = _build_note_gap_note_audio()
     sr = 44100
 
-    segs_normal, _, _ = detect_segments(audio, sr)
-    segs_mid, _, _ = detect_segments(audio, sr, mid_performance_start=True)
+    segs_normal = detect_segments(audio, sr).segments
+    segs_mid = detect_segments(audio, sr, mid_performance_start=True).segments
 
     # With midPerformanceStart, leading segments (before main active range)
     # should be suppressed.  The total segment count should be equal or fewer.
@@ -328,8 +331,8 @@ def test_mid_performance_end_suppresses_trailing_segments() -> None:
     audio = _build_note_gap_note_audio()
     sr = 44100
 
-    segs_normal, _, _ = detect_segments(audio, sr)
-    segs_mid, _, _ = detect_segments(audio, sr, mid_performance_end=True)
+    segs_normal = detect_segments(audio, sr).segments
+    segs_mid = detect_segments(audio, sr, mid_performance_end=True).segments
 
     assert len(segs_mid) <= len(segs_normal)
 
@@ -343,10 +346,10 @@ def test_mid_performance_flags_do_not_affect_inter_range_segments() -> None:
     audio = _build_note_gap_note_audio()
     sr = 44100
 
-    segs_normal, _, _ = detect_segments(audio, sr)
-    segs_both, _, _ = detect_segments(
+    segs_normal = detect_segments(audio, sr).segments
+    segs_both = detect_segments(
         audio, sr, mid_performance_start=True, mid_performance_end=True,
-    )
+    ).segments
 
     # Inter-range segments (the main notes) should be identical.
     # Filter to the "core" region: segments that are neither the earliest

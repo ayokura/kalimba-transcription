@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from collections import OrderedDict
-from dataclasses import replace as dataclass_replace
+from dataclasses import dataclass, replace as dataclass_replace
 from time import perf_counter
 from typing import Any
 
@@ -816,13 +816,20 @@ def build_segment_debug_contexts(
     return segment_contexts
 
 
+@dataclass(frozen=True, slots=True)
+class SegmentDetectionResult:
+    segments: list[Segment]
+    tempo: float
+    debug: dict[str, Any]
+
+
 def detect_segments(
     audio: np.ndarray,
     sample_rate: int,
     *,
     mid_performance_start: bool = False,
     mid_performance_end: bool = False,
-) -> tuple[list[Segment], float, dict[str, Any]]:
+) -> SegmentDetectionResult:
     cfg = settings.get()
     cached_features = _get_cached_librosa_features(audio, sample_rate, cfg.use_hpss_onset)
     rms = cached_features["rms"]
@@ -1048,4 +1055,4 @@ def detect_segments(
             for key, profile in onset_attack_profiles.items()
         },
     }
-    return segments, tempo, debug_info
+    return SegmentDetectionResult(segments=segments, tempo=tempo, debug=debug_info)

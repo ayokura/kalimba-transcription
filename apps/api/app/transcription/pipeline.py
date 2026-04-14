@@ -155,11 +155,14 @@ async def transcribe_audio(
     mid_performance_end: bool = False,
 ) -> TranscriptionResult:
     audio, sample_rate = await read_audio(upload)
-    segments, tempo, segment_debug = detect_segments(
+    detection = detect_segments(
         audio, sample_rate,
         mid_performance_start=mid_performance_start,
         mid_performance_end=mid_performance_end,
     )
+    segments = detection.segments
+    tempo = detection.tempo
+    segment_debug = detection.debug
     segments = rescue_gap_mute_dips(segments, audio, sample_rate, tuning)
 
     # #154 / #153 Phase B: per-recording per-band noise floor calibration.

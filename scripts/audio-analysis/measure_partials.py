@@ -163,7 +163,7 @@ def main():
     tuning = next((t for t in all_tunings if t.id == tuning_id), all_tunings[0])
 
     # Run segmenter + peaks to get solo notes
-    segments, _est_start, _debug = detect_segments(audio, sr)
+    segments = detect_segments(audio, sr).segments
 
     print(f"Fixture: {wav_path.parent.name}")
     print(f"Tuning: {tuning_id} ({len(tuning.notes)} notes)")
