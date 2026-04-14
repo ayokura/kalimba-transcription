@@ -1441,7 +1441,19 @@ HARD_REJECT_REASONS: frozenset[str] = frozenset({
 # Max soft alternates to keep per segment.
 _SOFT_ALT_MAX_COUNT = 3
 # Minimum score as a fraction of primary score to be considered.
-_SOFT_ALT_MIN_SCORE_RATIO = 0.05
+# (Retained as a floor but not the primary filter — see _SOFT_ALT_MIN_ONSET_GAIN.)
+_SOFT_ALT_MIN_SCORE_RATIO = 0.005
+# Minimum per-note onset_gain for a soft alternate. Primary filter: a candidate
+# with strong attack evidence is likely a real note even if score is low
+# (e.g., spectral masking by a stronger neighbor). Calibrated from
+# free-performance-01: C5 on E1 has score=12 but og=2640 (genuine 3-note chord);
+# carryover residuals have og<2. Threshold 10 separates these cleanly.
+_SOFT_ALT_MIN_ONSET_GAIN = 10.0
+# Minimum fundamental_ratio for a soft alternate. Low fr indicates the
+# candidate's "fundamental" is actually a harmonic of another note (alias).
+# Genuine masked notes (e.g., middle of a 3-note chord) still have fr>=0.9.
+# Calibrated: C5 on E1 (genuine) fr=0.974; harmonic aliases fr<0.7.
+_SOFT_ALT_MIN_FUNDAMENTAL_RATIO = 0.7
 
 
 @dataclass(slots=True)
@@ -2700,24 +2712,38 @@ def _select_candidates(
         primary_score = primary.score
         selected_names = {c.note_name for c in selected}
         seen_names: set[str] = set()
-        # Sort rejected candidates by score descending.
+        # Primary filter: onset_gain + fundamental_ratio based. Candidates
+        # with strong attack evidence AND high fundamental ratio are likely
+        # real masked notes (e.g., middle of a 3-note chord); low fr signals
+        # harmonic alias of a stronger neighbor.
         soft_candidates = [
             d for d in candidate_decisions
             if not d.accepted
             and d.note_name not in selected_names
             and d.note_name not in seen_names
+            and d.onset_gain is not None
+            and d.onset_gain >= _SOFT_ALT_MIN_ONSET_GAIN
+            and d.fundamental_ratio >= _SOFT_ALT_MIN_FUNDAMENTAL_RATIO
             and d.score >= primary_score * _SOFT_ALT_MIN_SCORE_RATIO
             and not any(r in HARD_REJECT_REASONS for r in d.reasons)
         ]
-        soft_candidates.sort(key=lambda d: d.score, reverse=True)
+        # Sort by onset_gain (primary signal for real attack) descending.
+        soft_candidates.sort(key=lambda d: (d.onset_gain or 0), reverse=True)
         for d in soft_candidates[:_SOFT_ALT_MAX_COUNT]:
             if d.note_name in seen_names:
                 continue
             seen_names.add(d.note_name)
-            # Confidence: score ratio, capped at 0.4; halved if onset evidence is weak.
-            conf = min(0.4, d.score / primary_score) if primary_score > 0 else 0.1
-            if d.onset_gain is not None and d.onset_gain < 2.0:
-                conf *= 0.5
+            # Confidence: scale by onset_gain ratio relative to a reference
+            # (og=100 → conf≈0.5, og>=500 → conf≈0.7, capped at 0.7).
+            og = d.onset_gain or 0
+            if og >= 500:
+                conf = 0.70
+            elif og >= 100:
+                conf = 0.50
+            elif og >= 30:
+                conf = 0.35
+            else:
+                conf = 0.20
             # Find the NoteCandidate from residual_ranked or reconstruct.
             note_candidate: NoteCandidate | None = None
             for hyp in residual_ranked:

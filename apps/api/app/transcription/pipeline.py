@@ -338,19 +338,28 @@ async def transcribe_audio(
     gap_validated_onsets = segment_debug.get("gapValidatedOnsetTimes")
     if gap_validated_onsets:
         segment_ranges = [(s.start_time, s.end_time) for s in segments]
+        # Stricter "near-segment-boundary" threshold — 100ms catches pre-onset
+        # artifacts that create near-duplicate slots next to real events.
+        _ORPHAN_BOUNDARY_SKIP_SEC = 0.10
         for onset_time in gap_validated_onsets:
             onset_time = float(onset_time)
             # Skip if within any existing segment
             if any(s <= onset_time <= e for s, e in segment_ranges):
                 continue
-            # Skip if too close to segment boundary (would duplicate)
-            if any(abs(onset_time - s) < 0.02 or abs(onset_time - e) < 0.02
+            # Skip if too close to segment boundary (pre-onset / post-onset artifact)
+            if any(abs(onset_time - s) < _ORPHAN_BOUNDARY_SKIP_SEC or abs(onset_time - e) < _ORPHAN_BOUNDARY_SKIP_SEC
                    for s, e in segment_ranges):
                 continue
             orphan_candidates = analyze_spectrum_at_onset(
                 audio, sample_rate, onset_time, tuning,
             )
             if not orphan_candidates:
+                continue
+            # Require meaningful attack evidence: the top candidate's onset_gain
+            # should be clearly above the noise floor. Spurious trailing-silence
+            # detections and pure noise have og < ~10.
+            top_og = orphan_candidates[0].onset_gain or 0
+            if top_og < 10.0:
                 continue
             dropped_slots.append(_build_candidate_slot(
                 start_time=onset_time,
