@@ -17,7 +17,8 @@ from conftest import synthesize_note, synthesize_chord
 def test_segment_peaks_prefers_fundamental_for_strong_harmonics() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_note(587.3295, harmonics=(1.0, 0.9, 0.7))
-    candidates, debug, _, _trace, *_ = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    _r = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    candidates, debug, _, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
     assert candidates
     assert candidates[0].note_name == "D5"
     assert debug is not None
@@ -25,7 +26,8 @@ def test_segment_peaks_prefers_fundamental_for_strong_harmonics() -> None:
 def test_segment_peaks_detects_d5_and_a5_chord() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_chord((587.3295, 880.0))
-    candidates, debug, _, _trace, *_ = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    _r = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    candidates, debug, _, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
     note_names = [candidate.note_name for candidate in candidates]
     assert "D5" in note_names
     assert "A5" in note_names
@@ -35,7 +37,8 @@ def test_segment_peaks_detects_d5_and_a5_chord() -> None:
 def test_segment_peaks_allows_true_octave_dyad() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_chord((587.3295, 1174.6591))
-    candidates, debug, _, _trace, *_ = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    _r = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    candidates, debug, _, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
     note_names = [candidate.note_name for candidate in candidates]
     assert "D5" in note_names
     assert "D6" in note_names
@@ -48,7 +51,8 @@ def test_segment_peaks_allows_true_octave_dyad() -> None:
 def test_segment_peaks_keeps_mono_d4_monophonic() -> None:
     tuning = get_default_tunings()[0]
     audio = synthesize_note(293.665)
-    candidates, debug, _, _trace, *_ = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    _r = segment_peaks(audio, 44100, 0.0, len(audio) / 44100, tuning, debug=True)
+    candidates, debug, _, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
     assert [candidate.note_name for candidate in candidates] == ["D4"]
     assert debug is not None
     assert any(
@@ -68,7 +72,7 @@ def test_segment_peaks_replaces_stale_recent_primary_with_fresh_lower_onset() ->
     peak = np.max(np.abs(audio))
     audio = audio if peak < 1e-6 else (audio / peak).astype(np.float32)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         audio,
         44100,
         0.5,
@@ -77,6 +81,7 @@ def test_segment_peaks_replaces_stale_recent_primary_with_fresh_lower_onset() ->
         debug=True,
         recent_note_names={"E5"},
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     assert primary.candidate.note_name == "C4"
@@ -100,7 +105,7 @@ def test_segment_peaks_suppresses_recent_upper_carryover_with_weak_onset() -> No
     peak = np.max(np.abs(audio))
     audio = audio if peak < 1e-6 else (audio / peak).astype(np.float32)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         audio,
         44100,
         0.5,
@@ -109,6 +114,7 @@ def test_segment_peaks_suppresses_recent_upper_carryover_with_weak_onset() -> No
         debug=True,
         recent_note_names={"E5", "G4"},
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     assert primary.candidate.note_name == "G4"
@@ -142,9 +148,10 @@ def test_onset_gate_rejects_resonance_only_segment() -> None:
         audio = (audio / peak).astype(np.float32)
 
     # Segment at t=0.8-1.1: far from original attack, only resonance energy
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         audio, 44100, 0.8, 1.1, tuning, debug=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     # With onset gate, the segment should be rejected (no candidates)
     assert candidates == []
@@ -163,9 +170,10 @@ def test_onset_gate_allows_segment_with_fresh_attack() -> None:
     if peak > 1e-6:
         audio = (audio / peak).astype(np.float32)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         audio, 44100, 0.5, 0.9, tuning, debug=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     # With fresh attack, the segment should produce candidates
     assert candidates
@@ -188,9 +196,10 @@ def test_onset_gate_respects_feature_flag() -> None:
     # With gate disabled, weak segment still produces candidates
     from app.transcription import settings
     with settings.override(use_onset_gate=False):
-        candidates, debug, primary, _trace, *_ = segment_peaks(
+        _r = segment_peaks(
             audio, 44100, 0.8, 1.1, tuning, debug=True,
         )
+        candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     # Without the gate, resonance energy is accepted as a note
     # (this verifies the gate is actually what rejects it when enabled)
@@ -214,7 +223,7 @@ def test_segment_peaks_keeps_fresh_recent_upper_dyad_when_both_notes_attack() ->
     peak = np.max(np.abs(audio))
     audio = audio if peak < 1e-6 else (audio / peak).astype(np.float32)
 
-    candidates, debug, _, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         audio,
         44100,
         0.5,
@@ -223,6 +232,7 @@ def test_segment_peaks_keeps_fresh_recent_upper_dyad_when_both_notes_attack() ->
         debug=True,
         recent_note_names={"C5", "E5"},
     )
+    candidates, debug, _, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert sorted(candidate.note_name for candidate in candidates) == ["C5", "E5"]
     assert debug is not None
@@ -239,7 +249,7 @@ def test_segment_peaks_suppresses_weak_lower_secondary_without_recent_context() 
     peak = np.max(np.abs(audio))
     audio = audio if peak < 1e-6 else (audio / peak).astype(np.float32)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         audio,
         44100,
         0.5,
@@ -248,6 +258,7 @@ def test_segment_peaks_suppresses_weak_lower_secondary_without_recent_context() 
         debug=True,
         recent_note_names={"A4"},
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     assert primary.candidate.note_name == "A4"
@@ -291,7 +302,7 @@ def test_segment_peaks_suppresses_descending_stale_upper_adjacent_carryover(monk
     monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda spectrum, frequencies, _frequency, **kw: spectrum)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         synthesize_note(880.0, duration=0.2),
         44100,
         0.0,
@@ -301,6 +312,7 @@ def test_segment_peaks_suppresses_descending_stale_upper_adjacent_carryover(monk
         previous_primary_note_name="B5",
         previous_primary_was_singleton=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     assert primary.candidate.note_name == "A5"
@@ -337,7 +349,7 @@ def test_segment_peaks_replaces_descending_repeated_stale_primary(monkeypatch: p
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         synthesize_note(f4.frequency, duration=0.3),
         44100,
         0.0,
@@ -349,6 +361,7 @@ def test_segment_peaks_replaces_descending_repeated_stale_primary(monkeypatch: p
         previous_primary_frequency=f4.frequency,
         previous_primary_was_singleton=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     assert primary.candidate.note_name == "E4"
@@ -389,7 +402,7 @@ def test_segment_peaks_suppresses_descending_restart_upper_carryover(monkeypatch
     monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda spectrum, frequencies, _frequency, **kw: spectrum)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         synthesize_note(g4.frequency, duration=0.24),
         44100,
         0.0,
@@ -400,6 +413,7 @@ def test_segment_peaks_suppresses_descending_restart_upper_carryover(monkeypatch
         previous_primary_frequency=440.0,
         previous_primary_was_singleton=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     assert primary.candidate.note_name == "G4"
@@ -430,7 +444,7 @@ def test_segment_peaks_rejects_weak_primary_with_low_score_and_fundamental_ratio
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         synthesize_note(e6.frequency, duration=0.2),
         44100,
         0.0,
@@ -438,6 +452,7 @@ def test_segment_peaks_rejects_weak_primary_with_low_score_and_fundamental_ratio
         tuning,
         debug=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert candidates == []
     assert primary is None
@@ -482,10 +497,11 @@ def test_rejected_primary_rescued_by_alternative_branch(
     monkeypatch.setattr(transcription.peaks, "suppress_harmonics", lambda s, f, _freq, **kw: s)
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
-    candidates, _debug, result_primary, trace, *_ = segment_peaks(
+    _r = segment_peaks(
         synthesize_note(d5.frequency, duration=0.3),
         44100, 0.0, 0.3, tuning, debug=True,
     )
+    candidates, _debug, result_primary, trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert len(candidates) > 0, "alternative branch should rescue the segment"
     assert result_primary is not None
@@ -529,10 +545,11 @@ def test_rejected_primary_not_rescued_when_flag_off(
     monkeypatch.setattr(transcription.peaks, "onset_energy_gain", fake_onset_energy_gain)
 
     with settings.override(use_multi_primary_branching=False):
-        candidates, _debug, primary, _trace, *_ = segment_peaks(
+        _r = segment_peaks(
             synthesize_note(d5.frequency, duration=0.3),
             44100, 0.0, 0.3, tuning, debug=True,
         )
+        candidates, _debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert candidates == [], "should remain rejected when flag is off"
     assert primary is None
@@ -555,7 +572,7 @@ def test_segment_peaks_keeps_low_score_primary_with_high_fundamental_ratio(
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         synthesize_note(c4.frequency, duration=0.2),
         44100,
         0.0,
@@ -563,6 +580,7 @@ def test_segment_peaks_keeps_low_score_primary_with_high_fundamental_ratio(
         tuning,
         debug=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     assert primary.candidate.note_name == "C4"
@@ -586,7 +604,7 @@ def test_segment_peaks_keeps_high_score_primary_with_low_fundamental_ratio(
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         synthesize_note(d4.frequency, duration=0.2),
         44100,
         0.0,
@@ -594,6 +612,7 @@ def test_segment_peaks_keeps_high_score_primary_with_low_fundamental_ratio(
         tuning,
         debug=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     assert primary.candidate.note_name == "D4"
@@ -665,9 +684,10 @@ def test_iterative_suppression_recovers_octave_tertiary(monkeypatch: pytest.Monk
 
     from app.transcription import settings
     with settings.override(use_iterative_harmonic_suppression=True):
-        candidates, debug, primary, _trace, *_ = segment_peaks(
+        _r = segment_peaks(
             synthesize_note(523.2511, duration=0.4), 44100, 0.0, 0.4, tuning, debug=True,
         )
+        candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     note_names = {c.note_name for c in candidates}
     assert "C5" in note_names, f"expected C5 in {note_names}"
@@ -697,9 +717,10 @@ def test_iterative_suppression_ablation_flag_off(monkeypatch: pytest.MonkeyPatch
 
     from app.transcription import settings
     with settings.override(use_iterative_harmonic_suppression=False):
-        candidates, debug, primary, _trace, *_ = segment_peaks(
+        _r = segment_peaks(
             synthesize_note(523.2511, duration=0.4), 44100, 0.0, 0.4, tuning, debug=True,
         )
+        candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     note_names = {c.note_name for c in candidates}
     assert "C5" in note_names
@@ -765,9 +786,10 @@ def test_broadband_transient_leak_rejects_high_as_low_score_secondary(
     duration = BROADBAND_TRANSIENT_LEAK_MAX_DURATION - 0.01  # short segment
     audio = synthesize_note(d4.frequency, duration=duration)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         audio, 44100, 0.0, duration, tuning, debug=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     assert primary.candidate.note_name == "D4"
@@ -823,9 +845,10 @@ def test_broadband_transient_leak_allows_low_as_secondary(
     duration = BROADBAND_TRANSIENT_LEAK_MAX_DURATION - 0.01
     audio = synthesize_note(d4.frequency, duration=duration)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         audio, 44100, 0.0, duration, tuning, debug=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     note_names = [c.note_name for c in candidates]
@@ -874,9 +897,10 @@ def test_broadband_transient_leak_skipped_on_long_segment(
     duration = BROADBAND_TRANSIENT_LEAK_MAX_DURATION + 0.05  # long segment
     audio = synthesize_note(d4.frequency, duration=duration)
 
-    candidates, debug, primary, _trace, *_ = segment_peaks(
+    _r = segment_peaks(
         audio, 44100, 0.0, duration, tuning, debug=True,
     )
+    candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
     assert primary is not None
     note_names = [c.note_name for c in candidates]
