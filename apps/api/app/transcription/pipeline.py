@@ -429,6 +429,9 @@ async def transcribe_audio(
                 ))
 
     processed_events = raw_events
+    narrow_fft_time_cache: dict[
+        tuple[int, float], dict[str, tuple[float, float, float]] | None
+    ] = {}
     _pp("suppress_low_confidence_dyad_transients", suppress_low_confidence_dyad_transients)
     _pp("suppress_onset_decaying_carryover", suppress_onset_decaying_carryover)
     _pp("collapse_same_start_primary_singletons", collapse_same_start_primary_singletons)
@@ -482,7 +485,8 @@ async def transcribe_audio(
     # the gap and decays before the next segment starts.
     _pp("recover_pre_segment_attack_via_narrow_fft",
         recover_pre_segment_attack_via_narrow_fft,
-        audio, sample_rate, tuning, all_onset_times, noise_floor=noise_floor)
+        audio, sample_rate, tuning, all_onset_times,
+        noise_floor=noise_floor, narrow_fft_cache=narrow_fft_time_cache)
     # #167 Phase C spread-chord rescue: recover notes that attacked
     # between the broadband onset and the segment start (rolled /
     # arpeggiated chords).  Unlike Phase B, these notes are RISING
@@ -491,10 +495,12 @@ async def transcribe_audio(
     # (e.g. G-low E136: B3 then G3).
     _pp("recover_spread_chord_via_segment_start_probe",
         recover_spread_chord_via_segment_start_probe,
-        audio, sample_rate, tuning, all_onset_times, noise_floor=noise_floor)
+        audio, sample_rate, tuning, all_onset_times,
+        noise_floor=noise_floor, narrow_fft_cache=narrow_fft_time_cache)
     _pp("recover_spread_chord_via_segment_start_probe_2",
         recover_spread_chord_via_segment_start_probe,
-        audio, sample_rate, tuning, all_onset_times, noise_floor=noise_floor)
+        audio, sample_rate, tuning, all_onset_times,
+        noise_floor=noise_floor, narrow_fft_cache=narrow_fft_time_cache)
     _pp("collapse_late_descending_step_handoffs", collapse_late_descending_step_handoffs)
 
     def _mp(name: str, fn, *args, **kwargs) -> list[RawEvent]:
