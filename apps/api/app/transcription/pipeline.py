@@ -342,7 +342,7 @@ async def transcribe_audio(
                 # so the guard fires for the actual short windows.
                 from_short_segment_guard=(end_time - start_time) < SHORT_SEGMENT_SECONDARY_GUARD_DURATION,
                 sub_onsets=sub_onsets,
-                alternate_groupings=list(_soft_alts),
+                alternate_groupings=list(seg_result.soft_alternates),
             )
         )
         if debug and candidate_debug:
