@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: completed
+- verdict: pending
 - scenario: 2026-03-25-BWV147-sequence-163-kalimba-17-c
 - expected note: C4 / C5 x 14 / D5 x 21 / [E5,C4] x 3 / G5 x 18 / F5 x 10 / [F5,A4] x 4 / A5 x 6 / [G5,E4] x 4 / C6 x 5 / B5 x 4 / [C6,A4] x 2 / E5 x 19 / <C5,A4> x 3 / [F5,D4] x 2 / [D5,F4] / <B4,G4> / [G4,D4] x 4 / B4 x 9 / <E5,C5> x 3 / [C5,G4] / <A4,F4> x 2 / [E5,G4] x 2 / [C5,<G4,E4,C4>] x 2 / [G5,B4] / A4 x 2 / [G5,G4] / <D5,B4,G4> / G4 x 2 / <F5,D5,B4,G4> x 2 / [E5,<G4,E4,C4>] x 2 / [E5,C5] / [F5,<A4,F4>] x 2 / [G5,<G4,E4>] x 3 / [C6,<E5,D4>] / [F5,<F5,D4>] / [D5,<A4,F4>] / [<B4,G4>,D4] / [C6,<C5,A4>]
 - capture intent: unknown

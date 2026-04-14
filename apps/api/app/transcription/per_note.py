@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import numpy as np
 
+import kalimba_dsp
+
 from ..models import InstrumentTuning
+from .constants import HARMONIC_BAND_CENTS
 from .models import Note, Segment
 from .peaks import (
     MUTE_DIP_ENERGY_WINDOW,
@@ -16,8 +19,6 @@ from .peaks import (
     MUTE_DIP_REATTACK_MIN_POST_ENERGY,
     MUTE_DIP_REATTACK_MIN_PRE_ENERGY,
     MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO,
-    _note_band_energy,
-    batch_note_band_energies,
 )
 
 # Coarse scan step (20 ms) — used to find candidate dip regions quickly.
@@ -71,73 +72,31 @@ def _scan_gap_for_mute_dip_with_window(
 ) -> float | None:
     """Scan a gap with a specific energy window size.
 
-    Pre-computes energies on the fine 5ms grid in batched form (one rfft for
-    all grid points instead of per-point rfft) and replaces the original
-    three-level loop with array lookups.  Bit-exact with the per-call form:
-    same window, same n_fft, same peak_energy_near band mask.
+    Delegated to the Rust implementation in ``kalimba_dsp``. Integer-indexed
+    fine grid matching the np.arange-based clean semantic (no float
+    accumulation drift); see docs/performance/20260415-profiling-baseline.md
+    for the rationale.
     """
-    audio_duration = len(audio) / sample_rate
-    scan_end = min(gap_end, audio_duration - window_seconds)
-
-    # Need room for at least dip_window + recovery_window.
-    if scan_end - gap_start < _GAP_DIP_MAX_DIP_WINDOW + _GAP_DIP_MAX_RECOVERY_WINDOW:
-        return None
-
-    fine_step = _GAP_DIP_FINE_STEP
-    times = np.arange(gap_start, scan_end, fine_step)
-    n_fine = times.size
-    if n_fine == 0:
-        return None
-
-    pre_energies = batch_note_band_energies(
-        audio, sample_rate, times, frequency, window_seconds=window_seconds,
+    audio_f32 = np.ascontiguousarray(audio, dtype=np.float32)
+    result = kalimba_dsp.scan_gap_for_mute_dip_with_window(
+        audio_f32,
+        int(sample_rate),
+        float(gap_start),
+        float(gap_end),
+        float(frequency),
+        float(window_seconds),
+        float(MUTE_DIP_ENERGY_WINDOW),
+        float(_GAP_DIP_MAX_DIP_WINDOW),
+        float(_GAP_DIP_MAX_RECOVERY_WINDOW),
+        float(_GAP_DIP_COARSE_STEP),
+        float(_GAP_DIP_FINE_STEP),
+        float(MUTE_DIP_REATTACK_MIN_PRE_ENERGY),
+        float(MUTE_DIP_REATTACK_MAX_DIP_RATIO),
+        float(MUTE_DIP_REATTACK_MIN_POST_ENERGY),
+        float(MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO),
+        float(HARMONIC_BAND_CENTS),
     )
-    if window_seconds == MUTE_DIP_ENERGY_WINDOW:
-        fine_energies = pre_energies
-    else:
-        fine_energies = batch_note_band_energies(
-            audio, sample_rate, times, frequency, window_seconds=MUTE_DIP_ENERGY_WINDOW,
-        )
-
-    coarse_stride = max(int(round(_GAP_DIP_COARSE_STEP / fine_step)), 1)
-    dip_span = int(round(_GAP_DIP_MAX_DIP_WINDOW / fine_step))
-    recovery_span = int(round(_GAP_DIP_MAX_RECOVERY_WINDOW / fine_step))
-    max_i = n_fine - dip_span - recovery_span
-
-    i = 0
-    while i < max_i:
-        pre_energy = float(pre_energies[i])
-        if pre_energy < MUTE_DIP_REATTACK_MIN_PRE_ENERGY:
-            i += coarse_stride
-            continue
-
-        # Fine-scan forward for a rapid dip within [i+1, i+dip_span).
-        dip_end_idx = min(i + dip_span, n_fine)
-        if dip_end_idx > i + 1:
-            min_energy = float(min(pre_energy, float(fine_energies[i + 1:dip_end_idx].min())))
-        else:
-            min_energy = pre_energy
-
-        dip_ratio = (min_energy + 1e-6) / (pre_energy + 1e-6)
-        if dip_ratio >= MUTE_DIP_REATTACK_MAX_DIP_RATIO:
-            i += coarse_stride
-            continue
-
-        # Dip confirmed — scan for recovery in [dip_end_idx, recovery_end_idx).
-        recovery_end_idx = min(dip_end_idx + recovery_span, n_fine)
-        if recovery_end_idx > dip_end_idx:
-            segment = fine_energies[dip_end_idx:recovery_end_idx]
-            post_ok = segment >= MUTE_DIP_REATTACK_MIN_POST_ENERGY
-            recovery_ok = (segment / (pre_energy + 1e-6)) >= MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO
-            both = post_ok & recovery_ok
-            if np.any(both):
-                first = int(np.argmax(both))
-                return float(times[dip_end_idx + first])
-
-        # Dip found but no recovery — skip past this region.
-        i += coarse_stride
-
-    return None
+    return result
 
 
 def rescue_gap_mute_dips(

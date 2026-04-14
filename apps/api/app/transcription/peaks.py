@@ -3615,67 +3615,6 @@ def _note_band_energy(
     return peak_energy_near(frequencies, spectrum, frequency)
 
 
-def batch_note_band_energies(
-    audio: np.ndarray,
-    sample_rate: int,
-    center_times: np.ndarray,
-    frequency: float,
-    window_seconds: float = ONSET_ENERGY_WINDOW_SECONDS,
-) -> np.ndarray:
-    """Batched equivalent of [_note_band_energy(audio, sr, t, frequency, window_seconds)
-    for t in center_times].
-
-    Full-size chunks (``start + window_samples <= len(audio)``) share a single
-    batched rfft; partial chunks at audio edges fall back to per-call
-    ``_note_band_energy`` so the result is bit-exact with the per-call path.
-    """
-    center_times_arr = np.asarray(center_times, dtype=np.float64)
-    n_times = center_times_arr.size
-    if n_times == 0:
-        return np.zeros(0)
-
-    window_samples = max(int(sample_rate * window_seconds), 512)
-    half = window_samples // 2
-    center_samples = (center_times_arr * sample_rate).astype(np.int64)
-    starts = np.maximum(center_samples - half, 0)
-    ends = np.minimum(starts + window_samples, len(audio))
-
-    energies = np.zeros(n_times, dtype=np.float64)
-
-    full_mask = (ends - starts) == window_samples
-    partial_indices = np.where(~full_mask)[0]
-    for i in partial_indices:
-        energies[i] = _note_band_energy(
-            audio, sample_rate, float(center_times_arr[i]), frequency,
-            window_seconds=window_seconds,
-        )
-
-    full_indices = np.where(full_mask)[0]
-    if full_indices.size == 0:
-        return energies
-
-    n_fft = _adaptive_n_fft(sample_rate, frequency, window_samples)
-    window = cached_hanning(window_samples)
-    frequencies = cached_rfftfreq(n_fft, sample_rate)
-
-    valid_bin = frequencies > 0
-    if not np.any(valid_bin) or frequency <= 0:
-        return energies
-    positive_freqs = frequencies[valid_bin]
-    distances = np.abs(1200.0 * np.log2(positive_freqs / frequency))
-    band_mask = distances <= HARMONIC_BAND_CENTS
-    if not np.any(band_mask):
-        return energies
-
-    chunks = np.stack([audio[starts[i]:starts[i] + window_samples] for i in full_indices])
-    windowed = chunks * window
-    spectra = np.abs(np.fft.rfft(windowed, n=n_fft, axis=1))
-    positive_spectra = spectra[:, valid_bin]
-    band_spectra = positive_spectra[:, band_mask]
-    energies[full_indices] = band_spectra.max(axis=1)
-    return energies
-
-
 def _find_note_attack_time(
     audio: np.ndarray,
     sample_rate: int,
