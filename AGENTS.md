@@ -53,6 +53,33 @@
 - `ignoredRanges` と同様、**ユーザーからの明示的な許可または指示がある場合に限り**追加・変更できる。エージェントが独自判断で追加してはならない。
 - 各 override には `reason` フィールドで根拠（耳確認、スペクトル分析等）を記録すること。
 
+### Schema
+
+v1 (現行互換) と v2 (op 拡張) をサポート。`op` を省略すると v1 と同じ `replace` 動作。
+
+```json
+{
+  "version": 2,
+  "overrides": [
+    {"op": "replace", "eventIndex": 64, "expectedNotes": ["C5","E4"], "reason": "..."},
+    {"op": "insert", "afterEventIndex": 115, "expectedNotes": ["E5"],
+     "reason": "R3 playing error: E116 D5 missed, E5 played instead; restarted from D5"},
+    {"op": "skip", "eventIndex": 170, "reason": "performer skipped this note"}
+  ]
+}
+```
+
+- **replace**: 既存イベント `eventIndex` の `expectedNotes` を上書き。v1 互換 (op 省略可)。
+- **insert**: スコアにない余分な演奏 event を `afterEventIndex` の直後に追加。label は `E{afterEventIndex}{suffix}` (例: `E115a`)。同じ `afterEventIndex` に複数 insert がある場合は自動で `a`, `b`, `c`... が付く。明示したい場合は `suffix` フィールドで指定。
+- **skip**: スコア上の `eventIndex` が録音では弾かれていない場合に欠番化。
+
+### score_structure との関係
+
+- `score_structure.json` は楽譜の真実 (不変)
+- `alignment_overrides.json` は録音固有の差分 (楽譜 → 録音の変換規則)
+- `expected.json:expectedEventNoteSetsOrdered` は録音の実順 (テスト assertion 用、alignment_overrides 適用後の最終形と整合するよう手書き)
+- diagnosis tool (`score_alignment_diagnosis.py`) は score_structure に alignment_overrides を適用して recognizer 出力と突合する
+
 ## Spike / Rollback Policy
 
 - Main-agent-only rule: for promising but not-yet-mergeable recognizer changes, use a dedicated `codex/...` branch.

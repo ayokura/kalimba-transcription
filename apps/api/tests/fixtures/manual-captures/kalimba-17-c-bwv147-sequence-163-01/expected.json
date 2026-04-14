@@ -2,8 +2,8 @@
   "pending": false,
   "status": "completed",
   "assertions": {
-    "minEvents": 163,
-    "maxEvents": 163,
+    "minEvents": 164,
+    "maxEvents": 164,
     "requiredPrimaryNoteOccurrences": {},
     "maxPrimaryNoteOccurrences": {},
     "requiredEventNoteSetOccurrences": {},
@@ -124,6 +124,7 @@
       "G5",
       "E5",
       "A4+C5",
+      "E5",
       "D5",
       "E5",
       "D4+F4+F5",
@@ -173,13 +174,5 @@
       "B4",
       "E4+G4+C5"
     ]
-  },
-  "ignoredRanges": [
-    {
-      "startSec": 197.2,
-      "endSec": 201.5,
-      "method": "splice",
-      "reason": "R3 playing error: 2nd D5 missed (E5 played), restarted from D5"
-    }
-  ]
+  }
 }

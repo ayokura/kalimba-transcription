@@ -634,13 +634,30 @@ def main():
             }
         ]
 
-    # Load alignment overrides (patches for events where recording differs from score)
+    # Load alignment overrides (patches for events where recording differs from score).
+    # Schema v2 adds `op`: "replace" (default, v1 behavior), "insert" (extra note
+    # played beyond the score), or "skip" (score note not played in recording).
+    # Insert ops carry `afterEventIndex` + `expectedNotes` (+ optional `suffix`);
+    # inserted events are labeled like "E115a". Skipped events are dropped from
+    # the expected list and shown as 欠番.
+    replace_overrides: dict[int, set[str]] = {}
+    skip_indices: set[int] = set()
+    inserts_by_after: dict[int, list[dict]] = {}
     overrides_path = fixture_dir / "alignment_overrides.json"
-    event_overrides: dict[int, set[str]] = {}
     if overrides_path.exists():
         overrides_data = json.loads(overrides_path.read_text())
         for ov in overrides_data.get("overrides", []):
-            event_overrides[ov["eventIndex"]] = set(ov["expectedNotes"])
+            op = ov.get("op", "replace")
+            if op == "replace":
+                replace_overrides[ov["eventIndex"]] = set(ov["expectedNotes"])
+            elif op == "skip":
+                skip_indices.add(ov["eventIndex"])
+            elif op == "insert":
+                after = ov["afterEventIndex"]
+                inserts_by_after.setdefault(after, []).append(ov)
+            else:
+                print(f"[warn] unknown alignment_overrides op={op!r}; ignored",
+                      file=sys.stderr)
 
     orig_to_eval = build_time_converter(expected)
 
@@ -750,12 +767,43 @@ def main():
         line_id = line["id"]
         if filter_line and line_id != filter_line:
             continue
-        expected_events = parse_content(line["content"])
-        for i, evt in enumerate(expected_events):
-            evt["num"] = line["eventRange"][0] + i
-            if evt["num"] in event_overrides:
-                evt["notes"] = event_overrides[evt["num"]]
+        raw_events = parse_content(line["content"])
+        start_num = line["eventRange"][0]
+        # Assign initial score numbers & labels, apply replace + skip
+        annotated: list[dict] = []
+        skipped_labels: list[str] = []
+        for i, evt in enumerate(raw_events):
+            num = start_num + i
+            if num in skip_indices:
+                skipped_labels.append(f"E{num}")
+                continue
+            evt["num"] = num
+            evt["label"] = str(num)
+            if num in replace_overrides:
+                evt["notes"] = replace_overrides[num]
                 evt["overridden"] = True
+            annotated.append(evt)
+        # Interleave insert ops (labeled E{n}a, E{n}b, ... auto-suffixed if not specified)
+        expected_events: list[dict] = []
+        for evt in annotated:
+            expected_events.append(evt)
+            ops = inserts_by_after.get(evt["num"])
+            if not ops:
+                continue
+            for idx, ov in enumerate(ops):
+                suffix = ov.get("suffix") or chr(ord("a") + idx)
+                notes = set(ov["expectedNotes"])
+                expected_events.append({
+                    "num": evt["num"],
+                    "sub": idx + 1,
+                    "label": f"{evt['num']}{suffix}",
+                    "content": "+".join(sorted(notes)),
+                    "notes": notes,
+                    "inserted": True,
+                })
+        if skipped_labels:
+            print(f"[alignment-override] {line_id}: skipped {', '.join(skipped_labels)}",
+                  file=sys.stderr)
 
         detected = seg_by_line.get(line_id, [])
         results, unmatched = match_line(expected_events, detected)
@@ -787,18 +835,18 @@ def main():
         # unmatched (extra) segments use their own time.
         line_items: list[tuple[float, int, str]] = []  # (sort_time, kind, formatted)
 
-        # Matched/unmatched-expected entries
-        for exp, seg in results:
+        # Matched/unmatched-expected entries. Track each expected event's
+        # list position (ei) so NO MATCH placeholders can be anchored by
+        # index rather than by num (labels may be strings like "115a").
+        def _fmt_label(evt: dict) -> str:
+            tag = "*" if evt.get("inserted") else " "
+            return f"E{evt['label']:>4s}{tag}"
+
+        for ei, (exp, seg) in enumerate(results):
             if seg is None:
-                # Anchor NO MATCH at the next-later matched segment time, or if
-                # none, at the expected event position (kept inline by the stable
-                # sort via its list index).
                 neighbor_time = _blank_time
-                line = f"  ∅ {neighbor_time} E{exp['num']:3d} {exp['content']:30s} → NO MATCH"
-                # Sort NO MATCH just before the next matched seg if any, else
-                # at end of line window. Use a placeholder time; we'll insert
-                # them after sorting based on position.
-                line_items.append((float("inf"), 1, line))  # placeholder, fixed up below
+                line = f"  ∅ {neighbor_time} {_fmt_label(exp)} {exp['content']:30s} → NO MATCH"
+                line_items.append((float("inf"), 1, line, ei))
                 continue
 
             det_notes = seg["notes"]
@@ -809,14 +857,14 @@ def main():
                 if args.verbose:
                     if exp.get("overridden"):
                         ov_notes = "+".join(sorted(exp_notes))
-                        line = f"  ✓ {time_str} E{exp['num']:3d} {exp['content']:30s} (override: {ov_notes})"
+                        line = f"  ✓ {time_str} {_fmt_label(exp)} {exp['content']:30s} (override: {ov_notes})"
+                    elif exp.get("inserted"):
+                        line = f"  ✓ {time_str} {_fmt_label(exp)} {exp['content']:30s} (insert)"
                     else:
-                        line = f"  ✓ {time_str} E{exp['num']:3d} {exp['content']}"
-                    line_items.append((seg["time"], 0, line))
+                        line = f"  ✓ {time_str} {_fmt_label(exp)} {exp['content']}"
+                    line_items.append((seg["time"], 0, line, ei))
                 else:
-                    # Still need to record time for sort-insertion even when suppressed;
-                    # use a sentinel that produces no output.
-                    line_items.append((seg["time"], -1, ""))
+                    line_items.append((seg["time"], -1, "", ei))
                 continue
 
             missing = exp_notes - det_notes
@@ -849,48 +897,39 @@ def main():
                 sym = "✗"
 
             src_str = f" [{','.join(seg['source'])}]" if seg.get('source') else ""
-            line = f"  {sym} {time_str} E{exp['num']:3d} {exp['content']:30s}→ {'+'.join(sorted(det_notes)):15s}{miss_str}{extra_str}{trail_str}{src_str}"
-            line_items.append((seg["time"], 0, line))
+            line = f"  {sym} {time_str} {_fmt_label(exp)} {exp['content']:30s}→ {'+'.join(sorted(det_notes)):15s}{miss_str}{extra_str}{trail_str}{src_str}"
+            line_items.append((seg["time"], 0, line, ei))
 
-        # Unmatched (extra) segments — interleave chronologically
+        # Unmatched (extra) segments — interleave chronologically.
+        # ei=-1 keeps them out of the placeholder-by-position logic.
         for u in unmatched:
             notes_str = '+'.join(sorted(u['notes'])) if u['notes'] else '(empty)'
             src_str = f" [{','.join(u['source'])}]" if u.get('source') else ""
             merge_str = f" ({u['mergeReason']})" if u.get('mergeReason') else ""
             cosmetic_tag = " (cosmetic)" if _is_cosmetic_extra(u) else ""
             line = f"  + {u['time']:7.2f}s {'(extra)':>9s} {notes_str}{src_str}{merge_str}{cosmetic_tag}"
-            line_items.append((u["time"], 0, line))
+            line_items.append((u["time"], 0, line, -1))
 
-        # Resolve NO MATCH placeholder times: put each at the position of its
-        # expected event (approximated by interleaving between neighboring
-        # matched times). For simplicity, anchor NO MATCH to the time of the
-        # nearest matched expected event with lower event number, or 0.
-        # Build expected->time map from matched results.
-        exp_time_by_num: dict[int, float] = {}
-        for exp, seg in results:
+        # Anchor NO MATCH placeholders to the time of the nearest matched
+        # expected event by list position (works with both int-num and
+        # string-label "115a" events).
+        ei_to_time: dict[int, float] = {}
+        for ei, (exp, seg) in enumerate(results):
             if seg is not None:
-                exp_time_by_num[exp["num"]] = seg["time"]
-        # Fix up placeholders
+                ei_to_time[ei] = seg["time"]
         fixed_items: list[tuple[float, int, str]] = []
-        for t, kind, line in line_items:
-            if t == float("inf"):
-                # Parse expected event number from the line (e.g., "E  5 ")
-                import re as _re
-                m = _re.search(r" E\s*(\d+) ", line)
-                if m:
-                    enum = int(m.group(1))
-                    # Find nearest neighbor expected event with known time
-                    before = max((n for n in exp_time_by_num if n < enum), default=None)
-                    after = min((n for n in exp_time_by_num if n > enum), default=None)
-                    if before is not None and after is not None:
-                        # Midpoint
-                        t = (exp_time_by_num[before] + exp_time_by_num[after]) / 2
-                    elif before is not None:
-                        t = exp_time_by_num[before] + 0.001
-                    elif after is not None:
-                        t = max(0.0, exp_time_by_num[after] - 0.001)
-                    else:
-                        t = 0.0
+        for t, kind, line, ei in line_items:
+            if t == float("inf") and ei >= 0:
+                before = max((e for e in ei_to_time if e < ei), default=None)
+                after = min((e for e in ei_to_time if e > ei), default=None)
+                if before is not None and after is not None:
+                    t = (ei_to_time[before] + ei_to_time[after]) / 2
+                elif before is not None:
+                    t = ei_to_time[before] + 0.001
+                elif after is not None:
+                    t = max(0.0, ei_to_time[after] - 0.001)
+                else:
+                    t = 0.0
             fixed_items.append((t, kind, line))
 
         fixed_items.sort(key=lambda x: x[0])

@@ -1,12 +1,20 @@
 {
-  "version": 1,
+  "version": 2,
   "overrides": [
     {
+      "op": "replace",
       "eventIndex": 64,
       "expectedNotes": ["C5", "E4"],
       "reason": "C4 and G4 genuinely played per score but energy too weak to detect; ear-verified C5+E4 is closer to recording than C5+C4+E4+G4"
     },
     {
+      "op": "insert",
+      "afterEventIndex": 115,
+      "expectedNotes": ["E5"],
+      "reason": "R3 playing error: E116 D5 missed, E5 played instead at 197.26s. Performer restarted from E116 D5 at 201.52s (known issue in score_structure.knownIssues[0])"
+    },
+    {
+      "op": "replace",
       "eventIndex": 163,
       "expectedNotes": ["C5", "G4", "E4"],
       "reason": "Performer (user) confirmed C4 was missed during the performance; ear + spectrum verified absent. Score event is [C5,<G4,E4,C4>] but recording only contains C5+G4+E4. Same chord pattern as E64 in this fixture."
