@@ -2978,30 +2978,61 @@ def _apply_evidence_gate_rescue(
         ))
 
 
+# Phase A rejection reasons that Phase C may override when an octave
+# partner is in the final selected set.  All are gates that compare the
+# candidate to primary only (or to its own spectral quality) and do not
+# consider already-accepted secondaries.  Other reasons
+# (fundamental-ratio-too-low, harmonic-related-to-selected non-octave,
+# semitone-leakage, recent-carryover-candidate, descending-*-carryover,
+# broadband-transient-leak, etc.) are structural or time-context
+# judgments that remain authoritative.
+#
+# Action dispatch per reason:
+# - ("promote", None): admit the candidate to selection.selected.
+# - ("candidate", conf): surface in selection.soft_alternates with the
+#   given confidence (no primary-output reflection).
+#
+# All current entries use "promote" because the rescue condition
+# (allow_octave_secondary against full selected) is a strong physical
+# context argument, and the primary-side of the same gate pattern is
+# already implemented in Phase A (peaks.py:2400, 2415) — i.e. the rescue
+# is the secondary-side mirror of a production-validated pattern.  The
+# "candidate" action is not exercised today; it is retained as the
+# structural home for future reasons whose theoretical or empirical
+# support does not warrant direct promotion.
+#
+# If a decision's reasons include both "promote" and "candidate" actions,
+# the decision is treated as "candidate" (conservative).
+_PHASE_C_ACTION: dict[str, tuple[str, float | None]] = {
+    "score-below-threshold": ("promote", None),
+    "weak-upper-secondary": ("promote", None),
+    "weak-lower-secondary": ("promote", None),
+    "weak-secondary-onset": ("promote", None),
+}
+
+
 def _apply_phase_c_octave_dyad_rescue(
     ctx: _SegmentContext,
     selection: _SelectionState,
     primary_result: _PrimaryResult,
     evidence: _NoteEvidenceCache,
 ) -> None:
-    """Phase C — context-aware rescue for octave-dyad upper notes.
+    """Phase C — context-aware rescue for octave-dyad secondaries.
 
-    Upper-octave notes in octave-dyad chords (e.g., C5 in C4+C5+E5) score
-    low in rank_tuning_candidates because subharmonic_alias_energy at f/2
-    is penalised — but when the f/2 position carries a genuine simultaneous
-    note (here C4), the penalty treats a real chord partner as ghost-octave
-    evidence.  Phase A rejects such candidates with score-below-threshold
-    because allow_octave_secondary is evaluated against primary only.
+    Phase A gates compare each candidate to primary only; a candidate that
+    would legitimately pass when an already-accepted secondary is its
+    octave partner cannot be recognised at that stage.  Prime example:
+    C5 in C4+C5+E5 scores low in rank_tuning_candidates because
+    subharmonic_alias_energy at 261.6 Hz (= C4 fundamental) is penalised,
+    and Phase A rejects with score-below-threshold because
+    allow_octave_secondary is called against [primary] only.
 
-    Phase C revisits these candidates after Phase A/B/iterative settle,
-    and re-evaluates allow_octave_secondary against the final selected
-    set.  If an octave partner is in selected, the candidate is admitted
-    despite its low score — matching the semantics already used by the
-    existing Phase B full-selected check at harmonic-related guard.
+    Phase C revisits candidates whose Phase A rejection reasons are a
+    subset of _PHASE_C_RESCUABLE_REASONS and re-evaluates
+    allow_octave_secondary against the full selected set.  Admission
+    matches the semantics of Phase B's harmonic-related guard, which
+    already uses full selected (peaks.py:2510).
     """
-    if len(selection.selected) >= MAX_POLYPHONY:
-        return
-
     _disabled = settings.get().disabled_gates
     gate_name = "phase-c-octave-dyad-rescue"
     if gate_name in _disabled:
@@ -3011,15 +3042,21 @@ def _apply_phase_c_octave_dyad_rescue(
     selected_names = {n.note_name for n in selection.selected}
 
     for decision in list(selection.candidate_decisions):
-        if len(selection.selected) >= MAX_POLYPHONY:
-            break
         if decision.accepted or decision.source != "secondary":
             continue
-        # Strict trigger: rejected ONLY by structural score-below-threshold
-        # in Phase A.  Other rejection reasons (fundamental-ratio-too-low,
-        # harmonic-related-to-selected non-octave, semitone-leakage, etc.)
-        # remain authoritative.
-        if decision.reasons != ["score-below-threshold"]:
+        if not decision.reasons:
+            continue
+        # All reasons must be mapped in the action table; unknown reasons
+        # are treated as authoritative (no rescue).
+        actions: list[tuple[str, float | None]] = []
+        abort = False
+        for r in decision.reasons:
+            action = _PHASE_C_ACTION.get(r)
+            if action is None:
+                abort = True
+                break
+            actions.append(action)
+        if abort:
             continue
         if decision.note_name in selected_names:
             continue
@@ -3032,20 +3069,40 @@ def _apply_phase_c_octave_dyad_rescue(
         if not is_physically_playable_chord(test_keys, key_layers=ctx.key_layers):
             continue
 
-        hyp.candidate.onset_gain = evidence.get_onset_gain_if_cached(hyp.candidate.frequency)
-        selection.selected.append(hyp.candidate)
-        selected_names.add(hyp.candidate.note_name)
-        selection.candidate_decisions.append(_CandidateDecision(
-            note_name=hyp.candidate.note_name,
-            frequency=hyp.candidate.frequency,
-            score=hyp.score,
-            fundamental_ratio=hyp.fundamental_ratio,
-            onset_gain=decision.onset_gain,
-            accepted=True,
-            reasons=[gate_name],
-            octave_dyad_allowed=True,
-            source="phase-c",
-        ))
+        # If any reason dispatches to "candidate", treat the whole decision
+        # as candidate (conservative); otherwise all reasons are promote.
+        candidate_confs = [c for (a, c) in actions if a == "candidate" and c is not None]
+        if candidate_confs:
+            # Surface in soft_alternates without primary-output reflection.
+            alt_note = NoteCandidate(
+                key=hyp.candidate.key,
+                note=hyp.candidate.note,
+                score=hyp.score,
+                onset_gain=decision.onset_gain,
+            )
+            selection.soft_alternates.append(RawAlternateGrouping(
+                alternate_note=alt_note,
+                reason=f"phase_c_candidate:{','.join(sorted(set(decision.reasons)))}",
+                confidence=max(candidate_confs),
+            ))
+        else:
+            # All reasons promote → admit to selected.
+            if len(selection.selected) >= MAX_POLYPHONY:
+                continue
+            hyp.candidate.onset_gain = evidence.get_onset_gain_if_cached(hyp.candidate.frequency)
+            selection.selected.append(hyp.candidate)
+            selected_names.add(hyp.candidate.note_name)
+            selection.candidate_decisions.append(_CandidateDecision(
+                note_name=hyp.candidate.note_name,
+                frequency=hyp.candidate.frequency,
+                score=hyp.score,
+                fundamental_ratio=hyp.fundamental_ratio,
+                onset_gain=decision.onset_gain,
+                accepted=True,
+                reasons=[gate_name],
+                octave_dyad_allowed=True,
+                source="phase-c",
+            ))
 
 
 def _find_hypothesis_by_frequency(
