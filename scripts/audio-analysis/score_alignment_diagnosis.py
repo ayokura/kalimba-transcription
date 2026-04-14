@@ -777,7 +777,7 @@ def main():
         pct = 100 * exact / n if n else 0
         pct2 = 100 * (exact + subset) / n if n else 0
 
-        print(f"\n=== {line_id} ({n} exp, {len(detected)} det) exact={exact} subset={subset} partial={partial} miss={miss} ({pct:.0f}% exact, {pct2:.0f}% +sub) ===")
+        print(f"\n=== {line_id} ({n} exp, {len(detected)} det) exact={exact} subset={subset} partial={partial} miss={miss} extra={len(unmatched)} ({pct:.0f}% exact, {pct2:.0f}% +sub) ===")
 
         _blank_time = " " * 8
 
@@ -910,12 +910,25 @@ def main():
     line_note = f" (filtered: {filter_line})" if filter_line else ""
     print(f"SUMMARY{mode_note}{line_note}: {total_events} expected events, {det_count} {det_label}")
     if total_events:
-        print(f"  Exact match:   {total_exact:3d}/{total_events} ({100*total_exact/total_events:.0f}%)")
-        print(f"  Subset match:  {total_subset:3d}/{total_events} ({100*total_subset/total_events:.0f}%)")
-        print(f"  Partial match: {total_partial:3d}/{total_events} ({100*total_partial/total_events:.0f}%)")
-        print(f"  No match:      {total_miss:3d}/{total_events} ({100*total_miss/total_events:.0f}%)")
         real_extras = total_extras - total_cosmetic_extras
-        print(f"  Extra segments: {total_extras} ({real_extras} real + {total_cosmetic_extras} cosmetic <30ms guard artefacts)")
+        # Raw counts only — no individual % to avoid recall-only optimization pressure.
+        extras_str = f"{total_extras}"
+        if total_cosmetic_extras:
+            extras_str = f"{total_extras} ({real_extras} real + {total_cosmetic_extras} cosmetic)"
+        print(f"  ✓ Exact: {total_exact}  ⊂ Subset: {total_subset}  △ Partial: {total_partial}  ∅ Miss: {total_miss}  + Extras: {extras_str}")
+        # Net exact score: subtract extras from numerator. Intuitive "penalty
+        # scoring" — like quiz grading where wrong answers cost points.
+        # Can go negative when false positives exceed true positives.
+        net = total_exact - real_extras
+        net_pct = 100 * net / total_events if total_events else 0
+        print(f"  Score: ({total_exact} - {real_extras}) / {total_events} = {net_pct:.0f}% net exact  (extras subtracted from numerator)")
+        # Standard ML metrics for reference.
+        tp = total_exact
+        # Precision: TP / (TP + FP + partial matches counted as inexact)
+        precision = tp / (tp + real_extras + total_subset + total_partial) if (tp + real_extras + total_subset + total_partial) else 0
+        recall = tp / total_events if total_events else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0
+        print(f"  F1 (exact): {f1:.2f}  (precision {precision:.2f} / recall {recall:.2f})")
     print(f"  Cache: {cache_status}")
 
 
