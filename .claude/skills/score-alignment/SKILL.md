@@ -7,7 +7,7 @@ arguments:
     description: Fixture name (e.g., bwv147-sequence-163-01)
     required: true
   - name: options
-    description: "Options: --verbose, --mode events|segments|candidates, --line L1, --no-cache"
+    description: "Options: --verbose, --mode events|segments|candidates|segment-debug, --line L1, --no-cache"
     required: false
 ---
 
@@ -27,24 +27,32 @@ The script logs which source was used via stderr `[synthetic-line] using <source
 
 Run the alignment diagnosis script:
 ```bash
-uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--verbose] [--mode events|segments|candidates] [--line L1] [--no-cache]
+uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--verbose] [--mode events|segments|candidates|segment-debug] [--line L1] [--no-cache]
 ```
 
 ## Modes
 
 | Mode | Description |
 |------|-------------|
-| `events` (default) | Post-processed final output (mergedEvents). Reflects all event-level corrections. |
-| `segments` | Raw segmentCandidates before event post-processing. Shows segment_peaks output directly. |
-| `candidates` | All segments with full candidate lists. No expected data required. Designed for Free Performance fixtures. |
+| `events` (default) | Post-processed final output (mergedEvents) aligned vs expected. |
+| `segments` | Raw segmentCandidates before event post-processing, aligned vs expected. |
+| `candidates` | Event-level timeline: final events + alts + candidate slots. **No expected data needed.** |
+| `segment-debug` | Per-segment internal trails: ranked candidates, secondary decisions, NarrowFFT. **No expected data needed.** |
 
-### candidates mode
+### candidates mode (event-level)
 
-Free Performance fixture 等、期待データのない fixture でも使用可能。各セグメントの全候補（採用・棄却とも）をスコア・onset証拠・棄却理由付きで一覧表示する。
+Free Performance fixture 等、期待データのない fixture の実用ビュー。Final events を中心に：
+- 各 event の primary notes と soft-rejected **alternates** (conf 付き)
+- event間に挟まった **candidate slots** (dropped segments / orphan onsets / sub-onset rescues)
+- すべて時系列順に統合表示
 
-- デフォルトでは active segments のみ表示。`--verbose` で dropped segments と NarrowFFT detail も表示
-- 末尾に final events 一覧を出力
-- evaluation scope cropping を適用せず full audio で認識を実行
+### segment-debug mode (内部挙動の深掘り)
+
+recognizer が各セグメントで何を候補として見て何を採用・棄却したかの詳細を一覧化する:
+- 各セグメントの primary / ranked / secondary decision trail
+- `--verbose` で dropped segments と NarrowFFT sub-onset detail も表示
+
+両モードとも evaluation scope cropping を適用せず full audio で認識を実行。
 
 ## Output symbols
 | Symbol | Meaning |
@@ -98,5 +106,6 @@ cache JSON には `payload["debug"]["segmentCandidates"]` 以下に **全 segmen
 /score-alignment bwv147-sequence-163-01 --mode segments
 /score-alignment bwv147-sequence-163-01 --line R4
 /score-alignment kalimba-17-c-free-performance-01 --mode candidates
-/score-alignment kalimba-17-c-free-performance-01 --mode candidates --verbose
+/score-alignment kalimba-17-c-free-performance-01 --mode segment-debug
+/score-alignment kalimba-17-c-free-performance-01 --mode segment-debug --verbose
 ```
