@@ -1,6 +1,7 @@
 {
-  "pending": false,
-  "status": "completed",
+  "pending": true,
+  "status": "pending",
+  "reason": "E148 C6 rescue depends on float-accumulation drift in _scan_gap_for_mute_dip_with_window. After the Phase 2 batched-FFT rewrite replaced per-call _note_band_energy with integer-indexed batched lookups, the dip/recovery scans no longer visit one extra endpoint that was previously included due to t_fine += 0.005 accumulating below recovery_end. Re-acquire E148 C6 via a rescue path that does not depend on boundary drift (widened dip/recovery window with fresh regression validation, or a different physical trigger). See docs/performance/20260415-profiling-baseline.md.",
   "assertions": {
     "minEvents": 164,
     "maxEvents": 164,
