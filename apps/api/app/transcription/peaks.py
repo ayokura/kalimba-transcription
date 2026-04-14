@@ -828,8 +828,12 @@ def build_debug_candidates(
 class PrimaryPromotion:
     """Output of a single primary-promotion helper.
 
-    `primary_onset_gain` is None when the helper does not compute it
-    (e.g. upper-octave promotion reuses the caller's value).
+    `primary_onset_gain` is the onset gain measured for :attr:`primary`.
+    It is ``None`` when the helper does not compute one; callers must
+    treat a pre-existing onset gain as invalid whenever :attr:`primary`
+    has been replaced (i.e. ``promotion_debug`` is not ``None``) and
+    either propagate this field or look the gain up again against the
+    new primary's frequency.
     """
     primary: NoteHypothesis
     primary_onset_gain: float | None = None
@@ -1900,6 +1904,11 @@ def _resolve_primary(
     )
     primary = stale_upper.primary
     if stale_upper.promotion_debug is not None:
+        # primary changed — the carried-over gain refers to the previous
+        # primary and must not leak into downstream helpers.  Set to None
+        # so maybe_promote_onset_strong_sibling re-looks up via the
+        # evidence cache against the new primary's frequency.
+        primary_onset_gain = None
         primary_promotion_debug = stale_upper.promotion_debug
         promotions.append(stale_upper.promotion_debug.get("reason", "stale-upper-octave"))
     # #166: Onset-strong sibling rescue — catches the pattern where the
