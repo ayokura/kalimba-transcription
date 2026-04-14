@@ -231,15 +231,28 @@ async def transcribe_audio(
                     drop_reason=_dropped_reason,
                 ))
                 # #178 Phase 2: sub-onset rescues — mute-dip re-attack found
-                # within a rejected segment. High-confidence slots for the re-attack.
+                # within a rejected segment.  The mute-dip envelope (ringing
+                # followed by energy drop and fresh spike) is a strong
+                # physical signal of a genuine re-attack on the same pitch,
+                # so we promote to a primary-bearing RawEvent rather than a
+                # candidate_slot.  Secondary-only; no harmonic/chord rerun
+                # is attempted at the rescue time.
                 for rescue_time in _dropped_rescues:
-                    dropped_slots.append(_build_candidate_slot(
-                        start_time=rescue_time,
-                        end_time=min(rescue_time + 0.3, end_time),
-                        primary=_dropped_primary,
-                        ranked_notes=_dropped_ranked,
-                        drop_reason="sub-onset-mute-dip-reattack",
-                    ))
+                    rescue_end = min(rescue_time + 0.3, end_time)
+                    rescue_duration = rescue_end - rescue_time
+                    raw_events.append(
+                        RawEvent(
+                            start_time=rescue_time,
+                            end_time=rescue_end,
+                            notes=[_dropped_primary],
+                            is_gliss_like=rescue_duration < 0.18,
+                            primary_note_name=_dropped_primary.note_name,
+                            primary_score=0.0,
+                            from_short_segment_guard=rescue_duration < SHORT_SEGMENT_SECONDARY_GUARD_DURATION,
+                            sub_onsets=[],
+                            alternate_groupings=[],
+                        )
+                    )
             continue
 
         segment_key = (round(start_time, 4), round(end_time, 4))
