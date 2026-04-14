@@ -7,7 +7,14 @@ from __future__ import annotations
 
 import numpy as np
 
-import kalimba_dsp
+try:
+    import kalimba_dsp
+except ImportError as exc:
+    raise ImportError(
+        "kalimba_dsp Rust extension is not installed. Build it with "
+        "`uv sync --dev` (requires a Rust toolchain) or "
+        "`uv run maturin develop --release --manifest-path crates/kalimba-dsp/Cargo.toml`."
+    ) from exc
 
 from ..models import InstrumentTuning
 from .constants import HARMONIC_BAND_CENTS
