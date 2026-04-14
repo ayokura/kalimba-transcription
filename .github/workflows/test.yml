@@ -27,9 +27,16 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install 3.13
+        run: uv python install 3.12
 
-      - name: Install dependencies
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/kalimba-dsp
+
+      - name: Install dependencies (includes Rust extension build via maturin)
         run: uv sync --dev
 
       - name: Run tests

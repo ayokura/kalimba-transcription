@@ -104,13 +104,45 @@ ncalls   tottime   cumtime   function
 - 呼び出し箇所によっては複数候補を batch にまとめられる
 - 期待削減: もう 10-20%
 
-### Phase 2: global STFT + query へのアーキテクチャ変更 (最大効果)
+### Phase 2: `_scan_gap_for_mute_dip_with_window` の Rust 移植 ✅ 実装済
 
-- 期待削減: bwv147 で _raw_fft 56s + _note_band_energy overhead ~18s = **~74-140s (40-75%)**
-- 発想: audio 全体を適切な hop (e.g. 2.5ms = 256 samples @ 96kHz) で一度 STFT しておき、`_note_band_energy(t, f)` をフレーム補間 + 周波数 bin lookup に置き換える
-- **単発 FFT を tens-of-thousands 回実行する現設計の代替**
-- リスク: 中。周波数/時間解像度のトレードオフを fixture で検証する必要がある。ignoredRanges/splice との整合にも注意
-- 注意: 上記に加え、`_adaptive_n_fft` は最低周波数で決まる n_fft を要求しているので、STFT の周波数解像度が低音側で足りないと正確性が落ちる。低音用 / 高音用の 2 解像度 STFT を併用するなどの工夫が要る可能性
+Phase 0 後の top1 bottleneck は `_scan_gap_for_mute_dip_with_window` で cumulative 100.9s / 112.7s (bwv147, **89.5%**)。per-note × per-gap で pre-energy coarse scan + fine dip/recovery scan を Python ループで回す設計が、Python dispatch + 多数の小さな numpy 演算で律速されていた。
+
+当初検討していた「global STFT 事前計算 + query への書き換え」は、per-note 可変 n_fft の都合でメモリと解像度のトレードオフが厄介。代わりに **Rust で rustfft + PyO3 による置換**を選択。
+
+#### 構成
+
+- crate: [`crates/kalimba-dsp/`](/crates/kalimba-dsp/) (PyO3 0.22 + rustfft 6.2, `maturin develop --release` で build)
+- Rust 側 entry: `scan_gap_for_mute_dip_with_window(audio, sr, gap_start, gap_end, freq, window_seconds, constants...) -> Option<f64>`
+- 内部: 逐次 FFT (thread-local FftPlanner), thread-local hanning cache, **integer-indexed fine grid** (`gap_start + i * fine_step`) で float 累積 drift を排除
+- Python 側: [`per_note.py`](/apps/api/app/transcription/per_note.py) が kalimba_dsp に委譲する thin wrapper
+
+#### 実測削減
+
+| fixture | post-Phase-0 | post-Phase-2 Rust | Δ 累積 vs pre-Phase-0 |
+|---|---|---|---|
+| bwv147-sequence-163-01 | 106.9s | **42.1s** | **167 → 42 (4.0x)** |
+| free-performance-01 | 9.9s | **2.8s** | **20 → 2.8 (7.1x)** |
+| 全 pytest (388件, 並列, Python 3.12) | 154s | **57s** | **~200 → 57 (3.5x)** |
+
+#### 意味論の変更と fixture 影響
+
+原 Python 実装は `while t_fine < recovery_end; t_fine += 0.005` の float 累積により、名目 exclusive な `recovery_end` を毎回 **1 点余計に visit** していた:
+
+- `recovery_end = min(dip_window_end + 0.10, scan_end) = 5.417300000000000**04**` (float 表現誤差でわずかに上振れ)
+- `t_fine` を 20 回 `+= 0.005` 累積 → `5.4172999999999991` (わずかに下振れ)
+- `5.4172999... < 5.4173000...04` → True、意図しない 21 点目を scan
+
+Rust 実装は **integer index** で grid を生成 (`times[i] = gap_start + i * fine_step`, `recovery_span = 20` as integer)、drift を排除した clean semantic を採用。結果として bwv147 E148 C6 (元々 drift の副作用で拾えていた rescue) が検出されなくなるため、**bwv147-sequence-163-01 を completed → pending に移行**。
+
+将来の WASM / streaming / 別言語再実装でも drift 依存は再現困難であり、ここで整数 index semantic を確立するのが筋。
+
+#### 次セッション候補
+
+- E148 C6 復活を **物理的に正当化される rescue 機構** で (Phase 2 docs 内 "60ms/100ms 境界設定根拠の調査" 参照)。候補:
+  1. `_GAP_DIP_MAX_DIP_WINDOW` を 60ms → 75-80ms に広げて全 fixture 回帰評価
+  2. mute-dip 以外の pass で E148 C6 を拾う (per-tine partial / HPSS / energy gradient)
+  3. `recovery_end` semantics を close-ended (≤) に正式変更して全 fixture 回帰評価
 
 ### Phase 3: 残存 bottleneck の再測定
 
@@ -121,12 +153,13 @@ ncalls   tottime   cumtime   function
   - band energy aggregation → 単純な loop で Rust 移植が容易
   - WASM 化しやすい leaf primitive に絞れるので、本来の趣旨と合致
 
-## Rust 化の現時点の評価
+## Rust 化の現時点の評価 (2026-04-15 追記)
 
-- **まだ早い**、が **方向性自体は正しい**
-- 今日いきなり peaks.py を Rust crate に切り出すのは、ほぼ同じ速度改善を Python キャッシュで得られてしまうため非効率
-- 一方で Phase 0-1 は 1-2 日で片付き、Phase 2 は中期課題 (アーキテクチャ変更を伴うため recognizer チューニング方針への影響を見ながら)
-- Phase 2 完了後に残る bottleneck は、**現状の peaks.py 全体** ではなく、より限定された primitive になる。そこが本来の Rust 化の最適ターゲット
+当初は「まだ早い」と判定したが、Phase 0 後の profile で bottleneck が `_scan_gap_for_mute_dip_with_window` 一本に集約されたため、その **単一 primitive のみ** を Rust 化する選択が最適と判断。結果:
+
+- 全 pytest 154s → 57s (Python 3.12 移行込み、2.7x)、bwv147 単発 167s → 42s (4x)
+- WASM 移植の布石として `crates/kalimba-dsp/` インフラが立ち上がった (PyO3 + rustfft + maturin)
+- 次の Rust 化候補 (HPSS, STFT, peak_energy_near の batch 化) も同 crate 内で追加可能
 
 ## 将来の browser / WASM 化との関係
 

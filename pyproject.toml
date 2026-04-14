@@ -3,9 +3,10 @@ name = "kalimba-transcription"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.135.2",
+    "kalimba-dsp",
     "librosa>=0.11.0",
     "numpy>=2.4.3",
     "pydantic>=2.12.5",
@@ -26,3 +27,6 @@ dev = [
 name = "takumi-guard"
 url = "https://pypi.flatt.tech/simple/"
 default = true
+
+[tool.uv.sources]
+kalimba-dsp = { path = "crates/kalimba-dsp", editable = true }

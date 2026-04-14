@@ -7,7 +7,17 @@ from __future__ import annotations
 
 import numpy as np
 
+try:
+    import kalimba_dsp
+except ImportError as exc:
+    raise ImportError(
+        "kalimba_dsp Rust extension is not installed. Build it with "
+        "`uv sync --dev` (requires a Rust toolchain) or "
+        "`uv run maturin develop --release --manifest-path crates/kalimba-dsp/Cargo.toml`."
+    ) from exc
+
 from ..models import InstrumentTuning
+from .constants import HARMONIC_BAND_CENTS
 from .models import Note, Segment
 from .peaks import (
     MUTE_DIP_ENERGY_WINDOW,
@@ -16,7 +26,6 @@ from .peaks import (
     MUTE_DIP_REATTACK_MIN_POST_ENERGY,
     MUTE_DIP_REATTACK_MIN_PRE_ENERGY,
     MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO,
-    _note_band_energy,
 )
 
 # Coarse scan step (20 ms) — used to find candidate dip regions quickly.
@@ -68,60 +77,33 @@ def _scan_gap_for_mute_dip_with_window(
     frequency: float,
     window_seconds: float,
 ) -> float | None:
-    """Scan a gap with a specific energy window size."""
-    audio_duration = len(audio) / sample_rate
-    scan_end = min(gap_end, audio_duration - window_seconds)
+    """Scan a gap with a specific energy window size.
 
-    # Need room for at least dip_window + recovery_window.
-    if scan_end - gap_start < _GAP_DIP_MAX_DIP_WINDOW + _GAP_DIP_MAX_RECOVERY_WINDOW:
-        return None
-
-    t = gap_start
-    while t < scan_end - _GAP_DIP_MAX_DIP_WINDOW - _GAP_DIP_MAX_RECOVERY_WINDOW:
-        pre_energy = _note_band_energy(
-            audio, sample_rate, t, frequency,
-            window_seconds=window_seconds,
-        )
-        if pre_energy < MUTE_DIP_REATTACK_MIN_PRE_ENERGY:
-            t += _GAP_DIP_COARSE_STEP
-            continue
-
-        # Fine-scan forward for a rapid dip within the compact window.
-        min_energy = pre_energy
-        dip_window_end = min(t + _GAP_DIP_MAX_DIP_WINDOW, scan_end)
-        t_fine = t + _GAP_DIP_FINE_STEP
-        while t_fine < dip_window_end:
-            energy = _note_band_energy(
-                audio, sample_rate, t_fine, frequency,
-                window_seconds=MUTE_DIP_ENERGY_WINDOW,
-            )
-            if energy < min_energy:
-                min_energy = energy
-            t_fine += _GAP_DIP_FINE_STEP
-
-        dip_ratio = (min_energy + 1e-6) / (pre_energy + 1e-6)
-        if dip_ratio >= MUTE_DIP_REATTACK_MAX_DIP_RATIO:
-            t += _GAP_DIP_COARSE_STEP
-            continue
-
-        # Dip confirmed — scan for recovery in the next window.
-        recovery_end = min(dip_window_end + _GAP_DIP_MAX_RECOVERY_WINDOW, scan_end)
-        t_fine = dip_window_end
-        while t_fine < recovery_end:
-            energy = _note_band_energy(
-                audio, sample_rate, t_fine, frequency,
-                window_seconds=MUTE_DIP_ENERGY_WINDOW,
-            )
-            if energy >= MUTE_DIP_REATTACK_MIN_POST_ENERGY:
-                recovery_ratio = energy / (pre_energy + 1e-6)
-                if recovery_ratio >= MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO:
-                    return t_fine
-            t_fine += _GAP_DIP_FINE_STEP
-
-        # Dip found but no recovery — skip past this region.
-        t += _GAP_DIP_COARSE_STEP
-
-    return None
+    Delegated to the Rust implementation in ``kalimba_dsp``. Integer-indexed
+    fine grid matching the np.arange-based clean semantic (no float
+    accumulation drift); see docs/performance/20260415-profiling-baseline.md
+    for the rationale.
+    """
+    audio_f32 = np.ascontiguousarray(audio, dtype=np.float32)
+    result = kalimba_dsp.scan_gap_for_mute_dip_with_window(
+        audio_f32,
+        int(sample_rate),
+        float(gap_start),
+        float(gap_end),
+        float(frequency),
+        float(window_seconds),
+        float(MUTE_DIP_ENERGY_WINDOW),
+        float(_GAP_DIP_MAX_DIP_WINDOW),
+        float(_GAP_DIP_MAX_RECOVERY_WINDOW),
+        float(_GAP_DIP_COARSE_STEP),
+        float(_GAP_DIP_FINE_STEP),
+        float(MUTE_DIP_REATTACK_MIN_PRE_ENERGY),
+        float(MUTE_DIP_REATTACK_MAX_DIP_RATIO),
+        float(MUTE_DIP_REATTACK_MIN_POST_ENERGY),
+        float(MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO),
+        float(HARMONIC_BAND_CENTS),
+    )
+    return result
 
 
 def rescue_gap_mute_dips(
