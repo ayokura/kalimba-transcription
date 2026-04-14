@@ -23,3 +23,4 @@ artifacts/
 .tmp-venv/
 pytest-cache-files-*/
 apps/api/tests/.cache/
+*.egg-info/
