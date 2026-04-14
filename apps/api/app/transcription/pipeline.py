@@ -67,6 +67,9 @@ def _event_sig(ev: RawEvent) -> tuple[float, float, tuple[str, ...]]:
 
 # #178 Phase 2: base confidence per drop reason for dropped-segment slots.
 _DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
+    # High confidence: mute-dip re-attack detected at sub-onset inside rejected segment.
+    # This is a strong physical signal that a fresh attack occurred.
+    "sub-onset-mute-dip-reattack": 0.80,
     "residual-decay-no-reattack": 0.15,
     "low_register_sparse_gap_tail": 0.10,
     "primary-score-too-low": 0.05,
@@ -190,7 +193,7 @@ async def transcribe_audio(
             previous_primary = next((note for note in raw_events[-1].notes if note.note_name == raw_events[-1].primary_note_name), None)
             previous_primary_frequency = previous_primary.frequency if previous_primary is not None else None
         previous_primary_was_singleton = bool(raw_events and len(raw_events[-1].notes) == 1)
-        candidates, candidate_debug, primary, _trace, _soft_alts, _dropped_primary, _dropped_ranked, _dropped_reason = segment_peaks(
+        candidates, candidate_debug, primary, _trace, _soft_alts, _dropped_primary, _dropped_ranked, _dropped_reason, _dropped_rescues = segment_peaks(
             audio,
             sample_rate,
             start_time,
@@ -223,6 +226,16 @@ async def transcribe_audio(
                     ranked_notes=_dropped_ranked,
                     drop_reason=_dropped_reason,
                 ))
+                # #178 Phase 2: sub-onset rescues — mute-dip re-attack found
+                # within a rejected segment. High-confidence slots for the re-attack.
+                for rescue_time in _dropped_rescues:
+                    dropped_slots.append(_build_candidate_slot(
+                        start_time=rescue_time,
+                        end_time=min(rescue_time + 0.3, end_time),
+                        primary=_dropped_primary,
+                        ranked_notes=_dropped_ranked,
+                        drop_reason="sub-onset-mute-dip-reattack",
+                    ))
             continue
 
         segment_key = (round(start_time, 4), round(end_time, 4))

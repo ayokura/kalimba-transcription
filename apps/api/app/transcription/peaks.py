@@ -1270,6 +1270,9 @@ class SegmentPeaksResult(NamedTuple):
     dropped_primary: NoteCandidate | None = None
     dropped_candidates: list[NoteCandidate] = []
     dropped_reason: str = ""
+    # #178 Phase 2 (sub-onset rescue): times within a rejected segment where
+    # mute-dip re-attack was detected — high-confidence slots for those notes.
+    dropped_sub_onset_rescues: list[float] = []
 
 
 @dataclass(slots=True)
@@ -3185,11 +3188,22 @@ def segment_peaks(
             }
         # #178 Phase 2: carry rejected primary + top-ranked for candidate slot.
         dropped_ranked = [h.candidate for h in spectral.ranked[:4] if h.candidate.note_name != primary.candidate.note_name]
+        # #178 Phase 2 sub-onset rescue: even when the segment is rejected as
+        # residual-decay, later sub-onsets may show mute-dip re-attack. These
+        # become high-confidence candidate slots for the re-attack time.
+        sub_onset_rescues: list[float] = []
+        for sub_onset in ctx.sub_onsets:
+            # Skip sub-onsets too close to the segment start (already checked there).
+            if sub_onset - ctx.start_time < 0.05:
+                continue
+            if _has_sub_onset_mute_dip_reattack(ctx.audio, ctx.sample_rate, sub_onset, primary.candidate.frequency):
+                sub_onset_rescues.append(sub_onset)
         return SegmentPeaksResult(
             [], rejection_debug, None, trace,
             dropped_primary=primary.candidate,
             dropped_candidates=dropped_ranked[:3],
             dropped_reason=primary_result.decision.rejection_reason or "rejected",
+            dropped_sub_onset_rescues=sub_onset_rescues,
         )
 
     # Layer 3: Candidate selection
@@ -3364,6 +3378,68 @@ def _check_mute_dip_with_window(
         return False
     post_energy = _note_band_energy(audio, sample_rate, post_time, frequency,
                                     window_seconds=window_seconds)
+    if post_energy < MUTE_DIP_REATTACK_MIN_POST_ENERGY:
+        return False
+
+    dip_ratio = (min_energy + 1e-6) / (pre_energy + 1e-6)
+    if dip_ratio >= MUTE_DIP_REATTACK_MAX_DIP_RATIO:
+        return False
+
+    recovery_ratio = post_energy / (pre_energy + 1e-6)
+    return recovery_ratio >= MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO
+
+
+def _has_sub_onset_mute_dip_reattack(
+    audio: np.ndarray,
+    sample_rate: int,
+    sub_onset_time: float,
+    frequency: float,
+    pre_lookback_seconds: float = 0.15,
+) -> bool:
+    """Check for mute-dip re-attack at a sub-onset WITHIN a segment (#178 Phase 2).
+
+    Unlike `_has_mute_dip_reattack` which uses pre_time = onset - 40ms
+    (appropriate for segment starts where the previous note ended just
+    before), this function looks further back to find the ringing period
+    of the previous attack within the same segment.
+
+    Pattern: max energy in [sub_onset - lookback, sub_onset - 40ms] must be high,
+    min energy in [sub_onset - 80ms, sub_onset + 20ms] must be low,
+    post-attack energy must recover.
+    """
+    window = MUTE_DIP_ENERGY_WINDOW
+    # Find max energy in the lookback region (ringing period)
+    pre_scan_start = max(sub_onset_time - pre_lookback_seconds, 0.0)
+    pre_scan_end = sub_onset_time - 0.04
+    if pre_scan_end <= pre_scan_start:
+        return False
+    pre_energy = 0.0
+    t = pre_scan_start
+    while t < pre_scan_end:
+        e = _note_band_energy(audio, sample_rate, t, frequency, window_seconds=window)
+        if e > pre_energy:
+            pre_energy = e
+        t += 0.01
+    if pre_energy < MUTE_DIP_REATTACK_MIN_PRE_ENERGY:
+        return False
+
+    # Find min energy in the dip region
+    min_energy = float("inf")
+    scan_start = max(sub_onset_time - 0.08, 0.0)
+    scan_end = min(sub_onset_time + 0.02, len(audio) / sample_rate - window)
+    t = scan_start
+    while t < scan_end:
+        e = _note_band_energy(audio, sample_rate, t, frequency, window_seconds=window)
+        if e < min_energy:
+            min_energy = e
+        t += 0.005
+
+    # Post-attack energy (after re-attack settles)
+    attack_time = _find_note_attack_time(audio, sample_rate, sub_onset_time, frequency)
+    post_time = attack_time + 0.02
+    if post_time > len(audio) / sample_rate - window:
+        return False
+    post_energy = _note_band_energy(audio, sample_rate, post_time, frequency, window_seconds=window)
     if post_energy < MUTE_DIP_REATTACK_MIN_POST_ENERGY:
         return False
 
