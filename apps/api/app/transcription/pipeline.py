@@ -50,7 +50,7 @@ from .models import NoteCandidate, RawCandidateSlot, RawEvent
 from .noise_floor import measure_noise_floor
 from .notation import build_notation_views, format_doremi, format_number, quantize_beat
 from .patterns import apply_repeated_pattern_passes
-from .peaks import analyze_spectrum_at_onset, segment_peaks
+from .peaks import analyze_spectrum_at_onset, has_kalimba_sustain_profile, segment_peaks
 from .per_note import rescue_gap_mute_dips
 from .segments import (
     build_segment_debug_contexts,
@@ -79,6 +79,17 @@ _DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
     "primary-score-too-low": 0.05,
     "onset-gate-no-evidence": 0.05,
 }
+
+# Thresholds for promoting an orphan-onset candidate to a primary RawEvent
+# instead of a candidate_slot.  Derived from cross-fixture orphan
+# distribution: recording-edge transients and non-pluck noise typically
+# show very high og but very low score (og >> 500, score < 10); genuine
+# missed plucks show both high og and high score (Free Perf 10.94s D5:
+# og=3268, score=237).  The sustain profile check is the final guard —
+# non-pluck noise decays to noise floor within tens of ms even when it
+# happens to land on a tuning frequency.
+_ORPHAN_PROMOTE_MIN_OG = 500.0
+_ORPHAN_PROMOTE_MIN_SCORE = 50.0
 
 
 def _build_candidate_slot(
@@ -371,16 +382,51 @@ async def transcribe_audio(
             # Require meaningful attack evidence: the top candidate's onset_gain
             # should be clearly above the noise floor. Spurious trailing-silence
             # detections and pure noise have og < ~10.
-            top_og = orphan_candidates[0].onset_gain or 0
+            top = orphan_candidates[0]
+            top_og = top.onset_gain or 0
             if top_og < 10.0:
                 continue
-            dropped_slots.append(_build_candidate_slot(
-                start_time=onset_time,
-                end_time=onset_time + 0.2,
-                primary=orphan_candidates[0],
-                ranked_notes=orphan_candidates[1:],
-                drop_reason="orphan-onset-no-segment",
-            ))
+            # Sustain profile filter: drop orphans without kalimba-like
+            # ringing entirely (no slot, no alt).  Recording-edge clicks
+            # and non-pluck noise can hit a pitch bin on onset but decay
+            # to noise floor in ~40 ms; a genuine pluck sustains for
+            # hundreds of ms.  See Free Perf 10.94s D5 (sustain/og ~2%)
+            # vs triple-glissando 0.03s C5 (sustain/og ~0.2%).
+            if not has_kalimba_sustain_profile(audio, sample_rate, onset_time, top.frequency):
+                continue
+            # Promote to RawEvent when onset + score are both strong;
+            # otherwise surface as a candidate_slot for UI review.
+            # Thresholds calibrated against cross-fixture orphan
+            # distribution (see #178 Phase 2.5 follow-up investigation).
+            top_score = top.score or 0
+            promote = (
+                top_og >= _ORPHAN_PROMOTE_MIN_OG
+                and top_score >= _ORPHAN_PROMOTE_MIN_SCORE
+            )
+            if promote:
+                rescue_end = onset_time + 0.2
+                rescue_duration = rescue_end - onset_time
+                raw_events.append(
+                    RawEvent(
+                        start_time=onset_time,
+                        end_time=rescue_end,
+                        notes=[top],
+                        is_gliss_like=rescue_duration < 0.18,
+                        primary_note_name=top.note_name,
+                        primary_score=top_score,
+                        from_short_segment_guard=rescue_duration < SHORT_SEGMENT_SECONDARY_GUARD_DURATION,
+                        sub_onsets=[],
+                        alternate_groupings=[],
+                    )
+                )
+            else:
+                dropped_slots.append(_build_candidate_slot(
+                    start_time=onset_time,
+                    end_time=onset_time + 0.2,
+                    primary=top,
+                    ranked_notes=orphan_candidates[1:],
+                    drop_reason="orphan-onset-no-segment",
+                ))
 
     processed_events = raw_events
     _pp("suppress_low_confidence_dyad_transients", suppress_low_confidence_dyad_transients)

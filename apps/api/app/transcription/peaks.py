@@ -3503,6 +3503,39 @@ def segment_peaks(
         selection.soft_alternates,
     )
 
+def has_kalimba_sustain_profile(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    frequency: float,
+    *,
+    min_sustain_ratio: float = 0.01,
+    sustain_delay: float = 0.05,
+    sustain_window: float = 0.20,
+) -> bool:
+    """Return True if *onset_time* has a kalimba-like sustain envelope on
+    *frequency* — i.e., ringing energy measured in a [onset + delay,
+    onset + delay + window] region is at least *min_sustain_ratio* of
+    the attack-window peak energy.
+
+    Used by orphan-onset promote logic: a spurious broadband transient
+    (recording edge click, non-kalimba noise) may hit the correct pitch
+    bin at onset but decays to noise floor in tens of ms; a genuine
+    pluck sustains for hundreds of ms.  The ratio is measured
+    peak-to-peak (both in short FFT windows) so it is scale/gain
+    invariant; absolute sustain energy is sensitive to mic distance.
+    """
+    attack_peak = _note_band_energy(audio, sample_rate, onset_time, frequency)
+    if attack_peak <= 0.0:
+        return False
+    sustain_center = onset_time + sustain_delay + sustain_window / 2.0
+    sustain_peak = _note_band_energy(
+        audio, sample_rate, sustain_center, frequency,
+        window_seconds=sustain_window,
+    )
+    return (sustain_peak / attack_peak) >= min_sustain_ratio
+
+
 def _note_band_energy(
     audio: np.ndarray,
     sample_rate: int,
