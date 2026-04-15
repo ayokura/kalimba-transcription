@@ -163,7 +163,10 @@ async def transcribe_audio(
     segments = detection.segments
     tempo = detection.tempo
     segment_debug = detection.debug
-    segments = rescue_gap_mute_dips(segments, audio, sample_rate, tuning)
+    rescue_log: list[dict] | None = [] if debug else None
+    segments = rescue_gap_mute_dips(
+        segments, audio, sample_rate, tuning, rescue_log=rescue_log,
+    )
 
     # #154 / #153 Phase B: per-recording per-band noise floor calibration.
     # Sample silent gaps between segments with the same narrow-FFT window
@@ -651,6 +654,7 @@ async def transcribe_audio(
     if debug:
         result_debug = {
             **segment_debug,
+            "gapRescueEvents": rescue_log or [],
             "segmentCandidates": segment_candidates_debug,
             "mergedEvents": [
                 {

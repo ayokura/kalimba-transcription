@@ -488,6 +488,18 @@ def collapse_same_start_primary_singletons(raw_events: list[RawEvent]) -> list[R
             index += 1
             continue
 
+        # Short-segment-guard singletons are tentative markers from
+        # narrow-window rescues (gap-mute-dip / gap-rise): their secondaries
+        # were explicitly stripped because the ~5 ms FFT was unreliable, so
+        # they must not be treated as authoritative enough to drop real
+        # secondaries from an adjacent chord. `merge_short_segment_guard_via_narrow_fft`
+        # (below in pipeline.py) is the intended path for folding these
+        # markers back into the chord after narrow-FFT cross-validation.
+        if current.from_short_segment_guard or following.from_short_segment_guard:
+            cleaned.append(current)
+            index += 1
+            continue
+
         current_primary = next((note for note in current.notes if note.note_name == current.primary_note_name), None)
         following_primary = next((note for note in following.notes if note.note_name == following.primary_note_name), None)
         if current_primary is None or following_primary is None:

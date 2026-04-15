@@ -290,8 +290,82 @@ fn scan_gap_for_mute_dip_with_window(
     None
 }
 
+/// Detect a sharp energy rise near the end of a gap for `frequency`.
+///
+/// Two-point check: pre at `gap_end - pre_offset`, post at `gap_end - post_offset`.
+/// Returns `post_time` (as a candidate segment start) iff:
+///   post_energy >= min_post_energy  AND  post_energy / (pre_energy + eps) >= rise_ratio
+///
+/// Targets the decay-into-restrike pattern that `scan_gap_for_mute_dip_with_window`
+/// cannot catch (pre_energy below its MIN_PRE_ENERGY floor but post_energy high).
+/// Both offsets are measured backward from `gap_end` so `post_time` is kept inside
+/// the gap — the caller uses it as a new Segment's start_time which must be
+/// < gap_end for seg_end clamping to stay valid.
+#[pyfunction]
+#[pyo3(signature = (
+    audio, sample_rate, gap_start, gap_end, frequency,
+    window_seconds, pre_offset, post_offset,
+    rise_ratio, min_post_energy, min_pre_energy, harmonic_band_cents,
+))]
+fn detect_gap_rise_attack(
+    audio: PyReadonlyArray1<f32>,
+    sample_rate: i64,
+    gap_start: f64,
+    gap_end: f64,
+    frequency: f64,
+    window_seconds: f64,
+    pre_offset: f64,
+    post_offset: f64,
+    rise_ratio: f64,
+    min_post_energy: f64,
+    min_pre_energy: f64,
+    harmonic_band_cents: f64,
+) -> Option<f64> {
+    if !(frequency > 0.0 && sample_rate > 0 && window_seconds > 0.0) {
+        return None;
+    }
+    if !(pre_offset > post_offset && post_offset >= 0.0) {
+        return None;
+    }
+
+    let audio_array = audio.as_array();
+    let audio_slice = audio_array.as_slice()?;
+
+    let pre_time = gap_end - pre_offset;
+    let post_time = gap_end - post_offset;
+    if pre_time < gap_start {
+        return None;
+    }
+    if post_time <= pre_time {
+        return None;
+    }
+
+    let mut fft_buffer: Vec<Complex32> = Vec::new();
+    let pre_energy = note_band_energy(
+        audio_slice, sample_rate, pre_time, frequency,
+        window_seconds, &mut fft_buffer, harmonic_band_cents,
+    ) as f64;
+    if pre_energy < min_pre_energy {
+        return None;
+    }
+    let post_energy = note_band_energy(
+        audio_slice, sample_rate, post_time, frequency,
+        window_seconds, &mut fft_buffer, harmonic_band_cents,
+    ) as f64;
+
+    if post_energy < min_post_energy {
+        return None;
+    }
+    let ratio = post_energy / (pre_energy + 1e-6);
+    if ratio < rise_ratio {
+        return None;
+    }
+    Some(post_time)
+}
+
 #[pymodule]
 fn kalimba_dsp(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(scan_gap_for_mute_dip_with_window, m)?)?;
+    m.add_function(wrap_pyfunction!(detect_gap_rise_attack, m)?)?;
     Ok(())
 }

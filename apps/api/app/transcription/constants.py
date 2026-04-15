@@ -45,6 +45,13 @@ ATTACK_ANALYSIS_RATIO = 0.35
 ONSET_ENERGY_WINDOW_SECONDS = 0.08
 SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY = 2000.0
 
+# FFT analysis window used when a gap-rise rescue segment is shorter than the
+# 512-sample FFT floor (per_note.py creates ~5 ms wrappers around the rise
+# interval). Extends forward from the segment start to cover the attack body
+# of the confirmed note. 80 ms is enough to resolve individual tines via the
+# adaptive n_fft while keeping the window local to the attack.
+GAP_RISE_ANALYSIS_SECONDS = 0.08
+
 # Sub-onset based per-note attack window anchoring (#152).
 # When a segment contains multiple sub-onsets, per-note attack measurement
 # (onset_energy_gain) anchors its window at the sub-onset showing the

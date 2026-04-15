@@ -1714,6 +1714,14 @@ def _acquire_spectrum(
     """
     start = int(ctx.start_time * ctx.sample_rate)
     end = int(ctx.end_time * ctx.sample_rate)
+    # gap-rise rescue segments intentionally wrap just the ~5 ms rise interval
+    # between pre-attack baseline and attack landing (see per_note.py
+    # _detect_gap_rise_attack). That's below the 512-sample FFT floor, so
+    # widen forward to GAP_RISE_ANALYSIS_SECONDS to capture the attack body
+    # itself — the confirmed note will dominate that window even if the
+    # 5-ms slice didn't yet.
+    if "gap-rise" in ctx.segment_sources and end - start < 512:
+        end = min(start + int(ctx.sample_rate * GAP_RISE_ANALYSIS_SECONDS), len(ctx.audio))
     segment = ctx.audio[start:end]
     if len(segment) < 512:
         return None
