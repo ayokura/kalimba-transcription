@@ -243,7 +243,21 @@ def rescue_gap_mute_dips(
                         continue  # sympathetic / sidelobe leakage, target not dominant
                     if decay_ratio > GAP_RISE_DOMINANCE_DECAY_RATIO:
                         continue  # sustained dominance → broadband already detected it
-                    if best_recovery is None or recovery < best_recovery:
+                    # Order by (recovery ↑, peak_ratio ↓). `detect_gap_rise_attack`
+                    # returns the same recovery time for every passing candidate
+                    # (gap_end - GAP_RISE_POST_OFFSET), so without the peak_ratio
+                    # tie-breaker this loop degenerates into "first note in tuning
+                    # order that passes" — the more dominant note is the one we
+                    # actually want when multiple pass.
+                    better = (
+                        best_recovery is None
+                        or recovery < best_recovery
+                        or (
+                            recovery == best_recovery
+                            and (best_peak_ratio is None or peak_ratio > best_peak_ratio)
+                        )
+                    )
+                    if better:
                         best_recovery = recovery
                         best_note = note
                         best_peak_ratio = peak_ratio

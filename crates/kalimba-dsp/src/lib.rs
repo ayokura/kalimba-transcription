@@ -293,14 +293,19 @@ fn scan_gap_for_mute_dip_with_window(
 /// Detect a sharp energy rise near the end of a gap for `frequency`.
 ///
 /// Two-point check: pre at `gap_end - pre_offset`, post at `gap_end - post_offset`.
-/// Returns `post_time` (as a candidate segment start) iff:
-///   post_energy >= min_post_energy  AND  post_energy / (pre_energy + eps) >= rise_ratio
+/// Returns `post_time` (as a candidate segment start) iff all three hold:
+///   pre_energy  >= min_pre_energy
+///   post_energy >= min_post_energy
+///   post_energy / (pre_energy + eps) >= rise_ratio
 ///
 /// Targets the decay-into-restrike pattern that `scan_gap_for_mute_dip_with_window`
-/// cannot catch (pre_energy below its MIN_PRE_ENERGY floor but post_energy high).
-/// Both offsets are measured backward from `gap_end` so `post_time` is kept inside
-/// the gap — the caller uses it as a new Segment's start_time which must be
-/// < gap_end for seg_end clamping to stay valid.
+/// cannot catch (pre_energy below mute-dip's MIN_PRE_ENERGY floor, but still
+/// meaningfully above the noise floor — the `min_pre_energy` gate here is set
+/// well below mute-dip's to keep the rise pass open for re-strikes that have
+/// decayed further, while still rejecting fresh attacks that start from pure
+/// noise). Both offsets are measured backward from `gap_end` so `post_time`
+/// is kept inside the gap — the caller uses it as a new Segment's start_time
+/// which must be < gap_end for seg_end clamping to stay valid.
 #[pyfunction]
 #[pyo3(signature = (
     audio, sample_rate, gap_start, gap_end, frequency,
