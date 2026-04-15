@@ -493,8 +493,9 @@ def collapse_same_start_primary_singletons(raw_events: list[RawEvent]) -> list[R
         # were explicitly stripped because the ~5 ms FFT was unreliable, so
         # they must not be treated as authoritative enough to drop real
         # secondaries from an adjacent chord. `merge_short_segment_guard_via_narrow_fft`
-        # (below in pipeline.py) is the intended path for folding these
-        # markers back into the chord after narrow-FFT cross-validation.
+        # (defined in this module, invoked from the post-processing sequence
+        # in pipeline.py) is the intended path for folding these markers
+        # back into the chord after narrow-FFT cross-validation.
         if current.from_short_segment_guard or following.from_short_segment_guard:
             cleaned.append(current)
             index += 1

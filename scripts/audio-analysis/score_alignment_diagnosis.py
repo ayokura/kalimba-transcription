@@ -119,7 +119,14 @@ def _kalimba_dsp_fingerprint() -> str:
     so_path = Path(so_path_str)
     if not so_path.is_file():
         return "absent"
-    return hashlib.sha256(so_path.read_bytes()).hexdigest()[:16]
+    try:
+        so_bytes = so_path.read_bytes()
+    except OSError as exc:
+        # Permission issue / transient IO error reading the .so. Return a
+        # stable sentinel so the cache key stays computable (we'd rather
+        # cache-miss once than crash the whole diagnosis script).
+        return f"unreadable:{type(exc).__name__}"
+    return hashlib.sha256(so_bytes).hexdigest()[:16]
 
 
 def _cache_key(audio_bytes: bytes, request_data: dict[str, str]) -> str:

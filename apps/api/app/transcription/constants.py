@@ -49,8 +49,45 @@ SPECTRAL_FLUX_HIGH_BAND_MIN_FREQUENCY = 2000.0
 # 512-sample FFT floor (per_note.py creates ~5 ms wrappers around the rise
 # interval). Extends forward from the segment start to cover the attack body
 # of the confirmed note. 80 ms is enough to resolve individual tines via the
-# adaptive n_fft while keeping the window local to the attack.
+# adaptive n_fft while keeping the window local to the attack. See #162.
 GAP_RISE_ANALYSIS_SECONDS = 0.08
+
+# Gap-rise rescue thresholds (per_note.py `_detect_gap_rise_attack` + the
+# dominance gate that follows it). Catches re-strikes the mute-dip scan
+# can't see because the target note has decayed below
+# MUTE_DIP_REATTACK_MIN_PRE_ENERGY before the next attack. See #162.
+#
+# Two-point rise detection: pre at `gap_end - GAP_RISE_PRE_OFFSET`, post at
+# `gap_end - GAP_RISE_POST_OFFSET`. Require post >= GAP_RISE_MIN_POST_ENERGY,
+# pre >= GAP_RISE_MIN_PRE_ENERGY (must be ringing, not noise floor), and
+# post/pre >= GAP_RISE_RATIO.
+# Calibration anchor: bwv147-sequence-163-01 E148 C6 @ 260.60s,
+# _note_band_energy(C6) = 0.82 at 260.56 (decay tail from E146, 2.2s earlier)
+# vs 26 at 260.60 (32x rise in 40ms). Threshold 10x excludes sympathetic
+# coupling from a neighbor strike (typically <3x on the quiet tine).
+GAP_RISE_PRE_OFFSET = 0.040
+GAP_RISE_POST_OFFSET = 0.005
+GAP_RISE_RATIO = 10.0
+GAP_RISE_MIN_POST_ENERGY = 10.0
+GAP_RISE_MIN_PRE_ENERGY = 0.5
+
+# Two-snapshot dominance gate (per_note.py `rescue_gap_mute_dips` Pass 1b).
+# Runs after rise detection against energies for every tuning note at two
+# time points: +GAP_RISE_DOMINANCE_PEAK_OFFSET and
+# +GAP_RISE_DOMINANCE_DECAY_OFFSET after gap_end.
+#
+#   peak_ratio = target_energy / max(other tines)   must be >= GAP_RISE_DOMINANCE_PEAK_RATIO
+#   decay_ratio = target_energy / max(other tines)  must be <= GAP_RISE_DOMINANCE_DECAY_RATIO
+#
+# Calibrated against:
+#   E148 C6 (miss, target): +15=1.80 +50=0.23  ← included
+#   E21 B5 (broadband got it):  +15=1.64 +50=1.98  ← excluded (sustained)
+#   E100 E5 (broadband got it): +15=2.39 +50=2.38  ← excluded (sustained)
+#   E40/E137 B4 (sympathetic):  +15=0.75 / 0.54    ← excluded (not dominant)
+GAP_RISE_DOMINANCE_PEAK_OFFSET = 0.015
+GAP_RISE_DOMINANCE_DECAY_OFFSET = 0.050
+GAP_RISE_DOMINANCE_PEAK_RATIO = 1.0
+GAP_RISE_DOMINANCE_DECAY_RATIO = 0.8
 
 # Sub-onset based per-note attack window anchoring (#152).
 # When a segment contains multiple sub-onsets, per-note attack measurement
