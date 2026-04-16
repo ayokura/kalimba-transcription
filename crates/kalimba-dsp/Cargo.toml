@@ -8,6 +8,6 @@ name = "kalimba_dsp"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.22", features = ["extension-module"] }
-numpy = "0.22"
+pyo3 = { version = "0.28", features = ["extension-module"] }
+numpy = "0.28"
 rustfft = "6.2"
