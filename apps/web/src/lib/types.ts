@@ -44,7 +44,7 @@ export type TranscriptionResult = {
   debug?: Record<string, unknown> | null;
 };
 
-export type NotationMode = "vertical" | "numbered" | "western";
+export type NotationMode = "vertical" | "numbered" | "western" | "score";
 
 export type AcquisitionMode = "live_mic" | "uploaded_file";
 

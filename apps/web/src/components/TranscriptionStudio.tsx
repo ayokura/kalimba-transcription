@@ -1185,6 +1185,20 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const debugSide = (
     <div className="stack gap-xl debug-side-stack">
       <RecorderPanel disabled={isAnalyzing || isSavingCapture} hasRecording={Boolean(recording)} onRecordingReady={handleRecordingReady} />
+      <div className="file-upload-row">
+        <label className="file-upload-label">
+          WAVファイルをアップロード
+          <input
+            type="file"
+            accept="audio/wav,audio/wave,.wav"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleRecordingReady(file);
+            }}
+            disabled={isAnalyzing || isSavingCapture}
+          />
+        </label>
+      </div>
       <TuningPanel
         tunings={tunings}
         selectedId={selectedTuningId}
@@ -1221,6 +1235,20 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const userPrimary = (
     <div className="stack gap-xl">
       <RecorderPanel disabled={isAnalyzing || isSavingCapture} hasRecording={Boolean(recording)} onRecordingReady={handleRecordingReady} />
+      <div className="file-upload-row">
+        <label className="file-upload-label">
+          WAVファイルをアップロード
+          <input
+            type="file"
+            accept="audio/wav,audio/wave,.wav"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleRecordingReady(file);
+            }}
+            disabled={isAnalyzing || isSavingCapture}
+          />
+        </label>
+      </div>
       <TuningPanel
         tunings={tunings}
         selectedId={selectedTuningId}

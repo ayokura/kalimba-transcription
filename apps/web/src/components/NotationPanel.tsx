@@ -3,6 +3,7 @@
 import { CaptureAssessmentDetails } from "@/lib/api";
 import { buildGestureLabel } from "@/lib/scoreEventPresentation";
 import { NotationMode, TranscriptionResult } from "@/lib/types";
+import { DoReMiScore } from "@/components/DoReMiScore";
 
 type NotationPanelProps = {
   result: TranscriptionResult | null;
@@ -52,6 +53,9 @@ export function NotationPanel({
           <button className={mode === "western" ? "active" : ""} onClick={() => onModeChange("western")}>
             通常表記
           </button>
+          <button className={mode === "score" ? "active" : ""} onClick={() => onModeChange("score")}>
+            ドレミ譜面
+          </button>
         </div>
       </div>
 
@@ -91,7 +95,13 @@ export function NotationPanel({
               ))}
             </div>
           ) : null}
-          {mode === "vertical" ? (
+          {mode === "score" ? (
+            <DoReMiScore
+              events={result.events}
+              activeEventId={activeEventId}
+              onActiveEventIdChange={onActiveEventIdChange}
+            />
+          ) : mode === "vertical" ? (
             <div className="notation-grid">
               {result.events.map((event, index) => {
                 const reviewEvent = review?.events[index];

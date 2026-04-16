@@ -990,3 +990,103 @@ button:disabled {
     display: grid;
   }
 }
+
+/* --- File Upload --- */
+
+.file-upload-row {
+  padding: 8px 0;
+}
+
+.file-upload-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.file-upload-label input[type="file"] {
+  font-size: 0.8rem;
+}
+
+/* --- DoReMi Score --- */
+
+.doremi-score-container {
+  overflow-x: auto;
+  padding: 8px 0;
+}
+
+.doremi-score-container svg {
+  display: block;
+}
+
+.score-debug-overlay {
+  display: none;
+}
+
+.doremi-score-container.show-debug .score-debug-overlay {
+  display: unset;
+}
+
+.score-debug-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 4px 0;
+}
+
+/* --- Print --- */
+
+@media print {
+  html {
+    background: white !important;
+  }
+  body {
+    color: black;
+  }
+  .shell {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+  .hero,
+  .panel-header,
+  .tabs,
+  .summary-strip,
+  .warning-box,
+  .review-box,
+  .event-meta-row,
+  .debug-side-stack,
+  .error-banner,
+  .action-link-row,
+  button:not(.doremi-score-container *),
+  audio,
+  .workspace-grid > *:not(:last-child) {
+    display: none !important;
+  }
+  .workspace-grid {
+    display: block;
+  }
+  .panel {
+    border: none;
+    background: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    padding: 0;
+  }
+  .doremi-score-container {
+    width: 100%;
+    overflow: visible;
+  }
+  .doremi-score-container svg {
+    width: 100%;
+    height: auto;
+  }
+  .notation-grid,
+  .line-notation {
+    display: none !important;
+  }
+}
