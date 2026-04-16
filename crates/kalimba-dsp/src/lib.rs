@@ -329,7 +329,11 @@ fn detect_gap_rise_attack(
     if !(frequency > 0.0 && sample_rate > 0 && window_seconds > 0.0) {
         return None;
     }
-    if !(pre_offset > post_offset && post_offset >= 0.0) {
+    // Require strict `post_offset > 0` so `post_time = gap_end - post_offset`
+    // stays inside the gap. Allowing post_offset == 0 would return
+    // post_time == gap_end, which the Python caller clamps to a zero-length
+    // segment via `seg_end = min(recovery + default, gap_end)`.
+    if !(pre_offset > post_offset && post_offset > 0.0) {
         return None;
     }
 
