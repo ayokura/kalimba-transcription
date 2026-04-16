@@ -45,6 +45,8 @@ Broadband onset 検出を**置き換えず**、per-note の物理的シグナル
 
 ### Pass 1: gap mute-dip rescue
 
+> **(2026-04-16 更新)** PR #186 で **gap-rise rescue** が Pass 1 の companion として実装された。Rust `detect_gap_rise_attack` が gap 内の energy rise (ratio>=10x) を検出し、Python 側の two-snapshot dominance check (+15ms で dominant, +50ms で非 dominant) で「一瞬 dominant → 和音マスク」パターンのみを rescue する。mute-dip が same-note re-attack を対象とするのに対し、gap-rise は前の note が鳴っていない新規 attack (例: bwv147 E148 C6) を補完する。これは #141 の full onset gate (本設計 §2) ではなく、gap 内 rescue の拡張である。kalimba-dsp crate は現在 `scan_gap_for_mute_dip_with_window` + `detect_gap_rise_attack` の 2 関数を提供する。
+
 **対象問題**: broadband onset が完全に見逃す same-note re-attack（gap 内に segment がない）
 
 **判別基準**: mute-dip（物理的保証あり）

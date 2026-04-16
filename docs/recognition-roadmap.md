@@ -1,10 +1,10 @@
 # Recognition Roadmap
 
-## Current State (2026-04-09)
+## Current State (2026-04-16)
 
 ### Fixture カバレッジ
 
-44 fixtures total (17-key BWV147 sequence-163 promoted to completed in #153 Phase B):
+44 fixtures total:
 - **31 completed** — strict regression target
 - **8 pending** — recognizer 改善待ち
 - **2 reference_only** — 参照用（regression 対象外）
@@ -22,7 +22,7 @@
 - BWV147 scoped phrases（6 sub-fixtures: late-upper-tail, lower-context-roll, lower-mixed-roll, upper-mixed-cluster, restart-prefix, restart-tail 等）
 
 ### BWV147 practical coverage
-- **17-key 163-event sequence**: **completed** (163/163 100%, promoted in #153 Phase B `400852a`, ordered note set list pinned)
+- **17-key 164-event sequence**: **completed** (164/164 100%, gap-rise rescue (#186) で E148 C6 復活 → 163→164 events に拡張、`6222b90` で completed 復帰)
 - **34-key 163-event sequence**: pending (162/163 99% as of #153 Phase B `36cb3de`, 残り 1 件は R1 E83 G4 → D5+G4 carryover で #153 scope 外)
 - 6 scoped BWV sub-fixtures: 4 completed, 2 pending
 
@@ -39,10 +39,10 @@
 - **peaks redesign / chord selector** ([#111](https://github.com/ayokura/kalimba-transcription/issues/111)): `_evidence_rescue_gate` の複雑化、sequential accept loop の構造的制約。Phase A/B 完了後の再評価マイルストーン待ち
 - **`arpeggio` modeling** ([#6](https://github.com/ayokura/kalimba-transcription/issues/6)): `slide_chord` との分離。Phase 1 設計は [arpeggio-design.md](arpeggio-design.md) に記載
 
-### 解決済 (#153 Phase A + B / #154 で完了)
-- **17-key BWV147 sequence-163**: 162/163 → **163/163 (100%)** で promoted
+### 解決済 (#153 Phase A + B / #154 / #186 で完了)
+- **17-key BWV147 sequence-163**: 162/163 → 163/163 (#153) → **164/164** (#186 gap-rise rescue で E148 C6 復活、completed 復帰 `6222b90`)
 - **17-key R1 E97 G4** (early-window primary、broadband onset 168.0827s が gap 内): Phase B `recover_pre_segment_attack_via_narrow_fft` で解決
-- **17-key R5 E148 octave-coincident chord** (C6 vs C5 2倍音): Phase A.2 で解決
+- **17-key R5 E148 C6** (octave-coincident chord, C6 vs C5 2倍音): Phase A.2 で一度解決 → Rust 整数化 (#185) で drift 依存が判明し pending に後退 → **#186 gap-rise rescue で物理的に正当な機構で復活** (Rust `detect_gap_rise_attack` + Python two-snapshot dominance check)
 - **34-key R1 E97 / R4 E133 D5+F5 (gliss splitting + masked re-attack)**: Phase A.3 + A.4 で解決
 - **34-key R2 E100 C4** (early-window primary): Phase B で解決
 - **34-key R3 E121 / E127 prefix splitting**: Phase A.3 で解決

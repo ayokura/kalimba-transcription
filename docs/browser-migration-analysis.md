@@ -10,7 +10,7 @@ MediaRecorder → WebM → WAV encode → normalize → detect_segments → segm
                                      │              │                  │                │
                                      │              │                  │                └─ 18+ pure Python functions
                                      │              │                  └─ numpy FFT + rank_tuning_candidates
-                                     │              └─ librosa RMS / onset / beat_track
+                                     │              └─ librosa RMS / onset_strength / HPSS + pure-numpy onset_detect / tempo
                                      └─ numpy array ops
 ```
 
@@ -39,17 +39,17 @@ Requires: STFT → mel filterbank → power-to-dB → frame-to-frame spectral fl
 
 **Mitigation**: Meyda.js supports mel spectrogram and spectral flux. However, exact numerical compatibility with librosa is not guaranteed — segment boundaries may shift slightly.
 
-#### C. Onset detection — `librosa.onset.onset_detect`
+#### C. Onset detection — ~~`librosa.onset.onset_detect`~~ (2026-04-16 更新: pure-numpy 化済み)
 
-Peak detection itself is straightforward (local maxima + adaptive threshold), but librosa's `backtrack` option walks backward to energy minima — a custom algorithm that must be ported precisely.
+~~Peak detection itself is straightforward (local maxima + adaptive threshold), but librosa's `backtrack` option walks backward to energy minima — a custom algorithm that must be ported precisely.~~
 
-**Mitigation**: Port the algorithm from librosa source. It is pure array logic, but compatibility testing against current fixtures is essential.
+**(2026-04-16 更新)** PR #187 で `librosa.onset.onset_detect` を pure-numpy の `_onset_detect_numpy` + `_peak_pick_numpy` に置換済み。`_peak_pick_numpy` は librosa の `__peak_pick` gufunc kernel の 1:1 port (ISC License)。backtrack は `librosa.onset.onset_backtrack` を引き続き使用するが、こちらは numba 非依存の単純な配列操作。**Browser 移植時は JS への直接移植が可能。**
 
-#### D. Tempo estimation — `librosa.beat.beat_track` (largest obstacle)
+#### D. Tempo estimation — ~~`librosa.beat.beat_track` (largest obstacle)~~ (2026-04-16 更新: pure-numpy 化済み)
 
-Internally computes: onset_envelope → tempogram (autocorrelation via 635 FFTs) → tempo estimation → beat tracking. This is 90% of current processing time. In-browser on the main thread, this would freeze the UI. Web Workers can help, but JS FFT is 3-10x slower than native scipy.
+~~Internally computes: onset_envelope → tempogram (autocorrelation via 635 FFTs) → tempo estimation → beat tracking. This is 90% of current processing time. In-browser on the main thread, this would freeze the UI. Web Workers can help, but JS FFT is 3-10x slower than native scipy.~~
 
-**Mitigation**: Resolve #10 (tempo estimation optimization) first. Reducing FFT count by 10x via coarser hop_length + audio truncation makes Web Worker execution realistic.
+**(2026-04-16 更新)** PR #187 で `librosa.beat.beat_track` を pure-numpy autocorrelation (`_estimate_tempo_autocorr`) に置換済み。tempogram FFT を排除し、onset envelope の autocorrelation で直接テンポ推定する。**Browser 移植のブロッカーではなくなった** — JS の配列演算で直接実装可能。既知の制限として sub-harmonic ambiguity があり (bwv147: 128 BPM → 41 BPM)、streaming 再設計時に対応予定。
 
 #### E. FFT performance for segment analysis
 
@@ -65,12 +65,14 @@ Uses numpy broadcasting (`log_positive[np.newaxis, :] - log_centers[:, np.newaxi
 
 ### Batch migration summary
 
+(2026-04-16 更新: onset_detect, beat_track の pure-numpy 化を反映)
+
 | Category | Target | Difficulty |
 |----------|--------|-----------|
 | Immediately portable | Normalization, post-processing (18 functions), score generation, beat quantization | Low |
+| Already pure-numpy (JS port straightforward) | onset_detect (`_peak_pick_numpy`), tempo estimation (`_estimate_tempo_autocorr`) | Low-Medium |
 | JS implementation needed | RMS, FFT, peak energy, harmonic suppression | Medium (library selection or self-implementation) |
-| Algorithm porting needed | onset_strength (mel spectrogram), onset_detect (backtrack) | Medium-High (compatibility verification is critical) |
-| Largest obstacle | beat_track (tempo estimation) | High (#10 optimization is prerequisite) |
+| Algorithm porting needed | onset_strength (mel spectrogram) | Medium-High (compatibility verification is critical) |
 
 ---
 
@@ -124,12 +126,14 @@ These scan all events to identify the dominant pattern (most frequent 3/4-note s
 
 ### Obstacle priority under real-time
 
+(2026-04-16 更新: onset_detect は pure-numpy 化済みのため obstacle 3 を下方修正、obstacle 4 は解消)
+
 | Priority | Obstacle | Impact |
 |----------|---------|--------|
 | **1** | Full-batch post-processing (6 functions) | Pattern normalization is impossible in real-time. Requires two-phase architecture: provisional display → post-recording correction |
 | **2** | Forward-looking function latency design | Current event display is blocked until the next event is confirmed. 1-event latency (~0.1-0.3s) |
-| **3** | onset_detect backtrack reproduction | Segment start accuracy. Solvable with a few frames of buffering, but adds latency |
-| **4** | Tempo estimation redesign | Not needed during real-time. IOI-based lightweight estimation after recording. beat_track becomes unnecessary |
+| **3** | onset_detect backtrack reproduction | Segment start accuracy. `_peak_pick_numpy` is already pure-numpy; backtrack is simple array logic. Solvable with a few frames of buffering |
+| ~~**4**~~ | ~~Tempo estimation redesign~~ | **(2026-04-16 解消)** `_estimate_tempo_autocorr` (pure-numpy) が `beat_track` を置換済み。Real-time では IOI-based lightweight estimation で十分 |
 
 ### Recommended architecture
 
@@ -148,12 +152,15 @@ This enables notes to appear on screen in real-time during performance, with pat
 
 ### Comparison: batch vs real-time migration
 
+(2026-04-16 更新: tempo estimation が pure-numpy 化により batch 側のブロッカーではなくなった)
+
 | Aspect | Batch migration | Real-time migration |
 |--------|----------------|-------------------|
-| Largest obstacle | Tempo estimation compute cost | Full-batch post-processing (architecturally incompatible) |
+| Largest obstacle | onset_strength mel spectrogram porting | Full-batch post-processing (architecturally incompatible) |
+| onset_detect | Pure-numpy (`_peak_pick_numpy`), JS port straightforward | `AnalyserNode` + incremental peak picking |
 | onset_strength | Mel spectrogram porting needed | `AnalyserNode` provides natively |
 | FFT performance | JS speed is a concern | `AnalyserNode` provides native implementation |
-| Tempo estimation | Biggest bottleneck | Problem disappears or becomes lightweight |
+| Tempo estimation | Pure-numpy autocorrelation, JS port straightforward | Problem disappears or becomes lightweight |
 | Post-processing | Directly portable | Two-phase architecture required |
 
 ---

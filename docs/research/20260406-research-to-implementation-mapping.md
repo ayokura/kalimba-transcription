@@ -52,6 +52,8 @@
 
 **関連 issue**: #141 (per-note onset detection umbrella) — この方向性を既に含む
 
+> **(2026-04-16 更新)** PR #186 で gap-rise rescue が実装され、per-note onset detection の gap rescue 側 (mute-dip + gap-rise) が一段進展した。ただしこれは gap 内の rescue であり、本項で述べている onset gate (「onset detector が同意しない限り新規 note-on を許可しない」) は #141 §2 として未実装のまま。onset gate は `_resolve_primary()` の候補選択をゲートする設計であり、gap-rise rescue とは異なるレイヤーの改善。
+
 ### 3. band-segmented spectral flatness (インパクト: 中)
 
 **現行**: BW90, centroid, flatness を全帯域で計算。倍音豊富なカリンバ音で

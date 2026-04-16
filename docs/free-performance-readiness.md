@@ -4,7 +4,7 @@
 
 各 recognizer コンポーネントについて、Free Performance（楽譜知識なし・Expected Performance なしの自由演奏転写）への適合度を評価する。チケット処理のたびに関連コンポーネントを再評価し、このドキュメントを更新する。
 
-**最終更新: 2026-04-09 (#153 Phase B (`36cb3de`) + #154 noise floor calibration + 17-key BWV147 sequence-163 promoted to completed (`400852a`) + #162 heuristic constants audit 起票 + 34-key BWV147 sequence-163 E83 fix (`35bca12`) → 34-key も completed promote (`7535464`))**
+**最終更新: 2026-04-16 (#186 gap-rise rescue で 17-key E148 C6 復活 → 164/164 completed 復帰 (`6222b90`) + #187 numba 排除 (beat_track/onset_detect pure-numpy 化))**
 
 ## 評価軸と凡例
 
@@ -73,6 +73,7 @@
 - **Gap collector (AVC)**: onset の attack profile で判定しており因果的・楽譜非依存
 - **librosa onset_strength + onset_detect**: 標準的な broadband spectral flux。大半の onset を正しく検出（17-key 161/163, 34-key 159/163）
 - **Per-note onset detection (Pass 1)**: gap mute-dip rescue 実装済み (#144)。broadband onset が見逃した same-note re-attack を per-note の mute-dip パターンで検出し、`confirmed_primary` 付き segment を生成。compact-window アルゴリズムで自然減衰の false positive を排除。楽譜非依存・因果的・WebAssembly 互換
+- **Gap-rise rescue** (2026-04-16 #186): Pass 1 の companion として実装。Rust `detect_gap_rise_attack` が gap 内の energy rise (ratio>=10x) を検出、Python の two-snapshot dominance check (+15ms dominant, +50ms 非 dominant) で「一瞬 dominant → 和音マスク」パターンのみ rescue。mute-dip が same-note re-attack 対象なのに対し、gap-rise は前の note が鳴っていない新規 attack を補完 (E148 C6 復活で 17-key bwv147 164/164 completed 復帰)。楽譜非依存・因果的・WebAssembly 互換 (Rust → WASM 化容易)
 - **Sub-onset aware per-note attack window** (#152, commit e449df8): segment 内に複数の broadband sub-onset がある場合、対象 note の actual attack を `pick_matching_sub_onset` で picked し、`onset_energy_gain` の窓をその時刻に anchor する。slide chord での staggered attack や、segment 開始よりやや遅い primary attack を救済。
 - **Short-segment secondary guard** (commit 1f3bda4): segment duration < 30ms (典型は gap-mute-dip rescue の 6.7ms) で secondary 全部を strip。FFT 窓が segment 幅未満になり secondary が信頼できないため。`from_short_segment_guard` フラグで下流から識別可能、`shortSegmentGuardActive` debug field 経由で trace 可能。`suppress_short_residual_tails` は guarded primary を carryover と誤認しないよう exempt。
 
@@ -353,14 +354,14 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 
 ボトルネック順:
 
-1. **Stage 2 onset detection**: `librosa.onset.onset_strength` が batch 処理。incremental spectral flux + peak picking の再実装が必須 (#140 参照)
+1. **Stage 2 onset detection**: `librosa.onset.onset_strength` が batch 処理。incremental spectral flux + peak picking の再実装が必須 (#140 参照)。なお onset_detect / beat_track は pure-numpy 化済み (#187) で streaming 再実装の障壁は低下
 2. **Stage 5/7 event post-processing**: 27 個の suppress/merge 関数が前後 event の文脈に依存。lookahead/lookbehind window を有限化する設計改修が必要 (cf. patterns.py の `apply_repeated_pattern_passes` も同類)
 3. **Stage 2.5 noise_floor**: 現状は全 segment 出揃い後に silent gap を集めるが、設計上は **leading silent region (録音冒頭の最初の attack より前)** だけで calibration 可能。streaming 版の方針は明確 (大規模再設計不要)
 4. **Stage 3 peaks.py / Stage 8 / Stage 9**: それぞれ自然に streaming 互換 (per-segment 独立 / pure 数値変換)
 
 ### Browser-side 実装
 
-- **librosa への依存** が segments.py (Stage 2 onset detection) に集中。それ以外の stage は numpy + 標準 Python のみ
+- **librosa への依存** が segments.py (Stage 2) の onset_strength / HPSS / rms に集中 (onset_detect / beat_track は #187 で pure-numpy 化済み、numba 不要)。それ以外の stage は numpy + 標準 Python のみ
 - **noise_floor.py (Stage 2.5)** は意図的に librosa を使わず `peaks._adaptive_n_fft` (numpy.fft) + `peaks.batch_peak_energies` (numpy 算術) のみで実装 → WebAssembly 移植は直接的
 - **peaks.py の scoring logic (Stage 3)** は数値演算のみで原理的に portable だが、Python 実装が大規模 (2700 行+) なので移植コストは大きい
 - **events.py の suppress/merge (Stage 5/7)** は pure list operations で、WebAssembly 不要 (素の JS で動く)
@@ -380,3 +381,4 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 | 2026-04-08 | #152 完了 + commit 1f3bda4 + #153 起票 | Stage 2: #152 sub-onset aware per-note attack window + commit 1f3bda4 short-segment secondary guard 追加。Masked re-attack 課題 (#153 で扱う) 追記。Stage 3: #152 の3拡張 + commit 1f3bda4 のフラグ/marking 機構を「良い点」に追加。**Octave-coincident chord aliasing** を独立課題として「懸念点」に明示 (C5/C6 周波数衝突の物理的制約、#125/#153)。Masked re-attack threshold 課題追記。残り failure 6/7 が #153 一本で解決可能と確定 |
 | 2026-04-09 | #153 Phase B + #154 + 17-key promote + #162 起票 | **3 軸評価 (Free Perf / Streaming / Browser-side) に再設計** + サマリー表追加。**Stage 2.5 (Per-Recording Calibration `noise_floor.py`) を新設** (#154)。Stage 2: masked re-attack を Phase A.4 で解決済としてマーク、broadband onset → segment 化 structural gap を新規課題として明示 (Phase B `recover_pre_segment_attack_via_narrow_fft` で workaround 解決)。Stage 3: octave-coincident aliasing / masked re-attack を解決済としてマーク。Stage 5: Phase A + B で追加した narrow-FFT 系 4 passes (`merge_short_segment_guard`, `merge_gliss_split`, `recover_masked_reattack`, `recover_pre_segment_attack`) のテーブル追加。Stage 6/7/8/9 を 3 軸表記に統一。Cross-cutting concerns を Streaming/Browser それぞれに対する stage 別ボトルネック分析に書き直し |
 | 2026-04-09 | 34-key E83 fix + 34-key promote (`35bca12`, `7535464`) | Stage 3: `residual-forward-scan` を segment classifier として再利用する 2 段構成 fix (`residual-forward-scan-replaced-primary` + `forced_evidence_gates`) を「良い点」に追加。これにより 34-key BWV147 sequence-163 が 162/163 → 163/163 完全達成し、両 BWV147 sequence-163 fixture (17-key と 34-key) が completed regression target に。「懸念点」に新規課題 2 件追加: (1) 演奏者/テンポ違いに対する robustness の汎化検証 (現状は `residual-forward-scan` 発火 segment 限定)、(2) tertiary/secondary 区別の本質的是非 (将来の大規模リファクタ候補として記録) |
+| 2026-04-16 | #186 gap-rise rescue + #187 numba 排除 | Stage 2: gap-rise rescue を「良い点」に追加 (E148 C6 復活、17-key bwv147 164/164 completed 復帰)。Cross-cutting: onset_detect / beat_track の pure-numpy 化 (#187) を Streaming / Browser 両セクションに反映。numba がパイプラインの到達パスから排除され、残 librosa (onset_strength / HPSS / rms) は numba 非依存 |
