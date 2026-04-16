@@ -10,4 +10,4 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = { version = "0.28", features = ["extension-module"] }
 numpy = "0.28"
-rustfft = "6.2"
+rustfft = "6.4"
