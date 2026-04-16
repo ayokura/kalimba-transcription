@@ -4,6 +4,12 @@ from __future__ import annotations
 FRAME_LENGTH = 2048
 HOP_LENGTH = 256
 TEMPO_ESTIMATION_HOP_LENGTH = 1024
+# Autocorrelation tempo search window. Narrower than the test sanity
+# range (30–300 in apps/api/tests/test_detect_segments.py) to reduce
+# sub-harmonic false peaks; the test range is a safety net, not a target.
+TEMPO_BPM_MIN = 40.0
+TEMPO_BPM_MAX = 200.0
+TEMPO_FALLBACK_BPM = 90.0
 RMS_MEDIAN_THRESHOLD_MAX_PEAK_RATIO = 0.45
 NESTED_SEGMENT_DEDUP_MAX_START_DELTA = 0.02
 CROSS_COLLECTOR_DEDUP_MIN_OVERLAP_RATIO = 0.5

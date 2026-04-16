@@ -36,6 +36,118 @@ _LIBROSA_CACHE: "OrderedDict[tuple[str, int, bool], dict[str, Any]]" = OrderedDi
 _LIBROSA_CACHE_MAX = 8
 
 
+# ---------------------------------------------------------------------------
+# _peak_pick_numpy: ported from librosa's __peak_pick guvectorize kernel.
+#
+# Original source: librosa/util/utils.py (librosa >= 0.10)
+# ISC License — Copyright (c) 2013--2023, librosa development team.
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+# ---------------------------------------------------------------------------
+
+
+def _peak_pick_numpy(
+    x: np.ndarray,
+    *,
+    pre_max: int = 0,
+    post_max: int = 1,
+    pre_avg: int = 0,
+    post_avg: int = 1,
+    delta: float = 0.0,
+    wait: int = 0,
+) -> np.ndarray:
+    """Pure-numpy reimplementation of ``librosa.util.peak_pick``.
+
+    Avoids ``numba.np.ufunc.gufunc`` which intermittently segfaults on
+    GitHub Actions (Python 3.12 + numba 0.64).  Semantics match librosa's
+    ``sparse=True, axis=-1`` mode: returns a 1-D int array of peak indices.
+
+    Ported from librosa's ``__peak_pick`` guvectorize kernel (utils.py):
+    frame 0 is special-cased, then a while-loop scans n=1..N-1 with
+    greedy wait-skip.
+    """
+    sz = len(x)
+    if sz == 0:
+        return np.array([], dtype=np.intp)
+
+    peaks: list[int] = []
+
+    # Special case: frame 0
+    max0 = np.max(x[: min(post_max, sz)])
+    avg0 = np.mean(x[: min(post_avg, sz)])
+    if x[0] >= max0 and x[0] >= avg0 + delta:
+        peaks.append(0)
+        n = wait + 1
+    else:
+        n = 1
+
+    while n < sz:
+        lo = max(0, n - pre_max)
+        hi = min(n + post_max, sz)
+        if x[n] != np.max(x[lo:hi]):
+            n += 1
+            continue
+        avg_lo = max(0, n - pre_avg)
+        avg_hi = min(n + post_avg, sz)
+        if x[n] < np.mean(x[avg_lo:avg_hi]) + delta:
+            n += 1
+            continue
+        peaks.append(n)
+        n += wait + 1
+
+    return np.array(peaks, dtype=np.intp)
+
+
+def _onset_detect_numpy(
+    onset_envelope: np.ndarray,
+    sr: int,
+    hop_length: int,
+    *,
+    backtrack: bool = False,
+) -> np.ndarray:
+    """Pure-numpy replacement for ``librosa.onset.onset_detect``.
+
+    Replaces only the ``peak_pick`` call (the numba gufunc that segfaults
+    on GitHub Actions Python 3.12 runners) with ``_peak_pick_numpy``.
+    All other steps — max-normalisation and ``onset_backtrack`` — use
+    librosa's own implementations, which are numba-free.
+    """
+    env = onset_envelope.copy()
+    env_max = env.max()
+    if env_max > 0:
+        env /= env_max
+
+    pre_max = int(0.03 * sr // hop_length)
+    post_max = int(0.00 * sr // hop_length) + 1
+    pre_avg = int(0.10 * sr // hop_length)
+    post_avg = int(0.10 * sr // hop_length) + 1
+    wait = int(0.03 * sr // hop_length)
+    delta = 0.07
+
+    frames = _peak_pick_numpy(
+        env,
+        pre_max=pre_max,
+        post_max=post_max,
+        pre_avg=pre_avg,
+        post_avg=post_avg,
+        delta=delta,
+        wait=wait,
+    )
+    if backtrack and len(frames) > 0:
+        frames = librosa.onset.onset_backtrack(frames, onset_envelope)
+    return frames
+
+
 def _compute_librosa_features(
     audio: np.ndarray, sample_rate: int, use_hpss_onset: bool
 ) -> dict[str, Any]:
@@ -43,22 +155,16 @@ def _compute_librosa_features(
     rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
     frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
     onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=HOP_LENGTH)
-    onset_frames = librosa.onset.onset_detect(
-        onset_envelope=onset_env,
-        sr=sample_rate,
-        hop_length=HOP_LENGTH,
-        backtrack=True,
+    onset_frames = _onset_detect_numpy(
+        onset_env, sample_rate, HOP_LENGTH, backtrack=True,
     )
     if use_hpss_onset:
         _, percussive = librosa.effects.hpss(
             audio, n_fft=FRAME_LENGTH, hop_length=HOP_LENGTH,
         )
         perc_env = librosa.onset.onset_strength(y=percussive, sr=sample_rate, hop_length=HOP_LENGTH)
-        perc_frames = librosa.onset.onset_detect(
-            onset_envelope=perc_env,
-            sr=sample_rate,
-            hop_length=HOP_LENGTH,
-            backtrack=True,
+        perc_frames = _onset_detect_numpy(
+            perc_env, sample_rate, HOP_LENGTH, backtrack=True,
         )
         onset_frames = np.unique(np.concatenate([onset_frames, perc_frames]))
     return {"rms": rms, "frame_times": frame_times, "onset_frames": onset_frames}
@@ -816,6 +922,58 @@ def build_segment_debug_contexts(
     return segment_contexts
 
 
+def _estimate_tempo_autocorr(
+    onset_env: np.ndarray,
+    sample_rate: int,
+    hop_length: int,
+) -> float:
+    """Estimate global tempo (BPM) via onset-envelope autocorrelation.
+
+    Pure-numpy replacement for ``librosa.beat.beat_track`` — avoids the
+    numba gufunc that intermittently segfaults on GitHub Actions runners
+    (see ``numba/np/ufunc/gufunc.py:263`` in CI logs).
+
+    Known limitations vs librosa.beat_track (which uses a tempogram +
+    dynamic-programming beat tracker):
+
+    * Sub-harmonic / octave ambiguity: simple global autocorrelation can
+      lock onto a sub-harmonic of the true tempo (e.g., 40 BPM when the
+      real tempo is ~128 BPM).  librosa's DP tracker avoids this by
+      penalising tempo deviations frame-to-frame.
+    * No beat positions: we only extract BPM; beat positions are discarded
+      by the caller anyway (``detect_segments`` uses only ``tempo``).
+
+    These limitations are acceptable because:
+
+    1. Tempo is used *only* for ``startBeat`` rendering (beat-time
+       quantisation of events).  Note detection is unaffected.
+    2. No test asserts exact ``startBeat`` values; the only assertion is
+       ``30 <= tempo <= 300``.
+    3. Streaming transcription (#141 / AGENTS.md vision) will redesign
+       tempo estimation entirely (online tracker or post-hoc), so this
+       batch implementation is intentionally minimal.
+    """
+    n = len(onset_env)
+    if n < 2:
+        return TEMPO_FALLBACK_BPM
+    oe = onset_env - onset_env.mean()
+    if oe.std() < 1e-8:
+        return TEMPO_FALLBACK_BPM
+    spec = np.fft.rfft(oe, n=2 * n)
+    acf = np.fft.irfft(np.abs(spec) ** 2)[:n]
+
+    lag_min = max(1, int(np.ceil(60.0 / TEMPO_BPM_MAX * sample_rate / hop_length)))
+    lag_max = min(int(np.floor(60.0 / TEMPO_BPM_MIN * sample_rate / hop_length)), n - 1)
+    if lag_max <= lag_min:
+        return TEMPO_FALLBACK_BPM
+
+    peak_lag = lag_min + int(np.argmax(acf[lag_min : lag_max + 1]))
+    if peak_lag <= 0:
+        return TEMPO_FALLBACK_BPM
+    bpm = 60.0 * sample_rate / (hop_length * peak_lag)
+    return max(bpm, 1.0)
+
+
 @dataclass(frozen=True, slots=True)
 class SegmentDetectionResult:
     segments: list[Segment]
@@ -1013,15 +1171,8 @@ def detect_segments(
     tempo_audio_duration_sec = float(librosa.get_duration(y=audio, sr=sample_rate))
     tempo_start = perf_counter()
     tempo_onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=TEMPO_ESTIMATION_HOP_LENGTH)
-    tempo_array, _ = librosa.beat.beat_track(
-        onset_envelope=tempo_onset_env,
-        sr=sample_rate,
-        hop_length=TEMPO_ESTIMATION_HOP_LENGTH,
-    )
+    tempo = _estimate_tempo_autocorr(tempo_onset_env, sample_rate, TEMPO_ESTIMATION_HOP_LENGTH)
     tempo_estimation_ms = (perf_counter() - tempo_start) * 1000.0
-    tempo = float(np.asarray(tempo_array).reshape(-1)[0]) if np.asarray(tempo_array).size else 90.0
-    if tempo <= 1.0:
-        tempo = 90.0
 
     debug_info = {
         "onsetTimes": onset_times,
