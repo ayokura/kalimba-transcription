@@ -27,3 +27,7 @@ docs/performance/profile-raw/
 docs/performance/profile-summary.txt
 crates/*/target/
 crates/*/uv.lock
+.playwright-mcp/
+.mcp.json
+test-results/
+.tmp/

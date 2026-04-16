@@ -10,7 +10,7 @@
         1,
         15
       ],
-      "content": "C4 / C5 / D5 / [E5,C4] / G5 / F5 / [F5,A4] / A5 / G5 / [G5,E4] / C6 / B5 / [C6,A4] / G5 / E5",
+      "content": ",C4 / C5 / D5 / [E5,C4] / G5 / F5 / [F5,A4] / A5 / G5 / [G5,E4] / C6 / B5 / [C6,A4] / G5 / E5",
       "estimatedStartSec": 0.7,
       "verifiedStartSec": null,
       "verificationMethod": "ear_verified"

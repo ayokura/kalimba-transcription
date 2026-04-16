@@ -267,7 +267,14 @@ def resolve_fixture(name: str) -> Path:
 
 
 def parse_content(content: str) -> list[dict]:
-    """Parse score_structure content string into list of event dicts."""
+    """Parse score_structure content string into list of event dicts.
+
+    Notation conventions:
+      "C5"         single melody note
+      "[E5,C4]"    melody + accompaniment
+      "<C5,A4>"    slide chord
+      ",C4"        accompaniment-only (leading comma = no melody voice)
+    """
     events = []
     for item in content.split(" / "):
         item = item.strip()
