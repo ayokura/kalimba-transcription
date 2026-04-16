@@ -233,11 +233,11 @@ def rescue_gap_mute_dips(
                 decay_energies: dict[str, float] = {}
                 for n in tuning_notes:
                     peak_energies[n.name] = _note_band_energy(
-                        audio, sample_rate, peak_time, n.frequency,
+                        audio_f32, sample_rate, peak_time, n.frequency,
                         window_seconds=MUTE_DIP_ENERGY_WINDOW,
                     )
                     decay_energies[n.name] = _note_band_energy(
-                        audio, sample_rate, decay_time, n.frequency,
+                        audio_f32, sample_rate, decay_time, n.frequency,
                         window_seconds=MUTE_DIP_ENERGY_WINDOW,
                     )
 
