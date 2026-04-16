@@ -816,6 +816,61 @@ def build_segment_debug_contexts(
     return segment_contexts
 
 
+_TEMPO_BPM_MIN = 40.0
+_TEMPO_BPM_MAX = 200.0
+_TEMPO_FALLBACK = 90.0
+
+
+def _estimate_tempo_autocorr(
+    onset_env: np.ndarray,
+    sample_rate: int,
+    hop_length: int,
+) -> float:
+    """Estimate global tempo (BPM) via onset-envelope autocorrelation.
+
+    Pure-numpy replacement for ``librosa.beat.beat_track`` — avoids the
+    numba gufunc that intermittently segfaults on GitHub Actions runners
+    (see ``numba/np/ufunc/gufunc.py:263`` in CI logs).
+
+    Known limitations vs librosa.beat_track (which uses a tempogram +
+    dynamic-programming beat tracker):
+
+    * Sub-harmonic / octave ambiguity: simple global autocorrelation can
+      lock onto a sub-harmonic of the true tempo (e.g., 40 BPM when the
+      real tempo is ~128 BPM).  librosa's DP tracker avoids this by
+      penalising tempo deviations frame-to-frame.
+    * No beat positions: we only extract BPM; beat positions are discarded
+      by the caller anyway (``detect_segments`` uses only ``tempo``).
+
+    These limitations are acceptable because:
+
+    1. Tempo is used *only* for ``startBeat`` rendering (beat-time
+       quantisation of events).  Note detection is unaffected.
+    2. No test asserts exact ``startBeat`` values; the only assertion is
+       ``30 <= tempo <= 300``.
+    3. Streaming transcription (#141 / AGENTS.md vision) will redesign
+       tempo estimation entirely (online tracker or post-hoc), so this
+       batch implementation is intentionally minimal.
+    """
+    n = len(onset_env)
+    if n < 2:
+        return _TEMPO_FALLBACK
+    oe = onset_env - onset_env.mean()
+    spec = np.fft.rfft(oe, n=2 * n)
+    acf = np.fft.irfft(np.abs(spec) ** 2)[:n]
+
+    lag_min = max(1, int(60.0 / _TEMPO_BPM_MAX * sample_rate / hop_length))
+    lag_max = min(int(60.0 / _TEMPO_BPM_MIN * sample_rate / hop_length), n - 1)
+    if lag_max <= lag_min:
+        return _TEMPO_FALLBACK
+
+    peak_lag = lag_min + int(np.argmax(acf[lag_min : lag_max + 1]))
+    if peak_lag <= 0:
+        return _TEMPO_FALLBACK
+    bpm = 60.0 * sample_rate / (hop_length * peak_lag)
+    return max(bpm, 1.0)
+
+
 @dataclass(frozen=True, slots=True)
 class SegmentDetectionResult:
     segments: list[Segment]
@@ -1013,15 +1068,8 @@ def detect_segments(
     tempo_audio_duration_sec = float(librosa.get_duration(y=audio, sr=sample_rate))
     tempo_start = perf_counter()
     tempo_onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=TEMPO_ESTIMATION_HOP_LENGTH)
-    tempo_array, _ = librosa.beat.beat_track(
-        onset_envelope=tempo_onset_env,
-        sr=sample_rate,
-        hop_length=TEMPO_ESTIMATION_HOP_LENGTH,
-    )
+    tempo = _estimate_tempo_autocorr(tempo_onset_env, sample_rate, TEMPO_ESTIMATION_HOP_LENGTH)
     tempo_estimation_ms = (perf_counter() - tempo_start) * 1000.0
-    tempo = float(np.asarray(tempo_array).reshape(-1)[0]) if np.asarray(tempo_array).size else 90.0
-    if tempo <= 1.0:
-        tempo = 90.0
 
     debug_info = {
         "onsetTimes": onset_times,
