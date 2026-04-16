@@ -1714,6 +1714,21 @@ def _acquire_spectrum(
     """
     start = int(ctx.start_time * ctx.sample_rate)
     end = int(ctx.end_time * ctx.sample_rate)
+    # gap-rise rescue segments intentionally wrap just the ~5 ms rise interval
+    # between pre-attack baseline and attack landing (see per_note.py
+    # _detect_gap_rise_attack). Too short for the intended frequency
+    # resolution (5 ms ⇒ 200 Hz bin width, wider than HARMONIC_BAND_CENTS
+    # around the upper tines), so widen forward whenever the slice is
+    # shorter than the intended analysis window: `max(512, GAP_RISE_ANALYSIS_SECONDS*sr)`.
+    # The `max(512, ...)` floor keeps the guard valid at low sample rates
+    # (<6.4 kHz) where the `* GAP_RISE_ANALYSIS_SECONDS` factor would fall
+    # under the FFT minimum; the `GAP_RISE_ANALYSIS_SECONDS*sr` branch makes
+    # the trigger fire at high sample rates (e.g. 192 kHz, where 5 ms is
+    # already >512 samples but still under the desired resolution).
+    if "gap-rise" in ctx.segment_sources:
+        widen_samples = max(512, int(ctx.sample_rate * GAP_RISE_ANALYSIS_SECONDS))
+        if end - start < widen_samples:
+            end = min(start + widen_samples, len(ctx.audio))
     segment = ctx.audio[start:end]
     if len(segment) < 512:
         return None

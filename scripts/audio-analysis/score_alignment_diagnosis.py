@@ -39,12 +39,18 @@ Deprecated:
     compatibility but triggers a deprecation warning. Prefer --no-cache.
 
 Cache:
-    The cache key includes a fingerprint of all .py files under
-    apps/api/app/transcription/, so editing recognizer code automatically
-    invalidates stale entries on the next run. Reverting an edit restores
-    the original cache hit. Audio bytes and request data are also part of
-    the key. The SUMMARY block shows ``Cache: hit/miss/fresh (recognizer: ...)``
-    so the provenance is always visible.
+    The cache key includes two independent fingerprints — one over all .py
+    files under apps/api/app/transcription/ (Python recognizer) and one
+    over the actual loaded kalimba_dsp .so / .pyd binary (Rust extension)
+    — so editing either side automatically invalidates stale entries on
+    the next run. Reverting an edit restores the original cache hit.
+    Audio bytes and request data are also part of the key. The SUMMARY
+    block shows ``Cache: hit/miss/fresh (recognizer: …, dsp: …)`` so the
+    provenance is always visible. Splitting the two also makes it easy
+    to compare results across Rust versions; hashing the loaded binary
+    (instead of .rs source) keeps "forgot to rebuild kalimba-dsp" honest
+    — cache stays a hit on the old result rather than producing a new
+    cache entry that's actually still the old binary's output.
     Old entries accumulate over time and can be cleaned manually:
         rm -rf apps/api/tests/.cache/score_alignment/
 """
@@ -89,14 +95,54 @@ def _recognizer_code_fingerprint() -> str:
     return h.hexdigest()[:16]
 
 
+@lru_cache(maxsize=1)
+def _kalimba_dsp_fingerprint() -> str:
+    """Hash the *loaded* kalimba_dsp extension binary (.so / .pyd).
+
+    Hashing the actual import target — not the Rust source — guarantees the
+    cache key reflects the code that really ran. A source-only hash would
+    mark the key dirty as soon as you edited a .rs file, even before
+    `maturin develop` rebuilt the extension, leading to a "fresh" cache
+    entry that was actually produced by the still-stale binary. Hashing
+    the .so closes that loophole: cache invalidates exactly when the
+    binary changes, and "forgot to rebuild" stays a cache hit on the old
+    result instead of silently saving a mislabeled new one.
+    Returns "absent" if kalimba_dsp can't be imported (older checkouts).
+    """
+    try:
+        import kalimba_dsp  # type: ignore[import-not-found]
+    except ImportError:
+        return "absent"
+    so_path_str = getattr(kalimba_dsp, "__file__", None)
+    if not so_path_str:
+        return "absent"
+    so_path = Path(so_path_str)
+    if not so_path.is_file():
+        return "absent"
+    # Stream the hash instead of read_bytes() — the extension binary is
+    # small today but can grow (multi-MB once HPSS/STFT land in the crate);
+    # `hashlib.file_digest` chunks internally so peak memory stays bounded
+    # to the block size regardless of file size.
+    try:
+        with so_path.open("rb") as fh:
+            digest = hashlib.file_digest(fh, "sha256")
+    except OSError as exc:
+        # Permission issue / transient IO error reading the .so. Return a
+        # stable sentinel so the cache key stays computable (we'd rather
+        # cache-miss once than crash the whole diagnosis script).
+        return f"unreadable:{type(exc).__name__}"
+    return digest.hexdigest()[:16]
+
+
 def _cache_key(audio_bytes: bytes, request_data: dict[str, str]) -> str:
-    """Compute cache key from audio bytes + request data + recognizer fingerprint."""
+    """Compute cache key from audio bytes + request data + code fingerprints."""
     h = hashlib.sha256()
     h.update(audio_bytes)
     h.update(
         json.dumps(sorted(request_data.items()), ensure_ascii=False).encode("utf-8")
     )
     h.update(_recognizer_code_fingerprint().encode("utf-8"))
+    h.update(_kalimba_dsp_fingerprint().encode("utf-8"))
     return h.hexdigest()
 
 
@@ -131,6 +177,7 @@ def _cached_transcribe(
     key = _cache_key(audio_bytes, request_data)
     key_prefix = key[:12]
     fp_prefix = _recognizer_code_fingerprint()[:8]
+    dsp_prefix = _kalimba_dsp_fingerprint()[:8]
     cache_file = CACHE_DIR / f"{key}.json"
 
     if not force_miss and cache_file.exists():
@@ -156,7 +203,7 @@ def _cached_transcribe(
                 pass
         else:
             print(f"[cache hit] {key_prefix}", file=sys.stderr)
-            return payload, f"hit {key_prefix} (recognizer: {fp_prefix})"
+            return payload, f"hit {key_prefix} (recognizer: {fp_prefix}, dsp: {dsp_prefix})"
 
     if force_miss:
         print(f"[cache fresh] {key_prefix} (--no-cache)", file=sys.stderr)
@@ -201,7 +248,7 @@ def _cached_transcribe(
         )
     label = "fresh" if force_miss else "miss"
     tag = " [--no-cache]" if force_miss else ""
-    return payload, f"{label} {key_prefix} (recognizer: {fp_prefix}){tag}"
+    return payload, f"{label} {key_prefix} (recognizer: {fp_prefix}, dsp: {dsp_prefix}){tag}"
 
 
 def resolve_fixture(name: str) -> Path:
@@ -957,7 +1004,9 @@ def main():
         print(f"  ✓ Exact: {total_exact}  ⊂ Subset: {total_subset}  △ Partial: {total_partial}  ∅ Miss: {total_miss}  + Extras: {extras_str}")
         # Net exact score: subtract extras from numerator. Intuitive "penalty
         # scoring" — like quiz grading where wrong answers cost points.
-        # Can go negative when false positives exceed true positives.
+        # Can go negative when false positives exceed true positives. Kept
+        # as a single-number guard against optimizing Exact while silently
+        # inflating Extras (a recurring agent-iteration failure mode).
         net = total_exact - real_extras
         net_pct = 100 * net / total_events if total_events else 0
         print(f"  Score: ({total_exact} - {real_extras}) / {total_events} = {net_pct:.0f}% net exact  (extras subtracted from numerator)")
