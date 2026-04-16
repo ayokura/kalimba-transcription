@@ -55,7 +55,7 @@ _GAP_DIP_MIN_GAP_SECONDS = 0.15
 _GAP_DIP_DEFAULT_DURATION = 0.24
 
 def _scan_gap_for_mute_dip(
-    audio: np.ndarray,
+    audio_f32: np.ndarray,
     sample_rate: int,
     gap_start: float,
     gap_end: float,
@@ -68,20 +68,24 @@ def _scan_gap_for_mute_dip(
     following 100 ms for recovery.  Tries the standard 50ms energy window
     first, then falls back to a narrower 30ms window for fast mute-dips.
 
+    ``audio_f32`` must already be a C-contiguous float32 numpy array
+    (``rescue_gap_mute_dips`` handles the one-time conversion so this helper
+    can be called per tuning note × gap without repeatedly re-wrapping).
+
     Returns the recovery time (suitable as a new segment start) or ``None``.
     """
     result = _scan_gap_for_mute_dip_with_window(
-        audio, sample_rate, gap_start, gap_end, frequency, MUTE_DIP_ENERGY_WINDOW,
+        audio_f32, sample_rate, gap_start, gap_end, frequency, MUTE_DIP_ENERGY_WINDOW,
     )
     if result is not None:
         return result
     return _scan_gap_for_mute_dip_with_window(
-        audio, sample_rate, gap_start, gap_end, frequency, MUTE_DIP_ENERGY_WINDOW_NARROW,
+        audio_f32, sample_rate, gap_start, gap_end, frequency, MUTE_DIP_ENERGY_WINDOW_NARROW,
     )
 
 
 def _scan_gap_for_mute_dip_with_window(
-    audio: np.ndarray,
+    audio_f32: np.ndarray,
     sample_rate: int,
     gap_start: float,
     gap_end: float,
@@ -90,12 +94,12 @@ def _scan_gap_for_mute_dip_with_window(
 ) -> float | None:
     """Scan a gap with a specific energy window size.
 
-    Delegated to the Rust implementation in ``kalimba_dsp``. Integer-indexed
-    fine grid matching the np.arange-based clean semantic (no float
-    accumulation drift); see docs/performance/20260415-profiling-baseline.md
-    for the rationale.
+    ``audio_f32`` must already be a C-contiguous float32 numpy array (see
+    `_scan_gap_for_mute_dip`). Delegated to the Rust implementation in
+    ``kalimba_dsp``. Integer-indexed fine grid matching the np.arange-based
+    clean semantic (no float accumulation drift); see
+    docs/performance/20260415-profiling-baseline.md for the rationale.
     """
-    audio_f32 = np.ascontiguousarray(audio, dtype=np.float32)
     result = kalimba_dsp.scan_gap_for_mute_dip_with_window(
         audio_f32,
         int(sample_rate),
@@ -118,7 +122,7 @@ def _scan_gap_for_mute_dip_with_window(
 
 
 def _detect_gap_rise_attack(
-    audio: np.ndarray,
+    audio_f32: np.ndarray,
     sample_rate: int,
     gap_start: float,
     gap_end: float,
@@ -129,8 +133,10 @@ def _detect_gap_rise_attack(
     Complements mute-dip rescue: catches re-strikes where the note decayed
     near-silent before the attack, so pre_energy falls under
     MUTE_DIP_REATTACK_MIN_PRE_ENERGY and the dip scan never enters.
+
+    ``audio_f32`` must already be a C-contiguous float32 numpy array (see
+    `_scan_gap_for_mute_dip`).
     """
-    audio_f32 = np.ascontiguousarray(audio, dtype=np.float32)
     return kalimba_dsp.detect_gap_rise_attack(
         audio_f32,
         int(sample_rate),
@@ -171,6 +177,13 @@ def rescue_gap_mute_dips(
     if len(segments) < 2:
         return segments
 
+    # Convert once up front instead of per (tuning-note × gap) inside the
+    # Rust helpers. Both `_scan_gap_for_mute_dip_with_window` and
+    # `_detect_gap_rise_attack` require a C-contiguous float32 view; a
+    # pre-converted audio array means the Rust boundary never has to
+    # re-validate dtype/contiguity on the hot 34 tines × N gaps loop below.
+    audio_f32 = np.ascontiguousarray(audio, dtype=np.float32)
+
     tuning_notes = [Note.from_name(tn.note_name) for tn in tuning.notes]
     rescued: list[Segment] = []
 
@@ -188,7 +201,7 @@ def rescue_gap_mute_dips(
         source = "gap-mute-dip"
         for note in tuning_notes:
             recovery = _scan_gap_for_mute_dip(
-                audio, sample_rate, gap_start, gap_end, note.frequency,
+                audio_f32, sample_rate, gap_start, gap_end, note.frequency,
             )
             if recovery is not None:
                 if best_recovery is None or recovery < best_recovery:
@@ -205,7 +218,7 @@ def rescue_gap_mute_dips(
             candidate_recoveries: list[tuple[Note, float]] = []
             for note in tuning_notes:
                 recovery = _detect_gap_rise_attack(
-                    audio, sample_rate, gap_start, gap_end, note.frequency,
+                    audio_f32, sample_rate, gap_start, gap_end, note.frequency,
                 )
                 if recovery is not None:
                     candidate_recoveries.append((note, recovery))
