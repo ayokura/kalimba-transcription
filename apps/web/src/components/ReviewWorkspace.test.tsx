@@ -31,6 +31,7 @@ function buildSession(): TranscriptionReviewSession {
   return {
     sessionVersion: 1,
     sessionId: "review-session-1",
+    transactionId: null,
     createdAt: "2026-03-31T00:00:00.000Z",
     acquisitionMode: "live_mic",
     tuning: {

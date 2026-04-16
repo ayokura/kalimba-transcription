@@ -159,6 +159,26 @@ export async function createTranscriptionWithCapture(
   };
 }
 
+export async function fetchTranscription(transactionId: string): Promise<TranscriptionResult> {
+  const response = await fetch(`${API_BASE_URL}/api/transcriptions/${transactionId}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load transcription.");
+  }
+  return response.json();
+}
+
+export async function fetchTranscriptionAudioBlob(transactionId: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE_URL}/api/transcriptions/${transactionId}/audio`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load audio.");
+  }
+  return response.blob();
+}
+
 function cleanOptionalText(value: string | undefined): string | null {
   const trimmed = value?.trim() ?? "";
   return trimmed.length > 0 ? trimmed : null;

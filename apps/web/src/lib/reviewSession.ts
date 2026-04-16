@@ -37,9 +37,13 @@ function isReviewSession(value: unknown): value is TranscriptionReviewSession {
     || !isObject(value.tuning)
     || !isObject(value.requestSnapshot)
     || !isObject(value.responseSnapshot)
-    || (value.notationMode !== "vertical" && value.notationMode !== "numbered" && value.notationMode !== "western")
+    || (value.notationMode !== "vertical" && value.notationMode !== "numbered" && value.notationMode !== "western" && value.notationMode !== "score")
     || !isStringOrNull(value.activeEventId)
   ) {
+    return false;
+  }
+
+  if (!isStringOrNull(value.transactionId)) {
     return false;
   }
 
@@ -68,8 +72,8 @@ export function isReviewSessionStorageAvailable() {
 
   try {
     const probeKey = `${REVIEW_SESSION_PREFIX}probe`;
-    window.sessionStorage.setItem(probeKey, "1");
-    window.sessionStorage.removeItem(probeKey);
+    window.localStorage.setItem(probeKey, "1");
+    window.localStorage.removeItem(probeKey);
     return true;
   } catch {
     return false;
@@ -96,6 +100,7 @@ export function createReviewSession({
   return {
     sessionVersion: 1,
     sessionId: createReviewSessionId(),
+    transactionId: capture.responsePayload.transactionId ?? null,
     createdAt: capture.generatedAt,
     acquisitionMode,
     tuning: capture.requestPayload.tuning,
@@ -113,7 +118,7 @@ export function saveReviewSession(session: TranscriptionReviewSession) {
   if (typeof window === "undefined") {
     return;
   }
-  window.sessionStorage.setItem(buildStorageKey(session.sessionId), JSON.stringify(session));
+  window.localStorage.setItem(buildStorageKey(session.sessionId), JSON.stringify(session));
 }
 
 type UpdateReviewSessionUiState = {
@@ -126,7 +131,7 @@ export function loadReviewSession(sessionId: string) {
     return null;
   }
 
-  const raw = window.sessionStorage.getItem(buildStorageKey(sessionId));
+  const raw = window.localStorage.getItem(buildStorageKey(sessionId));
   if (!raw) {
     return null;
   }
@@ -156,5 +161,5 @@ export function removeReviewSession(sessionId: string) {
   if (typeof window === "undefined") {
     return;
   }
-  window.sessionStorage.removeItem(buildStorageKey(sessionId));
+  window.localStorage.removeItem(buildStorageKey(sessionId));
 }

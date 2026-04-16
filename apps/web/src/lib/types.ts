@@ -36,6 +36,7 @@ export type NotationViews = {
 };
 
 export type TranscriptionResult = {
+  transactionId?: string | null;
   instrumentTuning: InstrumentTuning;
   tempo: number;
   events: ScoreEvent[];
@@ -86,6 +87,7 @@ export type ReviewEditedDraft = {
 export type TranscriptionReviewSession = {
   sessionVersion: 1;
   sessionId: string;
+  transactionId: string | null;
   createdAt: string;
   acquisitionMode: AcquisitionMode;
   tuning: InstrumentTuning;

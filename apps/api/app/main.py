@@ -1,14 +1,24 @@
 from __future__ import annotations
 
 import json
+import re
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from .models import InstrumentTuning, TranscriptionResult
+from .storage import generate_transaction_id, load_audio_path, load_response, save_transaction
 from .transcription import parse_tuning_json, transcribe_audio
 from .transcription.patterns import REPEATED_PATTERN_PASS_IDS
 from .tunings import get_default_tunings
+
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def _validate_transaction_id(transaction_id: str) -> None:
+    if not _UUID_RE.match(transaction_id):
+        raise HTTPException(status_code=400, detail="Invalid transaction ID format.")
 
 
 def parse_disabled_repeated_pattern_passes(raw_value: str | None) -> frozenset[str]:
@@ -62,9 +72,12 @@ async def create_transcription(
     midPerformanceStart: bool = Form(False),
     midPerformanceEnd: bool = Form(False),
 ) -> TranscriptionResult:
+    audio_bytes = await file.read()
+    await file.seek(0)
+
     parsed_tuning = parse_tuning_json(tuning)
     disabled_passes = parse_disabled_repeated_pattern_passes(disabledRepeatedPatternPasses)
-    return await transcribe_audio(
+    result = await transcribe_audio(
         file,
         parsed_tuning,
         debug=debug,
@@ -72,3 +85,38 @@ async def create_transcription(
         mid_performance_start=midPerformanceStart,
         mid_performance_end=midPerformanceEnd,
     )
+
+    transaction_id = generate_transaction_id()
+    result.transaction_id = transaction_id
+
+    request_params = {
+        "tuning": json.loads(tuning),
+        "debug": debug,
+        "disabledRepeatedPatternPasses": disabledRepeatedPatternPasses,
+        "midPerformanceStart": midPerformanceStart,
+        "midPerformanceEnd": midPerformanceEnd,
+    }
+    response_dict = result.model_dump(by_alias=True)
+    debug_dict = response_dict.get("debug") if debug else None
+
+    save_transaction(transaction_id, audio_bytes, request_params, response_dict, debug_dict)
+
+    return result
+
+
+@app.get("/api/transcriptions/{transaction_id}")
+def get_transcription(transaction_id: str) -> dict:
+    _validate_transaction_id(transaction_id)
+    data = load_response(transaction_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    return data
+
+
+@app.get("/api/transcriptions/{transaction_id}/audio")
+def get_transcription_audio(transaction_id: str):
+    _validate_transaction_id(transaction_id)
+    audio_path = load_audio_path(transaction_id)
+    if audio_path is None:
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    return FileResponse(audio_path, media_type="audio/wav", filename="audio.wav")

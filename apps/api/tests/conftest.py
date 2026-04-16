@@ -2,13 +2,20 @@ from copy import deepcopy
 from functools import lru_cache
 from io import BytesIO
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 
 import numpy as np
 import pytest
 import soundfile as sf
 from fastapi.testclient import TestClient
+
+# Set KALIMBA_DATA_DIR to a temporary directory before importing anything that
+# uses it, so server-side transaction storage does not pollute the project tree.
+_tmp_data_dir = tempfile.mkdtemp(prefix="kalimba-test-data-")
+os.environ["KALIMBA_DATA_DIR"] = _tmp_data_dir
 
 from app.main import app
 

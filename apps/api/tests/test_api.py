@@ -1,6 +1,7 @@
 import json
+import re
 
-from conftest import client
+from conftest import client, synthesize_note, wav_bytes
 
 
 def test_health_check() -> None:
@@ -86,3 +87,67 @@ def test_custom_tuning_rejects_non_string_name() -> None:
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Tuning name must be a string."}
+
+
+UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def _create_transcription():
+    """Helper: POST a synthetic audio to /api/transcriptions, return response JSON."""
+    import numpy as np
+    audio = synthesize_note(261.63, duration=0.5)
+    audio_data = wav_bytes(audio)
+    tuning = {
+        "name": "Test 17-C",
+        "notes": [{"noteName": "C4"}],
+    }
+    response = client.post(
+        "/api/transcriptions",
+        data={"tuning": json.dumps(tuning)},
+        files={"file": ("audio.wav", audio_data, "audio/wav")},
+    )
+    assert response.status_code == 200
+    return response.json()
+
+
+def test_transcription_response_includes_transaction_id():
+    payload = _create_transcription()
+    assert "transactionId" in payload
+    assert UUID_RE.match(payload["transactionId"])
+
+
+def test_get_transcription_by_id():
+    payload = _create_transcription()
+    tid = payload["transactionId"]
+
+    response = client.get(f"/api/transcriptions/{tid}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["transactionId"] == tid
+    assert data["events"] == payload["events"]
+
+
+def test_get_transcription_audio_by_id():
+    payload = _create_transcription()
+    tid = payload["transactionId"]
+
+    response = client.get(f"/api/transcriptions/{tid}/audio")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "audio/wav"
+    assert len(response.content) > 44  # WAV header + some data
+
+
+def test_get_transcription_not_found():
+    response = client.get("/api/transcriptions/00000000-0000-0000-0000-000000000000")
+    assert response.status_code == 404
+
+
+def test_get_transcription_invalid_id_format():
+    response = client.get("/api/transcriptions/not-a-uuid")
+    assert response.status_code == 400
+    assert "Invalid transaction ID" in response.json()["detail"]
+
+
+def test_get_transcription_audio_not_found():
+    response = client.get("/api/transcriptions/00000000-0000-0000-0000-000000000000/audio")
+    assert response.status_code == 404

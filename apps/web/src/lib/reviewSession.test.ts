@@ -51,8 +51,9 @@ function buildTuning(): InstrumentTuning {
   };
 }
 
-function buildResult(): TranscriptionResult {
+function buildResult(transactionId: string | null = "test-txn-00000000-0000-0000-0000-000000000001"): TranscriptionResult {
   return {
+    transactionId,
     instrumentTuning: buildTuning(),
     tempo: 96,
     warnings: [],
@@ -113,7 +114,7 @@ describe("reviewSession", () => {
   const fakeStorage = new FakeStorage();
 
   beforeEach(() => {
-    Object.defineProperty(window, "sessionStorage", {
+    Object.defineProperty(window, "localStorage", {
       value: fakeStorage,
       configurable: true,
     });
@@ -139,7 +140,7 @@ describe("reviewSession", () => {
     expect(session.activeEventId).toBe("evt-1");
   });
 
-  it("round-trips a saved review session through sessionStorage", () => {
+  it("round-trips a saved review session through localStorage", () => {
     const session = createReviewSession({
       capture: buildCapture(),
       acquisitionMode: "live_mic",
@@ -163,7 +164,7 @@ describe("reviewSession", () => {
     expect(loadReviewSession("invalid-shape")).toBeNull();
   });
 
-  it("reports sessionStorage availability and supports removal", () => {
+  it("reports localStorage availability and supports removal", () => {
     const session = createReviewSession({
       capture: buildCapture(),
       acquisitionMode: "live_mic",
@@ -198,5 +199,38 @@ describe("reviewSession", () => {
       notationMode: "western",
       activeEventId: null,
     });
+  });
+
+  it("preserves transactionId through round-trip", () => {
+    const capture = buildCapture();
+    const session = createReviewSession({
+      capture,
+      acquisitionMode: "live_mic",
+      notationMode: "vertical",
+      activeEventId: "evt-1",
+    });
+
+    expect(session.transactionId).toBe("test-txn-00000000-0000-0000-0000-000000000001");
+
+    saveReviewSession(session);
+    const loaded = loadReviewSession(session.sessionId);
+    expect(loaded?.transactionId).toBe("test-txn-00000000-0000-0000-0000-000000000001");
+  });
+
+  it("accepts null transactionId", () => {
+    const capture = buildCapture();
+    capture.responsePayload = buildResult(null);
+    const session = createReviewSession({
+      capture,
+      acquisitionMode: "live_mic",
+      notationMode: "vertical",
+      activeEventId: "evt-1",
+    });
+
+    expect(session.transactionId).toBeNull();
+
+    saveReviewSession(session);
+    const loaded = loadReviewSession(session.sessionId);
+    expect(loaded?.transactionId).toBeNull();
   });
 });

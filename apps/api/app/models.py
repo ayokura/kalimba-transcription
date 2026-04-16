@@ -96,6 +96,7 @@ class NotationViews(BaseModel):
 
 
 class TranscriptionResult(BaseModel):
+    transaction_id: str | None = Field(default=None, alias="transactionId")
     instrument_tuning: InstrumentTuning = Field(alias="instrumentTuning")
     tempo: float
     events: list[ScoreEvent]

@@ -31,3 +31,4 @@ crates/*/uv.lock
 .mcp.json
 test-results/
 .tmp/
+data/

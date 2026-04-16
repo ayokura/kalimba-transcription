@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { fetchTranscriptionAudioBlob } from "@/lib/api";
 import { loadReviewAudio } from "@/lib/reviewAudioStore";
 import { isReviewSessionStorageAvailable, loadReviewSession, updateReviewSessionUiState } from "@/lib/reviewSession";
 import { NotationMode } from "@/lib/types";
@@ -27,17 +28,33 @@ export function useReviewWorkspaceSession(sessionId: string) {
     ?? null;
 
   useEffect(() => {
-    if (!audioBlob) {
+    if (audioBlob) {
+      const nextUrl = URL.createObjectURL(audioBlob);
+      setAudioUrl(nextUrl);
+      return () => {
+        URL.revokeObjectURL(nextUrl);
+      };
+    }
+
+    if (!session?.transactionId) {
       setAudioUrl(null);
       return;
     }
 
-    const nextUrl = URL.createObjectURL(audioBlob);
-    setAudioUrl(nextUrl);
+    let cancelled = false;
+    fetchTranscriptionAudioBlob(session.transactionId)
+      .then((blob) => {
+        if (cancelled) return;
+        const nextUrl = URL.createObjectURL(blob);
+        setAudioUrl(nextUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setAudioUrl(null);
+      });
     return () => {
-      URL.revokeObjectURL(nextUrl);
+      cancelled = true;
     };
-  }, [audioBlob]);
+  }, [audioBlob, session?.transactionId]);
 
   useEffect(() => {
     setNotationMode(session?.notationMode ?? "vertical");
