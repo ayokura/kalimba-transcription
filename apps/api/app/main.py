@@ -11,7 +11,10 @@ from pydantic import BaseModel
 
 from .models import InstrumentTuning, TranscriptionResult
 from .storage import (
+    compute_audio_sha256,
+    find_transaction_by_hash_and_tuning,
     generate_transaction_id,
+    list_recent_transactions,
     load_audio_path,
     load_memo,
     load_response,
@@ -22,6 +25,9 @@ from .storage import (
 from .transcription import parse_tuning_json, transcribe_audio
 from .transcription.patterns import REPEATED_PATTERN_PASS_IDS
 from .tunings import get_default_tunings
+
+
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
@@ -90,11 +96,21 @@ async def create_transcription(
     disabledRepeatedPatternPasses: str | None = Form(None),
     midPerformanceStart: bool = Form(False),
     midPerformanceEnd: bool = Form(False),
+    force: bool = Form(False),
 ) -> TranscriptionResult:
     audio_bytes = await file.read()
     await file.seek(0)
 
     parsed_tuning = parse_tuning_json(tuning)
+    audio_sha256 = compute_audio_sha256(audio_bytes)
+
+    if not force and not debug:
+        existing_id = find_transaction_by_hash_and_tuning(audio_sha256, parsed_tuning.id)
+        if existing_id is not None:
+            existing = load_response(existing_id)
+            if existing is not None:
+                return TranscriptionResult.model_validate(existing)
+
     disabled_passes = parse_disabled_repeated_pattern_passes(disabledRepeatedPatternPasses)
     result = await transcribe_audio(
         file,
@@ -114,6 +130,7 @@ async def create_transcription(
         "disabledRepeatedPatternPasses": disabledRepeatedPatternPasses,
         "midPerformanceStart": midPerformanceStart,
         "midPerformanceEnd": midPerformanceEnd,
+        "audioSha256": audio_sha256,
     }
     response_dict = result.model_dump(by_alias=True)
     debug_dict = response_dict.get("debug") if debug else None
@@ -121,6 +138,22 @@ async def create_transcription(
     save_transaction(transaction_id, audio_bytes, request_params, response_dict, debug_dict)
 
     return result
+
+
+@app.get("/api/transcriptions/by-hash/{audio_sha256}")
+def get_transcription_by_hash(audio_sha256: str, tuning: str) -> dict:
+    if not _SHA256_RE.match(audio_sha256):
+        raise HTTPException(status_code=400, detail="Invalid SHA-256 format.")
+    existing_id = find_transaction_by_hash_and_tuning(audio_sha256, tuning)
+    if existing_id is None:
+        raise HTTPException(status_code=404, detail="No matching transcription found.")
+    return {"transactionId": existing_id}
+
+
+@app.get("/api/transcriptions/recent")
+def get_recent_transcriptions(limit: int = 10) -> list[dict]:
+    capped = max(1, min(limit, 100))
+    return list_recent_transactions(capped)
 
 
 @app.get("/api/transcriptions/{transaction_id}")
