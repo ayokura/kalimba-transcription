@@ -169,6 +169,32 @@ KALIMBA_GLOW_PARTIAL_OVERRIDES: dict[str, list[TuningNotePartial]] = {
     ],
 }
 
+# 17-key kalimba uses a V-shape layout: the tonic sits at center (index 8),
+# and notes alternate outward — right side ascending: 3rd, 5th, 7th, 2nd(+oct),
+# 4th(+oct), 6th(+oct), 1st(+2oct), 3rd(+2oct); left side mirrors the pattern
+# with 2nd, 4th, 6th, 1st(+oct), 3rd(+oct), 5th(+oct), 7th(+oct), 2nd(+2oct).
+# The helper below generates this layout for any major-scale tonic.
+MAJOR_SCALE_SEMITONES = (0, 2, 4, 5, 7, 9, 11)
+
+
+def _midi_to_note_name(midi: int, use_flats: bool = False) -> str:
+    names_sharp = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+    names_flat = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
+    octave = (midi // 12) - 1
+    pitch = (names_flat if use_flats else names_sharp)[midi % 12]
+    return f"{pitch}{octave}"
+
+
+def major_17_key_layout(tonic_note: str, *, use_flats: bool = False) -> list[str]:
+    pitch, octave = parse_note_name(tonic_note)
+    base_midi = NOTE_TO_MIDI[pitch] + (octave + 1) * 12
+    right_offsets = [4, 7, 11, 14, 17, 21, 24, 28]
+    left_offsets = [2, 5, 9, 12, 16, 19, 23, 26]
+    left_notes = [_midi_to_note_name(base_midi + o, use_flats) for o in left_offsets]
+    right_notes = [_midi_to_note_name(base_midi + o, use_flats) for o in right_offsets]
+    return list(reversed(left_notes)) + [f"{pitch}{octave}"] + right_notes
+
+
 DEFAULT_TUNINGS = [
     build_tuning(
         "kalimba-17-c",
@@ -178,9 +204,45 @@ DEFAULT_TUNINGS = [
         partial_overrides=KALIMBA_17C_PARTIAL_OVERRIDES,
     ),
     build_tuning(
+        "kalimba-17-d",
+        "17 Key D Major (ニ長調)",
+        major_17_key_layout("D4"),
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
+    ),
+    build_tuning(
+        "kalimba-17-e",
+        "17 Key E Major (ホ長調)",
+        major_17_key_layout("E4"),
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
+    ),
+    build_tuning(
+        "kalimba-17-f",
+        "17 Key F Major (ヘ長調)",
+        major_17_key_layout("F4", use_flats=True),
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
+    ),
+    build_tuning(
         "kalimba-17-g",
         "17 Key G Major",
         ["A6", "F#6", "D6", "B5", "G5", "E5", "C5", "A4", "G4", "B4", "D5", "F#5", "A5", "C6", "E6", "G6", "B6"],
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
+    ),
+    build_tuning(
+        "kalimba-17-a",
+        "17 Key A Major (イ長調)",
+        major_17_key_layout("A4"),
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
+    ),
+    build_tuning(
+        "kalimba-17-b",
+        "17 Key B Major (ロ長調)",
+        major_17_key_layout("B4"),
+        default_partials=KALIMBA_DEFAULT_PARTIALS,
+    ),
+    build_tuning(
+        "kalimba-17-bb",
+        "17 Key Bb Major (変ロ長調)",
+        major_17_key_layout("Bb4", use_flats=True),
         default_partials=KALIMBA_DEFAULT_PARTIALS,
     ),
     build_tuning(
