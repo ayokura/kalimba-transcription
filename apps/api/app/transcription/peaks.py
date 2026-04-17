@@ -3542,6 +3542,17 @@ def segment_peaks(
                 source="extension",
             ))
 
+    # Layer 4.6: Inharmonic partial gate.
+    # Kalimba tines have non-integer harmonics (Chapman 2012). A plucked
+    # primary's 2nd/3rd/4th inharmonic partial can coincide with a nearby
+    # tuning band and be selected as a secondary. Those leakage peaks ride
+    # the primary's attack but decay to noise floor in ~300 ms, whereas a
+    # genuine tine vibration retains 30-60 % of peak.  Compare cross-note
+    # late-sustain (noise-floor invariant) — drop the secondary when the
+    # ratio to the primary's own late-sustain is below the threshold.
+    if len(selection.selected) > 1:
+        _apply_inharmonic_partial_gate(ctx, selection, primary)
+
     # Layer 5: Evidence freeze + trace assembly + debug
     for note in selection.selected:
         cached_og = evidence.get_onset_gain_if_cached(note.frequency)
@@ -3664,6 +3675,73 @@ def _find_note_attack_time(
         t += hop_seconds
 
     return best_time
+
+
+# Inharmonic partial zones per Chapman 2012 (kalimba tine non-integer harmonics).
+# Secondary notes whose primary-relative frequency ratio lies in these zones
+# are candidates for partial-leakage FP; the sustain gate decides.
+#   2nd partial:  integer 2x,  zone 1.9-2.2
+#   3rd partial:  integer 3x,  zone 2.7-3.15 (incl. G4+C#6 @ 2.829)
+#   4th partial:  integer 4x,  zone 3.4-4.05
+_INHARMONIC_PARTIAL_ZONES: tuple[tuple[float, float], ...] = (
+    (1.90, 2.20),
+    (2.70, 3.15),
+    (3.40, 4.05),
+)
+
+# Cross-note late-sustain threshold.  Observed on ac1a5c58 non-clean
+# tester capture: evt3 C#6/G4 late-sustain ratio = 0.07, evt6 = 0.04.
+# Genuine co-occurring tines hold ratio ~0.3-2.0.
+_INHARMONIC_SECONDARY_MAX_SUSTAIN_RATIO = 0.15
+
+
+def _apply_inharmonic_partial_gate(
+    ctx: _SegmentContext,
+    selection: _SelectionState,
+    primary: NoteHypothesis,
+) -> None:
+    """Demote secondary notes that look like inharmonic partial leakage.
+
+    For each accepted secondary whose primary-relative frequency ratio lies
+    in an inharmonic partial zone, compare its late-sustain (300-600 ms
+    post-segment-start) energy to the primary's own late-sustain.  A
+    partial's leakage cannot sustain because it is not a real tine
+    vibration — its late-sustain collapses to noise floor while the
+    primary retains a visible fraction of peak.
+    """
+    primary_freq = primary.candidate.frequency
+    if primary_freq <= 0:
+        return
+    sustain_center = ctx.start_time + 0.30 + 0.15
+    primary_sustain = _note_band_energy(
+        ctx.audio, ctx.sample_rate, sustain_center, primary_freq,
+        window_seconds=0.30,
+    )
+    if primary_sustain <= 0:
+        return
+    primary_name = primary.candidate.note_name
+    dropped_names: set[str] = set()
+    for note in list(selection.selected):
+        if note.note_name == primary_name:
+            continue
+        ratio = note.frequency / primary_freq
+        in_zone = any(lo <= ratio <= hi for lo, hi in _INHARMONIC_PARTIAL_ZONES)
+        if not in_zone:
+            continue
+        secondary_sustain = _note_band_energy(
+            ctx.audio, ctx.sample_rate, sustain_center, note.frequency,
+            window_seconds=0.30,
+        )
+        cross_ratio = secondary_sustain / primary_sustain
+        if cross_ratio < _INHARMONIC_SECONDARY_MAX_SUSTAIN_RATIO:
+            dropped_names.add(note.note_name)
+    if not dropped_names:
+        return
+    selection.selected = [n for n in selection.selected if n.note_name not in dropped_names]
+    for cd in selection.candidate_decisions:
+        if cd.note_name in dropped_names and cd.accepted:
+            cd.accepted = False
+            cd.reasons.append("inharmonic-partial-leakage")
 
 
 MUTE_DIP_ENERGY_WINDOW = 0.05
