@@ -1,7 +1,7 @@
 import { InstrumentTuning, TranscriptionResult } from "@/lib/types";
 import { WavMetadata, toWavWithMetadata } from "@/lib/audio";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 export type CaptureAssessmentStatus = "completed" | "pending" | "rerecord" | "review_needed" | "reference_only";
 

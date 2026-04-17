@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -53,9 +54,18 @@ def parse_disabled_repeated_pattern_passes(raw_value: str | None) -> frozenset[s
 
 app = FastAPI(title="Kalimba Score API", version="0.1.0")
 
+
+def _parse_allowed_origins(raw: str | None) -> list[str]:
+    if raw is None:
+        return ["*"]
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+_ALLOWED_ORIGINS = _parse_allowed_origins(os.environ.get("KALIMBA_ALLOWED_ORIGINS"))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
