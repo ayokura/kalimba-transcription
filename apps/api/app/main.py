@@ -97,6 +97,7 @@ async def create_transcription(
     midPerformanceStart: bool = Form(False),
     midPerformanceEnd: bool = Form(False),
     force: bool = Form(False),
+    dryRun: bool = Form(False),
 ) -> TranscriptionResult:
     audio_bytes = await file.read()
     await file.seek(0)
@@ -104,7 +105,7 @@ async def create_transcription(
     parsed_tuning = parse_tuning_json(tuning)
     audio_sha256 = compute_audio_sha256(audio_bytes)
 
-    if not force and not debug:
+    if not dryRun and not force and not debug:
         existing_id = find_transaction_by_hash_and_tuning(audio_sha256, parsed_tuning.id)
         if existing_id is not None:
             existing = load_response(existing_id)
@@ -120,6 +121,9 @@ async def create_transcription(
         mid_performance_start=midPerformanceStart,
         mid_performance_end=midPerformanceEnd,
     )
+
+    if dryRun:
+        return result
 
     transaction_id = generate_transaction_id()
     result.transaction_id = transaction_id
