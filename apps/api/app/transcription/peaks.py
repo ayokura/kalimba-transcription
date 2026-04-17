@@ -3579,31 +3579,66 @@ def has_kalimba_sustain_profile(
     onset_time: float,
     frequency: float,
     *,
+    reference_frequency: float | None = None,
     min_sustain_ratio: float = 0.05,
+    min_cross_sustain_ratio: float = 0.15,
     attack_window: float = 0.10,
     sustain_delay: float = 0.30,
     sustain_window: float = 0.30,
 ) -> bool:
-    """Return True if *onset_time* has a kalimba-like sustain envelope on
-    *frequency*.  Compares peak energy in the attack window
-    [onset, onset + attack_window] to peak energy in the late-sustain
-    window [onset + sustain_delay, onset + sustain_delay + sustain_window].
-    Genuine plucks ring through the late window (ratio ~30-60 %);
-    spurious broadband transients (edge clicks, non-pluck noise) decay
-    to the noise floor (ratio < 1 %).
+    """Return True if *frequency* has a kalimba-like sustain envelope at *onset_time*.
 
-    The default windows (attack 0-100 ms, late 300-600 ms) skip the
-    first 300 ms so any transient spike that happens to land inside a
-    short sustain window does not inflate the ratio — the early-sustain
-    region can still carry a noise peak, whereas the 300-600 ms region
-    has clearly returned to noise floor for non-pluck events.  See Free
-    Perf 10.94s D5 (ratio ~0.60) vs triple-glissando 0.03s C5
-    (ratio ~0.01) comparison.
+    Two modes depending on ``reference_frequency``:
 
-    The ratio is peak-to-peak (both measured in short FFT windows) so
-    it is scale/gain invariant; absolute sustain energy is sensitive
-    to mic distance.
+    **Absolute mode** (``reference_frequency=None``, default): compares
+    peak energy in the attack window [onset, onset + attack_window] to
+    peak energy in the late-sustain window
+    [onset + sustain_delay, onset + sustain_delay + sustain_window].
+    Genuine plucks ring through the late window (ratio ~30-60 %); spurious
+    broadband transients (edge clicks, non-pluck noise) decay to noise
+    floor (ratio < 1 %).  Answers the question "is this band a real
+    kalimba pluck vs non-pluck noise".
+
+    Used for orphan-onset promotion: a recording-edge click or breath
+    that lands on a tuning frequency passes the onset detector and
+    narrow-FFT scoring but does not sustain.  The 300-ms delay before
+    the late window skips any transient spike that happens to leak into
+    an early-sustain window.
+
+    **Cross-note mode** (``reference_frequency`` given): compares the
+    target frequency's late-sustain peak to the reference frequency's
+    late-sustain peak, both in [onset + sustain_delay,
+    onset + sustain_delay + sustain_window].  Answers "is this a
+    genuine co-occurring tine or partial-leakage from the reference".
+
+    Used for inharmonic-partial secondary gating: kalimba tines have
+    non-integer harmonics (Chapman 2012), so a strongly plucked primary's
+    2nd/3rd/4th partial can coincide with a nearby tuning band.  The
+    leakage rides the primary attack transient but does not sustain
+    like a real tine vibration.  Cross-note comparison is noise-floor
+    invariant (both bands share the same background level), which
+    matters for non-clean tester captures where absolute thresholds
+    drift with mic distance.
+
+    Both ratios are peak-to-peak so they are scale/gain invariant;
+    absolute sustain energy is sensitive to mic distance.
     """
+    sustain_center = onset_time + sustain_delay + sustain_window / 2.0
+    if reference_frequency is not None:
+        reference_sustain = _note_band_energy(
+            audio, sample_rate, sustain_center, reference_frequency,
+            window_seconds=sustain_window,
+        )
+        if reference_sustain <= 0.0:
+            # Reference itself failed to sustain — the judgement is undefined
+            # for this onset; keep the secondary conservatively.
+            return True
+        target_sustain = _note_band_energy(
+            audio, sample_rate, sustain_center, frequency,
+            window_seconds=sustain_window,
+        )
+        return (target_sustain / reference_sustain) >= min_cross_sustain_ratio
+
     attack_center = onset_time + attack_window / 2.0
     attack_peak = _note_band_energy(
         audio, sample_rate, attack_center, frequency,
@@ -3611,7 +3646,6 @@ def has_kalimba_sustain_profile(
     )
     if attack_peak <= 0.0:
         return False
-    sustain_center = onset_time + sustain_delay + sustain_window / 2.0
     sustain_peak = _note_band_energy(
         audio, sample_rate, sustain_center, frequency,
         window_seconds=sustain_window,
@@ -3703,21 +3737,15 @@ def _apply_inharmonic_partial_gate(
     """Demote secondary notes that look like inharmonic partial leakage.
 
     For each accepted secondary whose primary-relative frequency ratio lies
-    in an inharmonic partial zone, compare its late-sustain (300-600 ms
-    post-segment-start) energy to the primary's own late-sustain.  A
-    partial's leakage cannot sustain because it is not a real tine
-    vibration — its late-sustain collapses to noise floor while the
-    primary retains a visible fraction of peak.
+    in an inharmonic partial zone, use has_kalimba_sustain_profile in
+    cross-note mode (reference_frequency = primary) to check whether the
+    secondary's late-sustain is comparable to the primary's.  A partial's
+    leakage cannot sustain because it is not a real tine vibration — its
+    late-sustain collapses to noise floor while the primary retains a
+    visible fraction of peak.
     """
     primary_freq = primary.candidate.frequency
     if primary_freq <= 0:
-        return
-    sustain_center = ctx.start_time + 0.30 + 0.15
-    primary_sustain = _note_band_energy(
-        ctx.audio, ctx.sample_rate, sustain_center, primary_freq,
-        window_seconds=0.30,
-    )
-    if primary_sustain <= 0:
         return
     primary_name = primary.candidate.note_name
     dropped_names: set[str] = set()
@@ -3728,12 +3756,11 @@ def _apply_inharmonic_partial_gate(
         in_zone = any(lo <= ratio <= hi for lo, hi in _INHARMONIC_PARTIAL_ZONES)
         if not in_zone:
             continue
-        secondary_sustain = _note_band_energy(
-            ctx.audio, ctx.sample_rate, sustain_center, note.frequency,
-            window_seconds=0.30,
-        )
-        cross_ratio = secondary_sustain / primary_sustain
-        if cross_ratio < _INHARMONIC_SECONDARY_MAX_SUSTAIN_RATIO:
+        if not has_kalimba_sustain_profile(
+            ctx.audio, ctx.sample_rate, ctx.start_time, note.frequency,
+            reference_frequency=primary_freq,
+            min_cross_sustain_ratio=_INHARMONIC_SECONDARY_MAX_SUSTAIN_RATIO,
+        ):
             dropped_names.add(note.note_name)
     if not dropped_names:
         return
