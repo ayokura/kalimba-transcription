@@ -4,6 +4,37 @@ export type WavMetadata = {
   durationSec: number;
 };
 
+export type AudioLevels = {
+  peakDb: number;
+  rmsDb: number;
+};
+
+export async function computeAudioLevels(blob: Blob): Promise<AudioLevels> {
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioContext = new AudioContext();
+  try {
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    const channels = audioBuffer.numberOfChannels;
+    const len = audioBuffer.length;
+    let peak = 0;
+    let sumSq = 0;
+    for (let c = 0; c < channels; c += 1) {
+      const data = audioBuffer.getChannelData(c);
+      for (let i = 0; i < len; i += 1) {
+        const v = Math.abs(data[i]);
+        if (v > peak) peak = v;
+        sumSq += data[i] * data[i];
+      }
+    }
+    const samples = channels * len;
+    const rms = samples > 0 ? Math.sqrt(sumSq / samples) : 0;
+    const toDb = (v: number) => (v > 0 ? 20 * Math.log10(v) : Number.NEGATIVE_INFINITY);
+    return { peakDb: toDb(peak), rmsDb: toDb(rms) };
+  } finally {
+    await audioContext.close();
+  }
+}
+
 export async function blobToWav(blob: Blob): Promise<Blob> {
   const { wavBlob } = await toWavWithMetadata(blob);
   return wavBlob;

@@ -4,11 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createTranscriptionWithCapture, fetchTunings } from "@/lib/api";
+import { computeAudioLevels, type AudioLevels } from "@/lib/audio";
 import { createReviewSession, saveReviewSession } from "@/lib/reviewSession";
 import { saveReviewAudio } from "@/lib/reviewAudioStore";
+import {
+  loadRecentTranscriptions,
+  pushRecentTranscription,
+  removeRecentTranscription,
+  type RecentTranscription,
+} from "@/lib/recentTranscriptions";
 import { InstrumentTuning } from "@/lib/types";
 
 type Stage = "idle" | "recording" | "ready" | "analyzing";
+
+const LOW_LEVEL_PEAK_DB = -18;
 
 export function SimpleHome() {
   const router = useRouter();
@@ -16,8 +25,32 @@ export function SimpleHome() {
   const [selectedTuningId, setSelectedTuningId] = useState<string>("");
   const [recording, setRecording] = useState<Blob | null>(null);
   const [recordingSource, setRecordingSource] = useState<"mic" | "file" | null>(null);
+  const [audioLevels, setAudioLevels] = useState<AudioLevels | null>(null);
   const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [recent, setRecent] = useState<RecentTranscription[]>([]);
+
+  useEffect(() => {
+    setRecent(loadRecentTranscriptions());
+  }, []);
+
+  useEffect(() => {
+    if (!recording) {
+      setAudioLevels(null);
+      return;
+    }
+    let cancelled = false;
+    computeAudioLevels(recording)
+      .then((levels) => {
+        if (!cancelled) setAudioLevels(levels);
+      })
+      .catch(() => {
+        if (!cancelled) setAudioLevels(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [recording]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -105,6 +138,12 @@ export function SimpleHome() {
       saveReviewAudio(session.sessionId, capture.audioWav);
       const transactionId = capture.responsePayload.transactionId;
       if (transactionId) {
+        pushRecentTranscription({
+          transactionId,
+          createdAt: new Date().toISOString(),
+          tuningName: selectedTuning.name,
+          eventCount: capture.responsePayload.events.length,
+        });
         router.push(`/score/${transactionId}`);
       } else {
         setError("サーバー保管に失敗しました。もう一度お試しください。");
@@ -192,6 +231,14 @@ export function SimpleHome() {
         )}
       </section>
 
+      {audioLevels && recording && audioLevels.peakDb < LOW_LEVEL_PEAK_DB ? (
+        <p className="simple-home-warning">
+          録音の音量が小さすぎます (ピーク {audioLevels.peakDb.toFixed(1)} dB)。
+          iOS では外部オーディオインターフェースが使えず、内蔵マイクで遠くから拾っている可能性があります。
+          マイクを近づけるか、PC で録音した WAV を「WAV をアップロード」から読み込ませてください。
+        </p>
+      ) : null}
+
       <section className="simple-home-step">
         <button
           type="button"
@@ -204,6 +251,53 @@ export function SimpleHome() {
       </section>
 
       {error ? <p className="simple-home-error">{error}</p> : null}
+
+      {recent.length > 0 ? (
+        <section className="simple-home-recent">
+          <p className="simple-home-label">これまでの採譜</p>
+          <ul className="simple-home-recent-list">
+            {recent.map((entry) => (
+              <li key={entry.transactionId} className="simple-home-recent-item">
+                <button
+                  type="button"
+                  className="simple-home-recent-btn"
+                  onClick={() => router.push(`/score/${entry.transactionId}`)}
+                >
+                  <span className="simple-home-recent-primary">
+                    {formatRelativeTime(entry.createdAt)} · {entry.tuningName}
+                  </span>
+                  <span className="simple-home-recent-secondary">
+                    {entry.eventCount} イベント
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="simple-home-recent-remove"
+                  aria-label="履歴から削除"
+                  onClick={() => {
+                    removeRecentTranscription(entry.transactionId);
+                    setRecent(loadRecentTranscriptions());
+                  }}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </main>
   );
+}
+
+function formatRelativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return iso;
+  const diffSec = Math.floor((Date.now() - then) / 1000);
+  if (diffSec < 60) return "たった今";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} 分前`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} 時間前`;
+  if (diffSec < 86400 * 7) return `${Math.floor(diffSec / 86400)} 日前`;
+  const d = new Date(iso);
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
 }

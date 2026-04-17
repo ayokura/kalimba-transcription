@@ -1209,6 +1209,84 @@ button:disabled {
   font-size: 0.9rem;
 }
 
+.simple-home-warning {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(220, 150, 40, 0.12);
+  border: 1px solid rgba(220, 150, 40, 0.35);
+  color: #8a5a10;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.simple-home-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.simple-home-recent-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.simple-home-recent-item {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.simple-home-recent-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.simple-home-recent-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.simple-home-recent-primary {
+  font-size: 0.92rem;
+}
+
+.simple-home-recent-secondary {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.simple-home-recent-remove {
+  width: 36px;
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.simple-home-recent-remove:hover {
+  color: #a33;
+  border-color: rgba(200, 60, 60, 0.3);
+}
+
 @media (max-width: 480px) {
   .simple-home {
     padding: 20px 16px 40px;
@@ -1234,6 +1312,29 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.score-viewer-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.score-viewer-home-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.score-viewer-home-link:hover {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .score-viewer-title {

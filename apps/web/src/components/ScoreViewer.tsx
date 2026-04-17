@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DoReMiScore } from "@/components/DoReMiScore";
@@ -164,7 +165,12 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
   return (
     <main className="score-viewer-shell">
       <header className="score-viewer-header">
-        <h1 className="score-viewer-title">カリンバ譜面</h1>
+        <div className="score-viewer-header-row">
+          <Link href="/" className="score-viewer-home-link">
+            ← トップへ
+          </Link>
+          <h1 className="score-viewer-title">カリンバ譜面</h1>
+        </div>
         <ShareUrlRow url={shareUrl} />
       </header>
 
