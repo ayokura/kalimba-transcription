@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { createTranscriptionWithCapture, fetchTunings } from "@/lib/api";
-import { computeAudioLevels, type AudioLevels } from "@/lib/audio";
+import {
+  createTranscriptionWithCapture,
+  fetchRecentTranscriptions,
+  fetchTunings,
+  lookupTranscriptionByHash,
+} from "@/lib/api";
+import { computeAudioLevels, computeBlobSha256Hex, type AudioLevels } from "@/lib/audio";
 import { createReviewSession, saveReviewSession } from "@/lib/reviewSession";
 import { saveReviewAudio } from "@/lib/reviewAudioStore";
 import {
@@ -18,6 +23,11 @@ import { InstrumentTuning } from "@/lib/types";
 type Stage = "idle" | "recording" | "ready" | "analyzing";
 
 const LOW_LEVEL_PEAK_DB = -18;
+const ANALYZE_RETRY_PROMPT_MS = 20_000;
+
+type DedupPrompt = {
+  transactionId: string;
+};
 
 export function SimpleHome() {
   const router = useRouter();
@@ -29,9 +39,37 @@ export function SimpleHome() {
   const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentTranscription[]>([]);
+  const [dedupPrompt, setDedupPrompt] = useState<DedupPrompt | null>(null);
+  const [analyzeElapsed, setAnalyzeElapsed] = useState(0);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const analyzeRequestIdRef = useRef(0);
 
   useEffect(() => {
     setRecent(loadRecentTranscriptions());
+    fetchRecentTranscriptions(10)
+      .then((serverRecent) => {
+        const existing = loadRecentTranscriptions();
+        const existingIds = new Set(existing.map((e) => e.transactionId));
+        let changed = false;
+        for (const s of serverRecent) {
+          if (existingIds.has(s.transactionId)) continue;
+          pushRecentTranscription({
+            transactionId: s.transactionId,
+            createdAt: new Date(s.createdAt * 1000).toISOString(),
+            tuningName: s.tuningName ?? "unknown",
+            eventCount: s.eventCount,
+          });
+          changed = true;
+        }
+        if (changed) setRecent(loadRecentTranscriptions());
+      })
+      .catch(() => {
+        // ignore server recent errors
+      });
   }, []);
 
   useEffect(() => {
@@ -52,11 +90,6 @@ export function SimpleHome() {
     };
   }, [recording]);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   useEffect(() => {
     fetchTunings()
       .then((list) => {
@@ -71,6 +104,18 @@ export function SimpleHome() {
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
+
+  useEffect(() => {
+    if (stage !== "analyzing") {
+      setAnalyzeElapsed(0);
+      return;
+    }
+    const start = Date.now();
+    const id = window.setInterval(() => {
+      setAnalyzeElapsed(Date.now() - start);
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [stage]);
 
   const selectedTuning = tunings.find((t) => t.id === selectedTuningId) ?? null;
 
@@ -119,45 +164,85 @@ export function SimpleHome() {
     setRecordingSource(null);
     setStage("idle");
     setError(null);
+    setDedupPrompt(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
+
+  const runTranscription = useCallback(
+    async (blob: Blob, tuning: InstrumentTuning, source: "mic" | "file" | null, force: boolean) => {
+      const requestId = ++analyzeRequestIdRef.current;
+      setStage("analyzing");
+      setError(null);
+      try {
+        const capture = await createTranscriptionWithCapture(blob, tuning, { force });
+        if (requestId !== analyzeRequestIdRef.current) return; // superseded
+        const session = createReviewSession({
+          capture,
+          acquisitionMode: source === "file" ? "uploaded_file" : "live_mic",
+          notationMode: "score",
+          activeEventId: null,
+        });
+        saveReviewSession(session);
+        saveReviewAudio(session.sessionId, capture.audioWav);
+        const transactionId = capture.responsePayload.transactionId;
+        if (transactionId) {
+          pushRecentTranscription({
+            transactionId,
+            createdAt: new Date().toISOString(),
+            tuningName: tuning.name,
+            eventCount: capture.responsePayload.events.length,
+          });
+          router.push(`/score/${transactionId}`);
+        } else {
+          setError("サーバー保管に失敗しました。もう一度お試しください。");
+          setStage("ready");
+        }
+      } catch (err) {
+        if (requestId !== analyzeRequestIdRef.current) return;
+        setError(err instanceof Error ? err.message : "採譜に失敗しました。");
+        setStage("ready");
+      }
+    },
+    [router],
+  );
 
   async function handleAnalyze() {
     if (!recording || !selectedTuning) return;
     setError(null);
-    setStage("analyzing");
+    setDedupPrompt(null);
     try {
-      const capture = await createTranscriptionWithCapture(recording, selectedTuning);
-      const session = createReviewSession({
-        capture,
-        acquisitionMode: recordingSource === "file" ? "uploaded_file" : "live_mic",
-        notationMode: "score",
-        activeEventId: null,
-      });
-      saveReviewSession(session);
-      saveReviewAudio(session.sessionId, capture.audioWav);
-      const transactionId = capture.responsePayload.transactionId;
-      if (transactionId) {
-        pushRecentTranscription({
-          transactionId,
-          createdAt: new Date().toISOString(),
-          tuningName: selectedTuning.name,
-          eventCount: capture.responsePayload.events.length,
-        });
-        router.push(`/score/${transactionId}`);
-      } else {
-        setError("サーバー保管に失敗しました。もう一度お試しください。");
-        setStage("ready");
+      const hash = await computeBlobSha256Hex(recording);
+      const existing = await lookupTranscriptionByHash(hash, selectedTuning.id);
+      if (existing) {
+        setDedupPrompt({ transactionId: existing });
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "採譜に失敗しました。");
-      setStage("ready");
+    } catch {
+      // ignore hash/lookup failures and proceed to POST
     }
+    await runTranscription(recording, selectedTuning, recordingSource, false);
+  }
+
+  async function handleForceRerun() {
+    if (!recording || !selectedTuning) return;
+    setDedupPrompt(null);
+    await runTranscription(recording, selectedTuning, recordingSource, true);
+  }
+
+  function handleOpenExisting(transactionId: string) {
+    setDedupPrompt(null);
+    router.push(`/score/${transactionId}`);
+  }
+
+  async function handleResend() {
+    if (!recording || !selectedTuning) return;
+    await runTranscription(recording, selectedTuning, recordingSource, false);
   }
 
   const isRecording = stage === "recording";
   const isAnalyzing = stage === "analyzing";
   const canAnalyze = Boolean(recording && selectedTuning) && !isAnalyzing;
+  const showRetryPrompt = isAnalyzing && analyzeElapsed >= ANALYZE_RETRY_PROMPT_MS;
 
   return (
     <main className="simple-home">
@@ -239,6 +324,30 @@ export function SimpleHome() {
         </p>
       ) : null}
 
+      {dedupPrompt ? (
+        <div className="simple-home-dedup" role="dialog" aria-label="dedup-prompt">
+          <p className="simple-home-dedup-text">
+            この録音は以前採譜済みです。既存の結果を開きますか? それとも改めて採譜しますか?
+          </p>
+          <div className="simple-home-dedup-actions">
+            <button
+              type="button"
+              className="simple-home-btn primary"
+              onClick={() => handleOpenExisting(dedupPrompt.transactionId)}
+            >
+              結果を開く
+            </button>
+            <button
+              type="button"
+              className="simple-home-btn secondary"
+              onClick={handleForceRerun}
+            >
+              改めて採譜
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <section className="simple-home-step">
         <button
           type="button"
@@ -249,6 +358,17 @@ export function SimpleHome() {
           {isAnalyzing ? "採譜中…" : "自動採譜する"}
         </button>
       </section>
+
+      {showRetryPrompt ? (
+        <div className="simple-home-retry">
+          <p className="simple-home-retry-text">
+            時間がかかっています。通信トラブルで届いていない可能性があります。
+          </p>
+          <button type="button" className="simple-home-btn secondary" onClick={handleResend}>
+            再送信する
+          </button>
+        </div>
+      ) : null}
 
       {error ? <p className="simple-home-error">{error}</p> : null}
 

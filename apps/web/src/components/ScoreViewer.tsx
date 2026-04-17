@@ -3,9 +3,19 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useRouter } from "next/navigation";
+
 import { DoReMiScore } from "@/components/DoReMiScore";
-import { fetchMemo, fetchTranscription, fetchTranscriptionAudioBlob, saveMemo } from "@/lib/api";
+import {
+  createTranscriptionWithCapture,
+  fetchMemo,
+  fetchTranscription,
+  fetchTranscriptionAudioBlob,
+  fetchTunings,
+  saveMemo,
+} from "@/lib/api";
 import { findEventById, findEventIdAtSec } from "@/lib/eventTiming";
+import { pushRecentTranscription } from "@/lib/recentTranscriptions";
 import {
   isMovableNumberApplicable,
   movableDoLabelFn,
@@ -13,7 +23,7 @@ import {
   noteLabelFromScoreNote,
   tonicReferenceOctave,
 } from "@/lib/scoreLayout";
-import { TranscriptionResult } from "@/lib/types";
+import { InstrumentTuning, TranscriptionResult } from "@/lib/types";
 
 type LabelMode = "fixed" | "movable" | "movableNumber";
 const LABEL_MODE_STORAGE_KEY = "kalimba:score-label-mode";
@@ -228,12 +238,92 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
         />
       </section>
 
+      <RetranscribeSection
+        transactionId={transactionId}
+        currentTuningId={result.instrumentTuning.id}
+      />
+
       <footer className="score-viewer-footer">
         <p className="muted">
           {result.instrumentTuning.name} · Tempo {result.tempo.toFixed(1)} BPM · {events.length} events
         </p>
       </footer>
     </main>
+  );
+}
+
+function RetranscribeSection({
+  transactionId,
+  currentTuningId,
+}: {
+  transactionId: string;
+  currentTuningId: string;
+}) {
+  const router = useRouter();
+  const [tunings, setTunings] = useState<InstrumentTuning[]>([]);
+  const [selectedTuningId, setSelectedTuningId] = useState<string>(currentTuningId);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchTunings()
+      .then((list) => setTunings(list))
+      .catch(() => setError("調律一覧の取得に失敗しました。"));
+  }, []);
+
+  const selectedTuning = tunings.find((t) => t.id === selectedTuningId) ?? null;
+
+  async function handleRetranscribe() {
+    if (!selectedTuning) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const audioBlob = await fetchTranscriptionAudioBlob(transactionId);
+      const capture = await createTranscriptionWithCapture(audioBlob, selectedTuning, {
+        force: true,
+      });
+      const newId = capture.responsePayload.transactionId;
+      if (!newId) throw new Error("新しい transactionId が返されませんでした。");
+      pushRecentTranscription({
+        transactionId: newId,
+        createdAt: new Date().toISOString(),
+        tuningName: selectedTuning.name,
+        eventCount: capture.responsePayload.events.length,
+      });
+      router.push(`/score/${newId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "再採譜に失敗しました。");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="score-viewer-retranscribe">
+      <p className="score-viewer-retranscribe-label">この録音を別の条件で再採譜</p>
+      <div className="score-viewer-retranscribe-row">
+        <select
+          className="score-viewer-retranscribe-select"
+          value={selectedTuningId}
+          onChange={(e) => setSelectedTuningId(e.target.value)}
+          disabled={busy || tunings.length === 0}
+        >
+          {tunings.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="score-viewer-retranscribe-btn"
+          onClick={handleRetranscribe}
+          disabled={busy || !selectedTuning}
+        >
+          {busy ? "再採譜中…" : "再採譜"}
+        </button>
+      </div>
+      {error ? <p className="score-viewer-retranscribe-error">{error}</p> : null}
+    </section>
   );
 }
 

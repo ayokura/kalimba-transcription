@@ -9,6 +9,17 @@ export type AudioLevels = {
   rmsDb: number;
 };
 
+export async function computeBlobSha256Hex(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  const bytes = new Uint8Array(digest);
+  let hex = "";
+  for (const b of bytes) {
+    hex += b.toString(16).padStart(2, "0");
+  }
+  return hex;
+}
+
 export async function computeAudioLevels(blob: Blob): Promise<AudioLevels> {
   const arrayBuffer = await blob.arrayBuffer();
   const audioContext = new AudioContext();

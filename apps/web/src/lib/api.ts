@@ -92,7 +92,39 @@ export type CreateTranscriptionOptions = {
   sourceProfile?: SourceProfile;
   midPerformanceStart?: boolean;
   midPerformanceEnd?: boolean;
+  force?: boolean;
 };
+
+export type RecentTranscriptionEntry = {
+  transactionId: string;
+  createdAt: number;
+  tuningId: string | null;
+  tuningName: string | null;
+  eventCount: number;
+  audioSha256: string | null;
+};
+
+export async function lookupTranscriptionByHash(
+  audioSha256: string,
+  tuningId: string,
+): Promise<string | null> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/transcriptions/by-hash/${audioSha256}?tuning=${encodeURIComponent(tuningId)}`,
+    { cache: "no-store" },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("Failed to check audio hash.");
+  const data = (await response.json()) as { transactionId: string };
+  return data.transactionId;
+}
+
+export async function fetchRecentTranscriptions(limit = 10): Promise<RecentTranscriptionEntry[]> {
+  const response = await fetch(`${API_BASE_URL}/api/transcriptions/recent?limit=${limit}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Failed to load recent transcriptions.");
+  return response.json();
+}
 
 export async function fetchTunings(): Promise<InstrumentTuning[]> {
   const response = await fetch(`${API_BASE_URL}/api/tunings`, { cache: "no-store" });
@@ -122,6 +154,9 @@ export async function createTranscriptionWithCapture(
   }
   if (options.midPerformanceEnd) {
     formData.append("midPerformanceEnd", "true");
+  }
+  if (options.force) {
+    formData.append("force", "true");
   }
 
   const response = await fetch(`${API_BASE_URL}/api/transcriptions`, {
