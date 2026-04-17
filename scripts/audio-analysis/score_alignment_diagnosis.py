@@ -579,6 +579,8 @@ def main():
     parser.add_argument("--line", type=str, default=None, help="Show only this line (e.g., R6)")
     parser.add_argument("--no-cache", action="store_true", default=False,
                         help="Force fresh transcription (skip cache read, still writes result to cache)")
+    parser.add_argument("--save-transaction", action="store_true", default=False,
+                        help="サーバー側に transaction を永続化 (デフォルトは dryRun=true で data/ に残さない)")
     args = parser.parse_args()
 
     force_miss = args.no_cache
@@ -605,6 +607,8 @@ def main():
         audio_bytes = build_evaluation_audio_bytes(fixture_dir, expected)
 
     request_data = {"tuning": json.dumps(request_payload["tuning"]), "debug": "true"}
+    if not args.save_transaction:
+        request_data["dryRun"] = "true"
     payload, cache_status = _cached_transcribe(client, audio_bytes, request_data,
                                                force_miss=force_miss)
     debug = payload.get("debug")

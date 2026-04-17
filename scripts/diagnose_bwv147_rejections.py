@@ -22,7 +22,11 @@ def main():
 
     response = client.post(
         "/api/transcriptions",
-        data={"tuning": json.dumps(request_payload["tuning"]), "debug": "true"},
+        data={
+            "tuning": json.dumps(request_payload["tuning"]),
+            "debug": "true",
+            "dryRun": "true",
+        },
         files={"file": ("audio.wav", audio_bytes, "audio/wav")},
     )
     assert response.status_code == 200

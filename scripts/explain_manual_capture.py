@@ -36,9 +36,10 @@ _transcription_cache: dict[tuple, dict] = {}
 def _cached_transcribe(request_data: dict[str, str], audio_bytes: bytes, fixture_name: str) -> dict:
     cache_key = (fixture_name, len(audio_bytes), tuple(sorted(request_data.items())))
     if cache_key not in _transcription_cache:
+        data = {**request_data, "dryRun": "true"}
         response = client.post(
             "/api/transcriptions",
-            data=request_data,
+            data=data,
             files={"file": ("audio.wav", audio_bytes, "audio/wav")},
         )
         response.raise_for_status()

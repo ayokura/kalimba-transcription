@@ -66,6 +66,7 @@ def main() -> int:
             data["midPerformanceStart"] = "true"
         if request_payload.get("midPerformanceEnd"):
             data["midPerformanceEnd"] = "true"
+        data["dryRun"] = "true"
 
         t0 = time.monotonic()
         response = client.post(
