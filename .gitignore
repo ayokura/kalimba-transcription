@@ -32,3 +32,6 @@ crates/*/uv.lock
 test-results/
 .tmp/
 data/
+
+# transaction-capture fixtures: 取扱ポリシー確定までフォルダごと除外
+apps/api/tests/fixtures/transaction-captures/
