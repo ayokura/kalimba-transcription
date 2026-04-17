@@ -12,6 +12,7 @@ from .constants import *
 from .models import Note, NoteCandidate, RawAlternateGrouping, RawEvent
 from .noise_floor import NoiseFloorMeasurement
 from .peaks import (
+    _note_band_energy,
     are_harmonic_related,
     harmonic_relation_multiple,
     is_adjacent_tuning_step,
@@ -19,6 +20,108 @@ from .peaks import (
     onset_backward_attack_gain,
     pick_matching_sub_onset,
 )
+
+# Inharmonic partial zones per Chapman 2012 (kalimba tine non-integer harmonics).
+# A plucked tine's 2nd/3rd/4th partials sit offset from exact integer multiples
+# of the fundamental and can coincide with nearby tuning bands, leaking energy
+# that segment_peaks picks up as a secondary.  Zones are wider than exact
+# integer multiples to cover the measured inharmonicity spread.
+#   2nd partial:  integer 2x,  zone 1.9–2.2
+#   3rd partial:  integer 3x,  zone 2.7–3.15 (incl. G4+C#6 @ 2.829)
+#   4th partial:  integer 4x,  zone 3.4–4.05
+_INHARMONIC_PARTIAL_ZONES: tuple[tuple[float, float], ...] = (
+    (1.90, 2.20),
+    (2.70, 3.15),
+    (3.40, 4.05),
+)
+
+# Cross-note sustain ratio threshold.
+# Inharmonic partial leakage rides the primary's attack transient but the
+# partial itself does not correspond to a real tine vibration, so by the
+# 300-600 ms late-sustain window the leakage has essentially decayed to
+# noise floor while the primary tine still rings at ~30-60 % of peak.
+# Observed on ac1a5c58: evt3 C#6/G4 late-sustain ratio = 0.07, evt6 = 0.04.
+# A genuine co-occurring tine holds a comparable sustain (ratio ~0.3–2.0).
+_INHARMONIC_SECONDARY_MAX_SUSTAIN_RATIO = 0.15
+
+
+def suppress_inharmonic_partial_secondaries(
+    raw_events: list[RawEvent],
+    audio: np.ndarray,
+    sample_rate: int,
+) -> list[RawEvent]:
+    """Drop secondary notes that look like inharmonic partial leakage from the primary.
+
+    Kalimba tines ring with non-integer harmonics (Chapman 2012). A strongly
+    plucked tine's 2nd/3rd/4th inharmonic partial can coincide with a nearby
+    tuning band and be picked up as a secondary note by segment_peaks.  These
+    partials ride the primary attack transient but decay to noise floor inside
+    ~300 ms, whereas a genuine tine vibration sustains for hundreds of ms.
+    Concretely, G4 tine's 3rd partial (~2.83x fundamental) lands in the C#6
+    band and decays to ~5 % of peak within 300 ms while G4 itself retains
+    30-60 %.
+
+    Strategy: for each event secondary whose primary-relative frequency ratio
+    lies in a known inharmonic partial zone, compare the secondary's late-sustain
+    energy (300-600 ms) to the primary's.  Drop the secondary if the ratio
+    is below ``_INHARMONIC_SECONDARY_MAX_SUSTAIN_RATIO``.  The primary-relative
+    cross-note comparison is noise-floor invariant (both notes share the same
+    background level).
+    """
+    cleaned: list[RawEvent] = []
+    for event in raw_events:
+        primary = next(
+            (note for note in event.notes if note.note_name == event.primary_note_name),
+            None,
+        )
+        if primary is None or len(event.notes) <= 1:
+            cleaned.append(event)
+            continue
+        primary_freq = primary.frequency
+        if primary_freq <= 0:
+            cleaned.append(event)
+            continue
+        sustain_center = event.start_time + 0.30 + 0.15  # 300-600 ms post-onset
+        primary_sustain = _note_band_energy(
+            audio, sample_rate, sustain_center, primary_freq, window_seconds=0.30,
+        )
+        if primary_sustain <= 0:
+            cleaned.append(event)
+            continue
+        kept_notes: list[NoteCandidate] = []
+        dropped_any = False
+        for note in event.notes:
+            if note.note_name == primary.note_name:
+                kept_notes.append(note)
+                continue
+            ratio = note.frequency / primary_freq
+            in_zone = any(lo <= ratio <= hi for lo, hi in _INHARMONIC_PARTIAL_ZONES)
+            if not in_zone:
+                kept_notes.append(note)
+                continue
+            secondary_sustain = _note_band_energy(
+                audio, sample_rate, sustain_center, note.frequency, window_seconds=0.30,
+            )
+            cross_ratio = secondary_sustain / primary_sustain
+            if cross_ratio >= _INHARMONIC_SECONDARY_MAX_SUSTAIN_RATIO:
+                kept_notes.append(note)
+            else:
+                dropped_any = True
+        if not dropped_any:
+            cleaned.append(event)
+            continue
+        cleaned.append(RawEvent(
+            start_time=event.start_time,
+            end_time=event.end_time,
+            notes=kept_notes,
+            is_gliss_like=event.is_gliss_like,
+            primary_note_name=event.primary_note_name,
+            primary_score=event.primary_score,
+            from_short_segment_guard=event.from_short_segment_guard,
+            sub_onsets=event.sub_onsets,
+            alternate_groupings=list(event.alternate_groupings),
+        ))
+    return cleaned
 
 DISSONANT_SEMITONE_THRESHOLD = 2  # minor 2nd (1) and major 2nd (2)
 

@@ -39,6 +39,7 @@ from .events import (
     suppress_leading_gliss_neighbor_noise,
     suppress_leading_gliss_subset_transients,
     suppress_leading_single_transient,
+    suppress_inharmonic_partial_secondaries,
     suppress_low_confidence_dyad_transients,
     suppress_onset_decaying_carryover,
     suppress_post_tail_gap_bridge_dyads,
@@ -450,6 +451,7 @@ async def transcribe_audio(
     narrow_fft_time_cache: dict[
         tuple[int, float], dict[str, tuple[float, float, float]] | None
     ] = {}
+    _pp("suppress_inharmonic_partial_secondaries", suppress_inharmonic_partial_secondaries, audio, sample_rate)
     _pp("suppress_low_confidence_dyad_transients", suppress_low_confidence_dyad_transients)
     _pp("suppress_onset_decaying_carryover", suppress_onset_decaying_carryover)
     _pp("collapse_same_start_primary_singletons", collapse_same_start_primary_singletons)
