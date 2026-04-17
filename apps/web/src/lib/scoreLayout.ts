@@ -1,4 +1,4 @@
-import type { ScoreEvent, ScoreNote } from "@/lib/types";
+import type { InstrumentTuning, ScoreEvent, ScoreNote } from "@/lib/types";
 
 // --- Pitch class to do-re-mi base name ---
 
@@ -46,6 +46,7 @@ export function noteLabelFromScoreNote(note: ScoreNote): NoteLabel {
 function makeTonicRelativeLabelFn(
   tonicPitchClass: string | null | undefined,
   syllables: string[],
+  tonicRefOctave: number,
 ): (note: ScoreNote) => NoteLabel {
   if (!tonicPitchClass) return noteLabelFromScoreNote;
   const tonicPc = PITCH_CLASS_TO_SEMITONE[tonicPitchClass];
@@ -55,9 +56,9 @@ function makeTonicRelativeLabelFn(
     if (pc == null) {
       return { baseName: note.pitchClass, octave: note.octave };
     }
-    const semitonesFromTonic4 = (note.octave - 4) * 12 + (pc - tonicPc);
-    const scaleOctave = Math.floor(semitonesFromTonic4 / 12);
-    const interval = ((semitonesFromTonic4 % 12) + 12) % 12;
+    const semitonesFromRef = (note.octave - tonicRefOctave) * 12 + (pc - tonicPc);
+    const scaleOctave = Math.floor(semitonesFromRef / 12);
+    const interval = ((semitonesFromRef % 12) + 12) % 12;
     return {
       baseName: syllables[interval],
       octave: 4 + scaleOctave,
@@ -65,25 +66,53 @@ function makeTonicRelativeLabelFn(
   };
 }
 
+const NOTE_NAME_PARSE_RE = /^([A-G][#b]?)(-?\d+)$/;
+
+// Returns the octave of the lowest tine whose pitch class equals the tonic.
+// Used to anchor movable-do/移動数字 octave dots to the kalimba's lowest
+// tonic (e.g. G-low → G3 anchors as "C4-equivalent"), so that identical
+// finger patterns feel the same across keys.  Defaults to 4 when the tonic
+// is not found on the instrument.
+export function tonicReferenceOctave(
+  tuning: InstrumentTuning | null | undefined,
+  tonicPitchClass: string | null | undefined,
+): number {
+  if (!tuning || !tonicPitchClass) return 4;
+  let minOctave: number | null = null;
+  for (const n of tuning.notes) {
+    const m = NOTE_NAME_PARSE_RE.exec(n.noteName);
+    if (!m || m[1] !== tonicPitchClass) continue;
+    const octave = parseInt(m[2], 10);
+    if (minOctave == null || octave < minOctave) minOctave = octave;
+  }
+  return minOctave ?? 4;
+}
+
 // Returns a labelFn that renders notes in movable-do relative to the given tonic.
-// Octave dots are anchored to the tonic's octave-4 reference: the octave that
-// contains the tonic at octave 4 shows no dots; each octave above adds `.`,
-// each below adds `_`.  Falls back to fixed-do if the tonic is unknown.
+// Octave dots are anchored so that the tonic at `tonicRefOctave` shows no dots;
+// each octave above adds `.`, each below adds `_`.  Pass the kalimba's lowest
+// tonic octave (via tonicReferenceOctave) so identical finger patterns produce
+// identical dot patterns across keys.  Falls back to fixed-do if the tonic is
+// unknown.  The tonicRefOctave default of 4 preserves legacy behavior for
+// standalone unit tests.
 export function movableDoLabelFn(
   tonicPitchClass: string | null | undefined,
+  tonicRefOctave: number = 4,
 ): (note: ScoreNote) => NoteLabel {
-  return makeTonicRelativeLabelFn(tonicPitchClass, MOVABLE_DO_SYLLABLES);
+  return makeTonicRelativeLabelFn(tonicPitchClass, MOVABLE_DO_SYLLABLES, tonicRefOctave);
 }
 
 // Returns a labelFn that renders notes as scale-degree numbers (1–7) relative
 // to the given tonic.  Intended for V-shape 17/21-key kalimbas and 34-key
-// performances that stay on the lower layer.  Falls back to fixed-do (i.e.
-// pitch-class ド/レ/ミ) when the tonic is unknown; callers should gate the
-// UI so this fn is only used when isMovableNumberApplicable returns true.
+// performances that stay on the lower layer.  See movableDoLabelFn for the
+// tonicRefOctave semantics.  Falls back to fixed-do (i.e. pitch-class
+// ド/レ/ミ) when the tonic is unknown; callers should gate the UI so this
+// fn is only used when isMovableNumberApplicable returns true.
 export function movableNumberLabelFn(
   tonicPitchClass: string | null | undefined,
+  tonicRefOctave: number = 4,
 ): (note: ScoreNote) => NoteLabel {
-  return makeTonicRelativeLabelFn(tonicPitchClass, MOVABLE_NUMBER_SYLLABLES);
+  return makeTonicRelativeLabelFn(tonicPitchClass, MOVABLE_NUMBER_SYLLABLES, tonicRefOctave);
 }
 
 // Returns true when every note's pitch class is diatonic to the major scale

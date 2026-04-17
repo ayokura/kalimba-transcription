@@ -10,6 +10,7 @@ import {
   movableDoLabelFn,
   movableNumberLabelFn,
   noteLabelFromScoreNote,
+  tonicReferenceOctave,
 } from "@/lib/scoreLayout";
 import { TranscriptionResult } from "@/lib/types";
 
@@ -99,6 +100,10 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
 
   const tonic = result.instrumentTuning.tonic ?? null;
   const movableAvailable = Boolean(tonic);
+  const tonicRefOctave = useMemo(
+    () => tonicReferenceOctave(result.instrumentTuning, tonic),
+    [result.instrumentTuning, tonic],
+  );
 
   const allNotes = useMemo(
     () => result.events.flatMap((e) => e.notes),
@@ -125,10 +130,10 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
   }, [labelMode]);
 
   const labelFn = useMemo(() => {
-    if (labelMode === "movable" && tonic) return movableDoLabelFn(tonic);
-    if (labelMode === "movableNumber" && tonic) return movableNumberLabelFn(tonic);
+    if (labelMode === "movable" && tonic) return movableDoLabelFn(tonic, tonicRefOctave);
+    if (labelMode === "movableNumber" && tonic) return movableNumberLabelFn(tonic, tonicRefOctave);
     return noteLabelFromScoreNote;
-  }, [labelMode, tonic]);
+  }, [labelMode, tonic, tonicRefOctave]);
 
   const events = result.events;
   const shareUrl = useMemo(() => {

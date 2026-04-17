@@ -5,8 +5,9 @@ import {
   movableDoLabelFn,
   movableNumberLabelFn,
   noteLabelFromScoreNote,
+  tonicReferenceOctave,
 } from "@/lib/scoreLayout";
-import { ScoreNote } from "@/lib/types";
+import { InstrumentTuning, ScoreNote } from "@/lib/types";
 
 function note(pitchClass: string, octave: number): ScoreNote {
   return {
@@ -135,6 +136,64 @@ describe("isMovableNumberApplicable", () => {
 
   it("returns false when tonic is missing", () => {
     expect(isMovableNumberApplicable([note("C", 4)], null)).toBe(false);
+  });
+});
+
+function buildTuning(names: string[], tonic: string | null): InstrumentTuning {
+  return {
+    id: "test",
+    name: "Test",
+    keyCount: names.length,
+    tonic,
+    notes: names.map((noteName, i) => ({ key: i + 1, noteName, frequency: 0 })),
+  };
+}
+
+describe("tonicReferenceOctave", () => {
+  it("returns the lowest octave of tonic tines", () => {
+    const tuning = buildTuning(["A5", "G5", "E5", "C5", "A4", "G4", "C4", "E4", "G3"], "G");
+    expect(tonicReferenceOctave(tuning, "G")).toBe(3);
+  });
+
+  it("ignores tines of other pitch classes sharing a letter prefix (B vs Bb)", () => {
+    // Tuning has B4 but tonic is Bb; should NOT pick up B4 as a match.
+    const tuning = buildTuning(["B4", "Bb5"], "Bb");
+    expect(tonicReferenceOctave(tuning, "Bb")).toBe(5);
+  });
+
+  it("defaults to 4 when tonic or tuning is missing", () => {
+    const tuning = buildTuning(["C4"], "C");
+    expect(tonicReferenceOctave(tuning, null)).toBe(4);
+    expect(tonicReferenceOctave(null, "C")).toBe(4);
+  });
+
+  it("defaults to 4 when tonic is not found in the tuning", () => {
+    const tuning = buildTuning(["C4", "D4"], "A");
+    expect(tonicReferenceOctave(tuning, "A")).toBe(4);
+  });
+});
+
+describe("movableDoLabelFn with custom tonicRefOctave", () => {
+  it("renders G3 as the no-dot reference when refOctave=3 (G-low kalimba)", () => {
+    const fn = movableDoLabelFn("G", 3);
+    expect(fn(note("G", 3))).toEqual({ baseName: "ド", octave: 4 });
+    expect(fn(note("G", 4))).toEqual({ baseName: "ド", octave: 5 });
+    expect(fn(note("B", 3))).toEqual({ baseName: "ミ", octave: 4 });
+  });
+
+  it("renders G4 as no-dot and G5 as .-dot when refOctave=4 (standard G)", () => {
+    const fn = movableDoLabelFn("G", 4);
+    expect(fn(note("G", 4))).toEqual({ baseName: "ド", octave: 4 });
+    expect(fn(note("G", 5))).toEqual({ baseName: "ド", octave: 5 });
+  });
+});
+
+describe("movableNumberLabelFn with custom tonicRefOctave", () => {
+  it("aligns number-label octave to G-low's G3", () => {
+    const fn = movableNumberLabelFn("G", 3);
+    expect(fn(note("G", 3))).toEqual({ baseName: "1", octave: 4 });
+    expect(fn(note("D", 4))).toEqual({ baseName: "5", octave: 4 });
+    expect(fn(note("G", 4))).toEqual({ baseName: "1", octave: 5 });
   });
 });
 
