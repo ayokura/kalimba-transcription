@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { movableDoLabelFn, noteLabelFromScoreNote } from "@/lib/scoreLayout";
+import {
+  isMovableNumberApplicable,
+  movableDoLabelFn,
+  movableNumberLabelFn,
+  noteLabelFromScoreNote,
+} from "@/lib/scoreLayout";
 import { ScoreNote } from "@/lib/types";
 
 function note(pitchClass: string, octave: number): ScoreNote {
@@ -68,6 +73,68 @@ describe("movableDoLabelFn", () => {
     expect(fn(note("C#", 4)).baseName).toBe("ド#");
     expect(fn(note("D#", 4)).baseName).toBe("レ#");
     expect(fn(note("F#", 4)).baseName).toBe("ファ#");
+  });
+});
+
+describe("movableNumberLabelFn", () => {
+  it("labels C major tonic scale as 1-7", () => {
+    const fn = movableNumberLabelFn("C");
+    expect(fn(note("C", 4)).baseName).toBe("1");
+    expect(fn(note("D", 4)).baseName).toBe("2");
+    expect(fn(note("E", 4)).baseName).toBe("3");
+    expect(fn(note("F", 4)).baseName).toBe("4");
+    expect(fn(note("G", 4)).baseName).toBe("5");
+    expect(fn(note("A", 4)).baseName).toBe("6");
+    expect(fn(note("B", 4)).baseName).toBe("7");
+  });
+
+  it("labels G major scale as 1-7 regardless of actual pitch", () => {
+    const fn = movableNumberLabelFn("G");
+    expect(fn(note("G", 4)).baseName).toBe("1");
+    expect(fn(note("A", 4)).baseName).toBe("2");
+    expect(fn(note("B", 4)).baseName).toBe("3");
+    expect(fn(note("C", 5)).baseName).toBe("4");
+    expect(fn(note("D", 5)).baseName).toBe("5");
+    expect(fn(note("E", 5)).baseName).toBe("6");
+    expect(fn(note("F#", 5)).baseName).toBe("7");
+  });
+
+  it("anchors octave to tonic (Bb4 tonic → F4 is lower-octave 5)", () => {
+    const fn = movableNumberLabelFn("Bb");
+    expect(fn(note("Bb", 4))).toEqual({ baseName: "1", octave: 4 });
+    expect(fn(note("F", 4))).toEqual({ baseName: "5", octave: 3 });
+    expect(fn(note("Bb", 5))).toEqual({ baseName: "1", octave: 5 });
+  });
+
+  it("falls back to fixed-do when tonic is missing", () => {
+    const fn = movableNumberLabelFn(null);
+    expect(fn(note("C", 4))).toEqual({ baseName: "ド", octave: 4 });
+  });
+});
+
+describe("isMovableNumberApplicable", () => {
+  it("returns true for all diatonic notes in C major", () => {
+    const notes = [note("C", 4), note("E", 4), note("G", 4), note("F", 5)];
+    expect(isMovableNumberApplicable(notes, "C")).toBe(true);
+  });
+
+  it("returns false when any note is chromatic to the tonic", () => {
+    const notes = [note("C", 4), note("C#", 4)];
+    expect(isMovableNumberApplicable(notes, "C")).toBe(false);
+  });
+
+  it("returns true for G major scale notes (including F#)", () => {
+    const notes = [note("G", 4), note("A", 4), note("F#", 5)];
+    expect(isMovableNumberApplicable(notes, "G")).toBe(true);
+  });
+
+  it("returns false when F is used in G major (non-diatonic)", () => {
+    const notes = [note("G", 4), note("F", 5)];
+    expect(isMovableNumberApplicable(notes, "G")).toBe(false);
+  });
+
+  it("returns false when tonic is missing", () => {
+    expect(isMovableNumberApplicable([note("C", 4)], null)).toBe(false);
   });
 });
 

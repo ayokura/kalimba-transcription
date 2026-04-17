@@ -5,11 +5,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DoReMiScore } from "@/components/DoReMiScore";
 import { fetchMemo, fetchTranscription, fetchTranscriptionAudioBlob, saveMemo } from "@/lib/api";
 import { findEventById, findEventIdAtSec } from "@/lib/eventTiming";
-import { movableDoLabelFn, noteLabelFromScoreNote } from "@/lib/scoreLayout";
+import {
+  isMovableNumberApplicable,
+  movableDoLabelFn,
+  movableNumberLabelFn,
+  noteLabelFromScoreNote,
+} from "@/lib/scoreLayout";
 import { TranscriptionResult } from "@/lib/types";
 
-type LabelMode = "fixed" | "movable";
+type LabelMode = "fixed" | "movable" | "movableNumber";
 const LABEL_MODE_STORAGE_KEY = "kalimba:score-label-mode";
+
+function isLabelMode(value: string | null): value is LabelMode {
+  return value === "fixed" || value === "movable" || value === "movableNumber";
+}
 
 type LoadState =
   | { kind: "loading" }
@@ -90,25 +99,36 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
 
   const tonic = result.instrumentTuning.tonic ?? null;
   const movableAvailable = Boolean(tonic);
+
+  const allNotes = useMemo(
+    () => result.events.flatMap((e) => e.notes),
+    [result.events],
+  );
+  const movableNumberAvailable = useMemo(
+    () => isMovableNumberApplicable(allNotes, tonic),
+    [allNotes, tonic],
+  );
+
   const [labelMode, setLabelMode] = useState<LabelMode>("fixed");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = window.localStorage.getItem(LABEL_MODE_STORAGE_KEY);
-    if (stored === "movable" && movableAvailable) {
-      setLabelMode("movable");
-    }
-  }, [movableAvailable]);
+    if (!isLabelMode(stored)) return;
+    if (stored === "movable" && movableAvailable) setLabelMode("movable");
+    else if (stored === "movableNumber" && movableNumberAvailable) setLabelMode("movableNumber");
+  }, [movableAvailable, movableNumberAvailable]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(LABEL_MODE_STORAGE_KEY, labelMode);
   }, [labelMode]);
 
-  const labelFn = useMemo(
-    () => (labelMode === "movable" && tonic ? movableDoLabelFn(tonic) : noteLabelFromScoreNote),
-    [labelMode, tonic],
-  );
+  const labelFn = useMemo(() => {
+    if (labelMode === "movable" && tonic) return movableDoLabelFn(tonic);
+    if (labelMode === "movableNumber" && tonic) return movableNumberLabelFn(tonic);
+    return noteLabelFromScoreNote;
+  }, [labelMode, tonic]);
 
   const events = result.events;
   const shareUrl = useMemo(() => {
@@ -172,6 +192,21 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
             title={movableAvailable ? undefined : "この調律には tonic が設定されていません"}
           >
             移動ド{tonic ? ` (${tonic})` : ""}
+          </button>
+          <button
+            type="button"
+            className={`score-viewer-mode-btn${labelMode === "movableNumber" ? " active" : ""}`}
+            onClick={() => movableNumberAvailable && setLabelMode("movableNumber")}
+            disabled={!movableNumberAvailable}
+            title={
+              movableNumberAvailable
+                ? undefined
+                : tonic
+                ? "スケール外の音が含まれているため使用できません"
+                : "この調律には tonic が設定されていません"
+            }
+          >
+            数字{tonic ? ` (${tonic}=1)` : ""}
           </button>
         </div>
         <DoReMiScore

@@ -22,6 +22,15 @@ const MOVABLE_DO_SYLLABLES = [
   "ファ#", "ソ", "ソ#", "ラ", "ラ#", "シ",
 ];
 
+// Movable-number (移動数字) syllables: scale-degree numbers 1-7 from tonic.
+// Same semitone indexing as movable-do, with # suffix for chromatic notes.
+const MOVABLE_NUMBER_SYLLABLES = [
+  "1", "#1", "2", "#2", "3", "4",
+  "#4", "5", "#5", "6", "#6", "7",
+];
+
+const MAJOR_SCALE_SEMITONES = new Set([0, 2, 4, 5, 7, 9, 11]);
+
 export type NoteLabel = {
   baseName: string;   // e.g. "ド", "ファ#", "シb"
   octave: number;     // 3, 4, 5, 6 — determines octave line markers
@@ -34,12 +43,9 @@ export function noteLabelFromScoreNote(note: ScoreNote): NoteLabel {
   };
 }
 
-// Returns a labelFn that renders notes in movable-do relative to the given tonic.
-// Octave dots are anchored to the tonic's octave-4 reference: the octave that
-// contains the tonic at octave 4 shows no dots; each octave above adds `.`,
-// each below adds `_`.  Falls back to fixed-do if the tonic is unknown.
-export function movableDoLabelFn(
+function makeTonicRelativeLabelFn(
   tonicPitchClass: string | null | undefined,
+  syllables: string[],
 ): (note: ScoreNote) => NoteLabel {
   if (!tonicPitchClass) return noteLabelFromScoreNote;
   const tonicPc = PITCH_CLASS_TO_SEMITONE[tonicPitchClass];
@@ -53,10 +59,52 @@ export function movableDoLabelFn(
     const scaleOctave = Math.floor(semitonesFromTonic4 / 12);
     const interval = ((semitonesFromTonic4 % 12) + 12) % 12;
     return {
-      baseName: MOVABLE_DO_SYLLABLES[interval],
+      baseName: syllables[interval],
       octave: 4 + scaleOctave,
     };
   };
+}
+
+// Returns a labelFn that renders notes in movable-do relative to the given tonic.
+// Octave dots are anchored to the tonic's octave-4 reference: the octave that
+// contains the tonic at octave 4 shows no dots; each octave above adds `.`,
+// each below adds `_`.  Falls back to fixed-do if the tonic is unknown.
+export function movableDoLabelFn(
+  tonicPitchClass: string | null | undefined,
+): (note: ScoreNote) => NoteLabel {
+  return makeTonicRelativeLabelFn(tonicPitchClass, MOVABLE_DO_SYLLABLES);
+}
+
+// Returns a labelFn that renders notes as scale-degree numbers (1–7) relative
+// to the given tonic.  Intended for V-shape 17/21-key kalimbas and 34-key
+// performances that stay on the lower layer.  Falls back to fixed-do (i.e.
+// pitch-class ド/レ/ミ) when the tonic is unknown; callers should gate the
+// UI so this fn is only used when isMovableNumberApplicable returns true.
+export function movableNumberLabelFn(
+  tonicPitchClass: string | null | undefined,
+): (note: ScoreNote) => NoteLabel {
+  return makeTonicRelativeLabelFn(tonicPitchClass, MOVABLE_NUMBER_SYLLABLES);
+}
+
+// Returns true when every note's pitch class is diatonic to the major scale
+// rooted at the given tonic.  Used to gate the 移動数字 toggle, since that
+// notation only makes sense for monotonic V-shape tunings whose scale contains
+// all played pitches (e.g. 34-key performances that never touch the upper
+// layer).
+export function isMovableNumberApplicable(
+  notes: ScoreNote[],
+  tonicPitchClass: string | null | undefined,
+): boolean {
+  if (!tonicPitchClass) return false;
+  const tonicPc = PITCH_CLASS_TO_SEMITONE[tonicPitchClass];
+  if (tonicPc == null) return false;
+  for (const note of notes) {
+    const pc = PITCH_CLASS_TO_SEMITONE[note.pitchClass];
+    if (pc == null) return false;
+    const interval = ((pc - tonicPc) % 12 + 12) % 12;
+    if (!MAJOR_SCALE_SEMITONES.has(interval)) return false;
+  }
+  return true;
 }
 
 // --- Label width estimation ---
