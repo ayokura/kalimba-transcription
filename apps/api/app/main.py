@@ -6,9 +6,18 @@ import re
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 from .models import InstrumentTuning, TranscriptionResult
-from .storage import generate_transaction_id, load_audio_path, load_response, save_transaction
+from .storage import (
+    generate_transaction_id,
+    load_audio_path,
+    load_memo,
+    load_response,
+    save_memo,
+    save_transaction,
+    transaction_exists,
+)
 from .transcription import parse_tuning_json, transcribe_audio
 from .transcription.patterns import REPEATED_PATTERN_PASS_IDS
 from .tunings import get_default_tunings
@@ -120,3 +129,25 @@ def get_transcription_audio(transaction_id: str):
     if audio_path is None:
         raise HTTPException(status_code=404, detail="Transaction not found.")
     return FileResponse(audio_path, media_type="audio/wav", filename="audio.wav")
+
+
+class MemoPayload(BaseModel):
+    memo: str
+
+
+@app.get("/api/transcriptions/{transaction_id}/memo")
+def get_transcription_memo(transaction_id: str) -> dict[str, str]:
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    memo = load_memo(transaction_id)
+    return {"memo": memo if memo is not None else ""}
+
+
+@app.put("/api/transcriptions/{transaction_id}/memo")
+def put_transcription_memo(transaction_id: str, payload: MemoPayload) -> dict[str, str]:
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    save_memo(transaction_id, payload.memo)
+    return {"memo": payload.memo}

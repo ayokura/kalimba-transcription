@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { ExpectedKeySelector } from "@/components/ExpectedKeySelector";
 import { InitialResultSummary } from "@/components/InitialResultSummary";
@@ -673,13 +674,14 @@ function hasProtectedExpectedDraft(
 
 export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const isDebug = mode === "debug";
+  const router = useRouter();
   const [tunings, setTunings] = useState<InstrumentTuning[]>([]);
   const [selectedTuningId, setSelectedTuningId] = useState<string>("");
   const [customName, setCustomName] = useState("Custom Tuning");
   const [customNotes, setCustomNotes] = useState("C4,D4,E4,G4,A4,C5,E5,G5");
   const [recording, setRecording] = useState<Blob | null>(null);
   const [result, setResult] = useState<TranscriptionResult | null>(null);
-  const [notationMode, setNotationMode] = useState<NotationMode>(isDebug ? "western" : "vertical");
+  const [notationMode, setNotationMode] = useState<NotationMode>(isDebug ? "western" : "score");
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -953,6 +955,10 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
           }
           return reviewSession.sessionId;
         });
+        const transactionId = capture.responsePayload.transactionId;
+        if (transactionId) {
+          router.push(`/score/${transactionId}`);
+        }
       }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "解析に失敗しました。");

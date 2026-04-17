@@ -11,6 +11,7 @@ function buildEvents(): ScoreEvent[] {
       id: "evt-1",
       startBeat: 1,
       durationBeat: 1,
+      startTimeSec: 0.5,
       notes: [
         { key: 1, pitchClass: "C", octave: 4, labelDoReMi: "ド", labelNumber: "1", frequency: 261.63 },
       ],
@@ -21,6 +22,7 @@ function buildEvents(): ScoreEvent[] {
       id: "evt-2",
       startBeat: 2,
       durationBeat: 1,
+      startTimeSec: 1.0,
       notes: [
         { key: 2, pitchClass: "E", octave: 4, labelDoReMi: "ミ", labelNumber: "3", frequency: 329.63 },
       ],
@@ -31,6 +33,7 @@ function buildEvents(): ScoreEvent[] {
       id: "evt-3",
       startBeat: 3,
       durationBeat: 1,
+      startTimeSec: 1.5,
       notes: [
         { key: 3, pitchClass: "G", octave: 4, labelDoReMi: "ソ", labelNumber: "5", frequency: 392 },
       ],

@@ -53,3 +53,20 @@ def load_response(transaction_id: str) -> dict | None:
 def load_audio_path(transaction_id: str) -> Path | None:
     audio_path = get_transaction_dir(transaction_id) / "audio.wav"
     return audio_path if audio_path.exists() else None
+
+
+def save_memo(transaction_id: str, memo: str) -> None:
+    tx_dir = get_transaction_dir(transaction_id)
+    tx_dir.mkdir(parents=True, exist_ok=True)
+    (tx_dir / "memo.txt").write_text(memo, encoding="utf-8")
+
+
+def load_memo(transaction_id: str) -> str | None:
+    memo_path = get_transaction_dir(transaction_id) / "memo.txt"
+    if not memo_path.exists():
+        return None
+    return memo_path.read_text(encoding="utf-8")
+
+
+def transaction_exists(transaction_id: str) -> bool:
+    return get_transaction_dir(transaction_id).exists()

@@ -171,6 +171,11 @@ textarea {
   background: white;
 }
 
+button {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
 textarea {
   min-height: 108px;
   resize: vertical;
@@ -1088,5 +1093,237 @@ button:disabled {
   .notation-grid,
   .line-notation {
     display: none !important;
+  }
+}
+
+/* SimpleHome (tester-facing mobile-first entrypoint) */
+
+.simple-home {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.simple-home-title {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.simple-home-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.simple-home-label {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.simple-home-select {
+  width: 100%;
+  font-size: 1rem;
+  padding: 12px 14px;
+}
+
+.simple-home-record-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.simple-home-recording-ready {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--accent-soft, rgba(23, 126, 137, 0.08));
+  border-radius: 14px;
+}
+
+.simple-home-ready-text {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.simple-home-btn {
+  flex: 1 1 auto;
+  min-height: 48px;
+  padding: 12px 18px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.simple-home-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.simple-home-btn.secondary {
+  background: white;
+}
+
+.simple-home-btn.ghost {
+  flex: 0 0 auto;
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.simple-home-btn.large {
+  min-height: 56px;
+  font-size: 1.05rem;
+}
+
+.simple-home-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.simple-home-error {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(200, 60, 60, 0.1);
+  color: #a33;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 480px) {
+  .simple-home {
+    padding: 20px 16px 40px;
+    gap: 18px;
+  }
+  .simple-home-title {
+    font-size: 1.35rem;
+  }
+}
+
+/* ScoreViewer (tester-facing mobile-first score page) */
+
+.score-viewer-shell {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.score-viewer-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.score-viewer-title {
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.score-viewer-share-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.score-viewer-url {
+  flex: 1 1 240px;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.score-viewer-copy-btn {
+  white-space: nowrap;
+  padding: 10px 14px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
+.score-viewer-playback {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.score-viewer-audio {
+  width: 100%;
+}
+
+.score-viewer-score {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.score-viewer-memo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.score-viewer-memo-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.score-viewer-memo-input {
+  width: 100%;
+  min-height: 0;
+  height: 56px;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.score-viewer-memo-status {
+  font-size: 0.8rem;
+  min-height: 1.1em;
+  margin: 0;
+}
+
+.score-viewer-footer {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.score-viewer-footer p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .score-viewer-shell {
+    padding: 12px;
+    gap: 12px;
+  }
+  .score-viewer-title {
+    font-size: 1.15rem;
+  }
+  .score-viewer-url {
+    font-size: 0.75rem;
   }
 }

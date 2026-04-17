@@ -95,6 +95,7 @@ function buildSession(): TranscriptionReviewSession {
           id: "evt-1",
           startBeat: 1,
           durationBeat: 1,
+          startTimeSec: 0.5,
           notes: [
             {
               key: 1,
@@ -112,6 +113,7 @@ function buildSession(): TranscriptionReviewSession {
           id: "evt-2",
           startBeat: 2,
           durationBeat: 1,
+          startTimeSec: 1.0,
           notes: [
             {
               key: 2,
@@ -129,6 +131,7 @@ function buildSession(): TranscriptionReviewSession {
           id: "evt-3",
           startBeat: 3,
           durationBeat: 1,
+          startTimeSec: 1.5,
           notes: [
             {
               key: 3,

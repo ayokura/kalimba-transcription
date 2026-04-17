@@ -1,5 +1,5 @@
-import { TranscriptionStudio } from "@/components/TranscriptionStudio";
+import { SimpleHome } from "@/components/SimpleHome";
 
 export default function HomePage() {
-  return <TranscriptionStudio mode="user" />;
+  return <SimpleHome />;
 }

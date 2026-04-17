@@ -151,3 +151,75 @@ def test_get_transcription_invalid_id_format():
 def test_get_transcription_audio_not_found():
     response = client.get("/api/transcriptions/00000000-0000-0000-0000-000000000000/audio")
     assert response.status_code == 404
+
+
+def test_memo_get_default_empty():
+    payload = _create_transcription()
+    tid = payload["transactionId"]
+
+    response = client.get(f"/api/transcriptions/{tid}/memo")
+    assert response.status_code == 200
+    assert response.json() == {"memo": ""}
+
+
+def test_memo_put_and_get():
+    payload = _create_transcription()
+    tid = payload["transactionId"]
+
+    put_response = client.put(
+        f"/api/transcriptions/{tid}/memo",
+        json={"memo": "BWV147 練習メモ。テンポ遅めで。"},
+    )
+    assert put_response.status_code == 200
+
+    get_response = client.get(f"/api/transcriptions/{tid}/memo")
+    assert get_response.status_code == 200
+    assert get_response.json() == {"memo": "BWV147 練習メモ。テンポ遅めで。"}
+
+
+def test_memo_put_overwrites():
+    payload = _create_transcription()
+    tid = payload["transactionId"]
+
+    client.put(f"/api/transcriptions/{tid}/memo", json={"memo": "first"})
+    client.put(f"/api/transcriptions/{tid}/memo", json={"memo": "second"})
+
+    response = client.get(f"/api/transcriptions/{tid}/memo")
+    assert response.json() == {"memo": "second"}
+
+
+def test_memo_get_not_found():
+    response = client.get("/api/transcriptions/00000000-0000-0000-0000-000000000000/memo")
+    assert response.status_code == 404
+
+
+def test_memo_put_not_found():
+    response = client.put(
+        "/api/transcriptions/00000000-0000-0000-0000-000000000000/memo",
+        json={"memo": "x"},
+    )
+    assert response.status_code == 404
+
+
+def test_memo_get_invalid_id():
+    response = client.get("/api/transcriptions/not-a-uuid/memo")
+    assert response.status_code == 400
+
+
+def test_transcription_response_includes_start_time_sec():
+    payload = _create_transcription()
+    assert len(payload["events"]) > 0
+    first = payload["events"][0]
+    assert "startTimeSec" in first
+    assert isinstance(first["startTimeSec"], float)
+    assert first["startTimeSec"] >= 0
+
+
+def test_event_start_times_are_monotonic():
+    payload = _create_transcription()
+    events = payload["events"]
+    assert len(events) > 0
+    prev = -1.0
+    for event in events:
+        assert event["startTimeSec"] >= prev, "startTimeSec must be non-decreasing"
+        prev = event["startTimeSec"]

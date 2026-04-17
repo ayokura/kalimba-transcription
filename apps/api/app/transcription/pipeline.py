@@ -640,6 +640,7 @@ async def transcribe_audio(
                 id=f"evt-{index}",
                 startBeat=start_beat,
                 durationBeat=duration_beat,
+                startTimeSec=round(event.start_time, 4),
                 notes=notes,
                 isGlissLike=event.is_gliss_like,
                 gesture=classify_event_gesture(event, index - 1, raw_events, merged_events),

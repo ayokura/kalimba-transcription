@@ -138,6 +138,16 @@ export function DoReMiScore({
                   onClick={isInteractive ? () => onActiveEventIdChange(evt.eventId) : undefined}
                   style={isInteractive ? { cursor: "pointer" } : undefined}
                 >
+                  {isInteractive && (
+                    <rect
+                      x={0}
+                      y={-4}
+                      width={evt.columnWidth}
+                      height={line.height + 4}
+                      fill="transparent"
+                      pointerEvents="all"
+                    />
+                  )}
                   {isDominant && (
                     <rect
                       className="score-debug-overlay"
@@ -146,6 +156,7 @@ export function DoReMiScore({
                       width={evt.columnWidth}
                       height={line.height}
                       fill="rgba(100, 100, 255, 0.10)"
+                      pointerEvents="none"
                     />
                   )}
                   {isActive && (
@@ -156,6 +167,7 @@ export function DoReMiScore({
                       height={line.height + 4}
                       rx={4}
                       fill="var(--accent-soft, rgba(23, 126, 137, 0.12))"
+                      pointerEvents="none"
                     />
                   )}
 

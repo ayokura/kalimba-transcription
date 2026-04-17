@@ -67,6 +67,7 @@ function buildResult(transactionId: string | null = "test-txn-00000000-0000-0000
         id: "evt-1",
         startBeat: 1,
         durationBeat: 1,
+        startTimeSec: 0.5,
         notes: [
           {
             key: 1,

@@ -62,6 +62,7 @@ class ScoreEvent(BaseModel):
     id: str
     start_beat: float = Field(alias="startBeat")
     duration_beat: float = Field(alias="durationBeat")
+    start_time_sec: float = Field(alias="startTimeSec")
     notes: list[ScoreNote]
     is_gliss_like: bool = Field(alias="isGlissLike")
     gesture: str = "ambiguous"

@@ -179,6 +179,28 @@ export async function fetchTranscriptionAudioBlob(transactionId: string): Promis
   return response.blob();
 }
 
+export async function fetchMemo(transactionId: string): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/api/transcriptions/${transactionId}/memo`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load memo.");
+  }
+  const payload = (await response.json()) as { memo: string };
+  return payload.memo;
+}
+
+export async function saveMemo(transactionId: string, memo: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/transcriptions/${transactionId}/memo`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ memo }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to save memo.");
+  }
+}
+
 function cleanOptionalText(value: string | undefined): string | null {
   const trimmed = value?.trim() ?? "";
   return trimmed.length > 0 ? trimmed : null;

@@ -28,6 +28,7 @@ function buildResult(): TranscriptionResult {
         id: "evt-1",
         startBeat: 1,
         durationBeat: 1,
+        startTimeSec: 0.5,
         notes: [
           {
             key: 1,
@@ -45,6 +46,7 @@ function buildResult(): TranscriptionResult {
         id: "evt-2",
         startBeat: 2,
         durationBeat: 1,
+        startTimeSec: 1.0,
         notes: [
           {
             key: 2,
