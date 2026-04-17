@@ -76,29 +76,139 @@ Zero Trust ダッシュボード (`one.dash.cloudflare.com`) で:
 5. Identity providers: 既存の Google SSO を選択
 6. Policy: `Allow` で、対象テスターのメールアドレス (または Google Workspace グループ) を include rule に設定
 
-## 起動 (毎回)
+## 常駐運用 (systemd user service)
 
-Terminal 3 枚 (または tmux / systemd user service):
+推奨は systemd user service で常駐させる方法。WSL2 再起動後も自動起動、セッション独立、`journalctl` でログ永続。
 
-### FastAPI (production mode、`--reload` なし)
+### 一度だけの前準備
 
 ```bash
+sudo loginctl enable-linger $USER
+systemctl --user is-system-running   # "running" が返ればOK
+```
+
+`linger` 有効化でログアウト後も user-level サービスが継続実行。`/etc/wsl.conf` に `[boot] systemd=true` が書かれていることも前提。
+
+### Unit ファイル配置
+
+`~/.config/systemd/user/` に 3 ファイルを配置する (内容は repo の `docs/deploy-cloudflare-tunnel.md` の末尾参照):
+
+- `kalimba-api.service` — FastAPI / uvicorn
+- `kalimba-web.service` — Next.js prod
+- `kalimba-tunnel.service` — cloudflared (前2本に After/Wants)
+
+配置後:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now kalimba-api kalimba-web kalimba-tunnel
+```
+
+### ログ追跡
+
+```bash
+journalctl --user -u kalimba-api -f
+journalctl --user -u kalimba-web -f
+journalctl --user -u kalimba-tunnel -f
+```
+
+### コード変更後の再起動
+
+```bash
+# API 側 (Python) コード変更後
+systemctl --user restart kalimba-api
+
+# Web 側 (TSX/CSS) コード変更後 — 事前に build 必須
+cd apps/web && npm run build
+systemctl --user restart kalimba-web
+
+# cloudflared config.yml 変更後
+systemctl --user restart kalimba-tunnel
+```
+
+### 手動起動 (systemd を使わない場合)
+
+Terminal 3 枚 (または tmux) で以下を同時起動:
+
+```bash
+# FastAPI (production、`--reload` なし)
 KALIMBA_ALLOWED_ORIGINS=https://kalimba.example.com \
   uv run uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 8000 --workers 1
+
+# Next.js (production build + start)
+cd apps/web && npm run build && npm run start -- --hostname 127.0.0.1 --port 3000
+
+# cloudflared
+cloudflared --config ~/.cloudflared/config.yml tunnel run kalimba-score
 ```
 
-### Next.js (production build + start)
+## systemd unit リファレンス
 
-```bash
-cd apps/web
-npm run build
-npm run start -- --hostname 127.0.0.1 --port 3000
+### `~/.config/systemd/user/kalimba-api.service`
+
+```ini
+[Unit]
+Description=Kalimba Score API (FastAPI / uvicorn, production)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/<user>/kalimba-transcription
+Environment=PATH=/home/<user>/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=KALIMBA_ALLOWED_ORIGINS=https://<your-domain>
+ExecStart=/home/<user>/.local/bin/uv run uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 8000 --workers 1
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
 ```
 
-### cloudflared
+### `~/.config/systemd/user/kalimba-web.service`
 
-```bash
-cloudflared tunnel run kalimba-score
+```ini
+[Unit]
+Description=Kalimba Score Web (Next.js production)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/<user>/kalimba-transcription/apps/web
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=NODE_ENV=production
+ExecStart=/usr/local/bin/npm run start -- --hostname 127.0.0.1 --port 3000
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
+```
+
+### `~/.config/systemd/user/kalimba-tunnel.service`
+
+```ini
+[Unit]
+Description=Cloudflare Tunnel for Kalimba Score
+After=network-online.target kalimba-api.service kalimba-web.service
+Wants=network-online.target kalimba-api.service kalimba-web.service
+
+[Service]
+Type=simple
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/local/bin/cloudflared --config /home/<user>/.cloudflared/config.yml tunnel run kalimba-score
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
 ```
 
 ## 動作確認
