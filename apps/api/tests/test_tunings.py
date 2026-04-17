@@ -48,6 +48,35 @@ def test_new_japanese_key_presets_are_registered() -> None:
     assert expected.issubset(ids)
 
 
+def test_all_default_presets_have_tonic() -> None:
+    for tuning in get_default_tunings():
+        assert tuning.tonic is not None, f"{tuning.id} is missing tonic"
+
+
+def test_tonic_matches_expected_per_preset() -> None:
+    expected = {
+        "kalimba-17-c": "C",
+        "kalimba-17-d": "D",
+        "kalimba-17-e": "E",
+        "kalimba-17-f": "F",
+        "kalimba-17-g": "G",
+        "kalimba-17-a": "A",
+        "kalimba-17-b": "B",
+        "kalimba-17-bb": "Bb",
+        "kalimba-17-g-low": "G",
+        "kalimba-34l-c": "C",
+        "kalimba-21-c": "C",
+    }
+    by_id = {t.id: t for t in get_default_tunings()}
+    for tid, tonic in expected.items():
+        assert by_id[tid].tonic == tonic, f"{tid} tonic mismatch"
+
+
+def test_custom_tuning_has_no_tonic() -> None:
+    tuning = build_custom_tuning("My Kalimba", ["C4", "E4", "G4"])
+    assert tuning.tonic is None
+
+
 def test_new_presets_all_have_17_keys() -> None:
     ids_to_check = {
         "kalimba-17-d", "kalimba-17-e", "kalimba-17-f",

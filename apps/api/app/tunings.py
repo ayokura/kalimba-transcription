@@ -73,6 +73,7 @@ def build_tuning(
     *,
     default_partials: list[TuningNotePartial] | None = None,
     partial_overrides: dict[str, list[TuningNotePartial]] | None = None,
+    tonic: str | None = None,
 ) -> InstrumentTuning:
     notes = []
     for index, note_name in enumerate(note_names):
@@ -85,7 +86,13 @@ def build_tuning(
             frequency=note_name_to_frequency(canonical_name),
             partials=partials,
         ))
-    return InstrumentTuning(id=tuning_id, name=name, keyCount=len(notes), notes=notes)
+    return InstrumentTuning(
+        id=tuning_id,
+        name=name,
+        keyCount=len(notes),
+        notes=notes,
+        tonic=tonic,
+    )
 
 
 # Per-tine partial overrides for 17-C, measured from single-note repeat
@@ -202,48 +209,56 @@ DEFAULT_TUNINGS = [
         ["D6", "B5", "G5", "E5", "C5", "A4", "F4", "D4", "C4", "E4", "G4", "B4", "D5", "F5", "A5", "C6", "E6"],
         default_partials=KALIMBA_DEFAULT_PARTIALS,
         partial_overrides=KALIMBA_17C_PARTIAL_OVERRIDES,
+        tonic="C",
     ),
     build_tuning(
         "kalimba-17-d",
         "17 Key D Major (ニ長調)",
         major_17_key_layout("D4"),
         default_partials=KALIMBA_DEFAULT_PARTIALS,
+        tonic="D",
     ),
     build_tuning(
         "kalimba-17-e",
         "17 Key E Major (ホ長調)",
         major_17_key_layout("E4"),
         default_partials=KALIMBA_DEFAULT_PARTIALS,
+        tonic="E",
     ),
     build_tuning(
         "kalimba-17-f",
         "17 Key F Major (ヘ長調)",
         major_17_key_layout("F4", use_flats=True),
         default_partials=KALIMBA_DEFAULT_PARTIALS,
+        tonic="F",
     ),
     build_tuning(
         "kalimba-17-g",
         "17 Key G Major",
         ["A6", "F#6", "D6", "B5", "G5", "E5", "C5", "A4", "G4", "B4", "D5", "F#5", "A5", "C6", "E6", "G6", "B6"],
         default_partials=KALIMBA_DEFAULT_PARTIALS,
+        tonic="G",
     ),
     build_tuning(
         "kalimba-17-a",
         "17 Key A Major (イ長調)",
         major_17_key_layout("A4"),
         default_partials=KALIMBA_DEFAULT_PARTIALS,
+        tonic="A",
     ),
     build_tuning(
         "kalimba-17-b",
         "17 Key B Major (ロ長調)",
         major_17_key_layout("B4"),
         default_partials=KALIMBA_DEFAULT_PARTIALS,
+        tonic="B",
     ),
     build_tuning(
         "kalimba-17-bb",
         "17 Key Bb Major (変ロ長調)",
         major_17_key_layout("Bb4", use_flats=True),
         default_partials=KALIMBA_DEFAULT_PARTIALS,
+        tonic="Bb",
     ),
     build_tuning(
         "kalimba-17-g-low",
@@ -251,6 +266,7 @@ DEFAULT_TUNINGS = [
         ["A5", "F#5", "D5", "B4", "G4", "E4", "C4", "A3", "G3", "B3", "D4", "F#4", "A4", "C5", "E5", "G5", "B5"],
         default_partials=KALIMBA_GLOW_DEFAULT_PARTIALS,
         partial_overrides=KALIMBA_GLOW_PARTIAL_OVERRIDES,
+        tonic="G",
     ),
     build_tuning(
         "kalimba-34l-c",
@@ -266,6 +282,7 @@ DEFAULT_TUNINGS = [
             "F4", "G#4", "C5", "D#5", "F#5", "A#5", "C#6", "F6",
         ],
         default_partials=KALIMBA_DEFAULT_PARTIALS,
+        tonic="C",
     ),
     build_tuning(
         "kalimba-21-c",
@@ -294,6 +311,7 @@ DEFAULT_TUNINGS = [
             "A6"
         ],
         default_partials=KALIMBA_DEFAULT_PARTIALS,
+        tonic="C",
     ),
 ]
 

@@ -9,6 +9,19 @@ const PITCH_TO_DOREMI: Record<string, string> = {
   Bb: "シb", B: "シ",
 };
 
+const PITCH_CLASS_TO_SEMITONE: Record<string, number> = {
+  C: 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3,
+  E: 4, F: 5, "F#": 6, Gb: 6, G: 7, "G#": 8,
+  Ab: 8, A: 9, "A#": 10, Bb: 10, B: 11,
+};
+
+// Movable-do syllables indexed by semitone distance from tonic.
+// Non-diatonic notes use sharp forms (e.g. ド# = raised tonic).
+const MOVABLE_DO_SYLLABLES = [
+  "ド", "ド#", "レ", "レ#", "ミ", "ファ",
+  "ファ#", "ソ", "ソ#", "ラ", "ラ#", "シ",
+];
+
 export type NoteLabel = {
   baseName: string;   // e.g. "ド", "ファ#", "シb"
   octave: number;     // 3, 4, 5, 6 — determines octave line markers
@@ -18,6 +31,31 @@ export function noteLabelFromScoreNote(note: ScoreNote): NoteLabel {
   return {
     baseName: PITCH_TO_DOREMI[note.pitchClass] ?? note.pitchClass,
     octave: note.octave,
+  };
+}
+
+// Returns a labelFn that renders notes in movable-do relative to the given tonic.
+// Octave dots are anchored to the tonic's octave-4 reference: the octave that
+// contains the tonic at octave 4 shows no dots; each octave above adds `.`,
+// each below adds `_`.  Falls back to fixed-do if the tonic is unknown.
+export function movableDoLabelFn(
+  tonicPitchClass: string | null | undefined,
+): (note: ScoreNote) => NoteLabel {
+  if (!tonicPitchClass) return noteLabelFromScoreNote;
+  const tonicPc = PITCH_CLASS_TO_SEMITONE[tonicPitchClass];
+  if (tonicPc == null) return noteLabelFromScoreNote;
+  return (note: ScoreNote) => {
+    const pc = PITCH_CLASS_TO_SEMITONE[note.pitchClass];
+    if (pc == null) {
+      return { baseName: note.pitchClass, octave: note.octave };
+    }
+    const semitonesFromTonic4 = (note.octave - 4) * 12 + (pc - tonicPc);
+    const scaleOctave = Math.floor(semitonesFromTonic4 / 12);
+    const interval = ((semitonesFromTonic4 % 12) + 12) % 12;
+    return {
+      baseName: MOVABLE_DO_SYLLABLES[interval],
+      octave: 4 + scaleOctave,
+    };
   };
 }
 

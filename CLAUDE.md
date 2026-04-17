@@ -5,6 +5,16 @@
 - This file is maintained by Claude Code. Other agents should not update it.
 - Rules shared with other agents belong in AGENTS.md, not here.
 
+## Dev server startup
+
+API サーバーは常に `--reload` 付きで起動すること。ファイル変更時に自動リロードされ、コード反映のたびにサーバーを kill/restart する必要がない:
+
+```
+uv run uvicorn app.main:app --app-dir apps/api --reload --host 0.0.0.0 --port 8000
+```
+
+バックグラウンドで起動した server の停止は、`kill` ではなく **`TaskStop` tool** を使うこと (run_in_background で起動したタスクの task_id を渡す)。`kill` は Claude Code がフリーズする原因になる場合がある。
+
 ## Audio Analysis Skills
 
 音声分析用のスキルが `.claude/skills/` に定義されている:

@@ -5,7 +5,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DoReMiScore } from "@/components/DoReMiScore";
 import { fetchMemo, fetchTranscription, fetchTranscriptionAudioBlob, saveMemo } from "@/lib/api";
 import { findEventById, findEventIdAtSec } from "@/lib/eventTiming";
+import { movableDoLabelFn, noteLabelFromScoreNote } from "@/lib/scoreLayout";
 import { TranscriptionResult } from "@/lib/types";
+
+type LabelMode = "fixed" | "movable";
+const LABEL_MODE_STORAGE_KEY = "kalimba:score-label-mode";
 
 type LoadState =
   | { kind: "loading" }
@@ -84,6 +88,28 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
 
+  const tonic = result.instrumentTuning.tonic ?? null;
+  const movableAvailable = Boolean(tonic);
+  const [labelMode, setLabelMode] = useState<LabelMode>("fixed");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(LABEL_MODE_STORAGE_KEY);
+    if (stored === "movable" && movableAvailable) {
+      setLabelMode("movable");
+    }
+  }, [movableAvailable]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(LABEL_MODE_STORAGE_KEY, labelMode);
+  }, [labelMode]);
+
+  const labelFn = useMemo(
+    () => (labelMode === "movable" && tonic ? movableDoLabelFn(tonic) : noteLabelFromScoreNote),
+    [labelMode, tonic],
+  );
+
   const events = result.events;
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -130,10 +156,29 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
       </section>
 
       <section className="score-viewer-score">
+        <div className="score-viewer-mode-toggle" role="group" aria-label="ドレミ表記">
+          <button
+            type="button"
+            className={`score-viewer-mode-btn${labelMode === "fixed" ? " active" : ""}`}
+            onClick={() => setLabelMode("fixed")}
+          >
+            固定ド
+          </button>
+          <button
+            type="button"
+            className={`score-viewer-mode-btn${labelMode === "movable" ? " active" : ""}`}
+            onClick={() => movableAvailable && setLabelMode("movable")}
+            disabled={!movableAvailable}
+            title={movableAvailable ? undefined : "この調律には tonic が設定されていません"}
+          >
+            移動ド{tonic ? ` (${tonic})` : ""}
+          </button>
+        </div>
         <DoReMiScore
           events={events}
           activeEventId={activeEventId}
           onActiveEventIdChange={handleScoreEventTap}
+          labelFn={labelFn}
         />
       </section>
 

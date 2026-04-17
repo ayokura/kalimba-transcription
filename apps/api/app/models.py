@@ -32,6 +32,7 @@ class InstrumentTuning(BaseModel):
     name: str
     key_count: int = Field(alias="keyCount")
     notes: list[TuningNote]
+    tonic: str | None = None
 
     model_config = {"populate_by_name": True}
 

@@ -1279,6 +1279,41 @@ button:disabled {
   -webkit-overflow-scrolling: touch;
 }
 
+.score-viewer-mode-toggle {
+  display: inline-flex;
+  gap: 0;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.score-viewer-mode-btn {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 0;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.score-viewer-mode-btn + .score-viewer-mode-btn {
+  border-left: 1px solid var(--line);
+}
+
+.score-viewer-mode-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
+.score-viewer-mode-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .score-viewer-memo {
   display: flex;
   flex-direction: column;

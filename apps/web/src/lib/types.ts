@@ -9,6 +9,7 @@ export type InstrumentTuning = {
   name: string;
   keyCount: number;
   notes: TuningNote[];
+  tonic?: string | null;
 };
 
 export type ScoreNote = {
