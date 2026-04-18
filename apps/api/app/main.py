@@ -95,7 +95,7 @@ def list_tunings() -> list[InstrumentTuning]:
 async def create_transcription(
     file: UploadFile = File(...),
     tuning: str = Form(...),
-    debug: bool = Form(False),
+    debug: bool = Form(True),
     disabledRepeatedPatternPasses: str | None = Form(None),
     midPerformanceStart: bool = Form(False),
     midPerformanceEnd: bool = Form(False),
@@ -108,7 +108,7 @@ async def create_transcription(
     parsed_tuning = parse_tuning_json(tuning)
     audio_sha256 = compute_audio_sha256(audio_bytes)
 
-    if not dryRun and not force and not debug:
+    if not dryRun and not force:
         existing_id = find_transaction_by_hash_and_tuning(audio_sha256, parsed_tuning.id)
         if existing_id is not None:
             existing = load_response(existing_id)
@@ -140,7 +140,7 @@ async def create_transcription(
         "audioSha256": audio_sha256,
     }
     response_dict = result.model_dump(by_alias=True)
-    debug_dict = response_dict.get("debug") if debug else None
+    debug_dict = response_dict.get("debug")
 
     save_transaction(transaction_id, audio_bytes, request_params, response_dict, debug_dict)
 
