@@ -48,6 +48,60 @@ def find_transaction_by_hash_and_tuning(audio_sha256: str, tuning_id: str) -> st
     return None
 
 
+def get_transaction_audio_sha256(transaction_id: str) -> str | None:
+    request_path = get_transaction_dir(transaction_id) / "request.json"
+    if not request_path.exists():
+        return None
+    try:
+        data = json.loads(request_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data.get("audioSha256")
+
+
+def list_transactions_by_hash(audio_sha256: str) -> list[dict]:
+    tx_root = get_transactions_dir()
+    if not tx_root.exists():
+        return []
+    results: list[dict] = []
+    for tx_dir in tx_root.iterdir():
+        if not tx_dir.is_dir():
+            continue
+        request_path = tx_dir / "request.json"
+        audio_path = tx_dir / "audio.wav"
+        if not request_path.exists() or not audio_path.exists():
+            continue
+        try:
+            data = json.loads(request_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if data.get("audioSha256") != audio_sha256:
+            continue
+        entry = _summarize_transaction(tx_dir)
+        if entry is not None:
+            results.append(entry)
+    results.sort(key=lambda e: e["createdAt"], reverse=True)
+    return results
+
+
+def get_transaction_timestamps(transaction_id: str) -> dict | None:
+    tx_dir = get_transaction_dir(transaction_id)
+    audio_path = tx_dir / "audio.wav"
+    if not audio_path.exists():
+        return None
+    transcribed_at = audio_path.stat().st_mtime
+    audio_sha256 = get_transaction_audio_sha256(transaction_id)
+    audio_first_seen_at = transcribed_at
+    if audio_sha256:
+        matches = list_transactions_by_hash(audio_sha256)
+        if matches:
+            audio_first_seen_at = min(m["createdAt"] for m in matches)
+    return {
+        "transcribedAt": transcribed_at,
+        "audioFirstSeenAt": audio_first_seen_at,
+    }
+
+
 def list_recent_transactions(limit: int) -> list[dict]:
     tx_root = get_transactions_dir()
     if not tx_root.exists():

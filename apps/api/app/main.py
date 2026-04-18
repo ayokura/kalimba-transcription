@@ -14,7 +14,10 @@ from .storage import (
     compute_audio_sha256,
     find_transaction_by_hash_and_tuning,
     generate_transaction_id,
+    get_transaction_audio_sha256,
+    get_transaction_timestamps,
     list_recent_transactions,
+    list_transactions_by_hash,
     load_audio_path,
     load_memo,
     load_response,
@@ -166,7 +169,22 @@ def get_transcription(transaction_id: str) -> dict:
     data = load_response(transaction_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Transaction not found.")
+    timestamps = get_transaction_timestamps(transaction_id)
+    if timestamps is not None:
+        data["transcribedAt"] = timestamps["transcribedAt"]
+        data["audioFirstSeenAt"] = timestamps["audioFirstSeenAt"]
     return data
+
+
+@app.get("/api/transcriptions/{transaction_id}/alternatives")
+def get_transcription_alternatives(transaction_id: str) -> list[dict]:
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    audio_sha256 = get_transaction_audio_sha256(transaction_id)
+    if audio_sha256 is None:
+        return []
+    return list_transactions_by_hash(audio_sha256)
 
 
 @app.get("/api/transcriptions/{transaction_id}/audio")
