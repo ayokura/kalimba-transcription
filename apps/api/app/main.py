@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from .fingerprints import git_head_sha, kalimba_dsp_fingerprint, recognizer_fingerprint
 from .models import InstrumentTuning, TranscriptionResult
 from .storage import (
     compute_audio_sha256,
@@ -138,6 +139,9 @@ async def create_transcription(
         "midPerformanceStart": midPerformanceStart,
         "midPerformanceEnd": midPerformanceEnd,
         "audioSha256": audio_sha256,
+        "commitSha": git_head_sha(),
+        "recognizerFingerprint": recognizer_fingerprint(),
+        "dspFingerprint": kalimba_dsp_fingerprint(),
     }
     response_dict = result.model_dump(by_alias=True)
     debug_dict = response_dict.get("debug")
