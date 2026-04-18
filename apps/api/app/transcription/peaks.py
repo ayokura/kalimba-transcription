@@ -3711,22 +3711,45 @@ def _find_note_attack_time(
     return best_time
 
 
-# Inharmonic partial zones per Chapman 2012 (kalimba tine non-integer harmonics).
-# Secondary notes whose primary-relative frequency ratio lies in these zones
-# are candidates for partial-leakage FP; the sustain gate decides.
-#   2nd partial:  integer 2x,  zone 1.9-2.2
-#   3rd partial:  integer 3x,  zone 2.7-3.15 (incl. G4+C#6 @ 2.829)
-#   4th partial:  integer 4x,  zone 3.4-4.05
-_INHARMONIC_PARTIAL_ZONES: tuple[tuple[float, float], ...] = (
-    (1.90, 2.20),
-    (2.70, 3.15),
-    (3.40, 4.05),
+# Spectral-leakage suspect zones.  Secondary notes whose primary-relative
+# frequency ratio falls in one of these ranges are candidates for a
+# non-tine FP (partial leakage / mechanical coupling) and must pass the
+# cross-note sustain gate to remain accepted.
+#
+# Each entry is (low_ratio, high_ratio, reason_tag).  Two physical
+# mechanisms are covered:
+#
+# 1. **Inharmonic partials** (Chapman 2012): kalimba tines have non-integer
+#    harmonics that can coincide with nearby tuning bands.  2nd/3rd/4th
+#    partial zones are offset from integer multiples by the measured
+#    inharmonicity spread.  Observed on ac1a5c58 G4 @ 4.12 s: C#6 3rd
+#    partial (ratio 2.829) picked up as secondary, late-sustain 7 % of
+#    primary's.
+#
+# 2. **Adjacent-semitone mechanical coupling**: on instruments with a
+#    chromatic row stacked above the diatonic row (e.g. 34L-C, where
+#    K13 D5 sits directly below K30 D#5 and K14 F5 below K31 F#5), a
+#    struck tine vibrates its neighbour via body coupling.  The neighbour
+#    tine is physically present as a real tuning note but did not receive
+#    a genuine pluck, so its sustain collapses while the primary rings.
+#    Observed on ac1a5c58 evt7 @ 15.56 s: D#5/D5 cross-sustain 9 %,
+#    F#5/F5 2 %.  Ratio range covers ±1 semitone ± inharmonicity spread.
+#
+# On instruments without the stacked chromatic row (e.g. 17-C diatonic),
+# no tuning note sits at ratio ~1.06 from another, so the semitone zones
+# are naturally no-ops.
+_SPECTRAL_LEAKAGE_SUSPECT_ZONES: tuple[tuple[float, float, str], ...] = (
+    (0.89, 0.97, "adjacent-semitone-leakage"),   # semitone below
+    (1.03, 1.12, "adjacent-semitone-leakage"),   # semitone above
+    (1.90, 2.20, "inharmonic-partial-leakage"),  # 2nd partial
+    (2.70, 3.15, "inharmonic-partial-leakage"),  # 3rd partial
+    (3.40, 4.05, "inharmonic-partial-leakage"),  # 4th partial
 )
 
 # Cross-note late-sustain threshold.  Observed on ac1a5c58 non-clean
-# tester capture: evt3 C#6/G4 late-sustain ratio = 0.07, evt6 = 0.04.
-# Genuine co-occurring tines hold ratio ~0.3-2.0.
-_INHARMONIC_SECONDARY_MAX_SUSTAIN_RATIO = 0.15
+# tester capture: evt3 C#6/G4 = 0.07, evt6 = 0.04, evt7 D#5/D5 = 0.09,
+# F#5/F5 = 0.02.  Genuine co-occurring tines hold ratio ~0.3–2.0.
+_SECONDARY_LEAKAGE_MAX_SUSTAIN_RATIO = 0.15
 
 
 def _apply_inharmonic_partial_gate(
@@ -3734,41 +3757,45 @@ def _apply_inharmonic_partial_gate(
     selection: _SelectionState,
     primary: NoteHypothesis,
 ) -> None:
-    """Demote secondary notes that look like inharmonic partial leakage.
+    """Demote secondary notes that look like spectral leakage from the primary.
 
     For each accepted secondary whose primary-relative frequency ratio lies
-    in an inharmonic partial zone, use has_kalimba_sustain_profile in
-    cross-note mode (reference_frequency = primary) to check whether the
-    secondary's late-sustain is comparable to the primary's.  A partial's
-    leakage cannot sustain because it is not a real tine vibration — its
-    late-sustain collapses to noise floor while the primary retains a
-    visible fraction of peak.
+    in a suspect zone (inharmonic partial or adjacent-semitone coupling),
+    use has_kalimba_sustain_profile in cross-note mode to check whether
+    the secondary's late-sustain is comparable to the primary's.  Leakage
+    cannot sustain because it is not a real tine vibration — its late-sustain
+    collapses to noise floor while the primary retains a visible fraction
+    of peak.
     """
     primary_freq = primary.candidate.frequency
     if primary_freq <= 0:
         return
     primary_name = primary.candidate.note_name
-    dropped_names: set[str] = set()
+    dropped: dict[str, str] = {}  # note_name -> reason_tag
     for note in list(selection.selected):
         if note.note_name == primary_name:
             continue
         ratio = note.frequency / primary_freq
-        in_zone = any(lo <= ratio <= hi for lo, hi in _INHARMONIC_PARTIAL_ZONES)
-        if not in_zone:
+        zone_reason: str | None = None
+        for lo, hi, reason in _SPECTRAL_LEAKAGE_SUSPECT_ZONES:
+            if lo <= ratio <= hi:
+                zone_reason = reason
+                break
+        if zone_reason is None:
             continue
         if not has_kalimba_sustain_profile(
             ctx.audio, ctx.sample_rate, ctx.start_time, note.frequency,
             reference_frequency=primary_freq,
-            min_cross_sustain_ratio=_INHARMONIC_SECONDARY_MAX_SUSTAIN_RATIO,
+            min_cross_sustain_ratio=_SECONDARY_LEAKAGE_MAX_SUSTAIN_RATIO,
         ):
-            dropped_names.add(note.note_name)
-    if not dropped_names:
+            dropped[note.note_name] = zone_reason
+    if not dropped:
         return
-    selection.selected = [n for n in selection.selected if n.note_name not in dropped_names]
+    selection.selected = [n for n in selection.selected if n.note_name not in dropped]
     for cd in selection.candidate_decisions:
-        if cd.note_name in dropped_names and cd.accepted:
+        if cd.note_name in dropped and cd.accepted:
             cd.accepted = False
-            cd.reasons.append("inharmonic-partial-leakage")
+            cd.reasons.append(dropped[cd.note_name])
 
 
 MUTE_DIP_ENERGY_WINDOW = 0.05
