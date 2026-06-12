@@ -4,6 +4,7 @@ import {
   activeEvents,
   addNote,
   buildInitialState,
+  hasActiveEventAt,
   insertEvent,
   removeNote,
   resolveScoreNote,
@@ -148,6 +149,33 @@ describe("payload roundtrip", () => {
     expect(removed?.removed).toBe(true);
 
     expect(toCorrectionsPayload(state)).toEqual(corrections);
+  });
+});
+
+describe("hasActiveEventAt (candidateSlot 表示抑制)", () => {
+  it("detects events inserted from a slot in the current session", () => {
+    const state = insertEvent(buildInitialState(makeResult()), 5.5, [F4], "inserted-slot");
+    expect(hasActiveEventAt(state, 5.5)).toBe(true);
+    expect(hasActiveEventAt(state, 6.5)).toBe(false);
+  });
+
+  it("detects inserted-slot events restored from saved corrections", () => {
+    const result = makeResult();
+    const state = restoreStateFromCorrections(result, {
+      version: 1,
+      events: [
+        { timeSec: 4.445, notes: ["D4", "D5"], origin: "recognizer" },
+        { timeSec: 7.069, notes: ["D4", "D5"], origin: "recognizer" },
+        { timeSec: 5.5, notes: ["F4"], origin: "inserted-slot" },
+      ],
+    });
+    // 復元された inserted-slot イベントの時刻では slot を再表示しない
+    expect(hasActiveEventAt(state, 5.5)).toBe(true);
+  });
+
+  it("ignores removed events", () => {
+    const state = toggleRemoved(buildInitialState(makeResult()), "evt-1");
+    expect(hasActiveEventAt(state, 4.445)).toBe(false);
   });
 });
 

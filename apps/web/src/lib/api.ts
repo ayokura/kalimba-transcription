@@ -240,6 +240,10 @@ export async function fetchCorrections(transactionId: string): Promise<Correctio
   const response = await fetch(`${API_BASE_URL}/api/transcriptions/${transactionId}/corrections`, {
     cache: "no-store",
   });
+  // 404 = 修正が存在しない (transaction なし / 旧 API)。それ以外の失敗は
+  // 「保存済み修正があるのに見えていない」可能性があるため throw する
+  // (黙って認識 baseline に戻すと、次の保存で既存修正を上書きしてしまう)。
+  if (response.status === 404) return null;
   if (!response.ok) {
     throw new Error("Failed to load corrections.");
   }
