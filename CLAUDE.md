@@ -81,4 +81,14 @@ GitHub に投稿する content (issue / PR comment, issue / PR body, commit mess
 
 これは `gh issue comment`, `gh pr comment`, `gh issue create --body`, `gh pr create --body`, `git commit -m` 等、最終的に GitHub UI に表示される **すべての content** に適用する。
 
+### Issue/PR への画像添付は scripts/gh-attach-image.sh
+
+gh CLI / GitHub API にはコメントへの画像添付機能がない (Web UI のアップロードは非公開エンドポイント)。スクリーンショット等を Issue/PR に貼る場合は:
+
+```
+scripts/gh-attach-image.sh /tmp/screenshot.png pr-190/review-ui-final.png
+```
+
+merge しない専用 `assets` ブランチに Git Data API で画像を積み、出力される raw URL の Markdown スニペットを body/comment に貼る。worktree には一切触れない。
+
 ローカルファイル (CLAUDE.md, AGENTS.md, `memory/*.md`, `docs/*.md` 等) では GitHub のリンク化対象外なので、code 表現としてのバッククォートを残してよい。
