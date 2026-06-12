@@ -35,3 +35,6 @@ data/
 
 # transaction-capture fixtures: 取扱ポリシー確定までフォルダごと除外
 apps/api/tests/fixtures/transaction-captures/
+
+# repo root の作業用スクリーンショット (UI 調整時の一時生成物)
+/*.png
