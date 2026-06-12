@@ -112,15 +112,32 @@ journalctl --user -u kalimba-web -f
 journalctl --user -u kalimba-tunnel -f
 ```
 
-### コード変更後の再起動
+### 本番 worktree 分離 (2026-06-13 以降の構成)
+
+本番サービスは開発用 worktree からではなく、**専用 worktree `~/kalimba-prod` (main 固定)** から起動する。開発側でのブランチ checkout / build / `.next` 削除が本番に影響しないようにするため (2026-06-13 のダウンインシデントの再発防止)。
 
 ```bash
-# API 側 (Python) コード変更後
+# 初期セットアップ (済)
+git worktree add ~/kalimba-prod main
+cd ~/kalimba-prod && uv sync --dev && npm install && (cd apps/web && npm run build)
+```
+
+unit の `WorkingDirectory` は `~/kalimba-prod` 系を指す。**データディレクトリだけは開発 worktree 側を共有**する (`KALIMBA_DATA_DIR=/home/<user>/kalimba-transcription/data`) — triage 等の分析ツールが同じ transaction 群を直接読むため。
+
+### デプロイ (main 更新の本番反映)
+
+```bash
+cd ~/kalimba-prod && git pull --ff-only
+
+# API 側 (Python) 変更を含む場合
 systemctl --user restart kalimba-api
 
-# Web 側 (TSX/CSS) コード変更後 — 事前に build 必須
-cd apps/web && npm run build
+# Web 側 (TSX/CSS) 変更を含む場合 — build 必須
+(cd ~/kalimba-prod/apps/web && npm run build)
 systemctl --user restart kalimba-web
+
+# 依存変更 (pyproject/uv.lock, package.json) を含む場合は事前に
+(cd ~/kalimba-prod && uv sync --dev)   # または npm install
 
 # cloudflared config.yml 変更後
 systemctl --user restart kalimba-tunnel
@@ -154,9 +171,10 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/<user>/kalimba-transcription
+WorkingDirectory=/home/<user>/kalimba-prod
 Environment=PATH=/home/<user>/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=KALIMBA_ALLOWED_ORIGINS=https://<your-domain>
+Environment=KALIMBA_DATA_DIR=/home/<user>/kalimba-transcription/data
 ExecStart=/home/<user>/.local/bin/uv run uvicorn app.main:app --app-dir apps/api --host 127.0.0.1 --port 8000 --workers 1
 Restart=on-failure
 RestartSec=5
@@ -177,7 +195,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/<user>/kalimba-transcription/apps/web
+WorkingDirectory=/home/<user>/kalimba-prod/apps/web
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
 Environment=NODE_ENV=production
 ExecStart=/usr/local/bin/npm run start -- --hostname 127.0.0.1 --port 3000
