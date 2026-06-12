@@ -295,7 +295,16 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
     <main className="review-shell">
       <header className="review-header">
         <div className="review-header-row">
-          <Link href={`/score/${transactionId}`} className="review-back-link">
+          <Link
+            href={`/score/${transactionId}`}
+            className="review-back-link"
+            onClick={(e) => {
+              // beforeunload はアプリ内 route 遷移には効かないため、ここでも守る
+              if (dirty && !window.confirm("未保存の修正があります。保存せずに移動しますか?")) {
+                e.preventDefault();
+              }
+            }}
+          >
             ← 譜面へ戻る
           </Link>
           <h1 className="review-title">確認と修正</h1>

@@ -116,6 +116,22 @@ def test_corrections_invalid_file_is_quarantined_on_read():
     assert (tx_dir / "corrections.json.invalid").exists()
 
 
+def test_corrections_malformed_json_is_quarantined_on_read():
+    from app.storage import get_transaction_dir
+
+    tid = _create_transaction()
+    tx_dir = get_transaction_dir(tid)
+    corrections_path = tx_dir / "corrections.json"
+    # partial write 等で JSON として壊れたファイル
+    corrections_path.write_text('{"version": 1, "events": [', encoding="utf-8")
+
+    response = client.get(f"/api/transcriptions/{tid}/corrections")
+    assert response.status_code == 200
+    assert response.json() == {"corrections": None}
+    assert not corrections_path.exists()
+    assert (tx_dir / "corrections.json.invalid").exists()
+
+
 def test_corrections_unknown_transaction_404():
     missing_id = "00000000-0000-0000-0000-000000000000"
     assert client.get(f"/api/transcriptions/{missing_id}/corrections").status_code == 404
