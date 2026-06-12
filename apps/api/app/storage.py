@@ -195,5 +195,23 @@ def load_memo(transaction_id: str) -> str | None:
     return memo_path.read_text(encoding="utf-8")
 
 
+def save_corrections(transaction_id: str, payload: dict) -> None:
+    tx_dir = get_transaction_dir(transaction_id)
+    tx_dir.mkdir(parents=True, exist_ok=True)
+    (tx_dir / "corrections.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def load_corrections(transaction_id: str) -> dict | None:
+    corrections_path = get_transaction_dir(transaction_id) / "corrections.json"
+    if not corrections_path.exists():
+        return None
+    try:
+        return json.loads(corrections_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+
 def transaction_exists(transaction_id: str) -> bool:
     return get_transaction_dir(transaction_id).exists()

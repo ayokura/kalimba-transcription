@@ -88,6 +88,27 @@ class CandidateSlot(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class CorrectionEvent(BaseModel):
+    """One event in the user-corrected timeline (review UI).
+
+    Stores note names + absolute seconds so a saved correction can be promoted
+    to ground_truth.json (same time/notes vocabulary) without transformation.
+    """
+    time_sec: float = Field(alias="timeSec")
+    notes: list[str] = Field(min_length=1)
+    origin: str = "recognizer"  # recognizer | edited | inserted-slot | inserted-manual
+
+    model_config = {"populate_by_name": True}
+
+
+class CorrectionsPayload(BaseModel):
+    version: int = 1
+    updated_at: str | None = Field(default=None, alias="updatedAt")
+    events: list[CorrectionEvent]
+
+    model_config = {"populate_by_name": True}
+
+
 class NotationViews(BaseModel):
     western: list[str]
     numbered: list[str]
