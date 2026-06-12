@@ -114,7 +114,10 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
   }
 
   return (
+    // key で transaction ごとにコンポーネントを作り直す。client-side 遷移で
+    // 前の transaction の編集 state が持ち越され、別 transaction に保存される事故を防ぐ
     <ReviewEditorReady
+      key={transactionId}
       transactionId={transactionId}
       result={state.result}
       audioUrl={state.audioUrl}
@@ -153,6 +156,7 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const stopAtRef = useRef<number | null>(null);
+  const programmaticSeekRef = useRef(false);
 
   const knownNotes = useMemo(() => buildKnownNoteIndex(result), [result]);
   const sourceEventById = useMemo(
@@ -224,6 +228,9 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
       const followers = visibleEvents.filter((e) => e.timeSec > event.timeSec + 0.01);
       const nextStart = followers.length > 0 ? followers[0].timeSec : event.timeSec + AUDITION_MAX_SEC;
       stopAtRef.current = Math.min(nextStart, event.timeSec + AUDITION_MAX_SEC);
+      // この currentTime 代入も onSeeking を発火させるため、programmatic seek を
+      // マークして stopAt の解除対象から除外する (ユーザー操作の seek のみ解除)
+      programmaticSeekRef.current = true;
       audio.currentTime = Math.max(0, event.timeSec - AUDITION_LEAD_SEC);
       void audio.play();
     },
@@ -321,6 +328,12 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
           controls
           onTimeUpdate={handleTimeUpdate}
           onSeeking={() => {
+            // auditionEvent 由来の programmatic seek では stopAt を維持し、
+            // ユーザーが自分でシークした時だけ区間再生を解除する
+            if (programmaticSeekRef.current) {
+              programmaticSeekRef.current = false;
+              return;
+            }
             stopAtRef.current = null;
           }}
           className="review-audio"
@@ -388,10 +401,15 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
           </button>
         </div>
         <p className="review-save-status muted" role="status">
-          {saveState === "saved" && !dirty && "保存しました"}
-          {saveState === "error" && "保存できませんでした"}
-          {dirty && saveState !== "saving" && "未保存の修正があります"}
-          {!dirty && saveState === "idle" && " "}
+          {saveState === "error"
+            ? "保存できませんでした — 未保存の修正があります"
+            : saveState === "saving"
+            ? "保存中…"
+            : dirty
+            ? "未保存の修正があります"
+            : saveState === "saved"
+            ? "保存しました"
+            : "\u00a0"}
         </p>
       </footer>
     </main>
