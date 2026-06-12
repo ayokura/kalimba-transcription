@@ -179,7 +179,7 @@ v1 (現行互換) と v2 (op 拡張) をサポート。`op` を省略すると v
 
 - `timeSec`: audio.wav 先頭からの絶対秒
 - `toleranceSec`: デフォルト50ms、onset ごとにオーバーライド可能
-- `method`: `ear_verified`, `spectrogram_verified`, `aubio_cross_checked`
+- `method`: `ear_verified`, `spectrogram_verified`, `aubio_cross_checked`, `user_corrected` (review UI の corrections.json 由来、`promote_corrections_to_ground_truth.py` で生成)
 - ファイルはオプショナル（存在する fixture のみ timing チェック実施）
 
 ## Recognizer Strategy Notes

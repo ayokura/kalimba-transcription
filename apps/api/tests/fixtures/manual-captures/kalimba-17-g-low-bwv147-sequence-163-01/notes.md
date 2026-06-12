@@ -194,6 +194,20 @@
 BWV147 を C 版 (kalimba-17-c-bwv147-sequence-163-01) から完全 4 度下 (-5 semitone) に転調して 17-key G Major (Low Octave) kalimba「はるかに勝つ」で演奏したもの。
 演奏ミスは現時点では未確認。Phase 2 (耳 confirm) で verifiedStartSec を埋める運用。
 
+## 2026-06-13 Boundary Verification (F#4/G4 末尾境界)
+
+2026-04-18 の pending 化理由だった events 162-163 (0-based 161-162) の境界問題を energy trace で物理検証した。
+
+- 96.46s: **F#4 単独打鍵** (F#4 帯域 720→39977 に立ち上がり。G3/B3/D4 帯域は無反応、G4 は前 event の減衰中)
+- 97.15〜97.40s: **終結和音 G3+B3+D4+G4 の strum** (G3@97.15 → B3@97.25 → D4@97.30 → G4@97.37 と順次立ち上がり)
+
+結論: **expected.json (F#4 単独 → G3+B3+D4+G4) が正しく、現 recognizer の出力 (G3+B3+D4+F#4 → G4) は誤グルーピング**。
+strum の前半 (G3/B3/D4) が直前の F#4 segment に併合され、G4 だけが分離されている。
+同一演奏のテスター playback 録音 (tx 2bf55c75) でも同じ挙動を確認。F1 ベンチマークの GT に記録済みで、
+このバグは micro F1 上 3 FP + 3 FN として計測されている。
+
+status は recognizer 修正まで pending を維持する。
+
 ## Known Local Issue
 
 - C 版 (event 116 付近) の演奏ミスは録音固有のものなのでこの fixture には引き継がない。
