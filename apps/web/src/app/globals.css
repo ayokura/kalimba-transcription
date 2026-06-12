@@ -1256,6 +1256,30 @@ button:disabled {
   gap: 10px;
 }
 
+.simple-home-pending {
+  margin: 0;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--brass-soft);
+  border: 1px solid var(--brass-line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.simple-home-pending-text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--brass-ink);
+}
+
+.simple-home-pending-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .simple-home-dedup-text {
   margin: 0;
   font-size: 0.92rem;

@@ -18,6 +18,13 @@ import {
   removeRecentTranscription,
   type RecentTranscription,
 } from "@/lib/recentTranscriptions";
+import {
+  clearPendingRecordings,
+  deletePendingRecording,
+  loadLatestPendingRecording,
+  savePendingRecording,
+  type PendingRecording,
+} from "@/lib/pendingRecordingStore";
 import { InstrumentTuning } from "@/lib/types";
 
 type Stage = "idle" | "recording" | "ready" | "analyzing";
@@ -43,12 +50,46 @@ export function SimpleHome() {
   const [recent, setRecent] = useState<RecentTranscription[]>([]);
   const [dedupPrompt, setDedupPrompt] = useState<DedupPrompt | null>(null);
   const [analyzeElapsed, setAnalyzeElapsed] = useState(0);
+  const [pendingRestore, setPendingRestore] = useState<PendingRecording | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const analyzeRequestIdRef = useRef(0);
+  const pendingIdRef = useRef<string | null>(null);
+
+  // タブクラッシュ対策: 録音/WAV を IndexedDB にバックアップし、採譜成功で削除する。
+  const backupRecording = useCallback(
+    (blob: Blob, source: "mic" | "file", tuningId: string | null) => {
+      const id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `pending-${Math.random().toString(36).slice(2)}`;
+      pendingIdRef.current = id;
+      savePendingRecording({ id, blob, source, tuningId, createdAt: Date.now() }).catch(() => {
+        // バックアップ失敗は主導線を妨げない
+        pendingIdRef.current = null;
+      });
+    },
+    [],
+  );
+
+  const discardBackup = useCallback(() => {
+    const id = pendingIdRef.current;
+    pendingIdRef.current = null;
+    if (id) deletePendingRecording(id).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    loadLatestPendingRecording()
+      .then((entry) => {
+        if (entry) setPendingRestore(entry);
+      })
+      .catch(() => {
+        // IndexedDB が使えない環境では復元プロンプトを出さない
+      });
+  }, []);
 
   useEffect(() => {
     setRecent(loadRecentTranscriptions());
@@ -136,6 +177,7 @@ export function SimpleHome() {
         setRecording(blob);
         setRecordingSource("mic");
         setStage("ready");
+        backupRecording(blob, "mic", selectedTuningId || null);
         stream.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
       };
@@ -159,6 +201,7 @@ export function SimpleHome() {
     setRecordingSource("file");
     setStage("ready");
     setError(null);
+    backupRecording(file, "file", selectedTuningId || null);
   }
 
   function resetRecording() {
@@ -167,7 +210,26 @@ export function SimpleHome() {
     setStage("idle");
     setError(null);
     setDedupPrompt(null);
+    discardBackup();
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handleRestorePending() {
+    if (!pendingRestore) return;
+    setRecording(pendingRestore.blob);
+    setRecordingSource(pendingRestore.source);
+    setStage("ready");
+    setError(null);
+    pendingIdRef.current = pendingRestore.id;
+    if (pendingRestore.tuningId && tunings.some((t) => t.id === pendingRestore.tuningId)) {
+      setSelectedTuningId(pendingRestore.tuningId);
+    }
+    setPendingRestore(null);
+  }
+
+  function handleDiscardPending() {
+    setPendingRestore(null);
+    clearPendingRecordings().catch(() => {});
   }
 
   const runTranscription = useCallback(
@@ -188,6 +250,7 @@ export function SimpleHome() {
         saveReviewAudio(session.sessionId, capture.audioWav);
         const transactionId = capture.responsePayload.transactionId;
         if (transactionId) {
+          discardBackup();
           pushRecentTranscription({
             transactionId,
             createdAt: new Date().toISOString(),
@@ -205,7 +268,7 @@ export function SimpleHome() {
         setStage("ready");
       }
     },
-    [router],
+    [router, discardBackup],
   );
 
   async function handleAnalyze() {
@@ -249,6 +312,23 @@ export function SimpleHome() {
   return (
     <main className="simple-home">
       <h1 className="simple-home-title">カリンバ譜面</h1>
+
+      {pendingRestore && !recording ? (
+        <div className="simple-home-pending" role="dialog" aria-label="pending-recording-prompt">
+          <p className="simple-home-pending-text">
+            送信されていない録音があります ({formatRelativeTime(new Date(pendingRestore.createdAt).toISOString())})。
+            復元して採譜しますか?
+          </p>
+          <div className="simple-home-pending-actions">
+            <button type="button" className="simple-home-btn primary" onClick={handleRestorePending}>
+              復元する
+            </button>
+            <button type="button" className="simple-home-btn ghost" onClick={handleDiscardPending}>
+              破棄する
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <section className="simple-home-step">
         <label className="simple-home-label" htmlFor="simple-home-tuning">
