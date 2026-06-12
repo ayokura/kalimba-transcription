@@ -238,6 +238,12 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
         />
       </section>
 
+      <section className="score-viewer-review-link-row">
+        <Link href={`/score/${transactionId}/review`} className="score-viewer-review-link">
+          結果を確認・修正する →
+        </Link>
+      </section>
+
       <RetranscribeSection
         transactionId={transactionId}
         currentTuningId={result.instrumentTuning.id}
