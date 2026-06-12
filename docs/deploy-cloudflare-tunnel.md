@@ -114,20 +114,21 @@ journalctl --user -u kalimba-tunnel -f
 
 ### 本番 worktree 分離 (2026-06-13 以降の構成)
 
-本番サービスは開発用 worktree からではなく、**専用 worktree `~/kalimba-prod` (main 固定)** から起動する。開発側でのブランチ checkout / build / `.next` 削除が本番に影響しないようにするため (2026-06-13 のダウンインシデントの再発防止)。
+本番サービスは開発用 worktree からではなく、**専用 worktree `~/kalimba-prod`** から起動する。開発側でのブランチ checkout / build / `.next` 削除が本番に影響しないようにするため (2026-06-13 のダウンインシデントの再発防止)。
 
 ```bash
 # 初期セットアップ (済)
 git worktree add ~/kalimba-prod main
+git -C ~/kalimba-prod checkout --detach origin/main   # ローカル main を開発側に解放
 cd ~/kalimba-prod && uv sync --dev && npm install && (cd apps/web && npm run build)
 ```
 
-unit の `WorkingDirectory` は `~/kalimba-prod` 系を指す。**データディレクトリだけは開発 worktree 側を共有**する (`KALIMBA_DATA_DIR=/home/<user>/kalimba-transcription/data`) — triage 等の分析ツールが同じ transaction 群を直接読むため。
+prod worktree は **detached HEAD で origin/main を指す** (ローカル `main` ブランチは開発 worktree 側で通常通り checkout できる)。unit の `WorkingDirectory` は `~/kalimba-prod` 系を指す。**データディレクトリだけは開発 worktree 側を共有**する (`KALIMBA_DATA_DIR=/home/<user>/kalimba-transcription/data`) — triage 等の分析ツールが同じ transaction 群を直接読むため。
 
 ### デプロイ (main 更新の本番反映)
 
 ```bash
-cd ~/kalimba-prod && git pull --ff-only
+cd ~/kalimba-prod && git fetch origin && git checkout --detach origin/main
 
 # API 側 (Python) 変更を含む場合
 systemctl --user restart kalimba-api
