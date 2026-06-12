@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from .fingerprints import git_head_sha, kalimba_dsp_fingerprint, recognizer_fingerprint
-from .models import InstrumentTuning, TranscriptionResult
+from .models import CorrectionsPayload, InstrumentTuning, TranscriptionResult
 from .storage import (
     compute_audio_sha256,
     find_transaction_by_hash_and_tuning,
@@ -20,8 +21,10 @@ from .storage import (
     list_recent_transactions,
     list_transactions_by_hash,
     load_audio_path,
+    load_corrections,
     load_memo,
     load_response,
+    save_corrections,
     save_memo,
     save_transaction,
     transaction_exists,
@@ -220,3 +223,22 @@ def put_transcription_memo(transaction_id: str, payload: MemoPayload) -> dict[st
         raise HTTPException(status_code=404, detail="Transaction not found.")
     save_memo(transaction_id, payload.memo)
     return {"memo": payload.memo}
+
+
+@app.get("/api/transcriptions/{transaction_id}/corrections")
+def get_transcription_corrections(transaction_id: str) -> dict:
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    return {"corrections": load_corrections(transaction_id)}
+
+
+@app.put("/api/transcriptions/{transaction_id}/corrections")
+def put_transcription_corrections(transaction_id: str, payload: CorrectionsPayload) -> dict:
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    document = payload.model_dump(by_alias=True)
+    document["updatedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    save_corrections(transaction_id, document)
+    return {"corrections": document}
