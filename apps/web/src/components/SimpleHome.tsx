@@ -22,7 +22,9 @@ import { InstrumentTuning } from "@/lib/types";
 
 type Stage = "idle" | "recording" | "ready" | "analyzing";
 
-const LOW_LEVEL_PEAK_DB = -18;
+// -15 dB: 実データ較正 (2da2e1ac peak -17.4dB で 3 events の実質失敗を捕捉、
+// ad0b0a57 peak -8.1dB の正常録音は誤警告しない)
+const LOW_LEVEL_PEAK_DB = -15;
 const ANALYZE_RETRY_PROMPT_MS = 20_000;
 
 type DedupPrompt = {

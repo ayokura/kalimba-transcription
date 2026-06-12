@@ -45,3 +45,28 @@ jobs:
           OPENBLAS_NUM_THREADS: "1"
           MKL_NUM_THREADS: "1"
           NUMBA_OPT: "2"
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Next.js route types
+        run: npx next typegen
+        working-directory: apps/web
+
+      - name: Typecheck
+        run: npm --workspace apps/web run lint
+
+      - name: Unit tests
+        run: npm --workspace apps/web run test
