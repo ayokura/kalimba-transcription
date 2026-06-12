@@ -21,6 +21,24 @@ export type ScoreNote = {
   frequency: number;
 };
 
+export type AlternateGrouping = {
+  combinesWith: string[] | null;
+  combinedNotes: ScoreNote[] | null;
+  splitInto: ScoreNote[][] | null;
+  alternateNote: ScoreNote | null;
+  reason: string;
+  confidence: number;
+};
+
+export type CandidateSlot = {
+  startTime: number;
+  endTime: number;
+  primaryNote: ScoreNote;
+  candidates: ScoreNote[];
+  dropReason: string;
+  confidence: number;
+};
+
 export type ScoreEvent = {
   id: string;
   startBeat: number;
@@ -29,6 +47,21 @@ export type ScoreEvent = {
   notes: ScoreNote[];
   isGlissLike: boolean;
   gesture: string;
+  alternateGroupings?: AlternateGrouping[] | null;
+};
+
+export type ReviewOrigin = "recognizer" | "edited" | "inserted-slot" | "inserted-manual";
+
+export type CorrectionEventPayload = {
+  timeSec: number;
+  notes: string[];
+  origin: ReviewOrigin;
+};
+
+export type CorrectionsPayload = {
+  version: 1;
+  updatedAt?: string | null;
+  events: CorrectionEventPayload[];
 };
 
 export type NotationViews = {
@@ -42,6 +75,7 @@ export type TranscriptionResult = {
   instrumentTuning: InstrumentTuning;
   tempo: number;
   events: ScoreEvent[];
+  candidateSlots?: CandidateSlot[];
   notationViews: NotationViews;
   warnings: string[];
   debug?: Record<string, unknown> | null;

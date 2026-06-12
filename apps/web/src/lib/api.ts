@@ -1,4 +1,4 @@
-import { InstrumentTuning, TranscriptionResult } from "@/lib/types";
+import { CorrectionsPayload, InstrumentTuning, TranscriptionResult } from "@/lib/types";
 import { WavMetadata, toWavWithMetadata } from "@/lib/audio";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -234,6 +234,33 @@ export async function saveMemo(transactionId: string, memo: string): Promise<voi
   if (!response.ok) {
     throw new Error("Failed to save memo.");
   }
+}
+
+export async function fetchCorrections(transactionId: string): Promise<CorrectionsPayload | null> {
+  const response = await fetch(`${API_BASE_URL}/api/transcriptions/${transactionId}/corrections`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load corrections.");
+  }
+  const payload = (await response.json()) as { corrections: CorrectionsPayload | null };
+  return payload.corrections;
+}
+
+export async function saveCorrections(
+  transactionId: string,
+  corrections: CorrectionsPayload,
+): Promise<CorrectionsPayload> {
+  const response = await fetch(`${API_BASE_URL}/api/transcriptions/${transactionId}/corrections`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(corrections),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to save corrections.");
+  }
+  const payload = (await response.json()) as { corrections: CorrectionsPayload };
+  return payload.corrections;
 }
 
 function cleanOptionalText(value: string | undefined): string | null {
