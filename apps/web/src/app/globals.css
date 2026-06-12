@@ -1506,7 +1506,7 @@ button:disabled {
   background: var(--bg-alt);
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 6px 18px rgba(30, 31, 31, 0.05);
+  box-shadow: 0 6px 18px rgba(30, 31, 31, 0.06);
 }
 
 .score-viewer-audio {
