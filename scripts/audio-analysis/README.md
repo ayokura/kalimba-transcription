@@ -100,6 +100,22 @@ synthetic 単一 line で動作する。
 uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--verbose] [--mode events|segments] [--line L1]
 ```
 
+### note_f1_benchmark.py
+free-performance 録音に対する note-level Precision / Recall / F1 評価。
+fixture 回帰スイートが「楽譜との完全一致」を assert するのに対し、本ベンチマークは
+人間検証済み ground truth (`ground_truth.json`, AGENTS.md スキーマ) との
+onset 時刻 ± tolerance の note 単位マッチングで「実演奏にどれだけ近いか」を測る。
+自由演奏転写の改善追跡用 (完全一致が定義できない録音向け)。
+
+ground truth の置き場所: `apps/api/tests/fixtures/transaction-captures/<tx-id>/ground_truth.json`
+(audio と tuning は `data/transactions/<tx-id>/` から読む)。
+
+```bash
+uv run python scripts/audio-analysis/note_f1_benchmark.py              # GT のある全録音
+uv run python scripts/audio-analysis/note_f1_benchmark.py <tx-id> --verbose  # FP/FN 明細
+uv run python scripts/audio-analysis/note_f1_benchmark.py --json
+```
+
 ## 判定基準
 
 ### ノイズ vs 楽音の判定

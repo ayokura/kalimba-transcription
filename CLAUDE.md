@@ -56,6 +56,7 @@ fixture名（例: `d5-repeat-01`）は自動的にフルパスに展開される
 - `note_peak_track.py` - ノート帯域ピーク周波数・centsずれ追跡
 - `energy_trace.py` - ノート帯域エネルギーの時間推移トレース (rescue/suppression 設計の前提検証で頻用)
 - `fixture_rejection_sweep.py` - rejection閾値探索（実テストスイート使用）
+- `note_f1_benchmark.py` - free-performance 録音の note-level F1 評価（ground_truth.json ベース、自由演奏の改善追跡用）
 - `score_alignment_diagnosis.py` - expected events (`score_structure.json` / `request.json:expectedPerformance` / `expected.json:expectedEventNoteSetsOrdered` の優先順で fallback) と recognizer 出力の整列・差分表示
 
 ### Fixture 影響評価の注意
