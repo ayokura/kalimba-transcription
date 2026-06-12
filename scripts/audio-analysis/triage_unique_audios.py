@@ -18,6 +18,17 @@ Rough prioritization heuristic (higher is more urgent):
   -20 if audio peak < -15 dB (recording issue, not recognizer's fault)
   -10 if this audio was already transcribed with the current recognizer
        (recognizerFingerprint == current), so no re-evaluation value
+  -100 if a closing verdict (correct_detection / recording_issue / wontfix) is
+       recorded — physically-verified recordings must not be re-flagged
+       (the ev/s heuristic mis-flags slow performances; see 0002b267 / 4e0f6c49)
+
+Verdicts persist in transaction-captures/triage_verdicts.json, keyed by
+(audioSha256, tuningId). Record one after physical verification:
+
+  uv run python scripts/audio-analysis/triage_unique_audios.py \\
+      --set-verdict 0002b267 --tuning kalimba-17-c \\
+      --verdict correct_detection --method energy_trace+ear_verified \\
+      --comment "D4+D5 octave dyad x5; 6.46/11.8s onsets are mute contacts"
 """
 
 from __future__ import annotations
@@ -45,6 +56,48 @@ from apps.api.app.main import app  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = Path(os.environ.get("KALIMBA_DATA_DIR", str(REPO_ROOT / "data"))) / "transactions"
+VERDICTS_PATH = (
+    REPO_ROOT / "apps" / "api" / "tests" / "fixtures" / "transaction-captures"
+    / "triage_verdicts.json"
+)
+
+# Verdicts that close a triage item (sink to the bottom of the priority list).
+# "recognizer_bug" keeps the item visible: the bug is confirmed and tracked,
+# re-evaluation after recognizer changes is still meaningful.
+CLOSING_VERDICTS = {"correct_detection", "recording_issue", "wontfix"}
+VALID_VERDICTS = CLOSING_VERDICTS | {"recognizer_bug"}
+
+
+def load_verdicts() -> dict[tuple[str, str], dict]:
+    if not VERDICTS_PATH.is_file():
+        return {}
+    try:
+        doc = json.loads(VERDICTS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        print(f"[warn] failed to read {VERDICTS_PATH}", file=sys.stderr)
+        return {}
+    return {
+        (v["audioSha256"], v["tuningId"]): v
+        for v in doc.get("verdicts", [])
+        if v.get("audioSha256") and v.get("tuningId")
+    }
+
+
+def save_verdict(entry: dict) -> None:
+    doc = {"version": 1, "verdicts": []}
+    if VERDICTS_PATH.is_file():
+        doc = json.loads(VERDICTS_PATH.read_text(encoding="utf-8"))
+    verdicts = [
+        v for v in doc.get("verdicts", [])
+        if (v.get("audioSha256"), v.get("tuningId"))
+        != (entry["audioSha256"], entry["tuningId"])
+    ]
+    verdicts.append(entry)
+    doc["verdicts"] = sorted(verdicts, key=lambda v: (v["audioSha256"], v["tuningId"]))
+    VERDICTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    VERDICTS_PATH.write_text(
+        json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 @dataclass
@@ -132,6 +185,7 @@ def score_priority(
     peak_db: float,
     stored_recognizer_fp: str | None,
     current_recognizer_fp: str,
+    verdict: dict | None = None,
 ) -> tuple[int, list[str]]:
     score = 0
     tags: list[str] = []
@@ -154,6 +208,10 @@ def score_priority(
     if stored_recognizer_fp == current_recognizer_fp:
         score -= 10
         tags.append("same-recognizer")
+    if verdict is not None:
+        tags.append(f"verdict:{verdict['verdict']}")
+        if verdict["verdict"] in CLOSING_VERDICTS:
+            score -= 100
     return score, tags
 
 
@@ -162,7 +220,46 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="Show all transactions per hash, not just representative")
     parser.add_argument("--json", action="store_true", help="Emit JSON (not table)")
     parser.add_argument("--filter-tuning", type=str, default=None, help="Only process transactions with this tuning id")
+    parser.add_argument("--set-verdict", type=str, default=None, metavar="SHA_PREFIX",
+                        help="Record a verdict for the audio matching this SHA-256 prefix (requires --tuning, --verdict)")
+    parser.add_argument("--tuning", type=str, default=None, help="tuning id for --set-verdict")
+    parser.add_argument("--verdict", type=str, default=None, choices=sorted(VALID_VERDICTS),
+                        help="verdict value for --set-verdict")
+    parser.add_argument("--method", type=str, default=None,
+                        help="verification method for --set-verdict (e.g. energy_trace+ear_verified)")
+    parser.add_argument("--comment", type=str, default=None, help="verdict comment for --set-verdict")
+    parser.add_argument("--issue", type=int, default=None, help="tracking issue number for --set-verdict")
     args = parser.parse_args()
+
+    if args.set_verdict:
+        if not (args.tuning and args.verdict):
+            parser.error("--set-verdict requires --tuning and --verdict")
+        matches = sorted(
+            {t.audio_sha256 for t in load_all_transactions()
+             if t.audio_sha256.startswith(args.set_verdict) and t.tuning.get("id") == args.tuning}
+        )
+        if len(matches) != 1:
+            parser.error(
+                f"SHA prefix {args.set_verdict!r} + tuning {args.tuning!r} matched "
+                f"{len(matches)} unique audios (need exactly 1): {[m[:12] for m in matches]}"
+            )
+        import datetime
+        entry = {
+            "audioSha256": matches[0],
+            "tuningId": args.tuning,
+            "verdict": args.verdict,
+            "verifiedAt": datetime.date.today().isoformat(),
+        }
+        if args.method:
+            entry["method"] = args.method
+        if args.comment:
+            entry["comment"] = args.comment
+        if args.issue:
+            entry["issue"] = args.issue
+        save_verdict(entry)
+        print(f"recorded verdict {args.verdict} for {matches[0][:12]} ({args.tuning})"
+              f" -> {VERDICTS_PATH.relative_to(REPO_ROOT)}")
+        return
 
     current_recognizer_fp = recognizer_fingerprint()
     current_dsp_fp = kalimba_dsp_fingerprint()
@@ -171,6 +268,7 @@ def main():
     all_tx = load_all_transactions()
     if args.filter_tuning:
         all_tx = [t for t in all_tx if t.tuning.get("id") == args.filter_tuning]
+    verdicts = load_verdicts()
 
     # Group by (audio_sha256, tuning_id) — same audio + different tuning = separate entry
     groups: dict[tuple[str, str | None], list[TransactionMeta]] = defaultdict(list)
@@ -215,6 +313,7 @@ def main():
         new_events = len(new.get("events") or [])
         new_event_rate = round(new_events / rep.duration_sec, 3) if rep.duration_sec > 0 else 0.0
 
+        verdict = verdicts.get((rep.audio_sha256, rep.tuning.get("id") or ""))
         score, tags = score_priority(
             old_events,
             new_events,
@@ -222,6 +321,7 @@ def main():
             rep.peak_db,
             stored_request.get("recognizerFingerprint"),
             current_recognizer_fp,
+            verdict=verdict,
         )
 
         results.append(
@@ -241,6 +341,7 @@ def main():
                 "currentRecognizerFp": current_recognizer_fp,
                 "priorityScore": score,
                 "tags": tags,
+                "verdict": verdict,
             }
         )
 
