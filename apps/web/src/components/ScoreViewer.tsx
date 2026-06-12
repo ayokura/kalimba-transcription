@@ -23,7 +23,7 @@ import {
   noteLabelFromScoreNote,
   tonicReferenceOctave,
 } from "@/lib/scoreLayout";
-import { InstrumentTuning, TranscriptionResult } from "@/lib/types";
+import { InstrumentTuning, TranscriptionResult, TuningMismatch } from "@/lib/types";
 
 type LabelMode = "fixed" | "movable" | "movableNumber";
 const LABEL_MODE_STORAGE_KEY = "kalimba:score-label-mode";
@@ -184,6 +184,14 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
         <ShareUrlRow url={shareUrl} />
       </header>
 
+      {result.tuningMismatch ? (
+        <TuningMismatchBanner
+          transactionId={transactionId}
+          mismatch={result.tuningMismatch}
+          currentTuningName={result.instrumentTuning.name}
+        />
+      ) : null}
+
       <MemoEditor transactionId={transactionId} initialMemo={initialMemo} />
 
       <section className="score-viewer-playback">
@@ -258,6 +266,93 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
   );
 }
 
+function useRetranscribe(transactionId: string) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const retranscribe = useCallback(
+    async (tuning: InstrumentTuning) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const audioBlob = await fetchTranscriptionAudioBlob(transactionId);
+        const capture = await createTranscriptionWithCapture(audioBlob, tuning, {
+          force: true,
+        });
+        const newId = capture.responsePayload.transactionId;
+        if (!newId) throw new Error("新しい transactionId が返されませんでした。");
+        pushRecentTranscription({
+          transactionId: newId,
+          createdAt: new Date().toISOString(),
+          tuningName: tuning.name,
+          eventCount: capture.responsePayload.events.length,
+        });
+        router.push(`/score/${newId}`);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "再採譜に失敗しました。");
+        setBusy(false);
+      }
+    },
+    [transactionId, router],
+  );
+
+  return { busy, error, retranscribe };
+}
+
+function TuningMismatchBanner({
+  transactionId,
+  mismatch,
+  currentTuningName,
+}: {
+  transactionId: string;
+  mismatch: TuningMismatch;
+  currentTuningName: string;
+}) {
+  const { busy, error, retranscribe } = useRetranscribe(transactionId);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const outside = mismatch.outsidePitchClasses.join(", ");
+
+  async function handleSuggested() {
+    if (!mismatch.suggestedTuningId) return;
+    setFetchError(null);
+    try {
+      const tunings = await fetchTunings();
+      const suggested = tunings.find((t) => t.id === mismatch.suggestedTuningId);
+      if (!suggested) throw new Error("提案された調律が見つかりませんでした。");
+      await retranscribe(suggested);
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : "再採譜に失敗しました。");
+    }
+  }
+
+  return (
+    <section className="score-viewer-mismatch" role="alert">
+      <p className="score-viewer-mismatch-text">
+        この録音には選択した調律 ({currentTuningName}) にない音
+        {outside ? ` (${outside})` : ""} が強く含まれています。
+        {mismatch.suggestedTuningName
+          ? ` ${mismatch.suggestedTuningName} の演奏かもしれません。`
+          : " 調律の選択が合っているか確認してください。"}
+      </p>
+      {mismatch.suggestedTuningId ? (
+        <button
+          type="button"
+          className="score-viewer-mismatch-btn"
+          onClick={handleSuggested}
+          disabled={busy}
+        >
+          {busy ? "再採譜中…" : `${mismatch.suggestedTuningName} で再採譜`}
+        </button>
+      ) : null}
+      {error || fetchError ? (
+        <p className="score-viewer-retranscribe-error">{error ?? fetchError}</p>
+      ) : null}
+    </section>
+  );
+}
+
 function RetranscribeSection({
   transactionId,
   currentTuningId,
@@ -265,42 +360,22 @@ function RetranscribeSection({
   transactionId: string;
   currentTuningId: string;
 }) {
-  const router = useRouter();
   const [tunings, setTunings] = useState<InstrumentTuning[]>([]);
   const [selectedTuningId, setSelectedTuningId] = useState<string>(currentTuningId);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const { busy, error, retranscribe } = useRetranscribe(transactionId);
 
   useEffect(() => {
     fetchTunings()
       .then((list) => setTunings(list))
-      .catch(() => setError("調律一覧の取得に失敗しました。"));
+      .catch(() => setFetchError("調律一覧の取得に失敗しました。"));
   }, []);
 
   const selectedTuning = tunings.find((t) => t.id === selectedTuningId) ?? null;
 
   async function handleRetranscribe() {
     if (!selectedTuning) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const audioBlob = await fetchTranscriptionAudioBlob(transactionId);
-      const capture = await createTranscriptionWithCapture(audioBlob, selectedTuning, {
-        force: true,
-      });
-      const newId = capture.responsePayload.transactionId;
-      if (!newId) throw new Error("新しい transactionId が返されませんでした。");
-      pushRecentTranscription({
-        transactionId: newId,
-        createdAt: new Date().toISOString(),
-        tuningName: selectedTuning.name,
-        eventCount: capture.responsePayload.events.length,
-      });
-      router.push(`/score/${newId}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "再採譜に失敗しました。");
-      setBusy(false);
-    }
+    await retranscribe(selectedTuning);
   }
 
   return (
@@ -328,7 +403,9 @@ function RetranscribeSection({
           {busy ? "再採譜中…" : "再採譜"}
         </button>
       </div>
-      {error ? <p className="score-viewer-retranscribe-error">{error}</p> : null}
+      {error || fetchError ? (
+        <p className="score-viewer-retranscribe-error">{error ?? fetchError}</p>
+      ) : null}
     </section>
   );
 }

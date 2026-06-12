@@ -109,6 +109,18 @@ class CorrectionsPayload(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class TuningMismatch(BaseModel):
+    """Advisory: the recording's spectral peaks fit the selected tuning poorly
+    (e.g. a D major recording transcribed with a C major tuning)."""
+    selected_coverage: float = Field(alias="selectedCoverage")
+    outside_pitch_classes: list[str] = Field(alias="outsidePitchClasses")
+    suggested_tuning_id: str | None = Field(default=None, alias="suggestedTuningId")
+    suggested_tuning_name: str | None = Field(default=None, alias="suggestedTuningName")
+    suggested_coverage: float | None = Field(default=None, alias="suggestedCoverage")
+
+    model_config = {"populate_by_name": True}
+
+
 class NotationViews(BaseModel):
     western: list[str]
     numbered: list[str]
@@ -125,6 +137,7 @@ class TranscriptionResult(BaseModel):
     events: list[ScoreEvent]
     candidate_slots: list[CandidateSlot] = Field(default_factory=list, alias="candidateSlots")
     notation_views: NotationViews = Field(alias="notationViews")
+    tuning_mismatch: TuningMismatch | None = Field(default=None, alias="tuningMismatch")
     warnings: list[str] = []
     debug: dict[str, Any] | None = None
 

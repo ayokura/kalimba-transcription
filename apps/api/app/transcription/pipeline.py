@@ -4,7 +4,15 @@ from typing import Any
 
 from fastapi import HTTPException, UploadFile
 
-from ..models import AlternateGrouping, CandidateSlot, InstrumentTuning, ScoreEvent, ScoreNote, TranscriptionResult
+from ..models import (
+    AlternateGrouping,
+    CandidateSlot,
+    InstrumentTuning,
+    ScoreEvent,
+    ScoreNote,
+    TranscriptionResult,
+    TuningMismatch,
+)
 from .audio import read_audio
 from .constants import GAP_RUN_LEAD_IN_MIN_FOLLOWUP_GAP, SHORT_SEGMENT_SECONDARY_GUARD_DURATION
 from .events import (
@@ -52,6 +60,7 @@ from .notation import build_notation_views, format_doremi, format_number, quanti
 from .patterns import apply_repeated_pattern_passes
 from .peaks import analyze_spectrum_at_onset, has_kalimba_sustain_profile, segment_peaks
 from .per_note import rescue_gap_mute_dips
+from .tuning_check import analyze_tuning_mismatch
 from .segments import (
     build_segment_debug_contexts,
     detect_segments,
@@ -651,6 +660,25 @@ async def transcribe_audio(
     if len(events) < 3:
         warnings.append("Only a small number of note events were detected.")
 
+    mismatch_report = analyze_tuning_mismatch(audio, sample_rate, tuning)
+    tuning_mismatch: TuningMismatch | None = None
+    if mismatch_report is not None:
+        tuning_mismatch = TuningMismatch(
+            selectedCoverage=mismatch_report.selected_coverage,
+            outsidePitchClasses=mismatch_report.outside_pitch_classes,
+            suggestedTuningId=mismatch_report.suggested_tuning_id,
+            suggestedTuningName=mismatch_report.suggested_tuning_name,
+            suggestedCoverage=mismatch_report.suggested_coverage,
+        )
+        outside = ", ".join(mismatch_report.outside_pitch_classes) or "outside the tuning"
+        message = (
+            "The recording contains strong pitches not in the selected tuning"
+            f" ({outside})."
+        )
+        if mismatch_report.suggested_tuning_name:
+            message += f" It may match {mismatch_report.suggested_tuning_name}."
+        warnings.append(message)
+
     result_debug = None
     if debug:
         result_debug = {
@@ -696,6 +724,7 @@ async def transcribe_audio(
         events=events,
         candidateSlots=candidate_slots_api,
         notationViews=build_notation_views(events),
+        tuningMismatch=tuning_mismatch,
         warnings=warnings,
         debug=result_debug,
     )

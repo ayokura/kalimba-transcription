@@ -70,6 +70,14 @@ export type NotationViews = {
   verticalDoReMi: string[][];
 };
 
+export type TuningMismatch = {
+  selectedCoverage: number;
+  outsidePitchClasses: string[];
+  suggestedTuningId?: string | null;
+  suggestedTuningName?: string | null;
+  suggestedCoverage?: number | null;
+};
+
 export type TranscriptionResult = {
   transactionId?: string | null;
   instrumentTuning: InstrumentTuning;
@@ -77,6 +85,7 @@ export type TranscriptionResult = {
   events: ScoreEvent[];
   candidateSlots?: CandidateSlot[];
   notationViews: NotationViews;
+  tuningMismatch?: TuningMismatch | null;
   warnings: string[];
   debug?: Record<string, unknown> | null;
 };

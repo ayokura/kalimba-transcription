@@ -1413,6 +1413,43 @@ button:disabled {
   margin: 0;
 }
 
+.score-viewer-mismatch {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--brass-soft);
+  border: 1px solid var(--brass-line);
+}
+
+.score-viewer-mismatch-text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--brass-ink);
+}
+
+.score-viewer-mismatch-btn {
+  align-self: flex-start;
+  padding: 8px 16px;
+  font-size: 0.92rem;
+  border-radius: 10px;
+  background: var(--accent);
+  color: white;
+  border: 1px solid var(--accent-strong);
+  cursor: pointer;
+}
+
+.score-viewer-mismatch-btn:not(:disabled):hover {
+  background: var(--accent-strong);
+}
+
+.score-viewer-mismatch-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .score-viewer-retranscribe {
   display: flex;
   flex-direction: column;
