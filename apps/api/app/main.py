@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from .fingerprints import git_head_sha, kalimba_dsp_fingerprint, recognizer_fingerprint
 from .models import CorrectionsPayload, InstrumentTuning, TranscriptionResult
@@ -24,6 +24,7 @@ from .storage import (
     load_corrections,
     load_memo,
     load_response,
+    quarantine_corrections,
     save_corrections,
     save_memo,
     save_transaction,
@@ -230,7 +231,17 @@ def get_transcription_corrections(transaction_id: str) -> dict:
     _validate_transaction_id(transaction_id)
     if not transaction_exists(transaction_id):
         raise HTTPException(status_code=404, detail="Transaction not found.")
-    return {"corrections": load_corrections(transaction_id)}
+    raw = load_corrections(transaction_id)
+    if raw is None:
+        return {"corrections": None}
+    try:
+        validated = CorrectionsPayload.model_validate(raw)
+    except ValidationError:
+        # 壊れた/互換性のないファイルを返すとクライアントが誤動作し、次の保存で
+        # 原本ごと上書きされる。退避 (.invalid) でデータを保全しつつ「無し」を返す。
+        quarantine_corrections(transaction_id)
+        return {"corrections": None}
+    return {"corrections": validated.model_dump(by_alias=True)}
 
 
 @app.put("/api/transcriptions/{transaction_id}/corrections")

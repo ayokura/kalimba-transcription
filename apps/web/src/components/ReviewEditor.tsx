@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import {
   activeEvents,
+  hasActiveEventAt,
   addNote,
   buildInitialState,
   buildKnownNoteIndex,
@@ -69,10 +70,13 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
 
     async function load() {
       try {
+        // fetchCorrections の失敗を握りつぶさない: 保存済み修正が見えないまま
+        // baseline で開くと、次の保存で既存修正を上書きしてしまう。
+        // 失敗時はページ全体をエラー表示にする (404 は api.ts 側で null になる)。
         const [result, audioBlob, corrections] = await Promise.all([
           fetchTranscription(transactionId),
           fetchTranscriptionAudioBlob(transactionId),
-          fetchCorrections(transactionId).catch(() => null),
+          fetchCorrections(transactionId),
         ]);
         if (cancelled) return;
         objectUrl = URL.createObjectURL(audioBlob);
@@ -138,7 +142,6 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
   );
   const [history, setHistory] = useState<ReviewState[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [insertedSlotKeys, setInsertedSlotKeys] = useState<Set<number>>(new Set());
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const lastSavedRef = useRef<string>(
     JSON.stringify(
@@ -180,7 +183,6 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
 
   const resetAll = useCallback(() => {
     apply(() => buildInitialState(result));
-    setInsertedSlotKeys(new Set());
   }, [apply, result]);
 
   const payload = useMemo(() => toCorrectionsPayload(reviewState), [reviewState]);
@@ -195,6 +197,8 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
     if (!dirty) return;
     const handler = (event: BeforeUnloadEvent) => {
       event.preventDefault();
+      // returnValue をセットしないと確認ダイアログを出さないブラウザがある
+      event.returnValue = "";
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
@@ -245,9 +249,8 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
   );
 
   const handleInsertSlot = useCallback(
-    (slot: CandidateSlot, slotIndex: number) => {
+    (slot: CandidateSlot) => {
       apply((state) => insertEvent(state, slot.startTime, [slot.primaryNote], "inserted-slot"));
-      setInsertedSlotKeys((keys) => new Set(keys).add(slotIndex));
     },
     [apply],
   );
@@ -268,11 +271,14 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
       event,
     }));
     (result.candidateSlots ?? []).forEach((slot, slotIndex) => {
-      if (insertedSlotKeys.has(slotIndex)) return;
+      // 同時刻にアクティブなイベントがある slot は表示しない。挿入記録ではなく
+      // state で判定することで、保存済み corrections から復元された
+      // inserted-slot イベントとの重複表示 (=重複挿入) を防ぐ
+      if (hasActiveEventAt(reviewState, slot.startTime)) return;
       items.push({ kind: "slot", timeSec: slot.startTime, slot, slotIndex });
     });
     return items.sort((a, b) => a.timeSec - b.timeSec);
-  }, [reviewState.events, result.candidateSlots, insertedSlotKeys]);
+  }, [reviewState, result.candidateSlots]);
 
   const displayEvents = useMemo(() => toDisplayScoreEvents(reviewState), [reviewState]);
 
@@ -344,7 +350,7 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
             <SlotCard
               key={`slot-${item.slotIndex}`}
               slot={item.slot}
-              onInsert={() => handleInsertSlot(item.slot, item.slotIndex)}
+              onInsert={() => handleInsertSlot(item.slot)}
             />
           ),
         )}

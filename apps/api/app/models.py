@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -96,13 +96,13 @@ class CorrectionEvent(BaseModel):
     """
     time_sec: float = Field(alias="timeSec")
     notes: list[str] = Field(min_length=1)
-    origin: str = "recognizer"  # recognizer | edited | inserted-slot | inserted-manual
+    origin: Literal["recognizer", "edited", "inserted-slot", "inserted-manual"] = "recognizer"
 
     model_config = {"populate_by_name": True}
 
 
 class CorrectionsPayload(BaseModel):
-    version: int = 1
+    version: Literal[1] = 1
     updated_at: str | None = Field(default=None, alias="updatedAt")
     events: list[CorrectionEvent]
 

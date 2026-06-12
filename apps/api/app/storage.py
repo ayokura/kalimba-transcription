@@ -213,5 +213,12 @@ def load_corrections(transaction_id: str) -> dict | None:
         return None
 
 
+def quarantine_corrections(transaction_id: str) -> None:
+    """不正な corrections.json を .invalid に退避する (データは保全しつつ「無し」扱いに)。"""
+    corrections_path = get_transaction_dir(transaction_id) / "corrections.json"
+    if corrections_path.exists():
+        corrections_path.replace(corrections_path.with_suffix(".json.invalid"))
+
+
 def transaction_exists(transaction_id: str) -> bool:
     return get_transaction_dir(transaction_id).exists()

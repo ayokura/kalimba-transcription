@@ -253,6 +253,21 @@ export function activeEvents(state: ReviewState): ReviewEvent[] {
   return state.events.filter((event) => !event.removed);
 }
 
+/**
+ * timeSec にアクティブなイベントが存在するか。candidateSlot の表示抑制に使う
+ * (保存済み corrections から復元された inserted-slot イベントも含めて判定するため、
+ * セッションローカルな挿入記録ではなく state 自体を見る)。
+ */
+export function hasActiveEventAt(
+  state: ReviewState,
+  timeSec: number,
+  toleranceSec = TIME_MATCH_TOLERANCE_SEC,
+): boolean {
+  return state.events.some(
+    (event) => !event.removed && Math.abs(event.timeSec - timeSec) <= toleranceSec,
+  );
+}
+
 export function toCorrectionsPayload(state: ReviewState): CorrectionsPayload {
   return {
     version: 1,

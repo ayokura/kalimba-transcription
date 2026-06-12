@@ -80,6 +80,42 @@ def test_corrections_rejects_empty_notes():
     assert response.status_code == 422
 
 
+def test_corrections_rejects_unknown_origin():
+    tid = _create_transaction()
+    payload = {"version": 1, "events": [{"timeSec": 1.0, "notes": ["C4"], "origin": "guessed"}]}
+    response = client.put(f"/api/transcriptions/{tid}/corrections", json=payload)
+    assert response.status_code == 422
+
+
+def test_corrections_rejects_unsupported_version():
+    tid = _create_transaction()
+    payload = {"version": 2, "events": [{"timeSec": 1.0, "notes": ["C4"]}]}
+    response = client.put(f"/api/transcriptions/{tid}/corrections", json=payload)
+    assert response.status_code == 422
+
+
+def test_corrections_invalid_file_is_quarantined_on_read():
+    from app.storage import get_transaction_dir
+
+    tid = _create_transaction()
+    tx_dir = get_transaction_dir(tid)
+    corrections_path = tx_dir / "corrections.json"
+    # スキーマ非互換 (origin typo) のファイルを直接置く
+    corrections_path.write_text(
+        json.dumps(
+            {"version": 1, "events": [{"timeSec": 1.0, "notes": ["C4"], "origin": "typo"}]}
+        ),
+        encoding="utf-8",
+    )
+
+    response = client.get(f"/api/transcriptions/{tid}/corrections")
+    assert response.status_code == 200
+    assert response.json() == {"corrections": None}
+    # 原本は .invalid に退避され、データは失われない
+    assert not corrections_path.exists()
+    assert (tx_dir / "corrections.json.invalid").exists()
+
+
 def test_corrections_unknown_transaction_404():
     missing_id = "00000000-0000-0000-0000-000000000000"
     assert client.get(f"/api/transcriptions/{missing_id}/corrections").status_code == 404
