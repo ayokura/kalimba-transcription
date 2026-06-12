@@ -8,6 +8,10 @@
   --accent-strong: #0f5f67;
   --accent-soft: rgba(23, 126, 137, 0.12);
   --warm: #f2c078;
+  --brass: #b08d3e;
+  --brass-soft: rgba(176, 141, 62, 0.12);
+  --brass-line: rgba(176, 141, 62, 0.4);
+  --brass-ink: #7a5e1f;
   --danger: #a63d40;
   --font-heading: "Georgia", "Times New Roman", serif;
   --font-body: "Trebuchet MS", "Segoe UI", sans-serif;
@@ -19,10 +23,8 @@
 
 html {
   min-height: 100%;
-  background:
-    radial-gradient(circle at top left, rgba(242, 192, 120, 0.3), transparent 28%),
-    radial-gradient(circle at top right, rgba(23, 126, 137, 0.15), transparent 32%),
-    linear-gradient(180deg, #fff7ea 0%, #f4efe7 55%, #efe6d8 100%);
+  /* 紙の質感: ごく控えめな上下グラデーションのみ (色ブロブは置かない) */
+  background: linear-gradient(180deg, #faf5ea 0%, #f4efe7 55%, #f0e9dc 100%);
 }
 
 body {
@@ -60,6 +62,7 @@ button {
 .panel h2,
 .workflow-card h3 {
   font-family: var(--font-heading);
+  letter-spacing: 0.04em;
   margin: 0;
 }
 
@@ -80,10 +83,9 @@ button {
 .panel,
 .workflow-card {
   border: 1px solid var(--line);
-  background: rgba(255, 250, 240, 0.85);
-  backdrop-filter: blur(10px);
-  border-radius: 24px;
-  box-shadow: 0 18px 40px rgba(60, 46, 26, 0.08);
+  background: var(--bg-alt);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(30, 31, 31, 0.06);
 }
 
 .hero-card {
@@ -125,7 +127,7 @@ button {
 
 .eyebrow {
   margin: 0 0 6px;
-  color: var(--accent-strong);
+  color: var(--brass-ink);
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 0.73rem;
@@ -183,8 +185,12 @@ textarea {
 
 button.primary {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
   color: white;
+}
+
+button.primary:not(:disabled):hover {
+  background: var(--accent-strong);
 }
 
 button.secondary {
@@ -1109,9 +1115,22 @@ button:disabled {
 
 .simple-home-title {
   margin: 0 0 4px;
+  font-family: var(--font-heading);
+  letter-spacing: 0.04em;
   font-size: 1.6rem;
   font-weight: 700;
   text-align: center;
+}
+
+/* 工房の刻印: タイトル下の短い真鍮ライン (review タイムレールと同じ素材感) */
+.simple-home-title::after {
+  content: "";
+  display: block;
+  width: 48px;
+  height: 2px;
+  margin: 10px auto 0;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgba(176, 141, 62, 0.65), rgba(176, 141, 62, 0.15));
 }
 
 .simple-home-step {
@@ -1145,7 +1164,8 @@ button:disabled {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  background: var(--accent-soft, rgba(23, 126, 137, 0.08));
+  background: var(--accent-soft);
+  border: 1px solid rgba(23, 126, 137, 0.2);
   border-radius: 14px;
 }
 
@@ -1162,7 +1182,7 @@ button:disabled {
   font-weight: 600;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: white;
+  background: var(--bg-alt);
   color: var(--ink);
   cursor: pointer;
   display: inline-flex;
@@ -1173,12 +1193,16 @@ button:disabled {
 
 .simple-home-btn.primary {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
   color: white;
 }
 
+.simple-home-btn.primary:not(:disabled):hover {
+  background: var(--accent-strong);
+}
+
 .simple-home-btn.secondary {
-  background: white;
+  background: var(--bg-alt);
 }
 
 .simple-home-btn.ghost {
@@ -1204,8 +1228,9 @@ button:disabled {
   margin: 0;
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(200, 60, 60, 0.1);
-  color: #a33;
+  background: rgba(166, 61, 64, 0.08);
+  border: 1px solid rgba(166, 61, 64, 0.24);
+  color: var(--danger);
   font-size: 0.9rem;
 }
 
@@ -1213,9 +1238,9 @@ button:disabled {
   margin: 0;
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(220, 150, 40, 0.12);
-  border: 1px solid rgba(220, 150, 40, 0.35);
-  color: #8a5a10;
+  background: var(--brass-soft);
+  border: 1px solid var(--brass-line);
+  color: var(--brass-ink);
   font-size: 0.88rem;
   line-height: 1.5;
 }
@@ -1224,8 +1249,8 @@ button:disabled {
   margin: 0;
   padding: 14px;
   border-radius: 12px;
-  background: rgba(60, 120, 200, 0.08);
-  border: 1px solid rgba(60, 120, 200, 0.3);
+  background: var(--accent-soft);
+  border: 1px solid rgba(23, 126, 137, 0.28);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1247,8 +1272,8 @@ button:disabled {
   margin: 0;
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(220, 150, 40, 0.12);
-  border: 1px solid rgba(220, 150, 40, 0.35);
+  background: var(--brass-soft);
+  border: 1px solid var(--brass-line);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1257,7 +1282,7 @@ button:disabled {
 .simple-home-retry-text {
   margin: 0;
   font-size: 0.88rem;
-  color: #8a5a10;
+  color: var(--brass-ink);
   line-height: 1.5;
 }
 
@@ -1290,8 +1315,9 @@ button:disabled {
   align-items: flex-start;
   gap: 2px;
   padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brass-line);
   border-radius: 10px;
   color: inherit;
   cursor: pointer;
@@ -1300,22 +1326,24 @@ button:disabled {
 }
 
 .simple-home-recent-btn:hover {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--accent-soft);
 }
 
 .simple-home-recent-primary {
   font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .simple-home-recent-secondary {
   font-size: 0.78rem;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .simple-home-recent-remove {
   width: 36px;
   background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--muted);
   cursor: pointer;
@@ -1324,8 +1352,8 @@ button:disabled {
 }
 
 .simple-home-recent-remove:hover {
-  color: #a33;
-  border-color: rgba(200, 60, 60, 0.3);
+  color: var(--danger);
+  border-color: rgba(166, 61, 64, 0.35);
 }
 
 @media (max-width: 480px) {
@@ -1366,19 +1394,21 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   padding: 6px 12px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  color: inherit;
+  border-radius: 10px;
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  color: var(--accent-strong);
   text-decoration: none;
   font-size: 0.9rem;
 }
 
 .score-viewer-home-link:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--accent-soft);
 }
 
 .score-viewer-title {
+  font-family: var(--font-heading);
+  letter-spacing: 0.04em;
   font-size: 1.35rem;
   margin: 0;
 }
@@ -1389,8 +1419,8 @@ button:disabled {
   gap: 8px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
 }
 
 .score-viewer-retranscribe-label {
@@ -1411,19 +1441,23 @@ button:disabled {
   min-width: 0;
   padding: 8px 10px;
   font-size: 0.92rem;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 10px;
+  border: 1px solid var(--line);
   background: white;
 }
 
 .score-viewer-retranscribe-btn {
   padding: 8px 16px;
   font-size: 0.92rem;
-  border-radius: 8px;
-  background: var(--accent, #3a6ea5);
+  border-radius: 10px;
+  background: var(--accent);
   color: white;
-  border: none;
+  border: 1px solid var(--accent-strong);
   cursor: pointer;
+}
+
+.score-viewer-retranscribe-btn:not(:disabled):hover {
+  background: var(--accent-strong);
 }
 
 .score-viewer-retranscribe-btn:disabled {
@@ -1434,7 +1468,7 @@ button:disabled {
 .score-viewer-retranscribe-error {
   margin: 0;
   font-size: 0.85rem;
-  color: #a33;
+  color: var(--danger);
 }
 
 .score-viewer-share-row {
@@ -1455,15 +1489,24 @@ button:disabled {
   white-space: nowrap;
   padding: 10px 14px;
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--accent-strong);
   color: white;
   font-weight: 600;
+}
+
+.score-viewer-copy-btn:not(:disabled):hover {
+  background: var(--accent-strong);
 }
 
 .score-viewer-playback {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(30, 31, 31, 0.05);
 }
 
 .score-viewer-audio {
@@ -1473,6 +1516,10 @@ button:disabled {
 .score-viewer-score {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg-alt);
+  padding: 10px;
 }
 
 .score-viewer-mode-toggle {
@@ -1491,7 +1538,7 @@ button:disabled {
   font-weight: 600;
   border: none;
   border-radius: 0;
-  background: white;
+  background: var(--bg-alt);
   color: var(--muted);
   cursor: pointer;
 }
@@ -1544,6 +1591,7 @@ button:disabled {
 .score-viewer-footer p {
   margin: 0;
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 640px) {
