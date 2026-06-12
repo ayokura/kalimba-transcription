@@ -38,6 +38,7 @@ function makeResult(): TranscriptionResult {
       name: "17 Key C Major",
       keyCount: 17,
       notes: [
+        { key: 6, noteName: "Bb4", frequency: 466.164 },
         { key: 7, noteName: "F4", frequency: 349.228 },
         { key: 8, noteName: "D4", frequency: 293.665 },
         { key: 9, noteName: "C4", frequency: 261.626 },
@@ -193,6 +194,15 @@ describe("resolveScoreNote", () => {
     expect(c4?.pitchClass).toBe("C");
     expect(c4?.labelDoReMi).toBe("ド");
     expect(c4?.frequency).toBeCloseTo(261.626);
+  });
+
+  it("resolves flat note names from the tuning (e.g. Bb major)", () => {
+    const result = makeResult();
+    const index = buildKnownNoteIndex(result);
+    const bb4 = resolveScoreNote("Bb4", index, result.instrumentTuning);
+    expect(bb4?.pitchClass).toBe("Bb");
+    expect(bb4?.labelDoReMi).toBe("シb");
+    expect(bb4?.frequency).toBeCloseTo(466.164);
   });
 
   it("returns null for notes outside the tuning", () => {

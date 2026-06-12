@@ -24,18 +24,24 @@ export type ReviewState = {
 
 const TIME_MATCH_TOLERANCE_SEC = 0.005;
 
+// サーバー側 PITCH_CLASS_TO_DOREMI (apps/api/app/transcription/constants.py) と同じ表記
 const DOREMI_BY_PITCH_CLASS: Record<string, string> = {
   C: "ド",
   "C#": "ド#",
+  Db: "レb",
   D: "レ",
   "D#": "レ#",
+  Eb: "ミb",
   E: "ミ",
   F: "ファ",
   "F#": "ファ#",
+  Gb: "ソb",
   G: "ソ",
   "G#": "ソ#",
+  Ab: "ラb",
   A: "ラ",
   "A#": "ラ#",
+  Bb: "シb",
   B: "シ",
 };
 
@@ -86,7 +92,7 @@ export function resolveScoreNote(
 ): ScoreNote | null {
   const known = knownNotes.get(name);
   if (known) return known;
-  const parsed = /^([A-G]#?)(\d)$/.exec(name);
+  const parsed = /^([A-G][#b]?)(\d)$/.exec(name);
   if (!parsed) return null;
   const tuningNote = tuning.notes.find((n) => n.noteName === name);
   if (!tuningNote) return null;

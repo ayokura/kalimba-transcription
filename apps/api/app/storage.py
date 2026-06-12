@@ -210,6 +210,9 @@ def load_corrections(transaction_id: str) -> dict | None:
     try:
         return json.loads(corrections_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
+        # 壊れた JSON (partial write 等) はスキーマ検証層に届かないため、
+        # ここで退避しないと次の保存で原本ごと上書きされる
+        quarantine_corrections(transaction_id)
         return None
 
 
