@@ -116,6 +116,38 @@ uv run python scripts/audio-analysis/note_f1_benchmark.py <tx-id> --verbose  # F
 uv run python scripts/audio-analysis/note_f1_benchmark.py --json
 ```
 
+### promote_corrections_to_ground_truth.py
+review UI のユーザー修正 (`data/transactions/<tx-id>/corrections.json`) を
+F1 ベンチマーク用 `ground_truth.json` に変換する。「テスター修正 = GT 収集装置」の
+ループを閉じるツール。既存 GT (特に人間検証済み) は `--force` なしで上書きしない。
+同一 audio SHA-256 の GT が他 tx にあれば二重カウント防止で skip。
+
+```bash
+uv run python scripts/audio-analysis/promote_corrections_to_ground_truth.py          # 候補一覧
+uv run python scripts/audio-analysis/promote_corrections_to_ground_truth.py <tx-id>  # promote
+uv run python scripts/audio-analysis/promote_corrections_to_ground_truth.py --all --dry-run
+```
+
+### derive_ground_truth_from_score.py
+score 既知の録音 (BWV147 playback 等) の GT を、対応 fixture の
+`expectedEventNoteSetsOrdered` (score 真実) + recognizer timing から導出する。
+厳密 1:1 alignment が成立しない場合は diff を表示して拒否 (人間検証へ回す)。
+timing は recognizer 由来なので回帰追跡用 (`method: "score_aligned"`)。
+
+```bash
+uv run python scripts/audio-analysis/derive_ground_truth_from_score.py <tx-id> \
+    --fixture kalimba-34l-c-bwv147-sequence-163-01 [--dry-run] [--force]
+```
+
+### calibrate_tuning_mismatch.py
+`apps/api/app/transcription/tuning_check.py` (tuning mismatch 警告) の閾値較正。
+テスターコーパス全録音に対して選択 tuning の pitch-class coverage と最良代替を表示する。
+閾値を変更する際は必ずこれで分離を再確認すること。
+
+```bash
+uv run python scripts/audio-analysis/calibrate_tuning_mismatch.py
+```
+
 ## 判定基準
 
 ### ノイズ vs 楽音の判定
