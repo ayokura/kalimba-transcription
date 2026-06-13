@@ -22,6 +22,23 @@ The numeric core is **binding-agnostic pure Rust** and operates on plain
 | `scan_gap_for_mute_dip_with_window_inner` | mute-dip-then-recovery scan |
 | `detect_gap_rise_attack_inner` | two-point energy-rise check inside a gap |
 
+The `onset` module (`src/onset.rs`) holds the browser-pipeline front end — ports
+of the librosa-derived numpy reference in `apps/api/app/transcription/segments.py`:
+
+| Onset function | Role |
+|---|---|
+| `mel_filterbank` | Slaney mel filterbank (bit-exact to numpy) |
+| `rms` | frame-wise RMS energy |
+| `onset_strength` | mel spectral-flux onset envelope (periodic-Hann STFT) |
+| `peak_pick` | greedy peak picker (librosa `util.peak_pick`) |
+| `onset_backtrack` | snap onsets to preceding energy minima |
+| `onset_detect` | full chain: normalise -> peak-pick -> backtrack |
+
+These are not delegated from the server recognizer (numpy stays the source of
+truth for the frame-index-sensitive path); they run the same onset detection in
+the browser, pinned to numpy by `apps/api/tests/test_onset_dsp_rust.py` and the
+wasm equivalence harness.
+
 Each binding is a thin wrapper that only adapts the input array to a `&[f32]`
 and delegates to the `*_inner` core:
 

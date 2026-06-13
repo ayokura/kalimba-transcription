@@ -48,6 +48,10 @@ use rustfft::FftPlanner;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+/// Onset-detection DSP (mel filterbank, STFT onset strength, peak-pick,
+/// backtrack) — the browser pipeline front end. See `onset.rs`.
+mod onset;
+
 thread_local! {
     static FFT_PLANNER: RefCell<FftPlanner<f32>> = RefCell::new(FftPlanner::<f32>::new());
     static HANNING_CACHE: RefCell<HashMap<usize, Vec<f32>>> = RefCell::new(HashMap::new());
@@ -443,7 +447,7 @@ mod python_binding {
         detect_gap_rise_attack_inner, note_band_energy_oneshot,
         scan_gap_for_mute_dip_with_window_inner,
     };
-    use numpy::PyReadonlyArray1;
+    use numpy::{PyArray1, PyReadonlyArray1};
     use pyo3::prelude::*;
 
     #[pyfunction]
@@ -572,12 +576,107 @@ mod python_binding {
         super::adaptive_n_fft(sample_rate, frequency, chunk_len, min_bins, harmonic_band_cents)
     }
 
+    // --- onset DSP (browser pipeline front end; see crate::onset) ---
+
+    #[pyfunction]
+    fn mel_filterbank(
+        py: Python<'_>,
+        sample_rate: i64,
+        n_fft: usize,
+        n_mels: usize,
+    ) -> Bound<'_, PyArray1<f32>> {
+        PyArray1::from_vec(py, crate::onset::mel_filterbank(sample_rate, n_fft, n_mels))
+    }
+
+    #[pyfunction]
+    fn rms<'py>(
+        py: Python<'py>,
+        audio: PyReadonlyArray1<f32>,
+        frame_length: usize,
+        hop_length: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f32>>> {
+        let arr = audio.as_array();
+        let slice = arr.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("audio must be a C-contiguous float32 array")
+        })?;
+        Ok(PyArray1::from_vec(py, crate::onset::rms(slice, frame_length, hop_length)))
+    }
+
+    #[pyfunction]
+    fn onset_strength<'py>(
+        py: Python<'py>,
+        audio: PyReadonlyArray1<f32>,
+        sample_rate: i64,
+        hop_length: usize,
+        n_fft: usize,
+        n_mels: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f32>>> {
+        let arr = audio.as_array();
+        let slice = arr.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("audio must be a C-contiguous float32 array")
+        })?;
+        Ok(PyArray1::from_vec(
+            py,
+            crate::onset::onset_strength(slice, sample_rate, hop_length, n_fft, n_mels),
+        ))
+    }
+
+    #[pyfunction]
+    #[pyo3(signature = (x, pre_max, post_max, pre_avg, post_avg, delta, wait))]
+    #[allow(clippy::too_many_arguments)]
+    fn peak_pick(
+        x: PyReadonlyArray1<f32>,
+        pre_max: usize,
+        post_max: usize,
+        pre_avg: usize,
+        post_avg: usize,
+        delta: f64,
+        wait: usize,
+    ) -> PyResult<Vec<u32>> {
+        let arr = x.as_array();
+        let slice = arr.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("x must be a C-contiguous float32 array")
+        })?;
+        Ok(crate::onset::peak_pick(
+            slice, pre_max, post_max, pre_avg, post_avg, delta, wait,
+        ))
+    }
+
+    #[pyfunction]
+    fn onset_backtrack(events: Vec<u32>, energy: PyReadonlyArray1<f32>) -> PyResult<Vec<u32>> {
+        let arr = energy.as_array();
+        let slice = arr.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("energy must be a C-contiguous float32 array")
+        })?;
+        Ok(crate::onset::onset_backtrack(&events, slice))
+    }
+
+    #[pyfunction]
+    fn onset_detect(
+        onset_env: PyReadonlyArray1<f32>,
+        sample_rate: i64,
+        hop_length: usize,
+        backtrack: bool,
+    ) -> PyResult<Vec<u32>> {
+        let arr = onset_env.as_array();
+        let slice = arr.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("onset_env must be a C-contiguous float32 array")
+        })?;
+        Ok(crate::onset::onset_detect(slice, sample_rate, hop_length, backtrack))
+    }
+
     #[pymodule]
     fn kalimba_dsp(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(scan_gap_for_mute_dip_with_window, m)?)?;
         m.add_function(wrap_pyfunction!(detect_gap_rise_attack, m)?)?;
         m.add_function(wrap_pyfunction!(note_band_energy, m)?)?;
         m.add_function(wrap_pyfunction!(adaptive_n_fft, m)?)?;
+        m.add_function(wrap_pyfunction!(mel_filterbank, m)?)?;
+        m.add_function(wrap_pyfunction!(rms, m)?)?;
+        m.add_function(wrap_pyfunction!(onset_strength, m)?)?;
+        m.add_function(wrap_pyfunction!(peak_pick, m)?)?;
+        m.add_function(wrap_pyfunction!(onset_backtrack, m)?)?;
+        m.add_function(wrap_pyfunction!(onset_detect, m)?)?;
         Ok(())
     }
 }
@@ -634,6 +733,78 @@ mod wasm_binding {
             min_bins as usize,
             harmonic_band_cents,
         ) as u32
+    }
+
+    // --- onset DSP (browser pipeline front end; see crate::onset) ---
+
+    /// Slaney mel filterbank, row-major `n_mels * (n_fft/2+1)` Float32Array.
+    #[wasm_bindgen]
+    pub fn mel_filterbank(sample_rate: i64, n_fft: u32, n_mels: u32) -> Vec<f32> {
+        crate::onset::mel_filterbank(sample_rate, n_fft as usize, n_mels as usize)
+    }
+
+    /// Frame-wise RMS energy (center=True, constant pad).
+    #[wasm_bindgen]
+    pub fn rms(audio: &[f32], frame_length: u32, hop_length: u32) -> Vec<f32> {
+        crate::onset::rms(audio, frame_length as usize, hop_length as usize)
+    }
+
+    /// Mel spectral-flux onset strength envelope.
+    #[wasm_bindgen]
+    pub fn onset_strength(
+        audio: &[f32],
+        sample_rate: i64,
+        hop_length: u32,
+        n_fft: u32,
+        n_mels: u32,
+    ) -> Vec<f32> {
+        crate::onset::onset_strength(
+            audio,
+            sample_rate,
+            hop_length as usize,
+            n_fft as usize,
+            n_mels as usize,
+        )
+    }
+
+    /// Greedy peak picker; returns peak frame indices (Uint32Array).
+    #[wasm_bindgen]
+    #[allow(clippy::too_many_arguments)]
+    pub fn peak_pick(
+        x: &[f32],
+        pre_max: u32,
+        post_max: u32,
+        pre_avg: u32,
+        post_avg: u32,
+        delta: f64,
+        wait: u32,
+    ) -> Vec<u32> {
+        crate::onset::peak_pick(
+            x,
+            pre_max as usize,
+            post_max as usize,
+            pre_avg as usize,
+            post_avg as usize,
+            delta,
+            wait as usize,
+        )
+    }
+
+    /// Snap onset events back to preceding local energy minima.
+    #[wasm_bindgen]
+    pub fn onset_backtrack(events: &[u32], energy: &[f32]) -> Vec<u32> {
+        crate::onset::onset_backtrack(events, energy)
+    }
+
+    /// Full onset-frame detection (normalise -> peak-pick -> backtrack).
+    #[wasm_bindgen]
+    pub fn onset_detect(
+        onset_env: &[f32],
+        sample_rate: i64,
+        hop_length: u32,
+        backtrack: bool,
+    ) -> Vec<u32> {
+        crate::onset::onset_detect(onset_env, sample_rate, hop_length as usize, backtrack)
     }
 
     #[wasm_bindgen]

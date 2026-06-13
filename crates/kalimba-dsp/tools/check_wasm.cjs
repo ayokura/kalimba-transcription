@@ -1,16 +1,15 @@
 /**
  * Replay native-Rust reference cases through the wasm build and assert equality.
  *
- * Pair of `wasm_reference.py` (which produced the reference dir using the native
- * pyo3 extension). Both bindings share the pure-Rust core, so any mismatch is a
- * binding-glue regression (Float32Array marshalling, i64->BigInt / u32 ABI), not
- * an algorithm change.
+ * Pairs with `wasm_reference.py` (which produced the reference dir using the
+ * native pyo3 extension). Both bindings share the pure-Rust core, so any
+ * mismatch is a binding-glue regression (Float32Array / Uint32Array marshalling,
+ * i64->BigInt / u32 ABI), not an algorithm change.
  *
  *   node tools/check_wasm.cjs <nodejs_pkg_dir> <reference_dir>
  *
- * Scalar-output functions only for now. When R3 exposes array-returning
- * primitives (mel_filterbank, onset_strength envelope, peak_pick indices),
- * extend the dispatch + comparison below to handle Float32Array / index outputs.
+ * Handles scalar, float-array, and uint32-index outputs. See wasm_reference.py
+ * for the case schema.
  */
 const fs = require("fs");
 const path = require("path");
@@ -24,14 +23,23 @@ if (!pkgDir || !refDir) {
 const wasm = require(path.join(pkgDir, "kalimba_dsp.js"));
 const ref = JSON.parse(fs.readFileSync(path.join(refDir, "reference.json"), "utf8"));
 
-const audioCache = {};
-function loadAudio(name) {
-  if (!(name in audioCache)) {
-    const meta = ref.audioFiles[name];
-    const buf = fs.readFileSync(path.join(refDir, meta.file));
-    audioCache[name] = new Float32Array(buf.buffer, buf.byteOffset, buf.length / 4);
-  }
-  return audioCache[name];
+function readF32(file) {
+  const buf = fs.readFileSync(path.join(refDir, file));
+  return new Float32Array(buf.buffer, buf.byteOffset, buf.length / 4);
+}
+function readU32(file) {
+  const buf = fs.readFileSync(path.join(refDir, file));
+  return new Uint32Array(buf.buffer, buf.byteOffset, buf.length / 4);
+}
+
+function buildArg(spec) {
+  if ("f32arr" in spec) return readF32(spec.f32arr);
+  if ("u32arr" in spec) return readU32(spec.u32arr);
+  if ("i64" in spec) return BigInt(spec.i64);
+  if ("f64" in spec) return spec.f64;
+  if ("u32" in spec) return spec.u32;
+  if ("bool" in spec) return spec.bool;
+  throw new Error("unknown arg spec: " + JSON.stringify(spec));
 }
 
 let pass = 0;
@@ -42,22 +50,37 @@ for (const c of ref.cases) {
     failures.push(`${c.name}: wasm export '${c.fn}' missing`);
     continue;
   }
-  // i64 sample_rate maps to a JS BigInt; everything else is a plain number.
-  const args = c.audio
-    ? [loadAudio(c.audio), BigInt(c.sampleRate), ...c.scalars]
-    : [BigInt(c.sampleRate), ...c.scalars];
-  const got = fn(...args);
+  const got = fn(...c.args.map(buildArg));
 
-  let ok;
-  if (c.exact) {
-    ok = got === c.expected;
+  if ("expected" in c) {
+    const ok = c.exact
+      ? got === c.expected
+      : Math.abs(got - c.expected) <= (c.atol ?? 0) + (c.rtol ?? 1e-6) * Math.abs(c.expected);
+    if (ok) pass++;
+    else failures.push(`${c.name}: wasm=${got} native=${c.expected}`);
+  } else if ("expectedArray" in c) {
+    const exp = readF32(c.expectedArray);
+    let maxd = 0, bad = -1;
+    if (got.length !== exp.length) {
+      failures.push(`${c.name}: length wasm=${got.length} native=${exp.length}`);
+      continue;
+    }
+    const atol = c.atol ?? 0, rtol = c.rtol ?? 1e-6;
+    for (let i = 0; i < exp.length; i++) {
+      const d = Math.abs(got[i] - exp[i]);
+      if (d > maxd) maxd = d;
+      if (d > atol + rtol * Math.abs(exp[i]) && bad < 0) bad = i;
+    }
+    if (bad < 0) pass++;
+    else failures.push(`${c.name}: max|d|=${maxd.toExponential(2)} first bad @${bad} wasm=${got[bad]} native=${exp[bad]}`);
+  } else if ("expectedIndices" in c) {
+    const exp = readU32(c.expectedIndices);
+    const ok = got.length === exp.length && exp.every((v, i) => v === got[i]);
+    if (ok) pass++;
+    else failures.push(`${c.name}: indices wasm=[${Array.from(got)}] native=[${Array.from(exp)}]`);
   } else {
-    const atol = c.atol ?? 0;
-    const rtol = c.rtol ?? 1e-6;
-    ok = Math.abs(got - c.expected) <= atol + rtol * Math.abs(c.expected);
+    failures.push(`${c.name}: no output spec`);
   }
-  if (ok) pass++;
-  else failures.push(`${c.name}: wasm=${got} native=${c.expected}`);
 }
 
 for (const f of failures) console.error("FAIL " + f);
