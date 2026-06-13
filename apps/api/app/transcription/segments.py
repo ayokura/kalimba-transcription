@@ -37,9 +37,16 @@ _LIBROSA_CACHE_MAX = 8
 
 
 # ---------------------------------------------------------------------------
-# _peak_pick_numpy: ported from librosa's __peak_pick guvectorize kernel.
+# librosa-derived code (ISC License). The following functions in this module are
+# ported from or closely derived from librosa source and are covered by the ISC
+# notice below (see also THIRD_PARTY_NOTICES.md at the repository root):
+#   _peak_pick_numpy        — port of librosa's __peak_pick kernel (util/utils.py)
+#   _onset_detect_numpy     — replacement for librosa.onset.onset_detect
+#   _onset_backtrack_numpy  — port of librosa.onset.onset_backtrack
+#   _mel_filterbank         — derived from librosa.filters.mel (Slaney norm)
+#   _onset_strength_numpy   — derived from librosa.onset.onset_strength
 #
-# Original source: librosa/util/utils.py (librosa >= 0.10)
+# Original source: librosa (https://librosa.org), >= 0.10
 # ISC License — Copyright (c) 2013--2023, librosa development team.
 #
 # Permission to use, copy, modify, and/or distribute this software for any
