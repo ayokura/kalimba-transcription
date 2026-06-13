@@ -42,6 +42,22 @@ SUGGESTION_MIN_COVERAGE_GAIN = 0.08
 # Coverages within this distance of the best candidate count as ties; the tie
 # is broken toward fewer pitch classes so a diatonic preset (7 pcs) beats the
 # chromatic 34L superset (12 pcs, coverage trivially 1.0).
+#
+# Fragility note (2026-06-13 stress test, forcing every wrong preset onto each
+# tester audio): this tie-break does NOT guarantee a diatonic suggestion — it
+# only protects the diatonic when the correct preset scores >= ~0.98. Clean
+# diatonic recordings all sit at 0.99+ so they win, but two cases yield a 34L
+# suggestion: (a) genuinely chromatic recordings (correct — 34L is the right
+# answer), and (b) spectrally messy/ambiguous audio where the correct preset's
+# coverage falls below the window (real case: tx 5b7608b4, correct=17-c but a
+# loud low-C drone + D-ish upper content drops cov(17-c) to ~0.91 vs 34L 1.0).
+# Case (b) is low-risk in production because the mismatch only fires when the
+# *selected* tuning's coverage is already poor, and 5b7608b4 under its correct
+# 17-c tuning is silenced by the MIN_PEAKS gate (only 2 peaks in-range) anyway.
+# The deeper cause is that _tuning_frequency_range() makes the analysis window
+# depend on the (possibly wrong) selected tuning, so the same audio yields
+# different pitch-class weights per selection. If this ever needs hardening,
+# prefer a tuning-independent union frequency range over widening this epsilon.
 SUGGESTION_COVERAGE_TIE_EPSILON = 0.02
 PEAK_SNAP_MAX_CENTS = 45.0
 MIN_PEAKS = 5
