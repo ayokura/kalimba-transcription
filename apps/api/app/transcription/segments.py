@@ -28,12 +28,12 @@ from .profiles import (
 )
 
 
-# LRU cache for librosa results keyed by (audio hash, sample rate, hpss flag).
-# Same audio is reprocessed across ablation variants and eval-window/full-audio
-# pairs; caching the deterministic librosa outputs avoids several seconds of
+# LRU cache for onset/RMS features keyed by (audio hash, sample rate).
+# Same audio is reprocessed across eval-window/full-audio pairs and ablation
+# variants; caching the deterministic numpy outputs avoids several seconds of
 # recomputation per variant.
-_LIBROSA_CACHE: "OrderedDict[tuple[str, int, bool], dict[str, Any]]" = OrderedDict()
-_LIBROSA_CACHE_MAX = 8
+_ONSET_FEATURE_CACHE: "OrderedDict[tuple[str, int], dict[str, Any]]" = OrderedDict()
+_ONSET_FEATURE_CACHE_MAX = 8
 
 
 # ---------------------------------------------------------------------------
@@ -261,52 +261,32 @@ def _onset_strength_numpy(
     return onset_env[: power.shape[1]].astype(np.float32)
 
 
-def _compute_librosa_features(
-    audio: np.ndarray, sample_rate: int, use_hpss_onset: bool
-) -> dict[str, Any]:
-    """Run librosa rms/onset routines and return cacheable outputs."""
+def _compute_onset_features(audio: np.ndarray, sample_rate: int) -> dict[str, Any]:
+    """Compute RMS / frame-time / onset-frame features (pure numpy, no librosa)."""
     rms = _rms_numpy(audio, FRAME_LENGTH, HOP_LENGTH)
     frame_times = _frames_to_time_numpy(np.arange(len(rms)), sample_rate, HOP_LENGTH)
     onset_env = _onset_strength_numpy(audio, sample_rate, HOP_LENGTH)
     onset_frames = _onset_detect_numpy(
         onset_env, sample_rate, HOP_LENGTH, backtrack=True,
     )
-    if use_hpss_onset:
-        # Lazy import: HPSS is the only remaining librosa dependency, gated behind
-        # this default-off research flag (#148). Importing it here keeps the
-        # module's primary (default) path fully librosa-free for WASM portability.
-        # Remaining #193 work: port hpss to numpy or drop the flag entirely.
-        import librosa
-
-        _, percussive = librosa.effects.hpss(
-            audio, n_fft=FRAME_LENGTH, hop_length=HOP_LENGTH,
-        )
-        perc_env = _onset_strength_numpy(percussive, sample_rate, HOP_LENGTH)
-        perc_frames = _onset_detect_numpy(
-            perc_env, sample_rate, HOP_LENGTH, backtrack=True,
-        )
-        onset_frames = np.unique(np.concatenate([onset_frames, perc_frames]))
     return {"rms": rms, "frame_times": frame_times, "onset_frames": onset_frames}
 
 
-def _get_cached_librosa_features(
-    audio: np.ndarray, sample_rate: int, use_hpss_onset: bool
-) -> dict[str, Any]:
-    """Return cached librosa outputs for ``audio``, computing them on miss."""
+def _get_cached_onset_features(audio: np.ndarray, sample_rate: int) -> dict[str, Any]:
+    """Return cached onset/RMS features for ``audio``, computing them on miss."""
     contiguous = np.ascontiguousarray(audio)
     audio_hash = hashlib.sha256(memoryview(contiguous).cast("B")).hexdigest()[:16]
-    key = (audio_hash, int(sample_rate), bool(use_hpss_onset))
-    cached = _LIBROSA_CACHE.get(key)
+    key = (audio_hash, int(sample_rate))
+    cached = _ONSET_FEATURE_CACHE.get(key)
     if cached is not None:
-        _LIBROSA_CACHE.move_to_end(key)
+        _ONSET_FEATURE_CACHE.move_to_end(key)
         return cached
-    # Pass the contiguous buffer (not the original `audio`) so the bytes that
-    # were hashed and the bytes librosa consumes are guaranteed to be the same,
-    # and any non-contiguous input is converted exactly once.
-    features = _compute_librosa_features(contiguous, sample_rate, use_hpss_onset)
-    _LIBROSA_CACHE[key] = features
-    if len(_LIBROSA_CACHE) > _LIBROSA_CACHE_MAX:
-        _LIBROSA_CACHE.popitem(last=False)
+    # Pass the contiguous buffer (not the original `audio`) so the hashed bytes
+    # and the bytes the FFT consumes match, converting non-contiguous input once.
+    features = _compute_onset_features(contiguous, sample_rate)
+    _ONSET_FEATURE_CACHE[key] = features
+    if len(_ONSET_FEATURE_CACHE) > _ONSET_FEATURE_CACHE_MAX:
+        _ONSET_FEATURE_CACHE.popitem(last=False)
     return features
 
 
@@ -1108,7 +1088,7 @@ def detect_segments(
     mid_performance_end: bool = False,
 ) -> SegmentDetectionResult:
     cfg = settings.get()
-    cached_features = _get_cached_librosa_features(audio, sample_rate, cfg.use_hpss_onset)
+    cached_features = _get_cached_onset_features(audio, sample_rate)
     rms = cached_features["rms"]
     frame_times = cached_features["frame_times"]
     max_rms = float(np.max(rms))
