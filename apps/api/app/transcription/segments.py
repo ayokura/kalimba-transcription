@@ -7,7 +7,6 @@ from functools import lru_cache
 from time import perf_counter
 from typing import Any
 
-import librosa
 import numpy as np
 
 from ..models import InstrumentTuning
@@ -266,6 +265,12 @@ def _compute_librosa_features(
         onset_env, sample_rate, HOP_LENGTH, backtrack=True,
     )
     if use_hpss_onset:
+        # Lazy import: HPSS is the only remaining librosa dependency, gated behind
+        # this default-off research flag (#148). Importing it here keeps the
+        # module's primary (default) path fully librosa-free for WASM portability.
+        # Remaining #193 work: port hpss to numpy or drop the flag entirely.
+        import librosa
+
         _, percussive = librosa.effects.hpss(
             audio, n_fft=FRAME_LENGTH, hop_length=HOP_LENGTH,
         )
