@@ -175,24 +175,25 @@ def test_detect_segments_collapses_redundant_same_start_segments() -> None:
 
 def test_detect_segments_does_not_backtrack_into_previous_active_range(monkeypatch: pytest.MonkeyPatch) -> None:
     import app.transcription as transcription
+    import app.transcription.segments as segments_mod
 
     frame_times = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 0.9, 1.0], dtype=np.float32)
     rms = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0], dtype=np.float32)
     onset_times = np.array([0.45, 0.79], dtype=np.float32)
 
-    monkeypatch.setattr(transcription.librosa.feature, "rms", lambda **kwargs: np.array([rms], dtype=np.float32))
+    # rms / frames_to_time / get_duration are pure-numpy now (librosa removed for
+    # these); onset_strength is still librosa. _rms_numpy returns 1-D directly.
+    monkeypatch.setattr(segments_mod, "_rms_numpy", lambda *args, **kwargs: rms)
     monkeypatch.setattr(transcription.librosa.onset, "onset_strength", lambda **kwargs: np.zeros_like(rms))
-    monkeypatch.setattr(transcription.librosa.onset, "onset_detect", lambda **kwargs: np.array([0, 1], dtype=np.int64))
 
-    def fake_frames_to_time(frames, **kwargs):
+    def fake_frames_to_time(frames, *args, **kwargs):
         frames = np.asarray(frames)
         if len(frames) == len(rms):
             return frame_times
         return onset_times
 
-    monkeypatch.setattr(transcription.librosa, "frames_to_time", fake_frames_to_time)
-    monkeypatch.setattr(transcription.librosa, "get_duration", lambda **kwargs: 1.08)
-    monkeypatch.setattr(transcription.librosa.beat, "beat_track", lambda **kwargs: (np.array([90.0]), np.array([], dtype=np.int64)))
+    monkeypatch.setattr(segments_mod, "_frames_to_time_numpy", fake_frames_to_time)
+    monkeypatch.setattr(segments_mod, "_audio_duration_sec", lambda *args, **kwargs: 1.08)
 
     segments = detect_segments(np.zeros(44100, dtype=np.float32), 44100).segments
 

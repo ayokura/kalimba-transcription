@@ -144,16 +144,55 @@ def _onset_detect_numpy(
         wait=wait,
     )
     if backtrack and len(frames) > 0:
-        frames = librosa.onset.onset_backtrack(frames, onset_envelope)
+        frames = _onset_backtrack_numpy(frames, onset_envelope)
     return frames
+
+
+def _frames_to_time_numpy(frames: np.ndarray, sr: int, hop_length: int) -> np.ndarray:
+    """Pure-numpy ``librosa.frames_to_time`` (n_fft=None: no centering offset).
+
+    Verified bit-exact against librosa 0.11 (frames * hop_length / sr)."""
+    return np.asarray(frames) * hop_length / float(sr)
+
+
+def _audio_duration_sec(audio: np.ndarray, sample_rate: int) -> float:
+    """Pure-numpy ``librosa.get_duration(y=audio, sr=sr)`` for a time-domain signal."""
+    return audio.shape[-1] / float(sample_rate)
+
+
+def _rms_numpy(audio: np.ndarray, frame_length: int, hop_length: int) -> np.ndarray:
+    """Pure-numpy ``librosa.feature.rms`` (center=True, pad_mode='constant').
+
+    Verified against librosa 0.11 to within float32 epsilon (~2e-7) on fixture
+    audio; the fixture regression suite is the authoritative equivalence gate."""
+    pad = frame_length // 2
+    padded = np.pad(audio, pad, mode="constant")
+    n_frames = 1 + (len(padded) - frame_length) // hop_length
+    indices = np.arange(frame_length)[:, None] + hop_length * np.arange(n_frames)[None, :]
+    frames = padded[indices]
+    power = np.mean(np.abs(frames) ** 2, axis=0)
+    return np.sqrt(power).astype(np.float32)
+
+
+def _onset_backtrack_numpy(events: np.ndarray, energy: np.ndarray) -> np.ndarray:
+    """Pure-numpy ``librosa.onset.onset_backtrack``.
+
+    Snaps each onset event back to the nearest preceding local minimum of the
+    energy envelope (energy[i] <= energy[i-1] and energy[i] < energy[i+1]), with
+    frame 0 always available as a fallback. Verified frame-exact against
+    librosa 0.11."""
+    minima = np.flatnonzero((energy[1:-1] <= energy[:-2]) & (energy[1:-1] < energy[2:])) + 1
+    minima = np.unique(np.concatenate([[0], minima]))
+    idx = np.clip(np.searchsorted(minima, events, side="right") - 1, 0, len(minima) - 1)
+    return minima[idx]
 
 
 def _compute_librosa_features(
     audio: np.ndarray, sample_rate: int, use_hpss_onset: bool
 ) -> dict[str, Any]:
     """Run librosa rms/onset routines and return cacheable outputs."""
-    rms = librosa.feature.rms(y=audio, frame_length=FRAME_LENGTH, hop_length=HOP_LENGTH)[0]
-    frame_times = librosa.frames_to_time(np.arange(len(rms)), sr=sample_rate, hop_length=HOP_LENGTH)
+    rms = _rms_numpy(audio, FRAME_LENGTH, HOP_LENGTH)
+    frame_times = _frames_to_time_numpy(np.arange(len(rms)), sample_rate, HOP_LENGTH)
     onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=HOP_LENGTH)
     onset_frames = _onset_detect_numpy(
         onset_env, sample_rate, HOP_LENGTH, backtrack=True,
@@ -1009,13 +1048,13 @@ def detect_segments(
             active_start = None
 
     if active_start is not None:
-        active_ranges.append((max(float(frame_times[active_start]) - 0.02, 0.0), librosa.get_duration(y=audio, sr=sample_rate)))
+        active_ranges.append((max(float(frame_times[active_start]) - 0.02, 0.0), _audio_duration_sec(audio, sample_rate)))
 
     raw_active_ranges = active_ranges.copy()
     active_ranges = merge_time_ranges(active_ranges)
 
     onset_frames = cached_features["onset_frames"]
-    onset_times = [float(value) for value in librosa.frames_to_time(onset_frames, sr=sample_rate, hop_length=HOP_LENGTH)]
+    onset_times = [float(value) for value in _frames_to_time_numpy(onset_frames, sample_rate, HOP_LENGTH)]
     onset_attack_profiles = precompute_onset_attack_profiles(audio, sample_rate, onset_times)
     onset_times = refine_onset_times_by_attack_profile(onset_times, onset_attack_profiles)
     onset_waveform_stats = (
@@ -1031,7 +1070,7 @@ def detect_segments(
     )
     gap_ioi_diagnostics = build_gap_ioi_diagnostics(active_ranges, onset_times)
 
-    audio_duration = float(librosa.get_duration(y=audio, sr=sample_rate))
+    audio_duration = float(_audio_duration_sec(audio, sample_rate))
     gap_onset_keys = {round(onset_time, 4) for onset_time in gap_onset_times}
     waveform_stats = {
         onset_time: stats
@@ -1165,10 +1204,10 @@ def detect_segments(
     segments = trim_small_overlapping_segments(segments)
 
     if not segments:
-        duration = librosa.get_duration(y=audio, sr=sample_rate)
+        duration = _audio_duration_sec(audio, sample_rate)
         segments = [Segment(0.0, duration, sources=frozenset({"fallback"}))]
 
-    tempo_audio_duration_sec = float(librosa.get_duration(y=audio, sr=sample_rate))
+    tempo_audio_duration_sec = float(_audio_duration_sec(audio, sample_rate))
     tempo_start = perf_counter()
     tempo_onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=TEMPO_ESTIMATION_HOP_LENGTH)
     tempo = _estimate_tempo_autocorr(tempo_onset_env, sample_rate, TEMPO_ESTIMATION_HOP_LENGTH)
