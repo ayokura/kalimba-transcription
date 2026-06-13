@@ -171,6 +171,33 @@ def _coverage(weights: dict[int, float], pcs: set[int]) -> float:
     return sum(w for pc, w in weights.items() if pc in pcs) / total
 
 
+def measure_selected_coverage(
+    audio: np.ndarray, sample_rate: int, tuning: InstrumentTuning
+) -> float | None:
+    """Return the selected tuning's spectral pitch-class coverage in [0, 1],
+    regardless of whether a mismatch is flagged (analyze_tuning_mismatch only
+    reports on poor coverage). Returns None when there is too little tonal
+    content / gain to judge -- the same gates analyze_tuning_mismatch uses.
+
+    Reused by the unsupervised quality indicators (quality_indicators.py) as a
+    recording-fit signal; kept here so the spectral-peak logic lives in one place."""
+    audio = np.asarray(audio, dtype=np.float64)
+    peak_amplitude = float(np.max(np.abs(audio))) if audio.size else 0.0
+    if peak_amplitude <= 0.0:
+        return None
+    if 20.0 * math.log10(peak_amplitude) < LOW_GAIN_SKIP_PEAK_DBFS:
+        return None
+    freqs, power = _mean_power_spectrum(audio, sample_rate)
+    if freqs.size == 0:
+        return None
+    fmin, fmax = _tuning_frequency_range(tuning)
+    peaks = _pick_peaks(freqs, power, fmin, fmax)
+    weights, accepted = _pitch_class_weights(peaks)
+    if accepted < MIN_PEAKS:
+        return None
+    return _coverage(weights, _tuning_pitch_classes(tuning))
+
+
 def analyze_tuning_mismatch(
     audio: np.ndarray,
     sample_rate: int,
