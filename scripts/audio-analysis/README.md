@@ -116,6 +116,22 @@ uv run python scripts/audio-analysis/note_f1_benchmark.py <tx-id> --verbose  # F
 uv run python scripts/audio-analysis/note_f1_benchmark.py --json
 ```
 
+### candidate_recall_benchmark.py
+multi-candidate 出力の有効性を測る (#178 Phase 2)。note_f1_benchmark が primary 出力のみを
+測るのに対し、本ツールは「primary が外した GT 音を、surfaced 候補 (event `alternateGroupings`
+\+ `candidateSlots`) から 1 タップで復元できるか」=編集コスト削減効果と、候補レイヤが追加する
+ノイズ (実音に対応しない候補=要却下) + confidence が real/noise を分離できているかを測る。
+診断として `debug.segmentCandidates.rankedCandidates` 由来の ranked top-K recall も出す
+(正解音が生 segment scoring で top-K に入るか。Phase 3 calibration ターゲット特定用)。
+GT は note_f1_benchmark と同じ置き場所。現コーパスは primary recall ~1.0 のため recovery は
+飽和、当面の signal は候補ノイズ率 + ranked 診断 (harder な #18 録音追加で recall@K が効く)。
+
+```bash
+uv run python scripts/audio-analysis/candidate_recall_benchmark.py            # GT のある全録音
+uv run python scripts/audio-analysis/candidate_recall_benchmark.py <tx-id> --verbose
+uv run python scripts/audio-analysis/candidate_recall_benchmark.py --json
+```
+
 ### promote_corrections_to_ground_truth.py
 review UI のユーザー修正 (`data/transactions/<tx-id>/corrections.json`) を
 F1 ベンチマーク用 `ground_truth.json` に変換する。「テスター修正 = GT 収集装置」の
