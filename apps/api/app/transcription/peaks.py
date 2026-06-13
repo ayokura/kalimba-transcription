@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Any, NamedTuple
 
+import kalimba_dsp
 import numpy as np
 
 from ..models import InstrumentTuning
@@ -43,11 +44,20 @@ def _adaptive_n_fft(sample_rate: int, min_frequency: float, chunk_len: int, *, m
     *min_bins=2* (default) is suitable for accurate energy measurement.
     *min_bins=1* is a conservative setting that only prevents zero-bin blind spots
     while preserving existing behavior at standard sample rates.
+
+    Delegated to the Rust ``kalimba_dsp.adaptive_n_fft`` shared core so the FFT
+    sizing rule has a single source of truth across the numpy spectral path, the
+    gap-rescue passes, and the future browser-side WASM pipeline. The output is an
+    exact integer match with the previous numpy formula (both evaluate the rule in
+    f64); verified over a 1100-case grid in ``tests/test_note_band_energy.py``.
     """
-    band_hz = min_frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
-    min_n_fft = int(np.ceil(sample_rate / band_hz)) * min_bins if band_hz > 0 else 4096
-    n_fft = max(min_n_fft, chunk_len)
-    return 1 << int(np.ceil(np.log2(n_fft)))
+    return kalimba_dsp.adaptive_n_fft(
+        int(sample_rate),
+        float(min_frequency),
+        int(chunk_len),
+        int(min_bins),
+        float(HARMONIC_BAND_CENTS),
+    )
 
 
 def batch_peak_energies(frequencies: np.ndarray, spectrum: np.ndarray, center_freqs: np.ndarray, band_cents: float = HARMONIC_BAND_CENTS) -> np.ndarray:
@@ -3660,19 +3670,26 @@ def _note_band_energy(
     frequency: float,
     window_seconds: float = ONSET_ENERGY_WINDOW_SECONDS,
 ) -> float:
-    """Compute peak energy near *frequency* in a short window centred on *center_time*."""
-    window_samples = max(int(sample_rate * window_seconds), 512)
-    center_sample = int(center_time * sample_rate)
-    half = window_samples // 2
-    start = max(center_sample - half, 0)
-    end = min(start + window_samples, len(audio))
-    chunk = audio[start:end]
-    if len(chunk) < 256:
-        return 0.0
-    n_fft = _adaptive_n_fft(sample_rate, frequency, len(chunk))
-    spectrum = np.abs(np.fft.rfft(chunk * cached_hanning(len(chunk)), n=n_fft))
-    frequencies = cached_rfftfreq(n_fft, sample_rate)
-    return peak_energy_near(frequencies, spectrum, frequency)
+    """Compute peak energy near *frequency* in a short window centred on *center_time*.
+
+    Delegated to the Rust ``kalimba_dsp.note_band_energy`` shared core — the same
+    binding-agnostic primitive used by the gap-rescue passes (``per_note.py``) and
+    the future browser-side WASM pipeline. The previous numpy implementation lives
+    on only as the differential-equivalence reference in
+    ``tests/test_note_band_energy.py`` (Rust f32 vs numpy f64 agree to ~1e-7
+    relative on tones, noise, and decaying signals). ``audio`` is coerced to a
+    C-contiguous float32 view, which is a no-op for the pipeline's already-float32
+    audio (see ``read_audio``).
+    """
+    audio_f32 = np.ascontiguousarray(audio, dtype=np.float32)
+    return kalimba_dsp.note_band_energy(
+        audio_f32,
+        int(sample_rate),
+        float(center_time),
+        float(frequency),
+        float(window_seconds),
+        float(HARMONIC_BAND_CENTS),
+    )
 
 
 def _find_note_attack_time(

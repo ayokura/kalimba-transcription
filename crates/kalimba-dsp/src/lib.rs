@@ -187,6 +187,31 @@ fn note_band_energy(
     )
 }
 
+/// One-shot convenience wrapper around `note_band_energy` that allocates its own
+/// FFT scratch buffer. The thin pyo3 / wasm-bindgen wrappers delegate here so the
+/// `Complex32` scratch type never has to cross a binding boundary. Mirrors the
+/// Python `_note_band_energy` (windowed peak energy near a note's band) that it
+/// replaces in `apps/api/app/transcription/peaks.py`.
+fn note_band_energy_oneshot(
+    audio: &[f32],
+    sample_rate: i64,
+    center_time: f64,
+    frequency: f64,
+    window_seconds: f64,
+    harmonic_band_cents: f64,
+) -> f32 {
+    let mut fft_buffer: Vec<Complex32> = Vec::new();
+    note_band_energy(
+        audio,
+        sample_rate,
+        center_time,
+        frequency,
+        window_seconds,
+        &mut fft_buffer,
+        harmonic_band_cents,
+    )
+}
+
 /// Binding-agnostic core of `scan_gap_for_mute_dip_with_window`.
 ///
 /// Scans a gap for a mute-dip-then-recovery pattern in `frequency`'s band and
@@ -410,7 +435,10 @@ fn detect_gap_rise_attack_inner(
 // ===========================================================================
 #[cfg(feature = "python")]
 mod python_binding {
-    use super::{detect_gap_rise_attack_inner, scan_gap_for_mute_dip_with_window_inner};
+    use super::{
+        detect_gap_rise_attack_inner, note_band_energy_oneshot,
+        scan_gap_for_mute_dip_with_window_inner,
+    };
     use numpy::PyReadonlyArray1;
     use pyo3::prelude::*;
 
@@ -502,10 +530,50 @@ mod python_binding {
         )
     }
 
+    #[pyfunction]
+    #[pyo3(signature = (
+        audio, sample_rate, center_time, frequency, window_seconds, harmonic_band_cents,
+    ))]
+    fn note_band_energy(
+        audio: PyReadonlyArray1<f32>,
+        sample_rate: i64,
+        center_time: f64,
+        frequency: f64,
+        window_seconds: f64,
+        harmonic_band_cents: f64,
+    ) -> PyResult<f64> {
+        let audio_array = audio.as_array();
+        let audio_slice = audio_array.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("audio must be a C-contiguous float32 array")
+        })?;
+        Ok(note_band_energy_oneshot(
+            audio_slice,
+            sample_rate,
+            center_time,
+            frequency,
+            window_seconds,
+            harmonic_band_cents,
+        ) as f64)
+    }
+
+    #[pyfunction]
+    #[pyo3(signature = (sample_rate, frequency, chunk_len, min_bins, harmonic_band_cents))]
+    fn adaptive_n_fft(
+        sample_rate: i64,
+        frequency: f64,
+        chunk_len: usize,
+        min_bins: usize,
+        harmonic_band_cents: f64,
+    ) -> usize {
+        super::adaptive_n_fft(sample_rate, frequency, chunk_len, min_bins, harmonic_band_cents)
+    }
+
     #[pymodule]
     fn kalimba_dsp(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(scan_gap_for_mute_dip_with_window, m)?)?;
         m.add_function(wrap_pyfunction!(detect_gap_rise_attack, m)?)?;
+        m.add_function(wrap_pyfunction!(note_band_energy, m)?)?;
+        m.add_function(wrap_pyfunction!(adaptive_n_fft, m)?)?;
         Ok(())
     }
 }
@@ -517,8 +585,52 @@ mod python_binding {
 // ===========================================================================
 #[cfg(feature = "wasm")]
 mod wasm_binding {
-    use super::{detect_gap_rise_attack_inner, scan_gap_for_mute_dip_with_window_inner};
+    use super::{
+        detect_gap_rise_attack_inner, note_band_energy_oneshot,
+        scan_gap_for_mute_dip_with_window_inner,
+    };
     use wasm_bindgen::prelude::*;
+
+    /// Peak FFT magnitude in `frequency`'s ±`harmonic_band_cents` band within a
+    /// window centered on `center_time`. Shared core with the pyo3 binding; the
+    /// browser pipeline calls this on a JS `Float32Array` of decoded audio.
+    #[wasm_bindgen]
+    pub fn note_band_energy(
+        audio: &[f32],
+        sample_rate: i64,
+        center_time: f64,
+        frequency: f64,
+        window_seconds: f64,
+        harmonic_band_cents: f64,
+    ) -> f64 {
+        note_band_energy_oneshot(
+            audio,
+            sample_rate,
+            center_time,
+            frequency,
+            window_seconds,
+            harmonic_band_cents,
+        ) as f64
+    }
+
+    /// FFT size giving >= `min_bins` bins inside the ±`harmonic_band_cents` band.
+    /// `u32` I/O for natural JS `number` interop (n_fft fits well within u32).
+    #[wasm_bindgen]
+    pub fn adaptive_n_fft(
+        sample_rate: i64,
+        frequency: f64,
+        chunk_len: u32,
+        min_bins: u32,
+        harmonic_band_cents: f64,
+    ) -> u32 {
+        super::adaptive_n_fft(
+            sample_rate,
+            frequency,
+            chunk_len as usize,
+            min_bins as usize,
+            harmonic_band_cents,
+        ) as u32
+    }
 
     #[wasm_bindgen]
     #[allow(clippy::too_many_arguments)]

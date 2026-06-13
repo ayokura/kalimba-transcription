@@ -10,7 +10,8 @@ import numpy as np
 import pytest
 
 from app.transcription import _adaptive_n_fft, _note_band_energy
-from app.transcription.peaks import onset_energy_gain, HARMONIC_BAND_CENTS
+from app.transcription.audio import cached_hanning, cached_rfftfreq
+from app.transcription.peaks import onset_energy_gain, peak_energy_near, HARMONIC_BAND_CENTS
 
 
 # ---------------------------------------------------------------------------
@@ -21,6 +22,53 @@ def _sine(frequency: float, duration: float, sr: int, amplitude: float = 1.0) ->
     """Generate a pure sine wave at the given sample rate."""
     t = np.arange(int(sr * duration)) / sr
     return (amplitude * np.sin(2 * np.pi * frequency * t)).astype(np.float32)
+
+
+# ---------------------------------------------------------------------------
+# numpy reference implementations (the pre-Rust formulas)
+#
+# `_adaptive_n_fft` and `_note_band_energy` now delegate to the Rust
+# `kalimba_dsp` shared core (see crates/kalimba-dsp/src/lib.rs). These local
+# copies preserve the original numpy formulas as a differential-equivalence
+# oracle so future Rust changes can't silently drift the production values.
+# ---------------------------------------------------------------------------
+
+def _numpy_adaptive_n_fft(sample_rate: int, min_frequency: float, chunk_len: int, *, min_bins: int = 2) -> int:
+    band_hz = min_frequency * (2 ** (HARMONIC_BAND_CENTS / 1200) - 2 ** (-HARMONIC_BAND_CENTS / 1200))
+    min_n_fft = int(np.ceil(sample_rate / band_hz)) * min_bins if band_hz > 0 else 4096
+    n_fft = max(min_n_fft, chunk_len)
+    return 1 << int(np.ceil(np.log2(n_fft)))
+
+
+def _numpy_note_band_energy(audio, sample_rate, center_time, frequency, window_seconds) -> float:
+    window_samples = max(int(sample_rate * window_seconds), 512)
+    center_sample = int(center_time * sample_rate)
+    half = window_samples // 2
+    start = max(center_sample - half, 0)
+    end = min(start + window_samples, len(audio))
+    chunk = audio[start:end]
+    if len(chunk) < 256:
+        return 0.0
+    n_fft = _numpy_adaptive_n_fft(sample_rate, frequency, len(chunk))
+    spectrum = np.abs(np.fft.rfft(chunk * cached_hanning(len(chunk)), n=n_fft))
+    frequencies = cached_rfftfreq(n_fft, sample_rate)
+    return peak_energy_near(frequencies, spectrum, frequency)
+
+
+def _make_signal(kind: str, frequency: float, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Build a float32 probe signal: pure tone, broadband noise, or decaying tone."""
+    dur = 0.6
+    n = int(sr * dur)
+    t = np.arange(n) / sr
+    if kind == "tone":
+        sig = 0.8 * np.sin(2 * np.pi * frequency * t)
+    elif kind == "noise":
+        sig = 0.05 * rng.standard_normal(n)
+    elif kind == "decay":
+        sig = 0.8 * np.exp(-t / 0.3) * np.sin(2 * np.pi * frequency * t) + 0.003 * rng.standard_normal(n)
+    else:  # pragma: no cover
+        raise ValueError(kind)
+    return np.ascontiguousarray(sig, dtype=np.float32)
 
 
 # ---------------------------------------------------------------------------
@@ -142,3 +190,51 @@ class TestOnsetEnergyGainLowRegister:
         audio = _sine(freq, 1.0, sr, amplitude=0.5)
         gain = onset_energy_gain(audio, sr, 0.3, 0.6, freq)
         assert gain < 3.0, f"Gain {gain:.2f} too high for sustained tone"
+
+
+# ---------------------------------------------------------------------------
+# Rust shared-core differential equivalence
+# ---------------------------------------------------------------------------
+
+class TestRustNumpyEquivalence:
+    """`_adaptive_n_fft` / `_note_band_energy` delegate to the Rust kalimba_dsp
+    shared core. Pin them to the numpy reference so a future Rust change can't
+    silently shift recognizer-gate inputs."""
+
+    def test_adaptive_n_fft_exact_match(self):
+        """FFT sizing is integer-exact: both evaluate the rule in f64."""
+        mismatches = []
+        for sr in [22050, 44100, 48000, 96000, 192000]:
+            for freq in [40.0, 65.41, 130.81, 261.63, 293.66, 440.0, 523.25, 1046.5, 1318.5, 2093.0]:
+                # 4096/8192 are exact powers of two — the log2-ceil edge case.
+                for chunk_len in [256, 512, 1024, 2048, 2880, 3528, 4096, 4123, 8192, 9000, 16384]:
+                    for min_bins in [1, 2]:
+                        ref = _numpy_adaptive_n_fft(sr, freq, chunk_len, min_bins=min_bins)
+                        got = _adaptive_n_fft(sr, freq, chunk_len, min_bins=min_bins)
+                        if ref != got:
+                            mismatches.append((sr, freq, chunk_len, min_bins, ref, got))
+        assert not mismatches, f"adaptive_n_fft mismatches (first 10): {mismatches[:10]}"
+
+    @pytest.mark.parametrize("kind", ["tone", "noise", "decay"])
+    def test_note_band_energy_matches_numpy(self, kind):
+        """Rust f32 FFT vs numpy f64 FFT agree to f32-epsilon (~1e-7 rel)."""
+        rng = np.random.default_rng(0)
+        max_rel = 0.0
+        max_abs = 0.0
+        for sr in [44100, 48000, 96000]:
+            for freq in [65.41, 130.81, 261.63, 293.66, 523.25, 1046.5]:
+                audio = _make_signal(kind, freq, sr, rng)
+                for ws in [0.02, 0.05, 0.08]:
+                    for ct in [0.1, 0.25, 0.4, 0.55]:
+                        ref = _numpy_note_band_energy(audio, sr, ct, freq, ws)
+                        got = _note_band_energy(audio, sr, ct, freq, window_seconds=ws)
+                        abs_diff = abs(ref - got)
+                        max_abs = max(max_abs, abs_diff)
+                        max_rel = max(max_rel, abs_diff / (abs(ref) + 1e-9))
+                        # Combined tolerance: tight enough to catch real drift,
+                        # loose enough for f32-vs-f64 FFT rounding.
+                        assert abs_diff <= 5e-4 + 1e-4 * abs(ref), (
+                            f"{kind} sr={sr} f={freq} ws={ws} ct={ct}: "
+                            f"numpy={ref:.6g} rust={got:.6g} diff={abs_diff:.3g}"
+                        )
+        assert max_rel < 1e-4, f"{kind}: max relative diff {max_rel:.2e}"
