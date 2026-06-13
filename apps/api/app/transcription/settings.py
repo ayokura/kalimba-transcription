@@ -25,6 +25,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass, fields, replace
 from typing import Any, Iterator
 
+from .constants import (
+    PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO,
+    PRIMARY_REJECTION_MAX_SCORE,
+)
+
 
 @dataclass(frozen=True, slots=True)
 class RecognizerSettings:
@@ -70,6 +75,15 @@ class RecognizerSettings:
     # See GATE_CATEGORIES in peaks.py for the full list.
     # Example: frozenset({"recent-carryover-candidate", "weak-upper-secondary"})
     disabled_gates: frozenset[str] = frozenset()
+
+    # Tunable thresholds (#131 Phase 2). Defaults are sourced from constants.py,
+    # where their calibration is documented; exposing them here makes them
+    # overridable in mechanism tests and in-process diagnostics via override()
+    # without mutating source. The fixture_rejection_sweep.py source-rewrite path
+    # still works (a subprocess re-imports constants, which flows into these
+    # defaults). Migrated incrementally — see #131.
+    primary_rejection_max_score: float = PRIMARY_REJECTION_MAX_SCORE
+    primary_rejection_max_fundamental_ratio: float = PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
 
 
 _DEFAULTS = RecognizerSettings()

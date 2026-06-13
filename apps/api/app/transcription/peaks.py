@@ -1960,8 +1960,8 @@ def _resolve_primary(
     _rejected = False
     _rejection_reason: str | None = None
     if (
-        primary.score < PRIMARY_REJECTION_MAX_SCORE
-        and primary.fundamental_ratio < PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
+        primary.score < settings.get().primary_rejection_max_score
+        and primary.fundamental_ratio < settings.get().primary_rejection_max_fundamental_ratio
     ):
         _rejected = True
         _rejection_reason = "primary-score-too-low"
@@ -1995,7 +1995,7 @@ def _resolve_primary(
                     if abs(h.candidate.frequency - target_freq) / target_freq < 0.03:
                         # Score gate: candidate must pass the same bar as a
                         # normal primary — otherwise we rescue with noise.
-                        if h.score < PRIMARY_REJECTION_MAX_SCORE:
+                        if h.score < settings.get().primary_rejection_max_score:
                             break
                         octave_gain = _note_onset_energy_gain(ctx.audio, ctx.sample_rate, ctx.start_time, h.candidate.frequency)
                         if octave_gain is not None and octave_gain >= RESIDUAL_DECAY_MIN_ONSET_GAIN:
@@ -3270,8 +3270,8 @@ def _evaluate_branch(
     _rejected = False
     _rejection_reason: str | None = None
     if (
-        primary_hyp.score < PRIMARY_REJECTION_MAX_SCORE
-        and primary_hyp.fundamental_ratio < PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
+        primary_hyp.score < settings.get().primary_rejection_max_score
+        and primary_hyp.fundamental_ratio < settings.get().primary_rejection_max_fundamental_ratio
     ):
         _rejected = True
         _rejection_reason = "primary-score-too-low"

@@ -459,6 +459,42 @@ def test_segment_peaks_rejects_weak_primary_with_low_score_and_fundamental_ratio
     assert debug is None
 
 
+def test_primary_rejection_threshold_honours_settings_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#131 Phase 2: the score-gate threshold is read from RecognizerSettings,
+    so settings.override() changes rejection behaviour without editing source.
+
+    The same weak primary (low score + low FR) is rejected under the default
+    threshold but survives the score gate when the threshold is overridden to 0
+    (``score < 0`` is never true)."""
+    import app.transcription as transcription
+    from app.transcription.settings import override
+
+    tuning = get_default_tunings()[0]
+    e6 = NoteCandidate(key=0, note=Note.from_name("E6"))
+
+    def fake_rank_tuning_candidates(_frequencies, _spectrum, _tuning, debug=False):
+        return [
+            NoteHypothesis(e6, PRIMARY_REJECTION_MAX_SCORE - 1, 0.0, 0.0,
+                           PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO - 0.1, 0.0, 0.0, 0.0, 0.0),
+        ]
+
+    monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank_tuning_candidates)
+
+    def run():
+        return segment_peaks(
+            synthesize_note(e6.frequency, duration=0.2), 44100, 0.0, 0.2, tuning, debug=True,
+        )
+
+    # Default threshold: the weak primary is rejected.
+    assert run().primary is None
+
+    # Overridden threshold of 0 disables the score gate -> primary survives it.
+    with override(primary_rejection_max_score=0.0):
+        assert run().primary is not None
+
+
 def test_rejected_primary_rescued_by_alternative_branch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -13,6 +13,14 @@ This script:
 4. Reports pass/fail counts per threshold
 5. Restores the original source on exit (including on error/interrupt)
 
+Note: PRIMARY_REJECTION_MAX_SCORE / PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO are
+now also exposed on RecognizerSettings (#131 Phase 2), so in-process experiments
+can override them with ``settings.override(primary_rejection_max_score=...)``
+instead of rewriting source. This sweep still rewrites constants.py because it
+runs pytest in a fresh subprocess (a context-manager override would not cross
+the process boundary); the rewritten constant flows into the settings default
+on subprocess import, so both paths stay consistent.
+
 Usage:
     uv run python scripts/audio-analysis/fixture_rejection_sweep.py
 
