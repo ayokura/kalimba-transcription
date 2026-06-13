@@ -64,6 +64,11 @@ class ScoreEvent(BaseModel):
     start_beat: float = Field(alias="startBeat")
     duration_beat: float = Field(alias="durationBeat")
     start_time_sec: float = Field(alias="startTimeSec")
+    # Absolute event duration in seconds (#86). Optional for backward compat with
+    # transcriptions stored before this field existed; the recognizer always
+    # populates it for freshly-computed results so review playback can seek by
+    # absolute time instead of approximating from the next event's start.
+    duration_sec: float | None = Field(default=None, alias="durationSec")
     notes: list[ScoreNote]
     is_gliss_like: bool = Field(alias="isGlissLike")
     gesture: str = "ambiguous"

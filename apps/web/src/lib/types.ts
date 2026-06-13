@@ -44,6 +44,7 @@ export type ScoreEvent = {
   startBeat: number;
   durationBeat: number;
   startTimeSec: number;
+  durationSec?: number | null;
   notes: ScoreNote[];
   isGlissLike: boolean;
   gesture: string;

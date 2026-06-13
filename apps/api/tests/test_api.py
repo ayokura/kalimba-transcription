@@ -223,3 +223,16 @@ def test_event_start_times_are_monotonic():
     for event in events:
         assert event["startTimeSec"] >= prev, "startTimeSec must be non-decreasing"
         prev = event["startTimeSec"]
+
+
+def test_transcription_response_includes_duration_sec():
+    # #86: freshly-computed events expose an absolute durationSec so review
+    # playback can seek by absolute time instead of approximating from the
+    # next event's start.
+    payload = _create_transcription()
+    events = payload["events"]
+    assert len(events) > 0
+    for event in events:
+        assert "durationSec" in event
+        assert isinstance(event["durationSec"], float)
+        assert event["durationSec"] >= 0
