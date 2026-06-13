@@ -5,9 +5,23 @@ edition = "2021"
 
 [lib]
 name = "kalimba_dsp"
-crate-type = ["cdylib"]
+# cdylib: Python extension (maturin) + the .wasm artifact.
+# rlib: lets the crate be used as a normal Rust dependency / `cargo check` lib.
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# Default keeps the Python (maturin) build working unchanged.
+default = ["python"]
+# pyo3 extension module for the API server.
+python = ["dep:pyo3", "dep:numpy", "pyo3/extension-module"]
+# wasm-bindgen wrappers for browser-side transcription.
+wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
-pyo3 = { version = "0.28", features = ["extension-module"] }
-numpy = "0.28"
+# pyo3 / numpy are pulled in only by the `python` feature. `extension-module`
+# is enabled via the feature definition above (not here) so the wasm build does
+# not drag in the CPython extension link flags.
+pyo3 = { version = "0.28", optional = true }
+numpy = { version = "0.28", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
 rustfft = "6.4"

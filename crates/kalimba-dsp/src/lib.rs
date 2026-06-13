@@ -1,5 +1,44 @@
-use numpy::PyReadonlyArray1;
-use pyo3::prelude::*;
+//! kalimba-dsp: DSP primitives for kalimba transcription.
+//!
+//! Dual-binding crate:
+//! - `python` feature (default): exposes a pyo3 extension module `kalimba_dsp`
+//!   built via maturin for the API server.
+//! - `wasm` feature: exposes wasm-bindgen wrappers for browser-side (WebAudio +
+//!   WebAssembly) transcription. Operates on `&[f32]` slices (JS `Float32Array`).
+//!
+//! The numeric core (`cached_hanning`, `adaptive_n_fft`, `note_band_energy_inner`,
+//! `note_band_energy`, `scan_gap_for_mute_dip_with_window_inner`,
+//! `detect_gap_rise_attack_inner`) is binding-agnostic pure Rust shared by both
+//! bindings. Only the thin FFI wrappers and the module/export glue are cfg-gated.
+//!
+//! ## Building the Python extension (default)
+//!
+//! ```text
+//! # via maturin (uses [tool.maturin] features = ["python"])
+//! maturin develop          # or: maturin build
+//! # plain cargo (default feature = python):
+//! cargo build
+//! ```
+//!
+//! ## Building for WASM (browser)
+//!
+//! The wasm target is NOT installed by default. A user must run these once:
+//!
+//! ```text
+//! rustup target add wasm32-unknown-unknown
+//! cargo build --no-default-features --features wasm --target wasm32-unknown-unknown
+//! ```
+//!
+//! For a full browser-ready package (JS glue + .wasm), install wasm-pack
+//! (`cargo install wasm-pack`) and run:
+//!
+//! ```text
+//! wasm-pack build --no-default-features --features wasm --target web
+//! ```
+//!
+//! On the host (no wasm target), `cargo check --no-default-features --features wasm`
+//! type-checks the wasm wrapper code without producing a wasm artifact.
+
 use rustfft::num_complex::Complex32;
 use rustfft::FftPlanner;
 use std::cell::RefCell;
@@ -148,16 +187,14 @@ fn note_band_energy(
     )
 }
 
-#[pyfunction]
-#[pyo3(signature = (
-    audio, sample_rate, gap_start, gap_end, frequency, window_seconds,
-    mute_dip_energy_window, max_dip_window, max_recovery_window,
-    coarse_step, fine_step,
-    min_pre_energy, max_dip_ratio, min_post_energy, min_recovery_ratio,
-    harmonic_band_cents,
-))]
-fn scan_gap_for_mute_dip_with_window(
-    audio: PyReadonlyArray1<f32>,
+/// Binding-agnostic core of `scan_gap_for_mute_dip_with_window`.
+///
+/// Scans a gap for a mute-dip-then-recovery pattern in `frequency`'s band and
+/// returns the recovery time, or `None`. Operates on a plain `&[f32]` audio
+/// slice so both the pyo3 and wasm-bindgen wrappers can share it unchanged.
+#[allow(clippy::too_many_arguments)]
+fn scan_gap_for_mute_dip_with_window_inner(
+    audio_slice: &[f32],
     sample_rate: i64,
     gap_start: f64,
     gap_end: f64,
@@ -183,8 +220,6 @@ fn scan_gap_for_mute_dip_with_window(
         return None;
     }
 
-    let audio_array = audio.as_array();
-    let audio_slice = audio_array.as_slice()?;
     let audio_duration = audio_slice.len() as f64 / sample_rate as f64;
     let scan_end = gap_end.min(audio_duration - window_seconds);
 
@@ -306,14 +341,13 @@ fn scan_gap_for_mute_dip_with_window(
 /// noise). Both offsets are measured backward from `gap_end` so `post_time`
 /// is kept inside the gap — the caller uses it as a new Segment's start_time
 /// which must be < gap_end for seg_end clamping to stay valid.
-#[pyfunction]
-#[pyo3(signature = (
-    audio, sample_rate, gap_start, gap_end, frequency,
-    window_seconds, pre_offset, post_offset,
-    rise_ratio, min_post_energy, min_pre_energy, harmonic_band_cents,
-))]
-fn detect_gap_rise_attack(
-    audio: PyReadonlyArray1<f32>,
+/// Binding-agnostic core of `detect_gap_rise_attack`.
+///
+/// Two-point energy-rise check inside a gap; returns `post_time` candidate start
+/// or `None`. Shared by the pyo3 and wasm-bindgen wrappers via a `&[f32]` slice.
+#[allow(clippy::too_many_arguments)]
+fn detect_gap_rise_attack_inner(
+    audio_slice: &[f32],
     sample_rate: i64,
     gap_start: f64,
     gap_end: f64,
@@ -336,9 +370,6 @@ fn detect_gap_rise_attack(
     if !(pre_offset > post_offset && post_offset > 0.0) {
         return None;
     }
-
-    let audio_array = audio.as_array();
-    let audio_slice = audio_array.as_slice()?;
 
     let pre_time = gap_end - pre_offset;
     let post_time = gap_end - post_offset;
@@ -372,9 +403,192 @@ fn detect_gap_rise_attack(
     Some(post_time)
 }
 
-#[pymodule]
-fn kalimba_dsp(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(scan_gap_for_mute_dip_with_window, m)?)?;
-    m.add_function(wrap_pyfunction!(detect_gap_rise_attack, m)?)?;
-    Ok(())
+// ===========================================================================
+// Python (pyo3) binding — built by maturin into the `kalimba_dsp` extension.
+// Thin wrappers: convert the numpy array to a &[f32] slice and delegate to the
+// binding-agnostic *_inner core above.
+// ===========================================================================
+#[cfg(feature = "python")]
+mod python_binding {
+    use super::{detect_gap_rise_attack_inner, scan_gap_for_mute_dip_with_window_inner};
+    use numpy::PyReadonlyArray1;
+    use pyo3::prelude::*;
+
+    #[pyfunction]
+    #[pyo3(signature = (
+        audio, sample_rate, gap_start, gap_end, frequency, window_seconds,
+        mute_dip_energy_window, max_dip_window, max_recovery_window,
+        coarse_step, fine_step,
+        min_pre_energy, max_dip_ratio, min_post_energy, min_recovery_ratio,
+        harmonic_band_cents,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn scan_gap_for_mute_dip_with_window(
+        audio: PyReadonlyArray1<f32>,
+        sample_rate: i64,
+        gap_start: f64,
+        gap_end: f64,
+        frequency: f64,
+        window_seconds: f64,
+        mute_dip_energy_window: f64,
+        max_dip_window: f64,
+        max_recovery_window: f64,
+        coarse_step: f64,
+        fine_step: f64,
+        min_pre_energy: f64,
+        max_dip_ratio: f64,
+        min_post_energy: f64,
+        min_recovery_ratio: f64,
+        harmonic_band_cents: f64,
+    ) -> Option<f64> {
+        let audio_array = audio.as_array();
+        let audio_slice = audio_array.as_slice()?;
+        scan_gap_for_mute_dip_with_window_inner(
+            audio_slice,
+            sample_rate,
+            gap_start,
+            gap_end,
+            frequency,
+            window_seconds,
+            mute_dip_energy_window,
+            max_dip_window,
+            max_recovery_window,
+            coarse_step,
+            fine_step,
+            min_pre_energy,
+            max_dip_ratio,
+            min_post_energy,
+            min_recovery_ratio,
+            harmonic_band_cents,
+        )
+    }
+
+    #[pyfunction]
+    #[pyo3(signature = (
+        audio, sample_rate, gap_start, gap_end, frequency,
+        window_seconds, pre_offset, post_offset,
+        rise_ratio, min_post_energy, min_pre_energy, harmonic_band_cents,
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn detect_gap_rise_attack(
+        audio: PyReadonlyArray1<f32>,
+        sample_rate: i64,
+        gap_start: f64,
+        gap_end: f64,
+        frequency: f64,
+        window_seconds: f64,
+        pre_offset: f64,
+        post_offset: f64,
+        rise_ratio: f64,
+        min_post_energy: f64,
+        min_pre_energy: f64,
+        harmonic_band_cents: f64,
+    ) -> Option<f64> {
+        let audio_array = audio.as_array();
+        let audio_slice = audio_array.as_slice()?;
+        detect_gap_rise_attack_inner(
+            audio_slice,
+            sample_rate,
+            gap_start,
+            gap_end,
+            frequency,
+            window_seconds,
+            pre_offset,
+            post_offset,
+            rise_ratio,
+            min_post_energy,
+            min_pre_energy,
+            harmonic_band_cents,
+        )
+    }
+
+    #[pymodule]
+    fn kalimba_dsp(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        m.add_function(wrap_pyfunction!(scan_gap_for_mute_dip_with_window, m)?)?;
+        m.add_function(wrap_pyfunction!(detect_gap_rise_attack, m)?)?;
+        Ok(())
+    }
+}
+
+// ===========================================================================
+// WASM (wasm-bindgen) binding — for browser-side transcription.
+// Wrappers take `&[f32]` (maps to a JS `Float32Array` via wasm-bindgen) and
+// delegate to the same *_inner core. Returns `Option<f64>` -> JS `number | undefined`.
+// ===========================================================================
+#[cfg(feature = "wasm")]
+mod wasm_binding {
+    use super::{detect_gap_rise_attack_inner, scan_gap_for_mute_dip_with_window_inner};
+    use wasm_bindgen::prelude::*;
+
+    #[wasm_bindgen]
+    #[allow(clippy::too_many_arguments)]
+    pub fn scan_gap_for_mute_dip_with_window(
+        audio: &[f32],
+        sample_rate: i64,
+        gap_start: f64,
+        gap_end: f64,
+        frequency: f64,
+        window_seconds: f64,
+        mute_dip_energy_window: f64,
+        max_dip_window: f64,
+        max_recovery_window: f64,
+        coarse_step: f64,
+        fine_step: f64,
+        min_pre_energy: f64,
+        max_dip_ratio: f64,
+        min_post_energy: f64,
+        min_recovery_ratio: f64,
+        harmonic_band_cents: f64,
+    ) -> Option<f64> {
+        scan_gap_for_mute_dip_with_window_inner(
+            audio,
+            sample_rate,
+            gap_start,
+            gap_end,
+            frequency,
+            window_seconds,
+            mute_dip_energy_window,
+            max_dip_window,
+            max_recovery_window,
+            coarse_step,
+            fine_step,
+            min_pre_energy,
+            max_dip_ratio,
+            min_post_energy,
+            min_recovery_ratio,
+            harmonic_band_cents,
+        )
+    }
+
+    #[wasm_bindgen]
+    #[allow(clippy::too_many_arguments)]
+    pub fn detect_gap_rise_attack(
+        audio: &[f32],
+        sample_rate: i64,
+        gap_start: f64,
+        gap_end: f64,
+        frequency: f64,
+        window_seconds: f64,
+        pre_offset: f64,
+        post_offset: f64,
+        rise_ratio: f64,
+        min_post_energy: f64,
+        min_pre_energy: f64,
+        harmonic_band_cents: f64,
+    ) -> Option<f64> {
+        detect_gap_rise_attack_inner(
+            audio,
+            sample_rate,
+            gap_start,
+            gap_end,
+            frequency,
+            window_seconds,
+            pre_offset,
+            post_offset,
+            rise_ratio,
+            min_post_energy,
+            min_pre_energy,
+            harmonic_band_cents,
+        )
+    }
 }

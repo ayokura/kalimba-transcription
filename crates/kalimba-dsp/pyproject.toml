@@ -13,5 +13,7 @@ classifiers = [
 ]
 
 [tool.maturin]
-features = ["pyo3/extension-module"]
+# The `python` feature pulls in pyo3 + numpy and enables pyo3/extension-module.
+# (See crates/kalimba-dsp/Cargo.toml [features].)
+features = ["python"]
 module-name = "kalimba_dsp"
