@@ -1,7 +1,7 @@
 {
-  "pending": true,
-  "status": "pending",
-  "reason": "Demoted to pending 2026-04-18 while adjacent-semitone leakage gate (spectral-leakage suspect zones) shifts the F#4/G4 merge boundary at the end of the sequence (events 161-162: F#4 / G3+B3+D4+G4 -> G3+B3+D4+F#4 / G4). Same 5 notes, boundary differs. Tracked for re-verification; see commit history for gate rationale.",
+  "pending": false,
+  "status": "completed",
+  "reason": "#192 fixed 2026-06-13: merge_four_note_gliss_clusters now refuses to absorb a stale sustained single note as a 4-note gliss lead (GLISS_CLUSTER_LEAD_MAX_DURATION = 0.22). The closing strum groups correctly as F#4 / G3+B3+D4+G4 (was G3+B3+D4+F#4 / G4). Physical premise verified by energy trace; see notes.md.",
   "assertions": {
     "minEvents": 163,
     "maxEvents": 163,

@@ -489,6 +489,16 @@ GLISS_CLUSTER_MAX_GAP = 0.06
 GLISS_CLUSTER_MAX_EVENT_DURATION = 0.85
 GLISS_CLUSTER_MAX_TOTAL_DURATION = 1.2
 GLISS_CLUSTER_TARGET_NOTE_COUNT = 3
+# Max duration of a *single* note acting as the lead of a 1+3 four-note gliss
+# merge. Segments are contiguous (current.end_time == following.start_time), so
+# a lead single note's event duration equals the IOI to the following cluster's
+# onset; the inter-event `gap` is ~0 by construction and cannot catch a stale
+# lead. A genuine strum lead is struck in rapid succession with the cluster
+# (G-low BWV147 closing strum internal IOI ≈ 0.09s). #192: a sustained F#4 rings
+# 0.69s before the closing G3+B3+D4+G4 strum and was wrongly pulled in as the
+# lead, displacing the real trailing G4. Threshold 0.22s separates the ~0.09s
+# strum lead from the 0.69s stale single with wide margin.
+GLISS_CLUSTER_LEAD_MAX_DURATION = 0.22
 GLISS_LEADING_SUBSET_MAX_DURATION = 0.18
 GLISS_LEADING_SUBSET_SCORE_RATIO = 4.0
 GLISS_TERTIARY_MAX_DURATION = 1.35

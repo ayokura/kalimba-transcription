@@ -1,7 +1,7 @@
 # Manual Notes
 
 - tester: manual
-- verdict: pending
+- verdict: completed
 - scenario: 2026-04-10-BWV147-sequence-163-kalimba-17-g-low-haruka
 - expected note: G3 / G4 x 14 / A4 x 21 / [B4,G3] x 3 / D5 x 18 / C5 x 10 / [C5,E4] x 4 / E5 x 6 / [D5,B3] x 4 / G5 x 5 / F#5 x 4 / [G5,E4] x 2 / B4 x 19 / <G4,E4> x 3 / [C5,A3] x 2 / [A4,C4] / <F#4,D4> / [D4,A3] x 4 / F#4 x 9 / <B4,G4> x 3 / [G4,D4] / <E4,C4> x 2 / [B4,D4] x 2 / [G4,<D4,B3,G3>] x 2 / [D5,F#4] / E4 x 2 / [D5,D4] / <A4,F#4,D4> / D4 x 2 / <C5,A4,F#4,D4> x 2 / [B4,<D4,B3,G3>] x 2 / [B4,G4] / [C5,<E4,C4>] x 2 / [D5,<D4,B3>] x 3 / [G5,<B4,A3>] / [C5,<C5,A3>] / [A4,<E4,C4>] / [<F#4,D4>,A3] / [G5,<G4,E4>]
 - capture intent: unknown
@@ -204,9 +204,17 @@ BWV147 を C 版 (kalimba-17-c-bwv147-sequence-163-01) から完全 4 度下 (-5
 結論: **expected.json (F#4 単独 → G3+B3+D4+G4) が正しく、現 recognizer の出力 (G3+B3+D4+F#4 → G4) は誤グルーピング**。
 strum の前半 (G3/B3/D4) が直前の F#4 segment に併合され、G4 だけが分離されている。
 同一演奏のテスター playback 録音 (tx 2bf55c75) でも同じ挙動を確認。F1 ベンチマークの GT に記録済みで、
-このバグは micro F1 上 3 FP + 3 FN として計測されている。
+このバグは micro F1 上 3 FP + 3 FN として計測されていた。
 
-status は recognizer 修正まで pending を維持する。
+### 2026-06-13 修正 (#192 解決)
+
+直接原因は post-processing の `merge_four_note_gliss_clusters` (events.py)。segment は連続するため
+`gap = following.start - current.end` が構造的にほぼ 0 になり、`GLISS_CLUSTER_MAX_GAP` が stale な単音 lead を
+弾けなかった。F#4 単独 segment は次 onset (strum 開始 97.1755) まで伸びて duration 0.69s だったが、
+`{1,3}` 併合に lead 単音の duration ガードが無く、F#4 を strum クラスタの lead として吸い込んでいた。
+`GLISS_CLUSTER_LEAD_MAX_DURATION = 0.22` を新設し、lead 単音 (current=1音, following=3音) の duration が
+strum IOI 相当を超える場合は併合を拒否。これにより F#4 が分離され、次ループで正しい `{3,1}` 併合
+(クラスタ B3+D4+G3 + 末尾 G4) が成立し G3+B3+D4+G4 になる。fixture を completed に昇格。
 
 ## Known Local Issue
 

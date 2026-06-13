@@ -1099,6 +1099,17 @@ def merge_four_note_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]
             {len(current.notes), len(following.notes)} == {1, 3}
             or ({len(current.notes), len(following.notes)} == {2, 3} and overlap_count >= 1)
         )
+        # A single note preceding a 3-note cluster only counts as a gliss *lead*
+        # if it was struck in rapid succession with the cluster. Its event
+        # duration equals the IOI to the cluster onset (segments are contiguous,
+        # so `gap` ~ 0 cannot catch this), so a long-sustained stale single must
+        # not be absorbed -- #192: F#4 ringing 0.69s before the closing strum was
+        # wrongly pulled in, displacing the real trailing G4.
+        lead_single_ok = not (
+            len(current.notes) == 1
+            and len(following.notes) == 3
+            and current_duration > GLISS_CLUSTER_LEAD_MAX_DURATION
+        )
         can_merge = (
             gap <= GLISS_CLUSTER_MAX_GAP
             and current_duration <= GLISS_CLUSTER_MAX_EVENT_DURATION
@@ -1107,6 +1118,7 @@ def merge_four_note_gliss_clusters(raw_events: list[RawEvent]) -> list[RawEvent]
             and len(combined_notes) == 4
             and contiguous_keys
             and merge_pattern_ok
+            and lead_single_ok
         )
         if can_merge:
             merged.append(
