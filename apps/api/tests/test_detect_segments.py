@@ -174,17 +174,16 @@ def test_detect_segments_collapses_redundant_same_start_segments() -> None:
 
 
 def test_detect_segments_does_not_backtrack_into_previous_active_range(monkeypatch: pytest.MonkeyPatch) -> None:
-    import app.transcription as transcription
     import app.transcription.segments as segments_mod
 
     frame_times = np.array([0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 0.9, 1.0], dtype=np.float32)
     rms = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0], dtype=np.float32)
     onset_times = np.array([0.45, 0.79], dtype=np.float32)
 
-    # rms / frames_to_time / get_duration are pure-numpy now (librosa removed for
-    # these); onset_strength is still librosa. _rms_numpy returns 1-D directly.
+    # rms / frames_to_time / get_duration / onset_strength are pure-numpy now
+    # (librosa removed from the primary path). _rms_numpy returns 1-D directly.
     monkeypatch.setattr(segments_mod, "_rms_numpy", lambda *args, **kwargs: rms)
-    monkeypatch.setattr(transcription.librosa.onset, "onset_strength", lambda **kwargs: np.zeros_like(rms))
+    monkeypatch.setattr(segments_mod, "_onset_strength_numpy", lambda *args, **kwargs: np.zeros_like(rms))
 
     def fake_frames_to_time(frames, *args, **kwargs):
         frames = np.asarray(frames)
@@ -202,6 +201,31 @@ def test_detect_segments_does_not_backtrack_into_previous_active_range(monkeypat
     assert len(late_segments) == 1
     assert late_segments[0][0] == pytest.approx(0.79)
     assert late_segments[0][1] == pytest.approx(1.08)
+
+
+def test_onset_strength_numpy_self_contained() -> None:
+    """#193: the pure-numpy onset_strength (no librosa) is self-contained,
+    non-negative, frame-count-correct, silent on silence, and peaks at a note
+    onset. Numerical equivalence to librosa 0.11 is covered by the fixture
+    regression suite; this locks the portable function's contract."""
+    import app.transcription.segments as segments_mod
+
+    sr, hop, n_fft = 44100, 256, 2048
+
+    silence = np.zeros(sr, dtype=np.float32)
+    env_silent = segments_mod._onset_strength_numpy(silence, sr, hop)
+    assert env_silent.shape[0] == 1 + (len(silence) + 2 * (n_fft // 2) - n_fft) // hop
+    assert np.all(env_silent >= 0.0)
+    assert np.allclose(env_silent, 0.0)
+
+    lead = np.zeros(int(sr * 0.3), dtype=np.float32)
+    note = synthesize_note(440.0, sample_rate=sr, duration=0.4)
+    audio = np.concatenate([lead, note]).astype(np.float32)
+    env = segments_mod._onset_strength_numpy(audio, sr, hop)
+    assert np.all(env >= 0.0)
+    # The strongest flux must land at the struck-note onset (~0.3s).
+    peak_time = float(np.argmax(env)) * hop / sr
+    assert abs(peak_time - 0.3) < 0.05
 
 
 # --- Cross-collector dedup mechanism tests ---

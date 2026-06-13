@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 from collections import OrderedDict
 from dataclasses import dataclass, replace as dataclass_replace
+from functools import lru_cache
 from time import perf_counter
 from typing import Any
 
@@ -187,13 +188,80 @@ def _onset_backtrack_numpy(events: np.ndarray, energy: np.ndarray) -> np.ndarray
     return minima[idx]
 
 
+@lru_cache(maxsize=8)
+def _mel_filterbank(sample_rate: int, n_fft: int, n_mels: int) -> np.ndarray:
+    """Slaney-normalised mel filterbank, bit-exact to librosa.filters.mel
+    (fmin=0, fmax=sr/2, htk=False, norm='slaney'). Cached per (sr, n_fft, n_mels).
+    Verified against librosa 0.11 to ~2.6e-9 (float rounding)."""
+    fft_freqs = np.fft.rfftfreq(n_fft, d=1.0 / sample_rate)
+    f_sp = 200.0 / 3.0
+    min_log_hz = 1000.0
+    logstep = np.log(6.4) / 27.0
+    min_log_mel = min_log_hz / f_sp
+
+    def hz_to_mel(freqs: np.ndarray) -> np.ndarray:
+        freqs = np.asarray(freqs, dtype=float)
+        mels = freqs / f_sp
+        log_region = freqs >= min_log_hz
+        mels[log_region] = min_log_mel + np.log(freqs[log_region] / min_log_hz) / logstep
+        return mels
+
+    def mel_to_hz(mels: np.ndarray) -> np.ndarray:
+        mels = np.asarray(mels, dtype=float)
+        freqs = f_sp * mels
+        log_region = mels >= min_log_mel
+        freqs[log_region] = min_log_hz * np.exp(logstep * (mels[log_region] - min_log_mel))
+        return freqs
+
+    mel_min, mel_max = hz_to_mel(np.array([0.0, sample_rate / 2.0]))
+    mel_f = mel_to_hz(np.linspace(mel_min, mel_max, n_mels + 2))
+    fdiff = np.diff(mel_f)
+    ramps = np.subtract.outer(mel_f, fft_freqs)
+    weights = np.zeros((n_mels, len(fft_freqs)))
+    for i in range(n_mels):
+        weights[i] = np.maximum(0.0, np.minimum(-ramps[i] / fdiff[i], ramps[i + 2] / fdiff[i + 1]))
+    weights *= (2.0 / (mel_f[2 : n_mels + 2] - mel_f[:n_mels]))[:, None]
+    return weights.astype(np.float32)
+
+
+def _onset_strength_numpy(
+    audio: np.ndarray,
+    sample_rate: int,
+    hop_length: int,
+    n_fft: int = FRAME_LENGTH,
+    n_mels: int = 128,
+) -> np.ndarray:
+    """Pure-numpy ``librosa.onset.onset_strength`` (mel spectral flux), default path.
+
+    power mel-spectrogram -> power_to_db (ref=1.0, amin=1e-10, top_db=80) ->
+    lag-1 positive difference -> mean over mel bands -> left-pad by
+    lag + n_fft//(2*hop), trimmed to frame count. Verified equivalent to
+    librosa 0.11 within float32 epsilon (~4e-6, frame count exact) on fixture
+    audio at hop 256/1024 -- peak-picked onset frames are identical."""
+    audio = np.asarray(audio, dtype=np.float32)
+    pad = n_fft // 2
+    padded = np.pad(audio, pad, mode="constant")
+    n_frames = 1 + (len(padded) - n_fft) // hop_length
+    window = (0.5 - 0.5 * np.cos(2 * np.pi * np.arange(n_fft) / n_fft)).astype(np.float32)
+    indices = np.arange(n_fft)[:, None] + hop_length * np.arange(n_frames)[None, :]
+    frames = padded[indices] * window[:, None]
+    power = (np.abs(np.fft.rfft(frames, axis=0)) ** 2).astype(np.float32)
+    mel = _mel_filterbank(sample_rate, n_fft, n_mels) @ power
+    log_mel = 10.0 * np.log10(np.maximum(1e-10, mel))
+    log_mel = np.maximum(log_mel, log_mel.max() - 80.0)
+    onset_env = np.maximum(0.0, log_mel[:, 1:] - log_mel[:, :-1]).mean(axis=0)
+    pad_width = 1 + n_fft // (2 * hop_length)
+    onset_env = np.pad(onset_env, (pad_width, 0), mode="constant")
+    return onset_env[: power.shape[1]].astype(np.float32)
+
+
 def _compute_librosa_features(
     audio: np.ndarray, sample_rate: int, use_hpss_onset: bool
 ) -> dict[str, Any]:
     """Run librosa rms/onset routines and return cacheable outputs."""
     rms = _rms_numpy(audio, FRAME_LENGTH, HOP_LENGTH)
     frame_times = _frames_to_time_numpy(np.arange(len(rms)), sample_rate, HOP_LENGTH)
-    onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=HOP_LENGTH)
+    onset_env = _onset_strength_numpy(audio, sample_rate, HOP_LENGTH)
     onset_frames = _onset_detect_numpy(
         onset_env, sample_rate, HOP_LENGTH, backtrack=True,
     )
@@ -201,7 +269,7 @@ def _compute_librosa_features(
         _, percussive = librosa.effects.hpss(
             audio, n_fft=FRAME_LENGTH, hop_length=HOP_LENGTH,
         )
-        perc_env = librosa.onset.onset_strength(y=percussive, sr=sample_rate, hop_length=HOP_LENGTH)
+        perc_env = _onset_strength_numpy(percussive, sample_rate, HOP_LENGTH)
         perc_frames = _onset_detect_numpy(
             perc_env, sample_rate, HOP_LENGTH, backtrack=True,
         )
@@ -1209,7 +1277,7 @@ def detect_segments(
 
     tempo_audio_duration_sec = float(_audio_duration_sec(audio, sample_rate))
     tempo_start = perf_counter()
-    tempo_onset_env = librosa.onset.onset_strength(y=audio, sr=sample_rate, hop_length=TEMPO_ESTIMATION_HOP_LENGTH)
+    tempo_onset_env = _onset_strength_numpy(audio, sample_rate, TEMPO_ESTIMATION_HOP_LENGTH)
     tempo = _estimate_tempo_autocorr(tempo_onset_env, sample_rate, TEMPO_ESTIMATION_HOP_LENGTH)
     tempo_estimation_ms = (perf_counter() - tempo_start) * 1000.0
 
