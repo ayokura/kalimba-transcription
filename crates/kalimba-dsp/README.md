@@ -86,12 +86,34 @@ cargo build --no-default-features --features wasm --target wasm32-unknown-unknow
 ```
 
 For a full browser-ready package (JS glue + `.wasm` + TypeScript types),
-install [`wasm-pack`](https://rustwasm.github.io/wasm-pack/) and run:
+install [`wasm-pack`](https://rustwasm.github.io/wasm-pack/) and run. Cargo flags
+go **after `--`**; wasm-pack's own `--target` selects the JS output kind
+(`web` / `bundler` / `nodejs`), not a rustc target — passing them before `--`
+makes wasm-pack try to `rustup target add web` and fail:
 
 ```sh
 cargo install wasm-pack
-wasm-pack build --no-default-features --features wasm --target web
+wasm-pack build --target web -- --no-default-features --features wasm
 ```
+
+Output lands in `pkg/` (git-ignored): `kalimba_dsp_bg.wasm` (~216 KB,
+wasm-opt'd), `kalimba_dsp.js` glue, and `.d.ts` types exporting every shared-core
+function with `Float32Array` audio I/O.
+
+### Validating the wasm build against the native extension
+
+Both bindings share one pure-Rust core, so the wasm output must be numerically
+identical to the pyo3 extension. `check_wasm.sh` builds the nodejs-target package
+and replays a battery of inputs through both, asserting equality:
+
+```sh
+crates/kalimba-dsp/check_wasm.sh
+```
+
+It exits non-zero on any wasm-vs-native mismatch (binding-glue regression:
+`Float32Array` marshalling, `i64`->BigInt / `u32` ABI). Requires `wasm-pack`,
+`node`, and the uv-managed Python env. Extend `tools/wasm_reference.py` +
+`tools/check_wasm.cjs` when a new shared-core primitive is exposed to wasm.
 
 ### Host type-check of the wasm wrappers (no wasm target needed)
 

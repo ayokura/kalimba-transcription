@@ -30,14 +30,18 @@
 //! ```
 //!
 //! For a full browser-ready package (JS glue + .wasm), install wasm-pack
-//! (`cargo install wasm-pack`) and run:
+//! (`cargo install wasm-pack`) and run (cargo flags go after `--`; wasm-pack's
+//! own `--target` selects the JS output kind, not a rustc target):
 //!
 //! ```text
-//! wasm-pack build --no-default-features --features wasm --target web
+//! wasm-pack build --target web -- --no-default-features --features wasm
 //! ```
 //!
 //! On the host (no wasm target), `cargo check --no-default-features --features wasm`
 //! type-checks the wasm wrapper code without producing a wasm artifact.
+//!
+//! `crates/kalimba-dsp/check_wasm.sh` builds the package and asserts the wasm
+//! outputs match the native pyo3 extension over a battery of inputs.
 
 use rustfft::num_complex::Complex32;
 use rustfft::FftPlanner;
