@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -161,6 +161,17 @@ describe("ReviewWorkspace", () => {
       configurable: true,
       writable: true,
     });
+    // jsdom は <audio> の再生 API を実装しないので audition 経路用にスタブする。
+    Object.defineProperty(HTMLMediaElement.prototype, "play", {
+      value: vi.fn().mockResolvedValue(undefined),
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(HTMLMediaElement.prototype, "pause", {
+      value: vi.fn(),
+      configurable: true,
+      writable: true,
+    });
     vi.stubGlobal("URL", {
       createObjectURL: vi.fn(() => "blob:review-audio"),
       revokeObjectURL: vi.fn(),
@@ -274,6 +285,48 @@ describe("ReviewWorkspace", () => {
 
     expect(URL.createObjectURL).toHaveBeenCalled();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:review-audio");
+  });
+
+  it("seeks the audio element to the event start when an event is auditioned", async () => {
+    const user = userEvent.setup();
+    mocks.loadReviewAudio.mockReturnValue(new Blob(["audio"], { type: "audio/wav" }));
+
+    const { container } = render(<ReviewWorkspace />);
+
+    const audio = container.querySelector("audio") as HTMLAudioElement;
+    expect(audio).toBeTruthy();
+
+    // 各 event カードに per-event の再生コントロールが出る (audio がある時のみ)。
+    await user.click(screen.getByLabelText("evt-2 をここから再生"));
+
+    // evt-2 は startTimeSec 1.0 → 0.15s の lead を引いた位置に頭出しする。
+    expect(audio.currentTime).toBeCloseTo(1.0 - 0.15, 5);
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
+  });
+
+  it("highlights the event under the playhead on timeupdate", () => {
+    mocks.loadReviewAudio.mockReturnValue(new Blob(["audio"], { type: "audio/wav" }));
+
+    const { container } = render(<ReviewWorkspace />);
+
+    const audio = container.querySelector("audio") as HTMLAudioElement;
+    Object.defineProperty(audio, "currentTime", { value: 1.2, configurable: true });
+    act(() => {
+      audio.dispatchEvent(new Event("timeupdate"));
+    });
+
+    // currentTime 1.2 は evt-2 (startTimeSec 1.0) の領域 → focus panel が evt-2 を示す。
+    expect(screen.getByText("2 / 3")).toBeTruthy();
+    expect(mocks.updateReviewSessionUiState).toHaveBeenLastCalledWith("review-session-1", {
+      notationMode: "vertical",
+      activeEventId: "evt-2",
+    });
+  });
+
+  it("does not show per-event audition controls when audio is unavailable", () => {
+    render(<ReviewWorkspace />);
+
+    expect(screen.queryByLabelText("evt-1 をここから再生")).toBeNull();
   });
 
   it("handles empty events without crashing", () => {

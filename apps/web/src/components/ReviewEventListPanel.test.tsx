@@ -93,4 +93,63 @@ describe("ReviewEventListPanel", () => {
     expect(onActiveEventIdChange).toHaveBeenNthCalledWith(1, "evt-2");
     expect(onActiveEventIdChange).toHaveBeenNthCalledWith(2, "evt-3");
   });
+
+  it("does not render audition controls when audition is unavailable", () => {
+    render(
+      <ReviewEventListPanel
+        events={buildEvents()}
+        activeEventId="evt-1"
+        onActiveEventIdChange={() => {}}
+      />,
+    );
+
+    expect(screen.queryByLabelText("evt-1 をここから再生")).toBeNull();
+  });
+
+  it("selecting an event seeks/plays when audition is available", async () => {
+    const user = userEvent.setup();
+    const onActiveEventIdChange = vi.fn();
+    const onAuditionEvent = vi.fn();
+
+    const { container } = render(
+      <ReviewEventListPanel
+        events={buildEvents()}
+        activeEventId="evt-1"
+        onActiveEventIdChange={onActiveEventIdChange}
+        onAuditionEvent={onAuditionEvent}
+      />,
+    );
+
+    // event 本体 (.event-list-item) を選ぶ。per-event の再生 span も role=button を
+    // 持つため、role 名だけでは曖昧になるのでクラスで絞り込む。
+    const items = Array.from(container.querySelectorAll<HTMLButtonElement>(".event-list-item"));
+    const evt2 = items.find((el) => el.textContent?.includes("evt-2"));
+    expect(evt2).toBeTruthy();
+    await user.click(evt2 as HTMLButtonElement);
+
+    expect(onActiveEventIdChange).toHaveBeenCalledWith("evt-2");
+    expect(onAuditionEvent).toHaveBeenCalledWith("evt-2");
+  });
+
+  it("the per-event play control auditions without re-triggering selection twice", async () => {
+    const user = userEvent.setup();
+    const onActiveEventIdChange = vi.fn();
+    const onAuditionEvent = vi.fn();
+
+    render(
+      <ReviewEventListPanel
+        events={buildEvents()}
+        activeEventId="evt-1"
+        onActiveEventIdChange={onActiveEventIdChange}
+        onAuditionEvent={onAuditionEvent}
+      />,
+    );
+
+    await user.click(screen.getByLabelText("evt-3 をここから再生"));
+
+    // stopPropagation で親 button の選択ハンドラは発火しない。
+    expect(onAuditionEvent).toHaveBeenCalledTimes(1);
+    expect(onAuditionEvent).toHaveBeenCalledWith("evt-3");
+    expect(onActiveEventIdChange).not.toHaveBeenCalled();
+  });
 });

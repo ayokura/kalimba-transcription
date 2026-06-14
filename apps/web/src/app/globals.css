@@ -545,6 +545,30 @@ button:disabled {
   color: var(--muted);
 }
 
+.event-list-item-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-list-audition {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--accent);
+  background: rgba(23, 126, 137, 0.1);
+  cursor: pointer;
+}
+
+.event-list-audition:hover {
+  background: rgba(23, 126, 137, 0.2);
+}
+
 .event-list-item.selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(23, 126, 137, 0.12);
