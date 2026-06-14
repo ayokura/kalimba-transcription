@@ -7,6 +7,7 @@ from functools import lru_cache
 from time import perf_counter
 from typing import Any
 
+import kalimba_dsp
 import numpy as np
 
 from ..models import InstrumentTuning
@@ -261,12 +262,57 @@ def _onset_strength_numpy(
     return onset_env[: power.shape[1]].astype(np.float32)
 
 
+# ---------------------------------------------------------------------------
+# Production onset DSP — delegated to the Rust shared core (kalimba_dsp).
+#
+# The `_*_numpy` functions above remain the differential-equivalence reference
+# (imported by tests/test_onset_dsp_rust.py). The Rust ports are frame-exact to
+# them (verified on synthetic audio + the full fixture suite) and 10-17x faster
+# (onset features were ~30% of transcription wall time: 1.8s/14.6s for the
+# g-low/96kHz bwv147 fixtures -> ~0.16s/1.0s). Same crate backs the browser
+# (WASM) pipeline. `audio` is coerced to C-contiguous float32 (no-op for the
+# pipeline's already-float32 audio).
+# ---------------------------------------------------------------------------
+
+def _rms(audio: np.ndarray, frame_length: int, hop_length: int) -> np.ndarray:
+    audio_f32 = np.ascontiguousarray(audio, dtype=np.float32)
+    return np.asarray(kalimba_dsp.rms(audio_f32, frame_length, hop_length), dtype=np.float32)
+
+
+def _onset_strength(
+    audio: np.ndarray,
+    sample_rate: int,
+    hop_length: int,
+    n_fft: int = FRAME_LENGTH,
+    n_mels: int = 128,
+) -> np.ndarray:
+    audio_f32 = np.ascontiguousarray(audio, dtype=np.float32)
+    return np.asarray(
+        kalimba_dsp.onset_strength(audio_f32, int(sample_rate), int(hop_length), int(n_fft), int(n_mels)),
+        dtype=np.float32,
+    )
+
+
+def _onset_detect(
+    onset_envelope: np.ndarray,
+    sr: int,
+    hop_length: int,
+    *,
+    backtrack: bool = False,
+) -> np.ndarray:
+    env_f32 = np.ascontiguousarray(onset_envelope, dtype=np.float32)
+    return np.asarray(
+        kalimba_dsp.onset_detect(env_f32, int(sr), int(hop_length), bool(backtrack)),
+        dtype=np.intp,
+    )
+
+
 def _compute_onset_features(audio: np.ndarray, sample_rate: int) -> dict[str, Any]:
-    """Compute RMS / frame-time / onset-frame features (pure numpy, no librosa)."""
-    rms = _rms_numpy(audio, FRAME_LENGTH, HOP_LENGTH)
+    """Compute RMS / frame-time / onset-frame features via the Rust shared core."""
+    rms = _rms(audio, FRAME_LENGTH, HOP_LENGTH)
     frame_times = _frames_to_time_numpy(np.arange(len(rms)), sample_rate, HOP_LENGTH)
-    onset_env = _onset_strength_numpy(audio, sample_rate, HOP_LENGTH)
-    onset_frames = _onset_detect_numpy(
+    onset_env = _onset_strength(audio, sample_rate, HOP_LENGTH)
+    onset_frames = _onset_detect(
         onset_env, sample_rate, HOP_LENGTH, backtrack=True,
     )
     return {"rms": rms, "frame_times": frame_times, "onset_frames": onset_frames}
@@ -1269,7 +1315,7 @@ def detect_segments(
 
     tempo_audio_duration_sec = float(_audio_duration_sec(audio, sample_rate))
     tempo_start = perf_counter()
-    tempo_onset_env = _onset_strength_numpy(audio, sample_rate, TEMPO_ESTIMATION_HOP_LENGTH)
+    tempo_onset_env = _onset_strength(audio, sample_rate, TEMPO_ESTIMATION_HOP_LENGTH)
     tempo = _estimate_tempo_autocorr(tempo_onset_env, sample_rate, TEMPO_ESTIMATION_HOP_LENGTH)
     tempo_estimation_ms = (perf_counter() - tempo_start) * 1000.0
 

@@ -180,10 +180,11 @@ def test_detect_segments_does_not_backtrack_into_previous_active_range(monkeypat
     rms = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0], dtype=np.float32)
     onset_times = np.array([0.45, 0.79], dtype=np.float32)
 
-    # rms / frames_to_time / get_duration / onset_strength are pure-numpy now
-    # (librosa removed from the primary path). _rms_numpy returns 1-D directly.
-    monkeypatch.setattr(segments_mod, "_rms_numpy", lambda *args, **kwargs: rms)
-    monkeypatch.setattr(segments_mod, "_onset_strength_numpy", lambda *args, **kwargs: np.zeros_like(rms))
+    # The primary onset path delegates to the Rust shared core (`_rms` /
+    # `_onset_strength` / `_onset_detect`); the `_*_numpy` functions are the
+    # differential reference. Patch the production wrappers to inject fixtures.
+    monkeypatch.setattr(segments_mod, "_rms", lambda *args, **kwargs: rms)
+    monkeypatch.setattr(segments_mod, "_onset_strength", lambda *args, **kwargs: np.zeros_like(rms))
 
     def fake_frames_to_time(frames, *args, **kwargs):
         frames = np.asarray(frames)

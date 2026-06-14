@@ -10,11 +10,14 @@
 //! frame-exact peak picking). `mel_filterbank` evaluates in f64 then rounds to
 //! f32, mirroring numpy.
 //!
-//! These are NOT delegated from the server recognizer (the numpy reference stays
-//! the source of truth for the frame-index-sensitive onset path). They exist to
-//! run the same onset detection in the browser (WebAudio Float32Array -> wasm),
-//! pinned to the numpy reference by mechanism tests
-//! (`apps/api/tests/test_onset_dsp_rust.py`) and the wasm equivalence harness.
+//! The server recognizer delegates its primary onset path to these (see
+//! `segments._compute_onset_features`): they are frame-exact to the numpy
+//! reference across the full fixture suite and 10-17x faster (onset features
+//! were ~30% of transcription wall time). The `_*_numpy` functions are retained
+//! as the differential-equivalence oracle. The same crate runs the onset
+//! detection in the browser (WebAudio Float32Array -> wasm). Pinned by mechanism
+//! tests (`apps/api/tests/test_onset_dsp_rust.py`), the full fixture regression
+//! suite, and the wasm equivalence harness.
 
 use rustfft::num_complex::Complex32;
 use rustfft::FftPlanner;

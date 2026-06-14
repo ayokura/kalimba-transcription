@@ -1,12 +1,12 @@
 """Mechanism tests: Rust onset DSP (kalimba_dsp) == numpy reference (segments.py).
 
-The Rust ports in `crates/kalimba-dsp/src/onset.rs` are the browser-pipeline
-front end (WebAudio Float32Array -> wasm). They are NOT delegated from the
-server recognizer — `segments.py`'s numpy implementations stay the source of
-truth for the frame-index-sensitive onset path. These tests pin the Rust port to
-that reference so the two never drift; the wasm equivalence harness
-(`crates/kalimba-dsp/check_wasm.sh`) extends the same guarantee to the .wasm
-build.
+The server recognizer's primary onset path delegates to the Rust ports in
+`crates/kalimba-dsp/src/onset.rs` (see `segments._compute_onset_features`); the
+same crate is the browser-pipeline front end (WebAudio Float32Array -> wasm).
+`segments.py`'s `_*_numpy` functions are retained as the differential reference.
+These tests pin the Rust port to that reference so the two never drift; the wasm
+equivalence harness (`crates/kalimba-dsp/check_wasm.sh`) extends the same
+guarantee to the .wasm build.
 
 Constructed inputs only (Test Architecture rule 2): a synthetic multi-onset
 signal exercises the full chain without fixture I/O.

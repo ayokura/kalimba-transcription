@@ -34,9 +34,10 @@ of the librosa-derived numpy reference in `apps/api/app/transcription/segments.p
 | `onset_backtrack` | snap onsets to preceding energy minima |
 | `onset_detect` | full chain: normalise -> peak-pick -> backtrack |
 
-These are not delegated from the server recognizer (numpy stays the source of
-truth for the frame-index-sensitive path); they run the same onset detection in
-the browser, pinned to numpy by `apps/api/tests/test_onset_dsp_rust.py` and the
+The server recognizer's primary onset path delegates to these (frame-exact to
+the numpy reference across the full fixture suite, 10-17x faster); the same crate
+runs onset detection in the browser. Pinned to the numpy reference by
+`apps/api/tests/test_onset_dsp_rust.py`, the fixture regression suite, and the
 wasm equivalence harness.
 
 Each binding is a thin wrapper that only adapts the input array to a `&[f32]`
