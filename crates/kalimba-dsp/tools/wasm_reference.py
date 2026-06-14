@@ -148,6 +148,51 @@ def build_cases(out_dir: Path) -> list[dict]:
                 "expected": pexp, "rtol": 1e-9, "atol": 1e-12,
             })
 
+    # --- pitch: chunk_spectrum (f32 audio -> f64 magnitude spectrum) ---
+    for sr, n_fft in [(48000, 4096), (96000, 8192)]:
+        rng = np.random.default_rng(sr ^ n_fft)
+        for chunk_len in (2048, 3528):
+            nm = f"cs_chunk_{sr}_{n_fft}_{chunk_len}"
+            cin = save_f32(nm, (0.5 * rng.standard_normal(chunk_len)).astype(np.float32))
+            cexp = np.asarray(K.chunk_spectrum(arrays[nm], sr, n_fft), dtype=np.float64)
+            cases.append({
+                "name": f"chunk_spectrum/{sr}/{n_fft}/{chunk_len}", "fn": "chunk_spectrum",
+                "args": [cin, {"i64": sr}, {"u32": n_fft}],
+                "expectedArrayF64": f64_expected(f"cs_spec_{sr}_{n_fft}_{chunk_len}", cexp),
+                "rtol": 1e-9, "atol": 1e-12,
+            })
+
+    # --- pitch: rank_tuning_candidates (integer-comb per-note scores) ---
+    # 17-key C-major-ish frequency span. Values only need to be identical between
+    # the wasm and native call (this harness checks binding-glue parity, not tuning
+    # correctness — that is covered by apps/api/tests/test_chunk_spectrum_rust.py).
+    note_freqs = np.array([
+        261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 493.88, 523.25, 587.33,
+        659.25, 698.46, 783.99, 880.0, 987.77, 1046.5, 1174.66, 1318.51,
+    ], dtype=np.float64)
+    for sr, n_fft, seed in [(48000, 8192, 3), (96000, 8192, 9)]:
+        rng = np.random.default_rng(seed)
+        rfreqs = np.fft.rfftfreq(n_fft, 1.0 / sr).astype(np.float64)
+        rspec = np.zeros_like(rfreqs)
+        for nf in note_freqs[::4]:
+            for m in (1, 2, 3):
+                b = int(round(nf * m / (sr / n_fft)))
+                if 0 <= b < len(rspec):
+                    rspec[b] += 1.0 / m
+        rspec += 0.01 * np.abs(rng.standard_normal(len(rfreqs)))
+        fin = save_f64(f"rk_freqs_{sr}", rfreqs)
+        sin = save_f64(f"rk_spec_{sr}", rspec)
+        nin = save_f64(f"rk_notes_{sr}", note_freqs)
+        rexp = np.asarray(
+            K.rank_tuning_candidates(arrays[f"rk_freqs_{sr}"], arrays[f"rk_spec_{sr}"], arrays[f"rk_notes_{sr}"], H),
+            dtype=np.float64,
+        )
+        cases.append({
+            "name": f"rank_tuning_candidates/{sr}", "fn": "rank_tuning_candidates",
+            "args": [fin, sin, nin, {"f64": H}],
+            "expectedArrayF64": f64_expected(f"rk_scores_{sr}", rexp), "rtol": 1e-9, "atol": 1e-12,
+        })
+
     # --- mel_filterbank (-> flat f32 matrix) ---
     for sr, n_fft, n_mels in [(44100, 2048, 128), (96000, 2048, 128), (48000, 1024, 64)]:
         exp = np.asarray(K.mel_filterbank(sr, n_fft, n_mels), dtype=np.float32)
