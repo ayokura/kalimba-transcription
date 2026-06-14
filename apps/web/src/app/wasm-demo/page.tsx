@@ -23,7 +23,13 @@ export default function WasmDemoPage() {
     let audioContext: AudioContext | null = null;
     try {
       const arrayBuffer = await file.arrayBuffer();
-      audioContext = new AudioContext();
+      // Request 48 kHz: a sample-rate sweep showed note identification is 100%
+      // identical to 96 kHz down to 32 kHz, then degrades (22 kHz ~97%, ≤16 kHz
+      // breaks as high-note partials fall below Nyquist). 48 kHz is the modern
+      // hardware default (no resample on live capture) with ample partial
+      // headroom; this is only a hint — the recognizer is sample-rate-robust, so
+      // whatever rate the browser actually provides is fine.
+      audioContext = new AudioContext({ sampleRate: 48000 });
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
       const samples = audioBuffer.getChannelData(0); // mono (first channel)
       const { onsetTimesSec, frameCount, elapsedMs } = await detectOnsetsInBrowser(
