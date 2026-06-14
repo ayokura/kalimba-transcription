@@ -52,6 +52,10 @@ use std::collections::HashMap;
 /// backtrack) — the browser pipeline front end. See `onset.rs`.
 mod onset;
 
+/// Pitch-identification DSP (f64 chunk spectrum + tuning-candidate ranking) —
+/// the browser pipeline step after onset detection. See `pitch.rs`.
+mod pitch;
+
 thread_local! {
     static FFT_PLANNER: RefCell<FftPlanner<f32>> = RefCell::new(FftPlanner::<f32>::new());
     static HANNING_CACHE: RefCell<HashMap<usize, Vec<f32>>> = RefCell::new(HashMap::new());
@@ -708,6 +712,51 @@ mod python_binding {
         Ok(PyArray1::from_vec(py, super::batch_peak_energies(fs, ss, cs, band_cents)))
     }
 
+    // --- pitch identification (f64 chunk spectrum + ranking; see crate::pitch) ---
+
+    #[pyfunction]
+    fn chunk_spectrum<'py>(
+        py: Python<'py>,
+        chunk: PyReadonlyArray1<f32>,
+        sample_rate: i64,
+        n_fft: usize,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let arr = chunk.as_array();
+        let slice = arr.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("chunk must be a C-contiguous float32 array")
+        })?;
+        Ok(PyArray1::from_vec(
+            py,
+            crate::pitch::chunk_spectrum_inner(slice, sample_rate, n_fft),
+        ))
+    }
+
+    #[pyfunction]
+    fn rank_tuning_candidates<'py>(
+        py: Python<'py>,
+        frequencies: PyReadonlyArray1<f64>,
+        spectrum: PyReadonlyArray1<f64>,
+        note_freqs: PyReadonlyArray1<f64>,
+        band_cents: f64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let fa = frequencies.as_array();
+        let fs = fa.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("frequencies must be a C-contiguous float64 array")
+        })?;
+        let sa = spectrum.as_array();
+        let ss = sa.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("spectrum must be a C-contiguous float64 array")
+        })?;
+        let na = note_freqs.as_array();
+        let ns = na.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("note_freqs must be a C-contiguous float64 array")
+        })?;
+        Ok(PyArray1::from_vec(
+            py,
+            crate::pitch::rank_tuning_inner(fs, ss, ns, band_cents),
+        ))
+    }
+
     // --- onset DSP (browser pipeline front end; see crate::onset) ---
 
     #[pyfunction]
@@ -805,6 +854,8 @@ mod python_binding {
         m.add_function(wrap_pyfunction!(adaptive_n_fft, m)?)?;
         m.add_function(wrap_pyfunction!(peak_energy_near, m)?)?;
         m.add_function(wrap_pyfunction!(batch_peak_energies, m)?)?;
+        m.add_function(wrap_pyfunction!(chunk_spectrum, m)?)?;
+        m.add_function(wrap_pyfunction!(rank_tuning_candidates, m)?)?;
         m.add_function(wrap_pyfunction!(mel_filterbank, m)?)?;
         m.add_function(wrap_pyfunction!(rms, m)?)?;
         m.add_function(wrap_pyfunction!(onset_strength, m)?)?;
@@ -891,6 +942,29 @@ mod wasm_binding {
         band_cents: f64,
     ) -> Vec<f64> {
         crate::batch_peak_energies(frequencies, spectrum, center_freqs, band_cents)
+    }
+
+    // --- pitch identification (f64 chunk spectrum + ranking; see crate::pitch) ---
+
+    /// f64 magnitude spectrum `|rfft(chunk * hanning, n_fft)|` (length n_fft/2+1).
+    /// Browser pitch-ID feeds this into `peak_energy_near`/`batch_peak_energies`.
+    /// Frequencies are the deterministic ramp `k*sample_rate/n_fft` (computed JS-side).
+    #[wasm_bindgen]
+    pub fn chunk_spectrum(audio: &[f32], sample_rate: i64, n_fft: u32) -> Vec<f64> {
+        crate::pitch::chunk_spectrum_inner(audio, sample_rate, n_fft as usize)
+    }
+
+    /// Per-note candidate scores (integer-harmonic-comb branch of the recognizer's
+    /// `rank_tuning_candidates`). Returns one score per `note_freqs` entry, in input
+    /// order; JS argmaxes/sorts and maps to a note name via the tuning it passed in.
+    #[wasm_bindgen]
+    pub fn rank_tuning_candidates(
+        frequencies: &[f64],
+        spectrum: &[f64],
+        note_freqs: &[f64],
+        band_cents: f64,
+    ) -> Vec<f64> {
+        crate::pitch::rank_tuning_inner(frequencies, spectrum, note_freqs, band_cents)
     }
 
     // --- onset DSP (browser pipeline front end; see crate::onset) ---
