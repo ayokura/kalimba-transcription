@@ -220,6 +220,95 @@ fn note_band_energy_oneshot(
     )
 }
 
+/// Peak magnitude of a precomputed (f64) spectrum within `±band_cents` of
+/// `center_freq`. Mirror of `peaks.peak_energy_near`: positive-freq bins only,
+/// cents distance `|1200 * log2(f / center)|`. Operates on the recognizer's
+/// already-f64 rfft spectrum so it is numerically equivalent to numpy (no f32
+/// downcast). Returns 0.0 when no bin falls in the band.
+fn peak_energy_near(
+    frequencies: &[f64],
+    spectrum: &[f64],
+    center_freq: f64,
+    band_cents: f64,
+) -> f64 {
+    if !(center_freq > 0.0) {
+        return 0.0;
+    }
+    let m = frequencies.len().min(spectrum.len());
+    let mut best = f64::NEG_INFINITY;
+    let mut found = false;
+    for j in 0..m {
+        let f = frequencies[j];
+        if f > 0.0 {
+            let cents = (1200.0 * (f / center_freq).log2()).abs();
+            if cents <= band_cents {
+                let v = spectrum[j];
+                if !found || v > best {
+                    best = v;
+                    found = true;
+                }
+            }
+        }
+    }
+    if found {
+        best
+    } else {
+        0.0
+    }
+}
+
+/// Batched `peak_energy_near` over many `center_freqs`. Mirror of
+/// `peaks.batch_peak_energies`: precomputes `log2(f)` for the positive-freq bins
+/// once, then per center uses the cents distance `|1200 * (log2(f) - log2(c))|`.
+/// Note the cents formula differs from `peak_energy_near` (`log2(f/c)`), matching
+/// the two distinct numpy implementations exactly. Invalid centers (<= 0) -> 0.
+fn batch_peak_energies(
+    frequencies: &[f64],
+    spectrum: &[f64],
+    center_freqs: &[f64],
+    band_cents: f64,
+) -> Vec<f64> {
+    let n = center_freqs.len();
+    let mut results = vec![0.0f64; n];
+    if n == 0 {
+        return results;
+    }
+    let m = frequencies.len().min(spectrum.len());
+    let mut log_pos: Vec<f64> = Vec::with_capacity(m);
+    let mut spec_pos: Vec<f64> = Vec::with_capacity(m);
+    for j in 0..m {
+        let f = frequencies[j];
+        if f > 0.0 {
+            log_pos.push(f.log2());
+            spec_pos.push(spectrum[j]);
+        }
+    }
+    if log_pos.is_empty() {
+        return results;
+    }
+    for (i, &c) in center_freqs.iter().enumerate() {
+        if !(c > 0.0) {
+            continue;
+        }
+        let log_c = c.log2();
+        let mut best = f64::NEG_INFINITY;
+        let mut found = false;
+        for (k, &lp) in log_pos.iter().enumerate() {
+            if (1200.0 * (lp - log_c)).abs() <= band_cents {
+                let v = spec_pos[k];
+                if !found || v > best {
+                    best = v;
+                    found = true;
+                }
+            }
+        }
+        if found {
+            results[i] = best;
+        }
+    }
+    results
+}
+
 /// Binding-agnostic core of `scan_gap_for_mute_dip_with_window`.
 ///
 /// Scans a gap for a mute-dip-then-recovery pattern in `frequency`'s band and
@@ -576,6 +665,49 @@ mod python_binding {
         super::adaptive_n_fft(sample_rate, frequency, chunk_len, min_bins, harmonic_band_cents)
     }
 
+    // --- broadband spectral energy (f64, matches the recognizer's rfft spectrum) ---
+
+    #[pyfunction]
+    fn peak_energy_near(
+        frequencies: PyReadonlyArray1<f64>,
+        spectrum: PyReadonlyArray1<f64>,
+        center_freq: f64,
+        band_cents: f64,
+    ) -> PyResult<f64> {
+        let fa = frequencies.as_array();
+        let fs = fa.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("frequencies must be a C-contiguous float64 array")
+        })?;
+        let sa = spectrum.as_array();
+        let ss = sa.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("spectrum must be a C-contiguous float64 array")
+        })?;
+        Ok(super::peak_energy_near(fs, ss, center_freq, band_cents))
+    }
+
+    #[pyfunction]
+    fn batch_peak_energies<'py>(
+        py: Python<'py>,
+        frequencies: PyReadonlyArray1<f64>,
+        spectrum: PyReadonlyArray1<f64>,
+        center_freqs: PyReadonlyArray1<f64>,
+        band_cents: f64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let fa = frequencies.as_array();
+        let fs = fa.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("frequencies must be a C-contiguous float64 array")
+        })?;
+        let sa = spectrum.as_array();
+        let ss = sa.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("spectrum must be a C-contiguous float64 array")
+        })?;
+        let ca = center_freqs.as_array();
+        let cs = ca.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("center_freqs must be a C-contiguous float64 array")
+        })?;
+        Ok(PyArray1::from_vec(py, super::batch_peak_energies(fs, ss, cs, band_cents)))
+    }
+
     // --- onset DSP (browser pipeline front end; see crate::onset) ---
 
     #[pyfunction]
@@ -671,6 +803,8 @@ mod python_binding {
         m.add_function(wrap_pyfunction!(detect_gap_rise_attack, m)?)?;
         m.add_function(wrap_pyfunction!(note_band_energy, m)?)?;
         m.add_function(wrap_pyfunction!(adaptive_n_fft, m)?)?;
+        m.add_function(wrap_pyfunction!(peak_energy_near, m)?)?;
+        m.add_function(wrap_pyfunction!(batch_peak_energies, m)?)?;
         m.add_function(wrap_pyfunction!(mel_filterbank, m)?)?;
         m.add_function(wrap_pyfunction!(rms, m)?)?;
         m.add_function(wrap_pyfunction!(onset_strength, m)?)?;
@@ -733,6 +867,30 @@ mod wasm_binding {
             min_bins as usize,
             harmonic_band_cents,
         ) as u32
+    }
+
+    // --- broadband spectral energy (f64 Float64Array) ---
+
+    /// Peak magnitude within `±band_cents` of `center_freq` over a precomputed spectrum.
+    #[wasm_bindgen]
+    pub fn peak_energy_near(
+        frequencies: &[f64],
+        spectrum: &[f64],
+        center_freq: f64,
+        band_cents: f64,
+    ) -> f64 {
+        crate::peak_energy_near(frequencies, spectrum, center_freq, band_cents)
+    }
+
+    /// Batched `peak_energy_near` over many center frequencies.
+    #[wasm_bindgen]
+    pub fn batch_peak_energies(
+        frequencies: &[f64],
+        spectrum: &[f64],
+        center_freqs: &[f64],
+        band_cents: f64,
+    ) -> Vec<f64> {
+        crate::batch_peak_energies(frequencies, spectrum, center_freqs, band_cents)
     }
 
     // --- onset DSP (browser pipeline front end; see crate::onset) ---

@@ -31,9 +31,14 @@ function readU32(file) {
   const buf = fs.readFileSync(path.join(refDir, file));
   return new Uint32Array(buf.buffer, buf.byteOffset, buf.length / 4);
 }
+function readF64(file) {
+  const buf = fs.readFileSync(path.join(refDir, file));
+  return new Float64Array(buf.buffer, buf.byteOffset, buf.length / 8);
+}
 
 function buildArg(spec) {
   if ("f32arr" in spec) return readF32(spec.f32arr);
+  if ("f64arr" in spec) return readF64(spec.f64arr);
   if ("u32arr" in spec) return readU32(spec.u32arr);
   if ("i64" in spec) return BigInt(spec.i64);
   if ("f64" in spec) return spec.f64;
@@ -66,6 +71,21 @@ for (const c of ref.cases) {
       continue;
     }
     const atol = c.atol ?? 0, rtol = c.rtol ?? 1e-6;
+    for (let i = 0; i < exp.length; i++) {
+      const d = Math.abs(got[i] - exp[i]);
+      if (d > maxd) maxd = d;
+      if (d > atol + rtol * Math.abs(exp[i]) && bad < 0) bad = i;
+    }
+    if (bad < 0) pass++;
+    else failures.push(`${c.name}: max|d|=${maxd.toExponential(2)} first bad @${bad} wasm=${got[bad]} native=${exp[bad]}`);
+  } else if ("expectedArrayF64" in c) {
+    const exp = readF64(c.expectedArrayF64);
+    if (got.length !== exp.length) {
+      failures.push(`${c.name}: length wasm=${got.length} native=${exp.length}`);
+      continue;
+    }
+    const atol = c.atol ?? 0, rtol = c.rtol ?? 1e-9;
+    let maxd = 0, bad = -1;
     for (let i = 0; i < exp.length; i++) {
       const d = Math.abs(got[i] - exp[i]);
       if (d > maxd) maxd = d;

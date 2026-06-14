@@ -76,6 +76,16 @@ def build_cases(out_dir: Path) -> list[dict]:
         a.tofile(out_dir / f"{name}.u32")
         return {"u32arr": f"{name}.u32"}
 
+    def save_f64(name: str, arr: np.ndarray) -> dict:
+        a = np.ascontiguousarray(arr, dtype=np.float64)
+        a.tofile(out_dir / f"{name}.f64")
+        arrays[name] = a
+        return {"f64arr": f"{name}.f64"}
+
+    def f64_expected(name: str, arr: np.ndarray) -> str:
+        np.ascontiguousarray(arr, dtype=np.float64).tofile(out_dir / f"{name}.f64")
+        return f"{name}.f64"
+
     def f32_expected(name: str, arr: np.ndarray) -> str:
         np.ascontiguousarray(arr, dtype=np.float32).tofile(out_dir / f"{name}.f32")
         return f"{name}.f32"
@@ -111,6 +121,32 @@ def build_cases(out_dir: Path) -> list[dict]:
                         "args": [{"i64": sr}, {"f64": freq}, {"u32": chunk_len}, {"u32": min_bins}, {"f64": H}],
                         "expected": exp, "exact": True,
                     })
+
+    # --- broadband spectral energy (f64 in -> f64 scalar / array) ---
+    for sr, n_fft in [(44100, 4096), (96000, 8192)]:
+        rng = np.random.default_rng(sr)
+        freqs = np.fft.rfftfreq(n_fft, 1.0 / sr)
+        spec = np.abs(rng.standard_normal(len(freqs)) + 1j * rng.standard_normal(len(freqs)))
+        fin = save_f64(f"bb_freqs_{sr}", freqs)
+        sin = save_f64(f"bb_spec_{sr}", spec)
+        centers = np.array([261.63, 392.0, 523.25, 1046.5, 40.0, 0.0], dtype=np.float64)
+        cin = save_f64(f"bb_centers_{sr}", centers)
+        farr = arrays[f"bb_freqs_{sr}"]
+        sarr = arrays[f"bb_spec_{sr}"]
+        carr = arrays[f"bb_centers_{sr}"]
+        bexp = np.asarray(K.batch_peak_energies(farr, sarr, carr, H), dtype=np.float64)
+        cases.append({
+            "name": f"batch_peak_energies/{sr}", "fn": "batch_peak_energies",
+            "args": [fin, sin, cin, {"f64": H}],
+            "expectedArrayF64": f64_expected(f"bb_batch_{sr}", bexp), "rtol": 1e-9, "atol": 1e-12,
+        })
+        for c in (261.63, 1046.5, 40.0):
+            pexp = K.peak_energy_near(farr, sarr, float(c), H)
+            cases.append({
+                "name": f"peak_energy_near/{sr}/{int(c)}", "fn": "peak_energy_near",
+                "args": [fin, sin, {"f64": c}, {"f64": H}],
+                "expected": pexp, "rtol": 1e-9, "atol": 1e-12,
+            })
 
     # --- mel_filterbank (-> flat f32 matrix) ---
     for sr, n_fft, n_mels in [(44100, 2048, 128), (96000, 2048, 128), (48000, 1024, 64)]:

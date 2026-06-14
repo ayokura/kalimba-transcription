@@ -19,6 +19,7 @@ The numeric core is **binding-agnostic pure Rust** and operates on plain
 | `cached_hanning` | cached Hanning window |
 | `adaptive_n_fft` | FFT size selection for a target band |
 | `note_band_energy_inner` / `note_band_energy` | peak FFT magnitude in a note's band |
+| `peak_energy_near` / `batch_peak_energies` | peak magnitude near center freq(s) over a precomputed f64 spectrum |
 | `scan_gap_for_mute_dip_with_window_inner` | mute-dip-then-recovery scan |
 | `detect_gap_rise_attack_inner` | two-point energy-rise check inside a gap |
 

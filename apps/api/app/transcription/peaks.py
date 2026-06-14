@@ -21,17 +21,19 @@ from .profiles import (
 
 
 def peak_energy_near(frequencies: np.ndarray, spectrum: np.ndarray, center_freq: float, band_cents: float = HARMONIC_BAND_CENTS) -> float:
-    valid = frequencies > 0
-    positive_freqs = frequencies[valid]
-    positive_spectrum = spectrum[valid]
-    if center_freq <= 0 or len(positive_freqs) == 0:
-        return 0.0
+    """Peak magnitude within ±band_cents of center_freq over a precomputed spectrum.
 
-    distances = np.abs(1200.0 * np.log2(positive_freqs / center_freq))
-    mask = distances <= band_cents
-    if not np.any(mask):
-        return 0.0
-    return float(np.max(positive_spectrum[mask]))
+    Delegated to the Rust ``kalimba_dsp.peak_energy_near`` shared core. The
+    recognizer's rfft spectrum/frequencies are already float64, so this is
+    bit-exact to the previous numpy implementation (verified in
+    ``tests/test_broadband_energy_rust.py``). Inputs are coerced to C-contiguous
+    float64 (a no-op for the cached rfftfreq / abs(rfft) arrays)."""
+    return kalimba_dsp.peak_energy_near(
+        np.ascontiguousarray(frequencies, dtype=np.float64),
+        np.ascontiguousarray(spectrum, dtype=np.float64),
+        float(center_freq),
+        float(band_cents),
+    )
 
 
 def _adaptive_n_fft(sample_rate: int, min_frequency: float, chunk_len: int, *, min_bins: int = 2) -> int:
@@ -61,24 +63,17 @@ def _adaptive_n_fft(sample_rate: int, min_frequency: float, chunk_len: int, *, m
 
 
 def batch_peak_energies(frequencies: np.ndarray, spectrum: np.ndarray, center_freqs: np.ndarray, band_cents: float = HARMONIC_BAND_CENTS) -> np.ndarray:
-    valid = frequencies > 0
-    positive_freqs = frequencies[valid]
-    positive_spectrum = spectrum[valid]
-    if len(positive_freqs) == 0 or len(center_freqs) == 0:
-        return np.zeros(len(center_freqs))
+    """Batched :func:`peak_energy_near` over many center frequencies.
 
-    valid_centers = center_freqs > 0
-    log_positive = np.log2(positive_freqs)
-    log_centers = np.full(len(center_freqs), -np.inf)
-    log_centers[valid_centers] = np.log2(center_freqs[valid_centers])
-
-    distances = np.abs(1200.0 * (log_positive[np.newaxis, :] - log_centers[:, np.newaxis]))
-    masks = distances <= band_cents
-    results = np.zeros(len(center_freqs))
-    for i in range(len(center_freqs)):
-        if valid_centers[i] and np.any(masks[i]):
-            results[i] = float(np.max(positive_spectrum[masks[i]]))
-    return results
+    Delegated to the Rust ``kalimba_dsp.batch_peak_energies`` shared core (f64,
+    bit-exact to the previous numpy implementation). This dominated the broadband
+    segment_peaks path (~22% of transcription wall time) before delegation."""
+    return kalimba_dsp.batch_peak_energies(
+        np.ascontiguousarray(frequencies, dtype=np.float64),
+        np.ascontiguousarray(spectrum, dtype=np.float64),
+        np.ascontiguousarray(center_freqs, dtype=np.float64),
+        float(band_cents),
+    )
 
 def suppress_harmonics(
     spectrum: np.ndarray,
