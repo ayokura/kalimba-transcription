@@ -25,16 +25,12 @@ npm run dev:web
 ### API
 
 ```bash
-# WSL/Linux (primary)
 uv sync
 uv run uvicorn app.main:app --reload --app-dir apps/api
 ```
 
-```bash
-# Windows (legacy) — Python 3.13
-py -3.13 -m pip install -r apps/api/requirements.txt
-py -3.13 -m uvicorn app.main:app --reload --app-dir apps/api
-```
+`uv` is the cross-platform source of truth (it manages the Python 3.14 toolchain
+from `pyproject.toml` / `uv.lock`); the same commands work on Windows.
 
 Set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` for the web app if needed.
 

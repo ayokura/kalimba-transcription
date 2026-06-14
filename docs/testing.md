@@ -16,30 +16,18 @@ npm run dev:web
 ### API dependencies
 
 ```bash
-# WSL/Linux (primary)
 uv sync
 ```
 
-```powershell
-# Windows (legacy)
-py -3.13 -m pip install -r apps/api/requirements.txt
-```
-
-Python 3.14 caused a `pydantic-core` build issue. Use Python 3.13 for the API (Windows only; WSL uses uv-managed Python 3.13).
+`uv` manages the Python 3.14 toolchain from `pyproject.toml` / `uv.lock` and is
+the cross-platform source of truth (the same command works on Windows).
 
 ## Recommended local run
 
 ### API
 
 ```bash
-# WSL/Linux (primary)
 uv run uvicorn app.main:app --reload --app-dir apps/api
-```
-
-```powershell
-# Windows (legacy)
-$env:PYTHONPATH = "C:\src\calimba-score\apps\api"
-py -3.13 -m uvicorn app.main:app --reload --app-dir apps/api
 ```
 
 ### Web
@@ -172,13 +160,7 @@ Rules:
 A saved browser capture pack can be turned into an API fixture.
 
 ```bash
-# WSL/Linux (primary)
 uv run python scripts/import_manual_capture.py <zip-path> <fixture-id> --min-events 5 --max-events 5 --required-event-note-set B4+D5=5
-```
-
-```powershell
-# Windows (legacy)
-py -3.13 scripts/import_manual_capture.py <zip-path> <fixture-id> --min-events 5 --max-events 5 --required-event-note-set B4+D5=5
 ```
 
 For a pending capture that should be stored but not executed yet:

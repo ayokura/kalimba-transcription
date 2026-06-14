@@ -7,7 +7,6 @@ requires-python = ">=3.14,<3.15"
 dependencies = [
     "fastapi>=0.135.2",
     "kalimba-dsp",
-    "librosa>=0.11.0",
     "numpy>=2.4.3",
     "pydantic>=2.12.5",
     "python-multipart>=0.0.22",
@@ -17,8 +16,13 @@ dependencies = [
 ]
 
 [dependency-groups]
+# librosa is NOT a runtime dependency — the recognizer is librosa-free (#193).
+# It is used only by the analysis scripts/skills (scripts/audio-analysis/,
+# .claude/skills/). Kept in dev so `uv run` (dev-default) still resolves it for
+# those tools; a `uv sync --no-dev` prod install can drop it.
 dev = [
     "httpx>=0.28.1",
+    "librosa>=0.11.0",
     "pytest>=9.0.2",
     "pytest-xdist>=3.5.0",
 ]
