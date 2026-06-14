@@ -7,6 +7,8 @@ type ReviewFocusPanelProps = {
   events: ScoreEvent[];
   activeEventId: string | null;
   onActiveEventIdChange: (eventId: string) => void;
+  /** 選択中 event の位置から再生する。audio が利用可能なときだけ渡される。 */
+  onAuditionEvent?: (eventId: string) => void;
 };
 
 function buildEventLine(event: ScoreEvent | null) {
@@ -38,6 +40,7 @@ export function ReviewFocusPanel({
   events,
   activeEventId,
   onActiveEventIdChange,
+  onAuditionEvent,
 }: ReviewFocusPanelProps) {
   const activeIndex = Math.max(
     events.findIndex((event) => event.id === activeEventId),
@@ -69,6 +72,16 @@ export function ReviewFocusPanel({
           <h2>選択中の event</h2>
         </div>
         <div className="row wrap review-focus-nav">
+          {onAuditionEvent ? (
+            <button
+              type="button"
+              className="secondary"
+              aria-label={`${activeEvent.id} をここから再生`}
+              onClick={() => onAuditionEvent(activeEvent.id)}
+            >
+              ▶ ここから再生
+            </button>
+          ) : null}
           <button
             type="button"
             className="secondary"

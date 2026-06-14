@@ -71,4 +71,34 @@ describe("ReviewFocusPanel", () => {
 
     expect(onActiveEventIdChange).toHaveBeenCalledWith("evt-1");
   });
+
+  it("does not render a play control when audition is unavailable", () => {
+    render(
+      <ReviewFocusPanel
+        events={buildEvents()}
+        activeEventId="evt-2"
+        onActiveEventIdChange={() => {}}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /ここから再生/ })).toBeNull();
+  });
+
+  it("auditions the active event from its start when available", async () => {
+    const user = userEvent.setup();
+    const onAuditionEvent = vi.fn();
+
+    render(
+      <ReviewFocusPanel
+        events={buildEvents()}
+        activeEventId="evt-2"
+        onActiveEventIdChange={() => {}}
+        onAuditionEvent={onAuditionEvent}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "evt-2 をここから再生" }));
+
+    expect(onAuditionEvent).toHaveBeenCalledWith("evt-2");
+  });
 });

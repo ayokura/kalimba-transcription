@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { NotationPanel } from "@/components/NotationPanel";
 import { ReviewEventListPanel } from "@/components/ReviewEventListPanel";
 import { ReviewFocusPanel } from "@/components/ReviewFocusPanel";
+import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useReviewWorkspaceSession } from "@/lib/useReviewWorkspaceSession";
 
 export function ReviewWorkspace() {
@@ -23,6 +24,15 @@ export function ReviewWorkspace() {
     setActiveEventId,
     setNotationMode,
   } = useReviewWorkspaceSession(sessionId);
+
+  // hooks は early return より前で無条件に呼ぶ必要があるため、session 未取得時は
+  // 空配列で初期化しておく (audioRef は描画される <audio> が無ければ no-op)。
+  const events = session?.responseSnapshot.events ?? [];
+  const { audioRef, seekToEvent, handleTimeUpdate, handleSeeking } = useAudioPlayback(
+    events,
+    setActiveEventId,
+  );
+
   if (!storageAvailable) {
     return (
       <main className="shell">
@@ -70,7 +80,7 @@ export function ReviewWorkspace() {
           <p className="eyebrow">Review Workspace</p>
           <h1>解析結果を確認する。</h1>
           <p className="hero-copy">
-            ここでは read-only で解析結果を見返します。repair と playback は後続 issue で追加します。
+            ここでは解析結果を見返します。event を選ぶとその位置から再生し、再生に合わせて選択もハイライトされます。repair は後続 issue で追加します。
           </p>
         </div>
         <div className="hero-card">
@@ -102,6 +112,7 @@ export function ReviewWorkspace() {
             events={session.responseSnapshot.events}
             activeEventId={activeEvent?.id ?? null}
             onActiveEventIdChange={setActiveEventId}
+            onAuditionEvent={audioUrl ? (eventId) => seekToEvent(eventId) : undefined}
           />
         </section>
 
@@ -114,7 +125,15 @@ export function ReviewWorkspace() {
               </div>
             </div>
             {audioUrl ? (
-              <audio controls preload="metadata" src={audioUrl} className="wide" />
+              <audio
+                ref={audioRef}
+                controls
+                preload="metadata"
+                src={audioUrl}
+                onTimeUpdate={handleTimeUpdate}
+                onSeeking={handleSeeking}
+                className="wide"
+              />
             ) : (
               <div className="warning-box">
                 <p>この review session には audio が残っていません。same-tab の解析直後に `/review` を開き直してください。</p>
@@ -132,6 +151,7 @@ export function ReviewWorkspace() {
             events={session.responseSnapshot.events}
             activeEventId={activeEvent?.id ?? null}
             onActiveEventIdChange={setActiveEventId}
+            onAuditionEvent={audioUrl ? (eventId) => seekToEvent(eventId) : undefined}
           />
         </div>
       </div>
