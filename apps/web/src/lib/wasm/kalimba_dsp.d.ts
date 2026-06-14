@@ -12,6 +12,13 @@ export function adaptive_n_fft(sample_rate: bigint, frequency: number, chunk_len
  */
 export function batch_peak_energies(frequencies: Float64Array, spectrum: Float64Array, center_freqs: Float64Array, band_cents: number): Float64Array;
 
+/**
+ * f64 magnitude spectrum `|rfft(chunk * hanning, n_fft)|` (length n_fft/2+1).
+ * Browser pitch-ID feeds this into `peak_energy_near`/`batch_peak_energies`.
+ * Frequencies are the deterministic ramp `k*sample_rate/n_fft` (computed JS-side).
+ */
+export function chunk_spectrum(audio: Float32Array, sample_rate: bigint, n_fft: number): Float64Array;
+
 export function detect_gap_rise_attack(audio: Float32Array, sample_rate: bigint, gap_start: number, gap_end: number, frequency: number, window_seconds: number, pre_offset: number, post_offset: number, rise_ratio: number, min_post_energy: number, min_pre_energy: number, harmonic_band_cents: number): number | undefined;
 
 /**
@@ -52,6 +59,13 @@ export function peak_energy_near(frequencies: Float64Array, spectrum: Float64Arr
 export function peak_pick(x: Float32Array, pre_max: number, post_max: number, pre_avg: number, post_avg: number, delta: number, wait: number): Uint32Array;
 
 /**
+ * Per-note candidate scores (integer-harmonic-comb branch of the recognizer's
+ * `rank_tuning_candidates`). Returns one score per `note_freqs` entry, in input
+ * order; JS argmaxes/sorts and maps to a note name via the tuning it passed in.
+ */
+export function rank_tuning_candidates(frequencies: Float64Array, spectrum: Float64Array, note_freqs: Float64Array, band_cents: number): Float64Array;
+
+/**
  * Frame-wise RMS energy (center=True, constant pad).
  */
 export function rms(audio: Float32Array, frame_length: number, hop_length: number): Float32Array;
@@ -64,6 +78,7 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly adaptive_n_fft: (a: bigint, b: number, c: number, d: number, e: number) => number;
     readonly batch_peak_energies: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly chunk_spectrum: (a: number, b: number, c: bigint, d: number) => [number, number];
     readonly detect_gap_rise_attack: (a: number, b: number, c: bigint, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number) => [number, number];
     readonly mel_filterbank: (a: bigint, b: number, c: number) => [number, number];
     readonly note_band_energy: (a: number, b: number, c: bigint, d: number, e: number, f: number, g: number) => number;
@@ -72,6 +87,7 @@ export interface InitOutput {
     readonly onset_strength: (a: number, b: number, c: bigint, d: number, e: number, f: number) => [number, number];
     readonly peak_energy_near: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly peak_pick: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
+    readonly rank_tuning_candidates: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly rms: (a: number, b: number, c: number, d: number) => [number, number];
     readonly scan_gap_for_mute_dip_with_window: (a: number, b: number, c: bigint, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;

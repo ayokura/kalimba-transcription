@@ -3,10 +3,11 @@
 import { useState } from "react";
 
 import { detectOnsetsInBrowser } from "@/lib/wasm/onset";
+import { identifyNotesInBrowser, type IdentifiedNote } from "@/lib/wasm/pitch";
 
 type DemoState = {
   info: string;
-  onsetTimesSec: number[];
+  notes: IdentifiedNote[];
 };
 
 export default function WasmDemoPage() {
@@ -36,13 +37,19 @@ export default function WasmDemoPage() {
         samples,
         audioBuffer.sampleRate,
       );
+      const { notes, elapsedMs: pitchMs } = await identifyNotesInBrowser(
+        samples,
+        audioBuffer.sampleRate,
+        onsetTimesSec,
+      );
       setResult({
         info:
           `${audioBuffer.duration.toFixed(1)}s @ ${audioBuffer.sampleRate} Hz, ` +
           `${samples.length.toLocaleString()} samples, ${frameCount} frames → ` +
-          `${onsetTimesSec.length} onsets in ${elapsedMs.toFixed(0)} ms ` +
-          `(fully in-browser, no server round-trip)`,
-        onsetTimesSec,
+          `${onsetTimesSec.length} onsets (${elapsedMs.toFixed(0)} ms) → ` +
+          `${notes.length} notes (${pitchMs.toFixed(0)} ms), tuning kalimba-17-c — ` +
+          `fully in-browser, no server round-trip`,
+        notes,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -55,13 +62,20 @@ export default function WasmDemoPage() {
   return (
     <main style={{ maxWidth: 640, margin: "0 auto", padding: "2rem 1.5rem" }}>
       <h1 style={{ fontSize: "1.4rem", marginBottom: "0.5rem" }}>
-        WASM onset detection (browser-only)
+        WASM onset + pitch identification (browser-only)
       </h1>
       <p style={{ color: "#555", lineHeight: 1.6, marginBottom: "1.25rem" }}>
         Proof of the browser-side pipeline: the kalimba-dsp Rust core runs as
         WebAssembly on a WebAudio-decoded <code>Float32Array</code> — the same
-        onset detection the server uses, with zero server round-trip. Pick an
-        audio file (WAV/MP3/etc.).
+        onset detection <em>and</em> tuning-candidate ranking the server uses, with
+        zero server round-trip. Each onset is matched to the strongest note in the
+        kalimba-17-c tuning. Pick an audio file (WAV/MP3/etc.).
+      </p>
+      <p style={{ color: "#999", fontSize: "0.85rem", lineHeight: 1.5, marginBottom: "1.25rem" }}>
+        Note: pitch ID is experimental. The tuning is fixed to kalimba-17-c and the
+        per-onset analysis window is a simple heuristic (top-1, monophonic) — the
+        Rust↔WASM numerics are parity-checked against the server, but the window
+        choice is not yet tuned for accuracy.
       </p>
 
       <input type="file" accept="audio/*" onChange={handleFile} disabled={busy} />
@@ -75,8 +89,11 @@ export default function WasmDemoPage() {
         <section style={{ marginTop: "1.5rem" }}>
           <p style={{ color: "#333", marginBottom: "0.75rem" }}>{result.info}</p>
           <ol style={{ columns: 3, fontVariantNumeric: "tabular-nums", color: "#222" }}>
-            {result.onsetTimesSec.map((sec, i) => (
-              <li key={i}>{sec.toFixed(3)}s</li>
+            {result.notes.map((note, i) => (
+              <li key={i}>
+                <strong>{note.noteName}</strong>{" "}
+                <span style={{ color: "#777" }}>@ {note.onsetTimeSec.toFixed(3)}s</span>
+              </li>
             ))}
           </ol>
         </section>

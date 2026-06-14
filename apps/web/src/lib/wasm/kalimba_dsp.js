@@ -37,6 +37,24 @@ export function batch_peak_energies(frequencies, spectrum, center_freqs, band_ce
 }
 
 /**
+ * f64 magnitude spectrum `|rfft(chunk * hanning, n_fft)|` (length n_fft/2+1).
+ * Browser pitch-ID feeds this into `peak_energy_near`/`batch_peak_energies`.
+ * Frequencies are the deterministic ramp `k*sample_rate/n_fft` (computed JS-side).
+ * @param {Float32Array} audio
+ * @param {bigint} sample_rate
+ * @param {number} n_fft
+ * @returns {Float64Array}
+ */
+export function chunk_spectrum(audio, sample_rate, n_fft) {
+    const ptr0 = passArrayF32ToWasm0(audio, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.chunk_spectrum(ptr0, len0, sample_rate, n_fft);
+    var v2 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v2;
+}
+
+/**
  * @param {Float32Array} audio
  * @param {bigint} sample_rate
  * @param {number} gap_start
@@ -178,6 +196,29 @@ export function peak_pick(x, pre_max, post_max, pre_avg, post_avg, delta, wait) 
     var v2 = getArrayU32FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
     return v2;
+}
+
+/**
+ * Per-note candidate scores (integer-harmonic-comb branch of the recognizer's
+ * `rank_tuning_candidates`). Returns one score per `note_freqs` entry, in input
+ * order; JS argmaxes/sorts and maps to a note name via the tuning it passed in.
+ * @param {Float64Array} frequencies
+ * @param {Float64Array} spectrum
+ * @param {Float64Array} note_freqs
+ * @param {number} band_cents
+ * @returns {Float64Array}
+ */
+export function rank_tuning_candidates(frequencies, spectrum, note_freqs, band_cents) {
+    const ptr0 = passArrayF64ToWasm0(frequencies, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayF64ToWasm0(spectrum, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayF64ToWasm0(note_freqs, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.rank_tuning_candidates(ptr0, len0, ptr1, len1, ptr2, len2, band_cents);
+    var v4 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v4;
 }
 
 /**
