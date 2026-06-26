@@ -46,39 +46,13 @@
   - `review_needed`: metadata or interpretation still unclear
   - `reference_only`: retain for reference, not active regression
 
-## Alignment Overrides
+## Fixture Alignment / Overrides
 
-- `alignment_overrides.json` は、score_structure が楽譜として正しいが録音上の演奏が楽譜と異なる場合に、特定イベントの「この録音での正解」をパッチするための仕組みである。
-- score_structure.json は楽譜の意図を表すものであり、変更しない。override は録音固有の事実を記録する。
-- `ignoredRanges` と同様、**ユーザーからの明示的な許可または指示がある場合に限り**追加・変更できる。エージェントが独自判断で追加してはならない。
+- `score_structure.json` は楽譜の意図を表す。録音固有の演奏差分に合わせて変更しない。
+- `alignment_overrides.json` は録音固有の差分（楽譜 → 録音の変換規則）を記録する。
+- `alignment_overrides.json` と `ignoredRanges` は、**ユーザーからの明示的な許可または指示がある場合に限り**追加・変更できる。エージェントが独自判断で追加してはならない。
 - 各 override には `reason` フィールドで根拠（耳確認、スペクトル分析等）を記録すること。
-
-### Schema
-
-v1 (現行互換) と v2 (op 拡張) をサポート。`op` を省略すると v1 と同じ `replace` 動作。
-
-```json
-{
-  "version": 2,
-  "overrides": [
-    {"op": "replace", "eventIndex": 64, "expectedNotes": ["C5","E4"], "reason": "..."},
-    {"op": "insert", "afterEventIndex": 115, "expectedNotes": ["E5"],
-     "reason": "R3 playing error: E116 D5 missed, E5 played instead; restarted from D5"},
-    {"op": "skip", "eventIndex": 170, "reason": "performer skipped this note"}
-  ]
-}
-```
-
-- **replace**: 既存イベント `eventIndex` の `expectedNotes` を上書き。v1 互換 (op 省略可)。
-- **insert**: スコアにない余分な演奏 event を `afterEventIndex` の直後に追加。label は `E{afterEventIndex}{suffix}` (例: `E115a`)。同じ `afterEventIndex` に複数 insert がある場合は自動で `a`, `b`, `c`... が付く。明示したい場合は `suffix` フィールドで指定。
-- **skip**: スコア上の `eventIndex` が録音では弾かれていない場合に欠番化。
-
-### score_structure との関係
-
-- `score_structure.json` は楽譜の真実 (不変)
-- `alignment_overrides.json` は録音固有の差分 (楽譜 → 録音の変換規則)
-- `expected.json:expectedEventNoteSetsOrdered` は録音の実順 (テスト assertion 用、alignment_overrides 適用後の最終形と整合するよう手書き)
-- diagnosis tool (`score_alignment_diagnosis.py`) は score_structure に alignment_overrides を適用して recognizer 出力と突合する
+- schema と `score_structure.json` / `expected.json` との関係は [`docs/fixture-alignment.md`](docs/fixture-alignment.md) を参照。
 
 ## Spike / Rollback Policy
 
@@ -119,7 +93,7 @@ v1 (現行互換) と v2 (op 拡張) をサポート。`op` を省略すると v
   - the issue title and summary, or
   - the relevant local problem statement directly
 - Close subagents after their result is integrated.
-- Use subagents aggressively for parallel analysis, but keep write scopes explicit when delegating implementation.
+- Use subagents for independent, high-value parallel analysis when the active runtime and higher-priority instructions permit it; keep write scopes explicit when delegating implementation.
 - Explorer subagents should treat file edits as exceptional, not normal.
 - Explorer subagents must not edit the main worktree directly.
 - If an explorer concludes that a file edit is necessary for the investigation, it must:
@@ -146,41 +120,14 @@ v1 (現行互換) と v2 (op 拡張) をサポート。`op` を省略すると v
 
 ## Test Architecture
 
-テストは3層モデルに従う:
+詳細は [`docs/testing.md`](docs/testing.md) を参照。AGENTS.md では以下のみ常時ルールとして維持する。
 
-| Tier | 目的 | 入力 | アサーション対象 |
-|------|------|------|----------------|
-| **Mechanism** | 個別の recognizer 関数の動作確認 | 構築した RawEvent/NoteCandidate、または marshal した中間データ | 関数の戻り値 |
-| **Fixture regression** | 実音声に対する転写結果の回帰検出 | WAV ファイル (HTTP 経由) | expected.json のアサーション (イベント数、ノートセット、順序) |
-| **Ablation/variant** | フィーチャーフラグ変更が既存 fixture を壊さないか | WAV ファイル + monkeypatch | expected.json のアサーション |
-
-### ルール
-
-1. **Fixture テストで debug 構造をアサートしない。** `payload["debug"]` のサブフィールド（`segmentCandidates`, `multiOnsetGapSegments`, `secondaryDecisionTrail`, `mergedEvents` 等）を exact-match でピン留めしない。recognizer リファクタリングで内部出力が変わっても転写結果が正しければテストは壊れてはならない。
-2. **Mechanism テストは構築入力を使う。** `RawEvent`/`NoteCandidate` を直接構築して関数を呼ぶ。合成音声で `segment_peaks` を直接呼ぶのも可。
-3. **実データが必要な mechanism テストは marshal する。** パイプラインの中間状態を JSON にダンプし、`apps/api/tests/fixtures/mechanism-snapshots/` に保存して読み込む。フルパイプライン実行で中間状態を取得してはならない。
-4. **Fixture 回帰の権威は parameterized テスト。** `test_manual_capture_completed.py` が全 completed fixture を自動的に検証する。個別の fixture テストを `test_api.py` に追加する前に、`expected.json` のアサーションで表現できないか検討する。
-5. **個別 fixture テストは parameterized で表現不可能な場合のみ。** pending/review_needed fixture の暫定チェック、またはイベント間の関係性など `expected.json` で表現できないアサーションに限る。
-6. **ground_truth.json でタイミング情報を管理する。** 人間が耳・スペクトログラムで確認した onset 時刻を `ground_truth.json` に記録する。librosa の onset 検出に依存しない絶対秒で記録し、自動テストでの timing 検証に使用する。
-7. **Fixture investigation: eval_scope vs full audio.** `test_manual_capture_completed.py` 系のテストは `transcribe_manual_capture_fixture(...)` 経由でデフォルト `use_evaluation_scope=True` (`evaluationWindows` / `ignoredRanges` でトリミングされた audio)。物理現象を綺麗に観察したい調査時は `transcribe_manual_capture_fixture_full_audio(...)` を使うとクリーンな silent region 分布 + splice 影響なしの状態で確認できるが、**最終的な validation は必ず eval_scope で行う** (テストはそれで動いているため)。両モードで挙動が変わるパスは特に警戒する (#154 noise floor は両モードで `noise_floor[G4]` が ~1.5x ずれた実例)。
-
-### ground_truth.json スキーマ
-
-```json
-{
-  "version": 1,
-  "toleranceSec": 0.05,
-  "onsets": [
-    {"timeSec": 1.05, "notes": ["C4"], "method": "ear_verified"},
-    {"timeSec": 2.03, "notes": ["D4"], "toleranceSec": 0.08, "method": "spectrogram_verified", "comment": "soft attack"}
-  ]
-}
-```
-
-- `timeSec`: audio.wav 先頭からの絶対秒
-- `toleranceSec`: デフォルト50ms、onset ごとにオーバーライド可能
-- `method`: `ear_verified`, `spectrogram_verified`, `aubio_cross_checked`, `user_corrected` (review UI の corrections.json 由来、`promote_corrections_to_ground_truth.py` で生成)
-- ファイルはオプショナル（存在する fixture のみ timing チェック実施）
+- テストは **Mechanism / Fixture regression / Ablation-variant** の3層モデルに従う。
+- Fixture regression の権威は `test_manual_capture_completed.py` の parameterized test と `expected.json`。
+- Fixture test で `payload["debug"]` の内部構造を exact-match しない。
+- Mechanism test は構築入力または marshal した中間データを使い、フルパイプライン実行に依存しない。
+- `ground_truth.json` は人間確認済み onset 時刻を絶対秒で記録する optional timing assertion。
+- Fixture 調査で full audio を見るのはよいが、最終 validation は必ず regression test と同じ eval_scope で行う。
 
 ## Recognizer Strategy Notes
 
@@ -192,7 +139,7 @@ v1 (現行互換) と v2 (op 拡張) をサポート。`op` を省略すると v
 
 ### Broadband patch vs per-note onset detection
 
-現在の recognizer は broadband onset detection（librosa spectral flux 系）をベースに、個別の rescue/gate patch を積み上げて精度を上げている。一方 [#141](https://github.com/ayokura/kalimba-transcription/issues/141) では per-note onset detection という根本的な architecture 変更が提案されている。
+現在の recognizer は broadband onset detection（pure-numpy 化された spectral flux ベース。librosa からの移植コードだが、recognizer 自体は #187 / #193 で librosa-free）をベースに、個別の rescue/gate patch を積み上げて精度を上げている。一方 [#141](https://github.com/ayokura/kalimba-transcription/issues/141) では per-note onset detection という根本的な architecture 変更が提案されている。
 
 **既定方針**: 既存の broadband + patch で対処できるケースは patch で進める。per-note への全面移行は以下のトリガーのいずれかが発生した時点で判断する:
 
@@ -201,7 +148,7 @@ v1 (現行互換) と v2 (op 拡張) をサポート。`op` を省略すると v
 3. **リアルタイム要求 (streaming transcription)** — batch 前提の broadband 解析では間に合わなくなったとき。per-note state machine (`OFF → ATTACK → BODY → LATE_DECAY`) への移行が必要
 4. **Patch 数が fixture 数に近づく** — 一般化できないローカル解決が蓄積したとき
 
-**streaming / WASM 適合性は直交**: broadband patch も per-note も FFT / band energy ベースで WASM 化できる。librosa からの独立は両者で共通の作業量であり、per-note を選ぶ理由にはならない。
+**streaming / WASM 適合性は直交**: broadband patch も per-note も FFT / band energy ベースで WASM 化できる。recognizer は既に librosa-free (#187 / #193 で pure-numpy 化済み) なので、ライブラリ独立は per-note を選ぶ理由にはならない。
 
 **並行路線を推奨**: main line は patch で完成度を上げ、research line (別 branch) で per-note を実験的に検証する。patch で解けないケースを per-note 側で解く、が明確になった時点で merge を判断する。
 
@@ -215,17 +162,16 @@ v1 (現行互換) と v2 (op 拡張) をサポート。`op` を省略すると v
 
 ## Codex-Specific Notes
 
-- In Codex, editing subagents must use dedicated worktrees under `.codex-worktrees/<agent-name>/` because the toolset does not provide equivalent automatic isolation.
+- In Codex, editing subagents must use dedicated worktrees under `.codex-worktrees/<agent-name>/` unless the active toolset provides equivalent automatic isolation.
 - In Codex, editing subagent branches should use the `codex/` prefix.
 - In Codex subagent coordination, do not pass only an issue number; include the issue title/summary or the local problem statement.
-- In Codex/GPT-5.4-era reasoning controls, enter `xhigh` only when starting actual large-scale redesign, not for preparatory audits or narrow local fixes. Re-evaluate this guidance if the toolset or reasoning-tier definitions change.
 - `.codex-*` paths are local-only and must remain ignored.
 - Runtime-specific guidance for Codex should be applied explicitly by shell/runtime:
   - WSL/Linux:
     - Prefer the repo-standard `uv` workflow directly.
     - Standard API test command remains `uv run pytest apps/api/tests -q`.
-    - In this WSL `/mnt/c/...` worktree, if the standard pytest run fails with a temp/capture `FileNotFoundError`, rerun with `TMPDIR=/tmp uv run pytest apps/api/tests -q`.
-    - In this workspace, `gh` auth is expected from `.codex-gh/gh.env`; if that file sets `GH_CONFIG_DIR` to a Windows path, normalize or override it to `/mnt/c/src/calimba-score/.codex-gh` before running `gh`.
+    - If the standard pytest run fails with a temp/capture `FileNotFoundError` (seen on Windows-mounted `/mnt/...` worktrees), rerun with `TMPDIR=/tmp uv run pytest apps/api/tests -q`.
+    - `gh` auth, when present, is read from a local `.codex-gh/gh.env` (gitignored, may not exist in every checkout). If that file sets `GH_CONFIG_DIR` to a Windows path, normalize it to the `.codex-gh` directory inside the current repo root before running `gh`.
   - Windows PowerShell:
     - The repo has shifted toward WSL/Linux as the primary runtime; call out the environment mismatch explicitly before assuming parity with the user's shell.
-    - In this workspace, `gh` auth is expected from `.codex-gh/gh.env`.
+    - `gh` auth, when configured, is read from the local `.codex-gh/gh.env` (gitignored; may be absent).

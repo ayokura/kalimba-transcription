@@ -227,7 +227,14 @@ This makes later fixture review and independent audit much easier.
 
 ## Test Architecture (3-Tier Model)
 
-テストは3層に分かれる。詳細は `AGENTS.md` の `## Test Architecture` を参照。
+テストは3層に分かれる。この節をテスト設計の詳細な参照先とし、`AGENTS.md`
+には全エージェントが常時守るべき要約だけを置く。
+
+| Tier | 目的 | 入力 | アサーション対象 |
+|------|------|------|----------------|
+| **Mechanism** | 個別の recognizer 関数の動作確認 | 構築した `RawEvent` / `NoteCandidate`、または marshal した中間データ | 関数の戻り値 |
+| **Fixture regression** | 実音声に対する転写結果の回帰検出 | WAV ファイル (HTTP 経由) | `expected.json` のアサーション (イベント数、ノートセット、順序) |
+| **Ablation / variant** | フィーチャーフラグ変更が既存 fixture を壊さないか | WAV ファイル + monkeypatch | `expected.json` のアサーション |
 
 ### Tier 1: Mechanism Tests
 
@@ -237,6 +244,9 @@ This makes later fixture review and independent audit much easier.
 - 入力: 直接構築、または `fixtures/mechanism-snapshots/` の marshal データ
 - アサーション: 関数の戻り値（ノート名、イベント数、etc.）
 - **`payload["debug"]` のサブフィールドをアサートしない**
+- 実データが必要な mechanism test は、パイプラインの中間状態を JSON に
+  dump して `apps/api/tests/fixtures/mechanism-snapshots/` から読み込む。
+  mechanism test のためにフルパイプラインを実行して中間状態を取得しない。
 
 ### Tier 2: Fixture Regression Tests
 
@@ -245,6 +255,8 @@ This makes later fixture review and independent audit much easier.
 - `expected.json` のアサーション（イベント数、ノートセット、順序）で検証
 - `ground_truth.json` が存在する fixture はタイミングも検証
 - **個別の fixture テストを追加する前に `expected.json` で表現できないか検討する**
+- 個別 fixture test は、pending / review_needed fixture の暫定チェックや、
+  event 間の関係性など `expected.json` で表現できないアサーションに限る。
 
 ### Tier 3: Ablation / Variant Tests
 
@@ -256,6 +268,9 @@ This makes later fixture review and independent audit much easier.
 2. 新しい fixture → `expected.json` に適切なアサーションを記載（`expectedEventNoteSetsOrdered` 推奨）
 3. 特定の偽検出を防ぎたい → `maxEventNoteSetOccurrences` や `expectedEventNoteSetsOrdered` で表現
 4. タイミングの正しさを検証したい → `ground_truth.json` を作成
+5. Fixture test では `payload["debug"]` の内部構造を exact-match しない。
+   recognizer refactoring で内部 debug 出力が変わっても、転写結果が正しければ
+   test は壊れないようにする。
 
 ### ground_truth.json
 
@@ -274,8 +289,26 @@ This makes later fixture review and independent audit much easier.
 
 - `timeSec`: audio.wav 先頭からの絶対秒（librosa 非依存）
 - `toleranceSec`: デフォルト50ms、onset ごとにオーバーライド可能
-- `method`: `ear_verified`, `spectrogram_verified`, `aubio_cross_checked`
+- `method`: `ear_verified`, `spectrogram_verified`, `aubio_cross_checked`,
+  `user_corrected` (`review UI` の `corrections.json` 由来、
+  `promote_corrections_to_ground_truth.py` で生成)
 - `test_manual_capture_completed.py` が自動的にチェック
+
+### Fixture Investigation: evaluation scope vs full audio
+
+`test_manual_capture_completed.py` 系の regression test は
+`transcribe_manual_capture_fixture(...)` 経由で、デフォルト
+`use_evaluation_scope=True` を使う。つまり `evaluationWindows` /
+`ignoredRanges` によって評価対象に絞られた audio が使われる。
+
+物理現象をきれいに観察したい調査時は
+`transcribe_manual_capture_fixture_full_audio(...)` を使うと、silent region
+分布や splice の影響を受けない状態を確認できる。
+
+ただし、**最終 validation は必ず eval_scope で行う**。実際の regression
+test がその条件で動くためである。両モードで挙動が変わる path は特に警戒する。
+実例として #154 noise floor では、full audio と eval_scope で
+`noise_floor[G4]` が約 1.5x ずれた。
 
 ## Next automated tests to add
 
@@ -388,4 +421,3 @@ Recommended collection strategy:
 4. Only request explicit re-records when a case blocks recognition work
    - Example: a capture is the best candidate for a strict baseline but the attacks are too staggered
    - Otherwise, prefer collecting broader musical material and triaging it with `pending / review_needed / reference_only`
-
