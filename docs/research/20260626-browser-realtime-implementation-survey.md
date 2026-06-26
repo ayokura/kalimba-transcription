@@ -9,6 +9,50 @@
 
 ---
 
+## 0. 検証済みの要点 (2026-06-26, 一次ソース確認)
+
+browser/realtime 担当サーベイで一次ソース確認できた要点と、私のドラフトに対する修正。
+
+- **Basic Pitch は 22,050 Hz に resample・mono 化して処理する。** ブラウザ移植で kalimba audio を
+  そのまま 48 kHz で渡す前提にしない。前処理 (mono downmix + resample) を Python/TS/WASM で揃える。
+- **Basic Pitch TS は AudioBuffer / ファイル処理寄り**であり、AudioWorklet live streaming の参照実装では
+  ない。**「browser offline parity baseline + note decoder 参照」**として扱う (live spine は自前)。
+- Basic Pitch の note decoding は `output_to_notes_polyphonic()`: onset local maxima を threshold →
+  対応 pitch bin の frame energy が閾値を切るまで note を伸長 → 採用 energy と隣接 pitch bin を
+  `remaining_energy` から消し込み。さらに `melodia_trick` が onset 無しの残余 energy を note 化する
+  rescue path。**この隣接 semitone 消し込みは kalimba の partial collision には荒い** → tine/partial
+  table ベースに置換する。`melodia_trick` 相当は final note ではなく alternate candidate へ降格。
+- **PESTO は single-pitch / dominant-pitch estimator** で、出力は `time, frequency, confidence`。
+  pitch 復元は既定で Argmax-Local Weighted Averaging。`streaming=True` の circular buffer mode と
+  ONNX export (stateless model + 呼び出し側 cache 更新) がある。chord/共鳴分離を単独で解くものではなく、
+  **onset 周辺の dominant pitch confidence / teacher / ORT Web POC** に使う。
+- **ONNX Runtime Web の WASM multi-threading は WebAssembly threads + `crossOriginIsolated` が前提。**
+  → dev/prod サーバの **COOP/COEP 方針を早期に決める**必要がある。`env.wasm.proxy=true` は WebGPU EP と
+  併用不可。自前 Worker を持つなら、その Worker 内で ORT を import する方が制御しやすい。
+- **ORT Web 配布は JS bundle と WASM binary の version 一致が必須**(不一致は初期化失敗)。大きい model は
+  IndexedDB cache を検討。軽量モデルは WASM EP 優先、重い時だけ WebGPU。
+- **AudioWorklet `process()` の audio quantum は現状 128 frames だが将来可変になり得る**ため、固定 128 を
+  前提にせず毎回 buffer length を見る。44.1 kHz では安定 stream の処理予算が約 3ms と非常に小さい
+  → AudioWorklet には重い処理 (FFT/VQT/ONNX/allocation/JSON) を置かない。
+- full CQT は低域 kernel が巨大化する (PESTO 例: A0/48kHz で約 131,072 samples ≈ 2.7s)。kalimba は
+  A0 ほど低くないが、realtime では **full CQT より VQT / bounded-window FFT / 17-tine resonator bank** を優先。
+- live **Web MIDI output は secure context + permission 依存**で対応も限定的 → core 要件にせず optional UX。
+  MIDI file export は note event 安定後に `@tonejs/midi` 等で生成。
+- Magenta.js Onsets and Frames は solo piano 向け・推論が音声長の半分程度で、**kalimba 本体移植候補では
+  ない**(browser 推論/chunk 処理/UI 連携の参考に留める)。
+
+### このサーベイで残った gap / 懸念 (要追検証)
+
+- **COOP/COEP を有効化すると既存 web app の埋め込み/3rd-party リソースが壊れ得る。** Next.js app
+  (`apps/web`) で `crossOriginIsolated` を入れる影響範囲は未調査。multi-thread を諦めて single-thread WASM で
+  始める退避策も併記して判断する。
+- **SharedArrayBuffer も COOP/COEP 必須。** ring buffer 設計が前提条件に縛られる点は spine 着手前に確定する。
+- **既存 `kalimba-dsp` (Rust/WASM) と ORT Web (別 WASM) の二重ロード**コスト・初期化順序は未評価。
+- Basic Pitch / PESTO のライセンスと model asset 配布条件は、teacher として組み込む前に要確認。
+- 数値 (22,050 Hz, 128 frames, ~3ms 予算, kernel sample 数) は出典時点の値。実装着手時に再確認する。
+
+---
+
 ## 1. 見るべき実装 / 一次ソース
 
 ### 1.1 Spotify Basic Pitch
@@ -164,6 +208,13 @@ Basic Pitch 系の重要な示唆:
 
 ## 4. このプロジェクトへの取り込み順
 
+> **検証サーベイの推奨順 (より細粒度):**
+> browser offline parity harness → candidate schema/metrics 固定 → AudioWorklet+Worker+SharedArrayBuffer
+> spine (精度を上げず latency/jitter/underflow だけ測る) → 既存 broadband onset/FFT scorer を Worker/WASM へ移植
+> → Basic Pitch decoder を candidate 処理の参照として比較 → PESTO+ORT Web POC (Worker 内) → VQT/17-tine
+> resonator を research line で dual-run → MIDI/MusicXML/Web MIDI export は最後。
+> 下記 Phase A–D はこれを粗くまとめたもの。
+
 ### Phase A: browser parity を拡張
 
 - 既存 `/wasm-demo` の `chunk_spectrum` / `rank_tuning_candidates` を基準にする。
@@ -205,3 +256,6 @@ Basic Pitch 系の重要な示唆:
 ## 履歴
 
 - 2026-06-26: 新規作成。Basic Pitch / PESTO / ONNX Runtime Web / WebAudio/WASM 実装観点を整理。
+- 2026-06-26: §0 追加。browser/realtime 担当サーベイの一次ソース検証 (Basic Pitch 22.05kHz/AudioBuffer 寄り、
+  PESTO single-pitch + streaming/ONNX、ORT Web の COOP/COEP・version 一致・proxy 注意、AudioWorklet 128frame/
+  ~3ms 予算、CQT 低域 kernel) と gap/懸念、検証推奨順を反映。
