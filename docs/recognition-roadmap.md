@@ -1,15 +1,18 @@
 # Recognition Roadmap
 
-## Current State (2026-04-16)
+## Current State (2026-06-26 実測更新)
+
+> **注記 (2026-06-26):** 本セクションの数値は `apps/api/tests/fixtures/manual-captures/*/expected.json` の
+> `status` を直接集計して更新した。以前の "44 fixtures / 31 completed / 8 pending / 2 reference_only /
+> 1 review_needed" は陳腐化していたため破棄。実装事実とドキュメントの乖離は #18 corpus 拡張前に解消しておく。
 
 ### Fixture カバレッジ
 
-44 fixtures total:
-- **31 completed** — strict regression target
-- **8 pending** — recognizer 改善待ち
-- **2 reference_only** — 参照用（regression 対象外）
-- **1 review_needed** — メタデータ要確認
-- **1 rerecord** — 再録音優先
+35 fixtures total (manual-captures 実測):
+- **33 completed** — strict regression target
+- **1 pending** — recognizer 改善待ち (`kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01`)
+- **1 rerecord** — 再録音優先 (`kalimba-17-c-e4-g4-b4-d5-four-note-repeat-02`)
+- reference_only / review_needed: 現存なし
 
 ### Gesture families (completed)
 - single notes（C4, D4, D5 等の繰り返し）
@@ -23,16 +26,16 @@
 
 ### BWV147 practical coverage
 - **17-key 164-event sequence**: **completed** (164/164 100%, gap-rise rescue (#186) で E148 C6 復活 → 163→164 events に拡張、`6222b90` で completed 復帰)
-- **34-key 163-event sequence**: pending (162/163 99% as of #153 Phase B `36cb3de`, 残り 1 件は R1 E83 G4 → D5+G4 carryover で #153 scope 外)
+- **34-key 163-event sequence**: **completed** (expected.json status=completed。残り 1 件の R1 E83 carryover は `alignment_overrides.json` の 1 件で録音固有差分として記録済み)
 - 6 scoped BWV sub-fixtures: 4 completed, 2 pending
 
 ### 現時点で acoustic regression target ではないもの
-- legacy four-note fixture（broken metadata, `reference_only`）
 - smartphone app reference video/audio
+- legacy four-note fixture（broken metadata）は過去の `reference_only` 経緯としてのみ残す。現行 manual-captures の status 集計には存在しない。
 
 ## Current Bottleneck
 
-31 completed fixtures が安定した regression baseline を形成している。主な残課題:
+33 completed fixtures が安定した regression baseline を形成している。主な残課題:
 
 - **34-key R1 E83 carryover** ([#153](https://github.com/ayokura/kalimba-transcription/issues/153) scope 外): L6 E82 `<D5,B4,G4>` の D5 carryover が threshold 突破して E83 (expected `G4`) に extra D5 として追加される。`recent-carryover-candidate` / `weak-secondary-onset` 等の既存 gate 領域。次セッションで energy trace 確認 → 別 issue 起票 or override 判断
 - **heuristic constants の audit** ([#162](https://github.com/ayokura/kalimba-transcription/issues/162)): #153 Phase A + B + #154 で導入した 27 個の新定数の inventory、環境依存性の特定、data-driven 化候補の抽出。設計 audit のみ
@@ -53,17 +56,16 @@
 
 ### ステータス分布
 
-- `completed` (31): strict regression target。`test_manual_capture_completed.py` が自動検証
-- `pending` (8): recognizer 改善待ち。smoke probe のみ実行
-- `reference_only` (2): 参照用。regression 対象外
-- `review_needed` (1): メタデータ要確認
+- `completed` (33): strict regression target。`test_manual_capture_completed.py` が自動検証
+- `pending` (1): recognizer 改善待ち。smoke probe のみ実行
 - `rerecord` (1): 再録音優先
+- `reference_only` / `review_needed`: 現在該当なし (将来再導入の可能性あり、定義は testing.md 参照)
 
 詳細なステータス定義は [testing.md](testing.md) を参照。
 
 ### Historical context
-- strict four-note reference (`four-note-strict-repeat-02/03/04`): 初期の認識精度検証に使用。現在は 30 completed fixtures のうちの一部
-- legacy four-note reference (`four-note-repeat-01`): `reference_only` — broken scenario metadata
+- strict four-note reference (`four-note-strict-repeat-02/03/04`): 初期の認識精度検証に使用。現在は 33 completed fixtures のうちの一部
+- legacy four-note reference (`four-note-repeat-01`): 過去の `reference_only` 経緯 — broken scenario metadata。現行 manual-captures の status 集計には存在しない。
 - BWV147 fixture-specific ルールの管理は [recognizer-local-rules.md](recognizer-local-rules.md) を参照
 
 ## ユーザー向け Gesture Families
@@ -100,7 +102,7 @@ Strategy B の gap-candidate 設計と candidate/promotion プロトタイプは
 
 ## Immediate Next Engineering Tasks
 
-1. 30 completed fixtures の regression baseline を維持する
+1. 33 completed fixtures の regression baseline を維持する
 2. peaks redesign (#111): chord selector による sequential accept loop の構造改善
 3. ranked candidate 不在問題 (#125): onset-focused FFT window 等の spectral acquisition 改善
 4. BWV147 full-sequence の pending 解消（onset detection 層 + post-processing debt）
@@ -251,4 +253,3 @@ strict four-note rerecord の例:
 - repetitions: `5`
 - spacing: take 間に約 `1s` の無音
 - success criteria: `5 events`、各 `E4+G4+B4+D5`
-

@@ -6,6 +6,11 @@
 
 **最終更新: 2026-04-16 (#186 gap-rise rescue で 17-key E148 C6 復活 → 164/164 completed 復帰 (`6222b90`) + #187 numba 排除 (beat_track/onset_detect pure-numpy 化))**
 
+> **2026-06-26 注記:** 研究サーベイの前提・fixture 数・一部実装事実は更新されている。
+> 新規の設計判断では、まず [`recognition-roadmap.md`](./recognition-roadmap.md) の現行 fixture 状態と、
+> バイアス除去版の [`docs/research/20260626-unbiased-amt-reassessment.md`](./research/20260626-unbiased-amt-reassessment.md)
+> を確認すること。本ファイルの詳細 stage 評価は 2026-04-16 時点の履歴として扱い、必要な stage から順次更新する。
+
 ## 評価軸と凡例
 
 各 stage を **3 軸独立**で評価する。1 つの stage が「Free Performance では問題ないが Streaming では再設計必要」のような nuance を表現できるようにするため。

@@ -2,6 +2,31 @@
 
 更新日: 2026-04-06
 
+> ## ⚠️ バイアス警告 (2026-06-26 追記)
+>
+> 本ドキュメントおよびソースの `20260406-deep-research-report.md` /
+> `20260406-kalimba_amt_survey.md` は **LLM 調査レポートを一次ソースとした二次資料**であり、
+> 以下のバイアス・品質上の問題が確認された。設計判断の根拠に使う前に必ず留意すること。
+>
+> 1. **一次文献の未検証**: 引用 (`[Chapman2012]`, `[Hawthorne2017]` 等) は LLM 出力をそのまま
+>    取り込んでおり、原典に当たって検証した形跡がない。`deep-research-report.md` には
+>    `citeturn..search` 形式の **LLM 検索トークンが約 60 箇所、未編集で残存**している
+>    (= 人手編集・検証を経ていない物的証拠)。
+> 2. **「インパクト: 大/中」ランクが未検証**: 各提案の影響度は ablation 等の実測ではなく
+>    レポート著者 (LLM) の主観。現コードベースでの効果は測られていない。
+> 3. **実装現状とのズレ**: 当時の「現行」記述は陳腐化している。例: 項目2「onset gate は
+>    未実装」→ 現在は `use_onset_gate=True` で**実装済み (ただし broadband/per-note/
+>    backward-attack の 3 証拠が全滅した時だけ棄却する弱 AND)**。項目1「整数 comb のみ」→
+>    per-tine partial scoring は実装済みだが `use_per_tine_partial_scoring=False` で
+>    既定無効 (#149 の tine 衝突問題のため)。
+> 4. **NN 系の一律退け**: 「大規模 NN は不整合」と結論しているが、Basic Pitch / PESTO の
+>    ような軽量・instrument-agnostic・streamable 路線を teacher / baseline として使う選択肢を
+>    検討していない。
+>
+> **バイアスを除去して再収集・再評価した結果は
+> [`20260626-unbiased-amt-reassessment.md`](./20260626-unbiased-amt-reassessment.md) を参照。**
+> 本ファイルは経緯保存のため残すが、新規の設計判断は再評価版を優先すること。
+
 ## 概要
 
 2つの LLM 調査レポートの知見を現行 recognizer パイプラインと照合し、
