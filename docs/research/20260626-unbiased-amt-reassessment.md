@@ -52,6 +52,9 @@
   partial が隣接 tine の基音と衝突し legitimate chord を誤罰) こそが本丸。**「整数 comb を捨てる」
   ではなく「partial の帰属問題を解く」**問題として再定義する。整数 comb は実用近似として残し、
   partial は追加 evidence / 占有ベース帰属として ablation する。
+- **補遺**: 巻号・ページ・タイトルの検証、未確認の倍音比レンジ、attack 区間で pitch 確定を急がない
+  実装含意、fixture/corpus 収集項目は
+  [`20260626-kalimba-acoustics-survey.md`](./20260626-kalimba-acoustics-survey.md) を優先参照する。
 
 ### 2.2 軽量・instrument-agnostic AMT (Basic Pitch)
 - **示唆**: Spotify Basic Pitch は polyphonic・instrument-agnostic・ブラウザ実行可・pitch bend 対応。
@@ -59,6 +62,8 @@
 - **扱い**: **置換ではなく** (a) free-performance baseline、(b) candidate generator、(c) browser-side
   比較対象、(d) pitch-bend/contour teacher として使う。出力構造が本プロジェクトの
   rankedCandidates/alternateGroupings + onset evidence と近く、接続コストが低い。
+- **補遺**: Basic Pitch TS / PESTO / ONNX Runtime Web / AudioWorklet / WASM 分担は
+  [`20260626-browser-realtime-implementation-survey.md`](./20260626-browser-realtime-implementation-survey.md) を参照。
 
 ### 2.3 自己教師あり・低レイテンシ pitch (PESTO)
 - **示唆**: VQT frame 入力の自己教師あり pitch 推定。~13万 params、cross-dataset 汎化、streamable VQT、
@@ -82,6 +87,9 @@
   articulation / dynamics など musically-informed metrics の重要性も指摘されている。
 - **扱い**: 本プロジェクトでも fixture exact-match の成功は free-performance の成功を保証しない。
   評価を**多層**に分ける (下記 §3.2)。
+- **補遺**: mir_eval / MIREX / AMT Challenge / onset annotation と、Candidate Recall /
+  Correction Burden の具体設計は
+  [`20260626-amt-evaluation-survey.md`](./20260626-amt-evaluation-survey.md) を参照。
 
 ---
 
@@ -135,6 +143,10 @@
   (teacher 由来 GT は `method: "model_suggested"` 等で厳格区別、人手 verify 前に completed 昇格しない)。
 - **exit:** ブラウザ (WebAudio+WASM) で固定遅延発火、Python バッチ版との F1 誤差 ±2% 以内。
 
+#### UX / correction workflow
+- 自動採譜 product の correction workflow と Correction Burden の UI 操作単位は
+  [`20260626-transcription-product-ux-survey.md`](./20260626-transcription-product-ux-survey.md) を参照。
+
 ### 3.4 やらない方がよいこと
 - events.py に新規 suppression pass を追加し続ける (限界収益が低下、自由演奏で破綻しやすい)。
 - per-tine partial を信念で既定化する (#149 衝突。ablation で勝ってから)。
@@ -149,11 +161,21 @@
 戻れる形になっていなかったこと**である。今後の設計判断では、少なくとも以下の安定した論文ID /
 DOI / 公式実装へ戻って確認する。
 
-- Chapman, *The tones of the kalimba (African thumb piano)*, JASA 2012, DOI: `10.1121/1.3651090`
+- Kalimba / mbira / lamellophone 音響:
+  - 詳細補遺: [`20260626-kalimba-acoustics-survey.md`](./20260626-kalimba-acoustics-survey.md)
+  - Chapman, *The tones of the kalimba (African thumb piano)*, JASA 131(1): 945–950 (2012), DOI: `10.1121/1.3651090`
+  - McNeil & Mitran, *Vibrational frequencies and tuning of the African mbira*, JASA 123(2): 1169–1178 (2008), DOI: `10.1121/1.2828063`
 - Spotify Basic Pitch:
   - Paper: *A Lightweight Instrument-Agnostic Model for Polyphonic Note Transcription and Multipitch Estimation*, arXiv: `2203.09893`
   - TypeScript/browser implementation: `github.com/spotify/basic-pitch-ts`
   - Note creation / onset+frame decoding reference: `github.com/spotify/basic-pitch`
+- Browser / realtime implementation:
+  - 詳細補遺: [`20260626-browser-realtime-implementation-survey.md`](./20260626-browser-realtime-implementation-survey.md)
+  - ONNX Runtime Web
+  - WebAudio AudioWorklet
+  - WASM / Worker / ring buffer patterns
+- Product UX / correction workflow:
+  - 詳細補遺: [`20260626-transcription-product-ux-survey.md`](./20260626-transcription-product-ux-survey.md)
 - MT3: *Multi-Task Multitrack Music Transcription*, arXiv: `2111.03017`
 - YourMT3+: *Multi-instrument Music Transcription with Enhanced Transformer Architectures and Cross-dataset Stem Augmentation*, arXiv: `2407.04822`
 - hFT-Transformer: *Automatic Piano Transcription with Hierarchical Frequency-Time Transformer*, arXiv: `2307.04305`
@@ -161,6 +183,10 @@ DOI / 公式実装へ戻って確認する。
   - ISMIR 2023 / arXiv: `2309.02265`
   - Real-time streamable VQT version: arXiv: `2508.01488`
 - 2025 AMT Challenge: *Advancing Multi-Instrument Music Transcription: Results from the 2025 AMT Challenge*, arXiv: `2603.27528`
+- AMT evaluation / benchmark:
+  - 詳細補遺: [`20260626-amt-evaluation-survey.md`](./20260626-amt-evaluation-survey.md)
+  - `mir_eval.transcription`
+  - MIREX Multiple Fundamental Frequency Estimation & Tracking
 - AMT corpus bias / OOD evaluation:
   - Marták, Hu, Widmer, *Sound and music biases in deep music transcription models: a systematic analysis*, Journal on Audio, Speech, and Music Processing 2026, DOI: `10.1186/s13636-025-00428-z`
 
