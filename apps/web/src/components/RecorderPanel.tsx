@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { MIC_AUDIO_CONSTRAINTS } from "@/lib/audio";
+
 type RecorderPanelProps = {
   disabled?: boolean;
   hasRecording?: boolean;
@@ -25,7 +27,7 @@ export function RecorderPanel({ disabled, hasRecording = false, onRecordingReady
     setError(null);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia(MIC_AUDIO_CONSTRAINTS);
       streamRef.current = stream;
       chunksRef.current = [];
 

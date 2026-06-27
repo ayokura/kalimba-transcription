@@ -1184,18 +1184,30 @@ button:disabled {
 
 .simple-home-recording-ready {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   padding: 12px 14px;
   background: var(--accent-soft);
   border: 1px solid rgba(23, 126, 137, 0.2);
   border-radius: 14px;
 }
 
+.simple-home-ready-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .simple-home-ready-text {
   margin: 0;
   font-size: 0.95rem;
+}
+
+.simple-home-audio {
+  width: 100%;
+  height: 40px;
 }
 
 .simple-home-btn {

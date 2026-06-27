@@ -9,7 +9,12 @@ import {
   fetchTunings,
   lookupTranscriptionByHash,
 } from "@/lib/api";
-import { computeAudioLevels, computeBlobSha256Hex, type AudioLevels } from "@/lib/audio";
+import {
+  computeAudioLevels,
+  computeBlobSha256Hex,
+  MIC_AUDIO_CONSTRAINTS,
+  type AudioLevels,
+} from "@/lib/audio";
 import { createReviewSession, saveReviewSession } from "@/lib/reviewSession";
 import { saveReviewAudio } from "@/lib/reviewAudioStore";
 import {
@@ -45,6 +50,7 @@ export function SimpleHome() {
   const [recording, setRecording] = useState<Blob | null>(null);
   const [recordingSource, setRecordingSource] = useState<"mic" | "file" | null>(null);
   const [audioLevels, setAudioLevels] = useState<AudioLevels | null>(null);
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>("idle");
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentTranscription[]>([]);
@@ -115,6 +121,18 @@ export function SimpleHome() {
       });
   }, []);
 
+  // 録音直後に聴き直せるよう、保持中の blob を再生用 object URL にする。
+  // blob が変わる / クリアされるたびに古い URL を解放してリークを防ぐ。
+  useEffect(() => {
+    if (!recording) {
+      setPlaybackUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(recording);
+    setPlaybackUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [recording]);
+
   useEffect(() => {
     if (!recording) {
       setAudioLevels(null);
@@ -165,7 +183,7 @@ export function SimpleHome() {
   async function startRecording() {
     setError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia(MIC_AUDIO_CONSTRAINTS);
       streamRef.current = stream;
       chunksRef.current = [];
       const recorder = new MediaRecorder(stream);
@@ -383,17 +401,28 @@ export function SimpleHome() {
           </div>
         ) : (
           <div className="simple-home-recording-ready">
-            <p className="simple-home-ready-text">
-              {recordingSource === "file" ? "WAV を選択しました。" : "録音を保持しています。"}
-            </p>
-            <button
-              type="button"
-              className="simple-home-btn ghost"
-              onClick={resetRecording}
-              disabled={isAnalyzing}
-            >
-              やり直す
-            </button>
+            <div className="simple-home-ready-head">
+              <p className="simple-home-ready-text">
+                {recordingSource === "file" ? "WAV を選択しました。" : "録音を保持しています。"}
+              </p>
+              <button
+                type="button"
+                className="simple-home-btn ghost"
+                onClick={resetRecording}
+                disabled={isAnalyzing}
+              >
+                やり直す
+              </button>
+            </div>
+            {playbackUrl ? (
+              <audio
+                className="simple-home-audio"
+                src={playbackUrl}
+                controls
+                preload="metadata"
+                aria-label="録音の聴き直し"
+              />
+            ) : null}
           </div>
         )}
       </section>

@@ -9,6 +9,20 @@ export type AudioLevels = {
   rmsDb: number;
 };
 
+// 楽器録音用のマイク constraints。ブラウザ既定の音声通話処理
+// (エコーキャンセル / ノイズ抑制 / 自動ゲイン) を無効化して生音を取得する。
+// これらは通話向けで、特に Android Chrome では攻撃的に効き、カリンバの持続音や
+// attack をダッキング (= 「変なミュート」) して潰すため、楽器採譜では必ず切る。
+// boolean 指定は exact ではない hint なので、非対応端末でも getUserMedia は失敗しない。
+export const MIC_AUDIO_CONSTRAINTS: MediaStreamConstraints = {
+  audio: {
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+    channelCount: 1,
+  },
+};
+
 export async function computeBlobSha256Hex(blob: Blob): Promise<string> {
   const buffer = await blob.arrayBuffer();
   const digest = await crypto.subtle.digest("SHA-256", buffer);
