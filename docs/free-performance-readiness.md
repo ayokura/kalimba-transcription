@@ -4,12 +4,15 @@
 
 各 recognizer コンポーネントについて、Free Performance（楽譜知識なし・Expected Performance なしの自由演奏転写）への適合度を評価する。チケット処理のたびに関連コンポーネントを再評価し、このドキュメントを更新する。
 
-**最終更新: 2026-04-16 (#186 gap-rise rescue で 17-key E148 C6 復活 → 164/164 completed 復帰 (`6222b90`) + #187 numba 排除 (beat_track/onset_detect pure-numpy 化))**
+**最終更新: 2026-06-27 (librosa-free 化 #193 を本文に反映 + F1 held-out caveat 追記。詳細 stage 評価の本体は 2026-04-16 時点)**
 
-> **2026-06-26 注記:** 研究サーベイの前提・fixture 数・一部実装事実は更新されている。
-> 新規の設計判断では、まず [`recognition-roadmap.md`](./recognition-roadmap.md) の現行 fixture 状態と、
-> バイアス除去版の [`docs/research/20260626-unbiased-amt-reassessment.md`](./research/20260626-unbiased-amt-reassessment.md)
-> を確認すること。本ファイルの詳細 stage 評価は 2026-04-16 時点の履歴として扱い、必要な stage から順次更新する。
+> **2026-06-27 重要注記 (先に読む):**
+>
+> 1. **recognizer は完全に librosa-free (#193, 14584e2)。** 本文中で「`librosa.onset.onset_strength`」「librosa 依存」「broadband onset detector (librosa)」等と記述している箇所は **2026-04-16 (#187) 時点の歴史的記述**であり現在は誤り。`onset_strength` / `rms` / `onset_detect` / `peak_pick` / `backtrack` / `mel` は `segments.py` で pure-numpy 移植済 (librosa 0.11 と数値等価検証済)、production はさらに Rust 共有コア (`kalimba_dsp`) に委譲している。**HPSS path は #193 で drop 済**。librosa は分析スクリプト / skill でのみ使用 (`apps/api/app/transcription/` に import ゼロ)。
+> 2. **onset DSP は Rust/WASM 移植済で `/wasm-demo` で in-browser 稼働。** Stage 2 の Browser 評価が ⚠️ だった主因は「librosa 依存」だったが、その blocker は解消済。残るのは segment 化ロジック (active range / collector / gap rescue) の WASM 移植。
+> 3. **F1=1.000 は『成功』ではなく tuning-set 飽和のサイン。** 現在の F1 micro=1.000 は 6 録音の tuning-target set (**held-out ゼロ**) での再現であり、free-performance が解けたことを意味しない。真の品質 gate は #18 の harder 新録音 (録音 gated)。本ドキュメントの各 stage readiness はこの caveat 前提で読む。詳細は reassessment §3.2。
+>
+> 新規の設計判断では、まず [`recognition-roadmap.md`](./recognition-roadmap.md) の現行 fixture 状態と、バイアス除去版の [`docs/research/20260626-unbiased-amt-reassessment.md`](./research/20260626-unbiased-amt-reassessment.md) を確認すること。本ファイルの詳細 stage 評価は 2026-04-16 時点の履歴として扱い、必要な stage から順次更新する。
 
 ## 評価軸と凡例
 
@@ -36,7 +39,7 @@
 | Stage | コンポーネント | Free Perf | Streaming | Browser |
 |---|---|---|---|---|
 | 1 | Audio Input (`audio.py`) | — | — | — |
-| 2 | Onset & Segment Detection (`segments.py`) | 🟡 | ⚠️ | ⚠️ |
+| 2 | Onset & Segment Detection (`segments.py`) | 🟡 | ⚠️ | 🟡 |
 | **2.5** | **Per-Recording Calibration (`noise_floor.py`)** ← **新設 #154** | ✅ | 🟡 | ✅ |
 | 3 | Per-Segment Peak Detection (`peaks.py`) | 🟡 | ✅ | 🟡 |
 | 4 | Raw Event Aggregation (`pipeline.py`) | — | — | — |
@@ -62,21 +65,21 @@
 
 ## Stage 2: Onset & Segment Detection (`segments.py`)
 
-**評価: Free Perf 🟡 / Streaming ⚠️ / Browser ⚠️**
+**評価: Free Perf 🟡 / Streaming ⚠️ / Browser 🟡 (#193/#187 で librosa blocker 解消、onset DSP は Rust/WASM 移植済)**
 
 **最終更新: 2026-04-09 (#153 Phase B で broadband onset → segment 化 structural gap を downstream で補完する設計に到達)**
 
 ### 3 軸サマリー
 - **Free Perf 🟡**: active range / onset 検出は楽譜非依存。ただし polyphonic onset 限界・masked re-attack・broadband onset → segment 化の structural gap が残る (Stage 3 / 5 で補完)
-- **Streaming ⚠️**: librosa.onset.onset_strength は batch 処理。incremental spectral flux + peak picking の再実装が必要
-- **Browser ⚠️**: librosa 依存。WebAudio AnalyserNode で代替可能だが精度差の検証が必要
+- **Streaming ⚠️**: `_onset_strength` (pure-numpy / production は Rust 委譲) は依然 batch 処理。incremental spectral flux + peak picking の再実装が必要 (librosa 由来の制約ではなく batch アルゴリズム自体の制約)
+- **Browser 🟡 (#193/#187 で blocker 解消)**: onset DSP (`onset_strength` / `onset_detect` / `rms` / `peak_pick` / `backtrack` / `mel`) は librosa-free な Rust 共有コア (`kalimba_dsp`) に移植済で `/wasm-demo` で in-browser 稼働。残るのは segment 化ロジック (active range / collector / gap rescue) の WASM 移植 (mechanical)
 
 ### 良い点
 
 - **Active range 検出**: RMS ベースで楽譜非依存。threshold = max(0.18*max_rms, 2.2*median_rms) は adaptive で楽器特性に追従
 - **Attack profile validation**: broadband_gain + high_band_flux の組み合わせ判定。moderate gain-flux gate (gain≥3.0, flux≥0.8) の追加で 34-key の genuine attack 2件を救済済み。閾値は物理量ベースで fixture-specific でない
 - **Gap collector (AVC)**: onset の attack profile で判定しており因果的・楽譜非依存
-- **librosa onset_strength + onset_detect**: 標準的な broadband spectral flux。大半の onset を正しく検出（17-key 161/163, 34-key 159/163）
+- **onset_strength + onset_detect (pure-numpy / Rust 委譲, #193)**: 標準的な broadband spectral flux。大半の onset を正しく検出（17-key 161/163, 34-key 159/163）
 - **Per-note onset detection (Pass 1)**: gap mute-dip rescue 実装済み (#144)。broadband onset が見逃した same-note re-attack を per-note の mute-dip パターンで検出し、`confirmed_primary` 付き segment を生成。compact-window アルゴリズムで自然減衰の false positive を排除。楽譜非依存・因果的・WebAssembly 互換
 - **Gap-rise rescue** (2026-04-16 #186): Pass 1 の companion として実装。Rust `detect_gap_rise_attack` が gap 内の energy rise (ratio>=10x) を検出、Python の two-snapshot dominance check (+15ms dominant, +50ms 非 dominant) で「一瞬 dominant → 和音マスク」パターンのみ rescue。mute-dip が same-note re-attack 対象なのに対し、gap-rise は前の note が鳴っていない新規 attack を補完 (E148 C6 復活で 17-key bwv147 164/164 completed 復帰)。楽譜非依存・因果的・WebAssembly 互換 (Rust → WASM 化容易)
 - **Sub-onset aware per-note attack window** (#152, commit e449df8): segment 内に複数の broadband sub-onset がある場合、対象 note の actual attack を `pick_matching_sub_onset` で picked し、`onset_energy_gain` の窓をその時刻に anchor する。slide chord での staggered attack や、segment 開始よりやや遅い primary attack を救済。
@@ -87,9 +90,9 @@
 - **SR 依存性 (#140)**: FRAME_LENGTH=2048, HOP_LENGTH=256 が固定サンプル数。sr=44100 で STFT窓=46.4ms、sr=96000 で 21.3ms。onset 検出の時間分解能が楽器/録音環境で異なる。リサンプル実験で -5 exact 回帰、n_fft 変更で -4 exact — チューニング再調整なしの単独投入は不可
 - **Polyphonic onset の限界**: 単音 attack が他の音の残響に埋もれると onset_strength に現れない（E162 B4: onset_strength=0.6 vs background 0.3-0.5）。per-note onset detection の Pass 2 (onset splitting) で補完予定 (#145)
 - ~~**Masked re-attack**~~ → **#153 Phase A.4 で解決済** (`ed729bb`)。`recover_masked_reattack_via_narrow_fft` が `pick_matching_sub_onset` + 4 disambiguators (energy/fr/dominance/sub_onsets≥3) で per-attack window narrow FFT して救出。E97/E133 の D5 が rescue 済
-- **Broadband onset → segment 化の structural gap**: broadband onset detector (librosa) は実際には早期 attack を検出している (例: 17-key R1 E97 で broadband が 168.0827s に onset を出している) が、segmenter (active range / collector logic) がその onset を「segment の始点」として消費せず捨てるケースがある。結果として attack window 全体がどの segment にも含まれない → segment_peaks がそもそも fresh attack を見られない → carryover 扱いで棄却。**#153 Phase B (`recover_pre_segment_attack_via_narrow_fft` `36cb3de`) が downstream で補完**: event 開始前の lookback 範囲 (200ms) で「未消費 broadband onset」を見つけて narrow FFT する。これは workaround pass であり、本質的には Stage 2 の onset → segment 化ロジックを強化する余地がある (将来の課題)
-- **Streaming 再設計**: librosa.onset.onset_strength は batch 処理。streaming 化には incremental spectral flux + peak picking の再実装が必要。per-note onset の部品（`_note_band_energy()` 等）は因果的で streaming 互換
-- **HPSS onset 分離**: 試験の結果、percussive 単独置換は回帰 (76%→53%)。カリンバの撥弦 attack が harmonic/percussive に分散し、percussive のノイズフロア上昇で偽 onset 増加。パイプライン全体チューンが必要 (#148)
+- **Broadband onset → segment 化の structural gap**: broadband onset detector は実際には早期 attack を検出している (例: 17-key R1 E97 で broadband が 168.0827s に onset を出している) が、segmenter (active range / collector logic) がその onset を「segment の始点」として消費せず捨てるケースがある。結果として attack window 全体がどの segment にも含まれない → segment_peaks がそもそも fresh attack を見られない → carryover 扱いで棄却。**#153 Phase B (`recover_pre_segment_attack_via_narrow_fft` `36cb3de`) が downstream で補完**: event 開始前の lookback 範囲 (200ms) で「未消費 broadband onset」を見つけて narrow FFT する。これは workaround pass であり、本質的には Stage 2 の onset → segment 化ロジックを強化する余地がある (将来の課題)
+- **Streaming 再設計**: `_onset_strength` (pure-numpy / production は Rust 委譲) は batch 処理。streaming 化には incremental spectral flux + peak picking の再実装が必要。per-note onset の部品（`_note_band_energy()` 等）は因果的で streaming 互換
+- **HPSS onset 分離 (#193 で path 削除済)**: 試験の結果、percussive 単独置換は回帰 (76%→53%)。カリンバの撥弦 attack が harmonic/percussive に分散し、percussive のノイズフロア上昇で偽 onset 増加。**librosa ベースの hpss hook は #193 (14584e2) で drop 済**、再開時は librosa-free で再実装が必要 (#148)
 
 ---
 
@@ -359,19 +362,19 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 
 ボトルネック順:
 
-1. **Stage 2 onset detection**: `librosa.onset.onset_strength` が batch 処理。incremental spectral flux + peak picking の再実装が必須 (#140 参照)。なお onset_detect / beat_track は pure-numpy 化済み (#187) で streaming 再実装の障壁は低下
+1. **Stage 2 onset detection**: `_onset_strength` (pure-numpy / Rust 委譲, #193 で librosa-free 化済) が batch 処理。incremental spectral flux + peak picking の再実装が必須 (#140 参照)。onset_detect / beat_track も pure-numpy 化済み (#187) で、streaming 再実装の障壁は librosa ではなく「batch → causal」アルゴリズム設計のみ
 2. **Stage 5/7 event post-processing**: 27 個の suppress/merge 関数が前後 event の文脈に依存。lookahead/lookbehind window を有限化する設計改修が必要 (cf. patterns.py の `apply_repeated_pattern_passes` も同類)
 3. **Stage 2.5 noise_floor**: 現状は全 segment 出揃い後に silent gap を集めるが、設計上は **leading silent region (録音冒頭の最初の attack より前)** だけで calibration 可能。streaming 版の方針は明確 (大規模再設計不要)
 4. **Stage 3 peaks.py / Stage 8 / Stage 9**: それぞれ自然に streaming 互換 (per-segment 独立 / pure 数値変換)
 
 ### Browser-side 実装
 
-- **librosa への依存** が segments.py (Stage 2) の onset_strength / HPSS / rms に集中 (onset_detect / beat_track は #187 で pure-numpy 化済み、numba 不要)。それ以外の stage は numpy + 標準 Python のみ
+- **librosa 依存はゼロ (#193 完了)**: segments.py (Stage 2) の onset_strength / rms / onset_detect / peak_pick / backtrack / mel は pure-numpy 移植済で、production は Rust 共有コア (`kalimba_dsp`) に委譲。HPSS path は #193 で drop。**onset DSP は既に Rust/WASM 移植済 (`/wasm-demo` で in-browser 稼働)**。それ以外の stage は numpy + 標準 Python のみ
 - **noise_floor.py (Stage 2.5)** は意図的に librosa を使わず `peaks._adaptive_n_fft` (numpy.fft) + `peaks.batch_peak_energies` (numpy 算術) のみで実装 → WebAssembly 移植は直接的
-- **peaks.py の scoring logic (Stage 3)** は数値演算のみで原理的に portable だが、Python 実装が大規模 (2700 行+) なので移植コストは大きい
+- **peaks.py の scoring logic (Stage 3)** は数値演算のみで原理的に portable。`chunk_spectrum` + `rank_tuning_candidates` は #195 で Rust/WASM 移植済 (/wasm-demo が音名表示)。残る broadband STFT 経路の移植コストは依然大きい
 - **events.py の suppress/merge (Stage 5/7)** は pure list operations で、WebAssembly 不要 (素の JS で動く)
 - **patterns.py (Stage 6)** も同様に pure logic
-- segments.py の RMS/onset detection は WebAudio API の `AnalyserNode` で代替可能だが、librosa との数値一致は別途検証が必要
+- segments.py の onset DSP は移植元 librosa 0.11 と数値等価検証済 (segments.py 冒頭の ISC 帰属 + 各 docstring 参照)。Rust 版も native/wasm parity を check_wasm.sh で pin
 
 ---
 
@@ -387,3 +390,4 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 | 2026-04-09 | #153 Phase B + #154 + 17-key promote + #162 起票 | **3 軸評価 (Free Perf / Streaming / Browser-side) に再設計** + サマリー表追加。**Stage 2.5 (Per-Recording Calibration `noise_floor.py`) を新設** (#154)。Stage 2: masked re-attack を Phase A.4 で解決済としてマーク、broadband onset → segment 化 structural gap を新規課題として明示 (Phase B `recover_pre_segment_attack_via_narrow_fft` で workaround 解決)。Stage 3: octave-coincident aliasing / masked re-attack を解決済としてマーク。Stage 5: Phase A + B で追加した narrow-FFT 系 4 passes (`merge_short_segment_guard`, `merge_gliss_split`, `recover_masked_reattack`, `recover_pre_segment_attack`) のテーブル追加。Stage 6/7/8/9 を 3 軸表記に統一。Cross-cutting concerns を Streaming/Browser それぞれに対する stage 別ボトルネック分析に書き直し |
 | 2026-04-09 | 34-key E83 fix + 34-key promote (`35bca12`, `7535464`) | Stage 3: `residual-forward-scan` を segment classifier として再利用する 2 段構成 fix (`residual-forward-scan-replaced-primary` + `forced_evidence_gates`) を「良い点」に追加。これにより 34-key BWV147 sequence-163 が 162/163 → 163/163 完全達成し、両 BWV147 sequence-163 fixture (17-key と 34-key) が completed regression target に。「懸念点」に新規課題 2 件追加: (1) 演奏者/テンポ違いに対する robustness の汎化検証 (現状は `residual-forward-scan` 発火 segment 限定)、(2) tertiary/secondary 区別の本質的是非 (将来の大規模リファクタ候補として記録) |
 | 2026-04-16 | #186 gap-rise rescue + #187 numba 排除 | Stage 2: gap-rise rescue を「良い点」に追加 (E148 C6 復活、17-key bwv147 164/164 completed 復帰)。Cross-cutting: onset_detect / beat_track の pure-numpy 化 (#187) を Streaming / Browser 両セクションに反映。numba がパイプラインの到達パスから排除され、残 librosa (onset_strength / HPSS / rms) は numba 非依存 |
+| 2026-06-27 | #193 librosa-free 完了の本文反映 + 研究再サーベイ整合 | ヘッダに重要注記を追加 (librosa-free #193 / onset DSP の Rust・WASM 移植 / F1=1.000 は held-out ゼロの tuning-set 飽和)。本文の「librosa.onset.onset_strength」「broadband onset detector (librosa)」「librosa 依存が onset_strength/HPSS/rms に集中」等の 2026-04-16 時点記述を訂正 (#193 で pure-numpy 移植 + Rust 委譲、HPSS path drop)。Stage 2 Browser 評価を ⚠️→🟡 (librosa blocker 解消、onset DSP は /wasm-demo で in-browser 稼働)。Cross-cutting Browser に #195 chunk_spectrum/rank_tuning_candidates の WASM 移植を反映 |
