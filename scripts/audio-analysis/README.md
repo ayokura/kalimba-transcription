@@ -151,6 +151,20 @@ promote する (テスターが確認・修正を終えた録音のみを GT 候
 `source.provenance` は `tester_corrected` で、人間検証 (ear/spectrogram) tier とは
 区別される。
 
+### review_priority_report.py
+benchmark 指標 (note_f1_benchmark) と review status (`review_status.json`) を結合し、
+「次に確認すべき録音」を優先度順に出す。優先度が高いのは、(a) まだ人手確認が必要な状態
+(`recorded_only` / `review_started` / `uncertain` / 未設定) かつ (b) recognizer が苦戦
+している (onset F1 が低い・HardMissRate が高い・Correction Burden が大きい) 録音。
+`review_completed` / `unusable` / `rerecord_needed` は de-prioritize される
+(確認しても次の改善に効きにくいため)。スコアリング (`compute_priority`) は IO を持たない
+純関数で、`apps/api/tests/test_review_priority_report.py` で単体テストしている。
+
+```bash
+uv run python scripts/audio-analysis/review_priority_report.py
+uv run python scripts/audio-analysis/review_priority_report.py --json
+```
+
 ```bash
 uv run python scripts/audio-analysis/promote_corrections_to_ground_truth.py          # 候補一覧
 uv run python scripts/audio-analysis/promote_corrections_to_ground_truth.py <tx-id>  # promote
