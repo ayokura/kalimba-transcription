@@ -33,6 +33,13 @@
   - `uv run pytest apps/api/tests -q`
 - `pytest.ini` sets `pythonpath = . apps/api`, so no `PYTHONPATH` environment variable is needed.
 
+## Host-Local Runtime & Deploy
+
+- Production serving, systemd units, ports, the Cloudflare tunnel, and the deploy procedure are **host-specific** and live outside git in `.runtime-local/` (gitignored; agent-neutral, not tied to any one agent).
+- **Before any production deploy or runtime operation (restart, log inspection, port assumptions), read `.runtime-local/deploy.md` on this host.** It is non-portable and may differ or be absent on other hosts/checkouts — never assume it exists or that its values apply elsewhere.
+- Keep secrets out of `.runtime-local/`; record only their locations (e.g. cloudflared credentials live under `~/.cloudflared/`).
+- `docs/deploy-cloudflare-tunnel.md` (checked in) is the portable procedure template; `.runtime-local/deploy.md` holds this host's concrete values. Keep host-specific facts in the latter, not in committed docs.
+
 ## Fixture Policy
 
 - Prefer practical musical fixtures over synthetic microbenchmarks when the two conflict.
