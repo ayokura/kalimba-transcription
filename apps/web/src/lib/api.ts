@@ -1,4 +1,11 @@
-import { CorrectionsPayload, InstrumentTuning, TranscriptionResult } from "@/lib/types";
+import {
+  CorrectionsPayload,
+  InstrumentTuning,
+  ReviewQueueEntry,
+  ReviewStatusPayload,
+  ReviewStatusValue,
+  TranscriptionResult,
+} from "@/lib/types";
 import { WavMetadata, toWavWithMetadata } from "@/lib/audio";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -265,6 +272,64 @@ export async function saveCorrections(
   }
   const payload = (await response.json()) as { corrections: CorrectionsPayload };
   return payload.corrections;
+}
+
+export async function fetchReviewStatus(
+  transactionId: string,
+): Promise<ReviewStatusPayload | null> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/transcriptions/${transactionId}/review-status`,
+    { cache: "no-store" },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error("Failed to load review status.");
+  }
+  const payload = (await response.json()) as { reviewStatus: ReviewStatusPayload | null };
+  return payload.reviewStatus;
+}
+
+export async function saveReviewStatus(
+  transactionId: string,
+  status: ReviewStatusValue,
+  options: { note?: string | null; reviewer?: string | null } = {},
+): Promise<ReviewStatusPayload> {
+  const body: ReviewStatusPayload = {
+    version: 1,
+    status,
+    note: options.note ?? null,
+    reviewer: options.reviewer ?? null,
+  };
+  const response = await fetch(
+    `${API_BASE_URL}/api/transcriptions/${transactionId}/review-status`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!response.ok) {
+    throw new Error("Failed to save review status.");
+  }
+  const payload = (await response.json()) as { reviewStatus: ReviewStatusPayload };
+  return payload.reviewStatus;
+}
+
+export async function fetchReviewQueue(
+  options: { limit?: number; status?: ReviewStatusValue | null } = {},
+): Promise<ReviewQueueEntry[]> {
+  const params = new URLSearchParams();
+  if (options.limit) params.set("limit", String(options.limit));
+  if (options.status) params.set("status", options.status);
+  const query = params.toString();
+  const response = await fetch(
+    `${API_BASE_URL}/api/review-queue${query ? `?${query}` : ""}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new Error("Failed to load review queue.");
+  }
+  return response.json();
 }
 
 function cleanOptionalText(value: string | undefined): string | null {

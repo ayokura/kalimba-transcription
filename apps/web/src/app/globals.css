@@ -1717,6 +1717,59 @@ button:disabled {
   gap: 14px;
 }
 
+.review-status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface, #fafafa);
+}
+
+.review-status-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.review-status-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.review-status-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.review-status-btn:hover {
+  border-color: var(--accent-strong);
+}
+
+.review-status-btn.active {
+  border-color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+}
+
+.review-status-btn .review-status-desc {
+  font-size: 0.78rem;
+  color: var(--muted, #666);
+}
+
+.review-status-feedback {
+  font-size: 0.82rem;
+  min-height: 1.1em;
+}
+
 .review-back-link {
   color: var(--accent-strong);
   text-decoration: none;

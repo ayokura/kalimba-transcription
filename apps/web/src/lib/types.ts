@@ -65,6 +65,37 @@ export type CorrectionsPayload = {
   events: CorrectionEventPayload[];
 };
 
+export type ReviewStatusValue =
+  | "recorded_only"
+  | "review_started"
+  | "review_completed"
+  | "rerecord_needed"
+  | "unusable"
+  | "uncertain";
+
+export type ReviewStatusPayload = {
+  version: 1;
+  status: ReviewStatusValue;
+  note?: string | null;
+  reviewer?: string | null;
+  updatedAt?: string | null;
+};
+
+export type ReviewQueueEntry = {
+  transactionId: string;
+  createdAt: number;
+  tuningId: string | null;
+  tuningName: string | null;
+  eventCount: number;
+  audioSha256: string | null;
+  reviewStatus: ReviewStatusValue | null;
+  reviewStatusUpdatedAt: string | null;
+  hasCorrections: boolean;
+  hasMemo: boolean;
+  warningCount: number;
+  candidateSlotCount: number;
+};
+
 export type NotationViews = {
   western: string[];
   numbered: string[];

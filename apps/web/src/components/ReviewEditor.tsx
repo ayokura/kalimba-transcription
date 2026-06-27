@@ -8,6 +8,7 @@ import {
   fetchCorrections,
   fetchTranscription,
   fetchTranscriptionAudioBlob,
+  fetchReviewStatus,
   saveCorrections,
 } from "@/lib/api";
 import {
@@ -31,9 +32,11 @@ import {
   CandidateSlot,
   CorrectionsPayload,
   ReviewOrigin,
+  ReviewStatusPayload,
   ScoreNote,
   TranscriptionResult,
 } from "@/lib/types";
+import { ReviewStatusPanel } from "@/components/ReviewStatusPanel";
 
 const AUDITION_LEAD_SEC = 0.15;
 const AUDITION_MAX_SEC = 4.0;
@@ -58,6 +61,7 @@ type LoadState =
       result: TranscriptionResult;
       audioUrl: string;
       corrections: CorrectionsPayload | null;
+      reviewStatus: ReviewStatusPayload | null;
     }
   | { kind: "error"; message: string };
 
@@ -73,14 +77,15 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
         // fetchCorrections の失敗を握りつぶさない: 保存済み修正が見えないまま
         // baseline で開くと、次の保存で既存修正を上書きしてしまう。
         // 失敗時はページ全体をエラー表示にする (404 は api.ts 側で null になる)。
-        const [result, audioBlob, corrections] = await Promise.all([
+        const [result, audioBlob, corrections, reviewStatus] = await Promise.all([
           fetchTranscription(transactionId),
           fetchTranscriptionAudioBlob(transactionId),
           fetchCorrections(transactionId),
+          fetchReviewStatus(transactionId).catch(() => null),
         ]);
         if (cancelled) return;
         objectUrl = URL.createObjectURL(audioBlob);
-        setState({ kind: "ready", result, audioUrl: objectUrl, corrections });
+        setState({ kind: "ready", result, audioUrl: objectUrl, corrections, reviewStatus });
       } catch (err) {
         if (cancelled) return;
         setState({
@@ -122,6 +127,7 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
       result={state.result}
       audioUrl={state.audioUrl}
       initialCorrections={state.corrections}
+      initialReviewStatus={state.reviewStatus}
     />
   );
 }
@@ -131,13 +137,20 @@ type ReadyProps = {
   result: TranscriptionResult;
   audioUrl: string;
   initialCorrections: CorrectionsPayload | null;
+  initialReviewStatus: ReviewStatusPayload | null;
 };
 
 type TimelineItem =
   | { kind: "event"; timeSec: number; event: ReviewEvent }
   | { kind: "slot"; timeSec: number; slot: CandidateSlot; slotIndex: number };
 
-function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections }: ReadyProps) {
+function ReviewEditorReady({
+  transactionId,
+  result,
+  audioUrl,
+  initialCorrections,
+  initialReviewStatus,
+}: ReadyProps) {
   const [reviewState, setReviewState] = useState<ReviewState>(() =>
     initialCorrections
       ? restoreStateFromCorrections(result, initialCorrections)
@@ -320,6 +333,8 @@ function ReviewEditorReady({ transactionId, result, audioUrl, initialCorrections
           イベントを選ぶとその部分を再生します。音の過不足はカードから直せます。
         </p>
       </header>
+
+      <ReviewStatusPanel transactionId={transactionId} initialStatus={initialReviewStatus} />
 
       <section className="review-playback">
         <audio
