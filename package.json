@@ -7,6 +7,9 @@
   "scripts": {
     "dev:web": "npm --workspace apps/web run dev",
     "build:web": "npm --workspace apps/web run build",
-    "lint:web": "npm --workspace apps/web run lint"
+    "lint:web": "npm --workspace apps/web run lint",
+    "test:web": "npm --workspace apps/web run test",
+    "e2e:web": "npm --workspace apps/web run e2e",
+    "e2e:web:headed": "npm --workspace apps/web run e2e:headed"
   }
 }
