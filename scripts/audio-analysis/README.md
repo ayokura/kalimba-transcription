@@ -143,6 +143,14 @@ F1 ベンチマーク用 `ground_truth.json` に変換する。「テスター�
 ループを閉じるツール。既存 GT (特に人間検証済み) は `--force` なしで上書きしない。
 同一 audio SHA-256 の GT が他 tx にあれば二重カウント防止で skip。
 
+review-status ゲート: 既定では `review_status.json` が `review_completed` の録音だけを
+promote する (テスターが確認・修正を終えた録音のみを GT 候補にする)。
+`recorded_only` / `rerecord_needed` / `unusable` / `uncertain` や status 未設定は
+既定で skip される。`--require-status <status>` でゲートを変更、`--ignore-status` で
+ゲートを無効化 (status ファイルの無い旧 corrections 用)。生成される GT の
+`source.provenance` は `tester_corrected` で、人間検証 (ear/spectrogram) tier とは
+区別される。
+
 ```bash
 uv run python scripts/audio-analysis/promote_corrections_to_ground_truth.py          # 候補一覧
 uv run python scripts/audio-analysis/promote_corrections_to_ground_truth.py <tx-id>  # promote

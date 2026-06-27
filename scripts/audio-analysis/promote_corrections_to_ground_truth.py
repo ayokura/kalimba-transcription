@@ -15,6 +15,12 @@ Safety rails:
 - Duplicate-audio detection: if another capture dir already has GT for the
   same audio SHA-256, the promotion is skipped (the benchmark would
   double-count the recording) unless --allow-duplicate is given.
+- Review-status gate: by default only recordings whose review_status.json is
+  ``review_completed`` are promoted. A tester who only submitted a recording
+  (``recorded_only``) or flagged it (``rerecord_needed`` / ``unusable`` /
+  ``uncertain``) is NOT a ground-truth signal. Use --require-status to change
+  the gate, or --ignore-status to bypass it (e.g. legacy corrections with no
+  status file).
 
 Usage:
   uv run python scripts/audio-analysis/promote_corrections_to_ground_truth.py            # list candidates
@@ -46,12 +52,37 @@ ORIGIN_TOLERANCE_SEC = {"inserted-slot": 0.08, "inserted-manual": 0.10}
 
 HUMAN_VERIFIED_METHODS = {"ear_verified", "spectrogram_verified", "aubio_cross_checked"}
 
+# review_completed is the only status that means "the tester finished checking
+# and the timeline reflects what was played" — the one signal worth promoting
+# to a GT candidate by default.
+DEFAULT_REQUIRED_STATUS = "review_completed"
+VALID_REVIEW_STATUSES = {
+    "recorded_only",
+    "review_started",
+    "review_completed",
+    "rerecord_needed",
+    "unusable",
+    "uncertain",
+}
+
 
 def audio_sha256(tx_id: str) -> str | None:
     path = DATA_DIR / tx_id / "audio.wav"
     if not path.is_file():
         return None
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def load_review_status(tx_id: str) -> str | None:
+    path = DATA_DIR / tx_id / "review_status.json"
+    if not path.is_file():
+        return None
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    status = doc.get("status")
+    return status if isinstance(status, str) else None
 
 
 def load_corrections(tx_id: str) -> dict | None:
@@ -108,6 +139,7 @@ def build_ground_truth(tx_id: str, corrections: dict) -> dict:
         if origin != "recognizer":
             onset["comment"] = f"origin={origin}"
         onsets.append(onset)
+    review_status = load_review_status(tx_id)
     return {
         "version": 1,
         "toleranceSec": DEFAULT_TOLERANCE_SEC,
@@ -116,6 +148,10 @@ def build_ground_truth(tx_id: str, corrections: dict) -> dict:
             "transactionId": tx_id,
             "correctionsUpdatedAt": corrections.get("updatedAt"),
             "originCounts": origin_counts,
+            "reviewStatus": review_status,
+            # provenance tier: tester-confirmed timeline, NOT human-verified onset
+            # annotation. promote_corrections never claims ear/spectrogram tiers.
+            "provenance": "tester_corrected",
         },
         "onsets": onsets,
     }
@@ -142,6 +178,16 @@ def main() -> int:
         "--allow-duplicate", action="store_true",
         help="promote even if another capture already has GT for the same audio",
     )
+    parser.add_argument(
+        "--require-status",
+        default=DEFAULT_REQUIRED_STATUS,
+        choices=sorted(VALID_REVIEW_STATUSES),
+        help=f"only promote recordings with this review status (default: {DEFAULT_REQUIRED_STATUS})",
+    )
+    parser.add_argument(
+        "--ignore-status", action="store_true",
+        help="bypass the review-status gate (e.g. legacy corrections without review_status.json)",
+    )
     args = parser.parse_args()
 
     candidates = discover_candidates()
@@ -149,17 +195,22 @@ def main() -> int:
         if not candidates:
             print("No corrections.json found under", DATA_DIR)
             return 0
-        print(f"{'tx':38} {'events':>6} {'updatedAt':25} GT?")
+        print(f"{'tx':38} {'events':>6} {'reviewStatus':16} {'updatedAt':25} GT?")
         for tx_id in candidates:
             corrections = load_corrections(tx_id)
             if corrections is None:
                 continue
             has_gt = (CAPTURES_DIR / tx_id / "ground_truth.json").is_file()
+            status = load_review_status(tx_id) or "-"
             print(
                 f"{tx_id:38} {len(corrections['events']):>6}"
-                f" {corrections.get('updatedAt') or '-':25} {'yes' if has_gt else 'no'}"
+                f" {status:16} {corrections.get('updatedAt') or '-':25} {'yes' if has_gt else 'no'}"
             )
-        print("\nRun with <tx-id> or --all to promote.")
+        print(
+            f"\nRun with <tx-id> or --all to promote."
+            f" Default gate: review status == {DEFAULT_REQUIRED_STATUS}"
+            f" (use --require-status / --ignore-status to change)."
+        )
         return 0
 
     targets = candidates if args.all else args.tx_ids
@@ -170,6 +221,15 @@ def main() -> int:
         if corrections is None:
             print(f"SKIP {tx_id}: no valid corrections.json")
             continue
+
+        if not args.ignore_status:
+            status = load_review_status(tx_id)
+            if status != args.require_status:
+                print(
+                    f"SKIP {tx_id}: review status is {status or 'unset'},"
+                    f" need {args.require_status} (use --ignore-status to bypass)"
+                )
+                continue
 
         gt_path = CAPTURES_DIR / tx_id / "ground_truth.json"
         if gt_path.is_file() and not args.force:
@@ -199,7 +259,11 @@ def main() -> int:
         if sha:
             gt_hashes[sha] = tx_id
         promoted += 1
-        print(f"WROTE {gt_path.relative_to(REPO_ROOT)} ({len(gt['onsets'])} onsets)")
+        try:
+            shown = gt_path.relative_to(REPO_ROOT)
+        except ValueError:
+            shown = gt_path
+        print(f"WROTE {shown} ({len(gt['onsets'])} onsets)")
 
     if not args.dry_run:
         print(f"\nPromoted {promoted} recording(s)."
