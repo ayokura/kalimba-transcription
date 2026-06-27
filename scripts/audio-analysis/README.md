@@ -101,11 +101,16 @@ uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--v
 ```
 
 ### note_f1_benchmark.py
-free-performance 録音に対する note-level Precision / Recall / F1 評価。
+free-performance 録音に対する layered benchmark。既存の note-level Precision / Recall / F1
+を one-best onset-only 指標として維持しつつ、survey 反映の skeleton として
+Candidate Recall@K、粗い Correction Burden、HardMissRate、ConfidenceCalibration 初期集計も出す。
 fixture 回帰スイートが「楽譜との完全一致」を assert するのに対し、本ベンチマークは
 人間検証済み ground truth (`ground_truth.json`, AGENTS.md スキーマ) との
 onset 時刻 ± tolerance の note 単位マッチングで「実演奏にどれだけ近いか」を測る。
 自由演奏転写の改善追跡用 (完全一致が定義できない録音向け)。
+追加レイヤは analysis script 限定で、本番 response schema は広げない。benchmark 実行時のみ
+debug 出力から `rankedCandidates` を拾い、通常 response の `alternateGroupings` / `candidateSlots`
+(soft alternate / dropped candidate) と合わせて JSON に source counts と recall/cost を出す。
 
 ground truth の置き場所: `apps/api/tests/fixtures/transaction-captures/<tx-id>/ground_truth.json`
 (audio と tuning は `data/transactions/<tx-id>/` から読む)。
