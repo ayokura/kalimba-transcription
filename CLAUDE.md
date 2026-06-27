@@ -7,11 +7,16 @@
 
 ## Dev server startup
 
-API サーバーは常に `--reload` 付きで起動すること。ファイル変更時に自動リロードされ、コード反映のたびにサーバーを kill/restart する必要がない:
+prod の API/Web/tunnel は systemd user service として常駐し、**127.0.0.1:8000 (api) と 127.0.0.1:3000 (web) を占有している**。dev で素の uvicorn を 8000 に立てると prod とポート競合で落ちるため、用途で使い分ける:
+
+- **prod へコード反映**: `systemctl --user restart kalimba-api` (web は build 後に `systemctl --user restart kalimba-web`)。手順詳細は `docs/deploy-cloudflare-tunnel.md`。
+- **dev / ブランチ検証で別インスタンスを立てる**: prod (8000/3000) と衝突しない **port 8001** で起動する。`--reload` 付きにすればファイル変更時に自動リロードされ、コード反映のたびにサーバーを kill/restart する必要がない:
 
 ```
-uv run uvicorn app.main:app --app-dir apps/api --reload --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --app-dir apps/api --reload --host 0.0.0.0 --port 8001
 ```
+
+prod と共有の `data/` を汚したくない実験では `KALIMBA_DATA_DIR` を一時ディレクトリに向ける。
 
 バックグラウンドで起動した server の停止は、`kill` ではなく **`TaskStop` tool** を使うこと (run_in_background で起動したタスクの task_id を渡す)。`kill` は Claude Code がフリーズする原因になる場合がある。
 
