@@ -123,6 +123,38 @@ def list_recent_transactions(limit: int) -> list[dict]:
     return results
 
 
+def list_review_queue(limit: int, status: str | None = None) -> list[dict]:
+    """All transactions (newest first) with review/queue metadata, optionally
+    filtered by review status. A transaction with no review_status.json is
+    treated as ``recorded_only`` for filtering purposes (it was submitted but
+    never triaged)."""
+    tx_root = get_transactions_dir()
+    if not tx_root.exists():
+        return []
+    entries: list[tuple[float, Path]] = []
+    for tx_dir in tx_root.iterdir():
+        if not tx_dir.is_dir():
+            continue
+        audio_path = tx_dir / "audio.wav"
+        if not audio_path.exists():
+            continue
+        entries.append((audio_path.stat().st_mtime, tx_dir))
+    entries.sort(reverse=True)
+    results: list[dict] = []
+    for _, tx_dir in entries:
+        entry = _summarize_transaction(tx_dir)
+        if entry is None:
+            continue
+        if status is not None:
+            effective = entry.get("reviewStatus") or "recorded_only"
+            if effective != status:
+                continue
+        results.append(entry)
+        if len(results) >= limit:
+            break
+    return results
+
+
 def _summarize_transaction(tx_dir: Path) -> dict | None:
     request_path = tx_dir / "request.json"
     response_path = tx_dir / "response.json"
@@ -135,6 +167,15 @@ def _summarize_transaction(tx_dir: Path) -> dict | None:
         return None
     tuning = request_data.get("tuning") or {}
     audio_path = tx_dir / "audio.wav"
+    review_status = _read_review_status(tx_dir)
+    corrections_exists = (tx_dir / "corrections.json").exists()
+    memo_text = None
+    memo_path = tx_dir / "memo.txt"
+    if memo_path.exists():
+        try:
+            memo_text = memo_path.read_text(encoding="utf-8")
+        except OSError:
+            memo_text = None
     return {
         "transactionId": tx_dir.name,
         "createdAt": audio_path.stat().st_mtime,
@@ -142,6 +183,12 @@ def _summarize_transaction(tx_dir: Path) -> dict | None:
         "tuningName": tuning.get("name"),
         "eventCount": len(response_data.get("events") or []),
         "audioSha256": request_data.get("audioSha256"),
+        "reviewStatus": (review_status or {}).get("status"),
+        "reviewStatusUpdatedAt": (review_status or {}).get("updatedAt"),
+        "hasCorrections": corrections_exists,
+        "hasMemo": bool(memo_text and memo_text.strip()),
+        "warningCount": len(response_data.get("warnings") or []),
+        "candidateSlotCount": len(response_data.get("candidateSlots") or []),
     }
 
 
@@ -225,3 +272,25 @@ def quarantine_corrections(transaction_id: str) -> None:
 
 def transaction_exists(transaction_id: str) -> bool:
     return get_transaction_dir(transaction_id).exists()
+
+
+def save_review_status(transaction_id: str, payload: dict) -> None:
+    tx_dir = get_transaction_dir(transaction_id)
+    tx_dir.mkdir(parents=True, exist_ok=True)
+    (tx_dir / "review_status.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def _read_review_status(tx_dir: Path) -> dict | None:
+    path = tx_dir / "review_status.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def load_review_status(transaction_id: str) -> dict | None:
+    return _read_review_status(get_transaction_dir(transaction_id))

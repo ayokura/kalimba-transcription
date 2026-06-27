@@ -114,6 +114,31 @@ class CorrectionsPayload(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+# Review lifecycle status for a recording (tester collection workflow). Kept as a
+# small, explicit state set so testers can submit a recording WITHOUT a full
+# manual transcription: "recorded_only" is a valid terminal contribution.
+# review_completed is the only state that promote_corrections_to_ground_truth.py
+# treats as ready for GT-candidate promotion.
+ReviewStatusValue = Literal[
+    "recorded_only",
+    "review_started",
+    "review_completed",
+    "rerecord_needed",
+    "unusable",
+    "uncertain",
+]
+
+
+class ReviewStatusPayload(BaseModel):
+    version: Literal[1] = 1
+    status: ReviewStatusValue
+    note: str | None = None
+    reviewer: str | None = None
+    updated_at: str | None = Field(default=None, alias="updatedAt")
+
+    model_config = {"populate_by_name": True}
+
+
 class TuningMismatch(BaseModel):
     """Advisory: the recording's spectral peaks fit the selected tuning poorly
     (e.g. a D major recording transcribed with a C major tuning)."""

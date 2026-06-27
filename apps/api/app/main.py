@@ -11,7 +11,12 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, ValidationError
 
 from .fingerprints import git_head_sha, kalimba_dsp_fingerprint, recognizer_fingerprint
-from .models import CorrectionsPayload, InstrumentTuning, TranscriptionResult
+from .models import (
+    CorrectionsPayload,
+    InstrumentTuning,
+    ReviewStatusPayload,
+    TranscriptionResult,
+)
 from .storage import (
     compute_audio_sha256,
     find_transaction_by_hash_and_tuning,
@@ -19,14 +24,17 @@ from .storage import (
     get_transaction_audio_sha256,
     get_transaction_timestamps,
     list_recent_transactions,
+    list_review_queue,
     list_transactions_by_hash,
     load_audio_path,
     load_corrections,
     load_memo,
     load_response,
+    load_review_status,
     quarantine_corrections,
     save_corrections,
     save_memo,
+    save_review_status,
     save_transaction,
     transaction_exists,
 )
@@ -171,6 +179,24 @@ def get_recent_transcriptions(limit: int = 10) -> list[dict]:
     return list_recent_transactions(capped)
 
 
+_REVIEW_STATUS_VALUES = {
+    "recorded_only",
+    "review_started",
+    "review_completed",
+    "rerecord_needed",
+    "unusable",
+    "uncertain",
+}
+
+
+@app.get("/api/review-queue")
+def get_review_queue(limit: int = 50, status: str | None = None) -> list[dict]:
+    capped = max(1, min(limit, 200))
+    if status is not None and status not in _REVIEW_STATUS_VALUES:
+        raise HTTPException(status_code=400, detail="Invalid review status filter.")
+    return list_review_queue(capped, status=status)
+
+
 @app.get("/api/transcriptions/{transaction_id}")
 def get_transcription(transaction_id: str) -> dict:
     _validate_transaction_id(transaction_id)
@@ -253,3 +279,30 @@ def put_transcription_corrections(transaction_id: str, payload: CorrectionsPaylo
     document["updatedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     save_corrections(transaction_id, document)
     return {"corrections": document}
+
+
+@app.get("/api/transcriptions/{transaction_id}/review-status")
+def get_transcription_review_status(transaction_id: str) -> dict:
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    raw = load_review_status(transaction_id)
+    if raw is None:
+        return {"reviewStatus": None}
+    try:
+        validated = ReviewStatusPayload.model_validate(raw)
+    except ValidationError:
+        # 互換性のない/壊れた review_status は「未設定」として扱う (誤動作防止)。
+        return {"reviewStatus": None}
+    return {"reviewStatus": validated.model_dump(by_alias=True)}
+
+
+@app.put("/api/transcriptions/{transaction_id}/review-status")
+def put_transcription_review_status(transaction_id: str, payload: ReviewStatusPayload) -> dict:
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    document = payload.model_dump(by_alias=True)
+    document["updatedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    save_review_status(transaction_id, document)
+    return {"reviewStatus": document}
