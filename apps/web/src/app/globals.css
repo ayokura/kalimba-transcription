@@ -2182,6 +2182,25 @@ button:disabled {
   background: rgba(176, 141, 62, 0.22);
 }
 
+.review-slot-candidates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+
+.review-suggestion-chip-primary {
+  border-color: var(--accent-strong);
+  background: rgba(176, 141, 62, 0.22);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.review-suggestion-chip {
+  cursor: pointer;
+}
+
 .review-card-actions {
   display: flex;
   gap: 10px;

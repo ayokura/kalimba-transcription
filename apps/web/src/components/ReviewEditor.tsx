@@ -269,8 +269,9 @@ function ReviewEditorReady({
   );
 
   const handleInsertSlot = useCallback(
-    (slot: CandidateSlot) => {
-      apply((state) => insertEvent(state, slot.startTime, [slot.primaryNote], "inserted-slot"));
+    (slot: CandidateSlot, note?: ScoreNote) => {
+      const chosen = note ?? slot.primaryNote;
+      apply((state) => insertEvent(state, slot.startTime, [chosen], "inserted-slot"));
     },
     [apply],
   );
@@ -387,7 +388,7 @@ function ReviewEditorReady({
             <SlotCard
               key={`slot-${item.slotIndex}`}
               slot={item.slot}
-              onInsert={() => handleInsertSlot(item.slot)}
+              onInsert={(note) => handleInsertSlot(item.slot, note)}
             />
           ),
         )}
@@ -577,8 +578,20 @@ function EventCard({
   );
 }
 
-function SlotCard({ slot, onInsert }: { slot: CandidateSlot; onInsert: () => void }) {
+function SlotCard({
+  slot,
+  onInsert,
+}: {
+  slot: CandidateSlot;
+  onInsert: (note?: ScoreNote) => void;
+}) {
   const reasonLabel = DROP_REASON_LABELS[slot.dropReason] ?? slot.dropReason;
+  // Candidate-first: the recognizer dropped this segment but kept candidates.
+  // Adopting a candidate is one tap (Candidate Recall → low correction burden);
+  // typing a note by hand stays available as a fallback (InsertAtPlayhead).
+  const alternates = slot.candidates.filter(
+    (cand) => noteName(cand) !== noteName(slot.primaryNote),
+  );
   return (
     <article className="review-card review-card-slot">
       <div className="review-card-head review-card-head-static">
@@ -592,9 +605,26 @@ function SlotCard({ slot, onInsert }: { slot: CandidateSlot; onInsert: () => voi
         <span className="review-slot-meta">
           {reasonLabel} · {Math.round(slot.confidence * 100)}%
         </span>
-        <button type="button" className="review-btn review-btn-small" onClick={onInsert}>
-          ＋ 追加
+      </div>
+      <div className="review-slot-candidates">
+        <span className="review-suggestions-label">候補をそのまま採用:</span>
+        <button
+          type="button"
+          className="review-suggestion-chip review-suggestion-chip-primary"
+          onClick={() => onInsert(slot.primaryNote)}
+        >
+          ＋{slot.primaryNote.labelDoReMi} <small>{noteName(slot.primaryNote)}</small>
         </button>
+        {alternates.map((cand) => (
+          <button
+            key={noteName(cand)}
+            type="button"
+            className="review-suggestion-chip"
+            onClick={() => onInsert(cand)}
+          >
+            ＋{cand.labelDoReMi} <small>{noteName(cand)}</small>
+          </button>
+        ))}
       </div>
     </article>
   );

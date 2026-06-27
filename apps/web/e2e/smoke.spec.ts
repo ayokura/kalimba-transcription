@@ -139,7 +139,8 @@ test("score page can open the persistent review page with mocked transaction dat
   await expect(page).toHaveURL(/\/score\/tx-e2e\/review$/);
   await expect(page.getByRole("heading", { name: "確認と修正" })).toBeVisible();
   await expect(page.getByRole("button", { name: /保存/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /追加/ }).first()).toBeVisible();
+  // Candidate-first slot card surfaces one-tap adopt chips for dropped segments.
+  await expect(page.getByText("候補をそのまま採用:")).toBeVisible();
 });
 
 test("review page shows the status panel and can set recorded_only", async ({ page }) => {
@@ -168,6 +169,21 @@ test("review page shows the status panel and can set recorded_only", async ({ pa
   await page.getByRole("button", { name: /録音だけ提出/ }).click();
   await expect(page.getByText("状態を保存しました")).toBeVisible();
   expect(savedStatus).toBe("recorded_only");
+});
+
+test("review page adopts a dropped-segment candidate with one tap", async ({ page }) => {
+  await mockTranscriptionApi(page);
+  await page.goto("/score/tx-e2e/review");
+  await expect(page.getByRole("heading", { name: "確認と修正" })).toBeVisible();
+
+  // The mocked transcription has a candidate slot (dropped primary E4). The
+  // candidate-first UX surfaces a one-tap adopt chip.
+  await expect(page.getByText("候補をそのまま採用:")).toBeVisible();
+  const adoptChip = page.getByRole("button", { name: /E4/ }).first();
+  await adoptChip.click();
+
+  // After adopting, an unsaved-change indicator appears (save becomes enabled).
+  await expect(page.getByText("未保存の修正があります")).toBeVisible();
 });
 
 test("review queue lists recordings and filters by status", async ({ page }) => {
