@@ -141,3 +141,81 @@ test("score page can open the persistent review page with mocked transaction dat
   await expect(page.getByRole("button", { name: /保存/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /追加/ }).first()).toBeVisible();
 });
+
+test("review page shows the status panel and can set recorded_only", async ({ page }) => {
+  await mockTranscriptionApi(page);
+  let savedStatus: string | null = null;
+  await page.route("**/api/transcriptions/tx-e2e/review-status", async (route) => {
+    if (route.request().method() === "PUT") {
+      const body = JSON.parse(route.request().postData() ?? "{}");
+      savedStatus = body.status;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ reviewStatus: { version: 1, status: body.status } }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ reviewStatus: null }),
+    });
+  });
+
+  await page.goto("/score/tx-e2e/review");
+  await expect(page.getByRole("heading", { name: "確認と修正" })).toBeVisible();
+  await page.getByRole("button", { name: /録音だけ提出/ }).click();
+  await expect(page.getByText("状態を保存しました")).toBeVisible();
+  expect(savedStatus).toBe("recorded_only");
+});
+
+test("review queue lists recordings and filters by status", async ({ page }) => {
+  await page.route("**/api/review-queue**", async (route) => {
+    const url = new URL(route.request().url());
+    const status = url.searchParams.get("status");
+    const all = [
+      {
+        transactionId: "tx-e2e",
+        createdAt: 1_700_000_000,
+        tuningId: "kalimba-17-c",
+        tuningName: "17 Key C Major",
+        eventCount: 12,
+        audioSha256: "abc",
+        reviewStatus: "review_started",
+        reviewStatusUpdatedAt: null,
+        hasCorrections: true,
+        hasMemo: false,
+        warningCount: 1,
+        candidateSlotCount: 2,
+      },
+      {
+        transactionId: "tx-other",
+        createdAt: 1_700_000_500,
+        tuningId: "kalimba-17-c",
+        tuningName: "17 Key C Major",
+        eventCount: 3,
+        audioSha256: "def",
+        reviewStatus: "rerecord_needed",
+        reviewStatusUpdatedAt: null,
+        hasCorrections: false,
+        hasMemo: false,
+        warningCount: 0,
+        candidateSlotCount: 0,
+      },
+    ];
+    const rows = status ? all.filter((r) => r.reviewStatus === status) : all;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(rows),
+    });
+  });
+
+  await page.goto("/review/queue");
+  await expect(page.getByRole("heading", { name: "確認キュー" })).toBeVisible();
+  await expect(page.getByText("2 件")).toBeVisible();
+
+  await page.getByRole("button", { name: "録り直しが必要" }).click();
+  await expect(page.getByText("1 件")).toBeVisible();
+});

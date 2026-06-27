@@ -1770,6 +1770,143 @@ button:disabled {
   min-height: 1.1em;
 }
 
+.review-queue-shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px 16px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-queue-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.review-queue-header-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.review-queue-home-link {
+  color: var(--accent-strong);
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.review-queue-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+}
+
+.review-queue-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-queue-filter {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.review-queue-filter.active {
+  border-color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px var(--accent-strong);
+}
+
+.review-queue-count {
+  font-size: 0.82rem;
+}
+
+.review-queue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.review-queue-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  background: #fff;
+}
+
+.review-queue-link:hover {
+  border-color: var(--accent-strong);
+}
+
+.review-queue-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.review-queue-item-title {
+  font-weight: 600;
+}
+
+.review-queue-item-time {
+  font-size: 0.78rem;
+}
+
+.review-queue-item-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.review-queue-status,
+.review-queue-flag {
+  font-size: 0.74rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.review-queue-flag.warn {
+  border-color: #c08a00;
+  color: #8a6300;
+}
+
+.simple-home-recent-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.simple-home-queue-link {
+  background: none;
+  border: none;
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+}
+
 .review-back-link {
   color: var(--accent-strong);
   text-decoration: none;

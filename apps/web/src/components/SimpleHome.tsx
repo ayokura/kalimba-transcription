@@ -456,7 +456,16 @@ export function SimpleHome() {
 
       {recent.length > 0 ? (
         <section className="simple-home-recent">
-          <p className="simple-home-label">これまでの採譜</p>
+          <div className="simple-home-recent-head">
+            <p className="simple-home-label">これまでの採譜</p>
+            <button
+              type="button"
+              className="simple-home-queue-link"
+              onClick={() => router.push("/review/queue")}
+            >
+              確認キューを開く →
+            </button>
+          </div>
           <ul className="simple-home-recent-list">
             {recent.map((entry) => (
               <li key={entry.transactionId} className="simple-home-recent-item">
