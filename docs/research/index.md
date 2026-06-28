@@ -29,7 +29,7 @@
 
 mir_eval / PEAMT / Onsets and Frames / MV2H / AMT Challenge / calibration をもとに、Candidate Recall@K、Correction Burden、ConfidenceCalibration の位置づけを整理。
 
-次の実装候補である `note_f1_benchmark.py` 拡張時に参照する。
+`note_f1_benchmark.py` は 2026-06-28 時点でこの骨格を実装済み。次は、その出力を review queue / CI / #18 free-performance corpus 拡張へ接続する。
 
 ### 3. Product UX / correction workflow
 
@@ -83,16 +83,24 @@ per-tine partial / note-state / resonance handling の spike 前に参照する�
 
 ## 次にやるなら
 
-最も自然な次作業は、`note_f1_benchmark.py` に以下の skeleton を追加すること。
+`note_f1_benchmark.py` には、以下の free-performance 評価 skeleton が実装済み。
 
 - onset-only one-best metrics
 - Candidate Recall@K
 - Correction Burden の粗い編集コスト
 - HardMissRate
 - ConfidenceCalibration の初期集計
+- debug `rankedCandidates` / `candidateSlots` を使った診断 recall
 
-その後、#18 の free-performance corpus 拡張と #178 の candidate output schema を接続する。
+次の自然な作業は、**測定値を運用ループへ接続すること**。
+
+1. テスター環境の `ground_truth.json` corpus で `note_f1_benchmark.py --json` を定期実行し、baseline JSON を保存する。
+2. `review_priority_report.py` を review queue の運用メモに接続し、「どの録音を見ると recognizer 改善に効くか」を見える化する。
+3. #18 の free-performance corpus 拡張では、録音だけでなく onset `ground_truth.json` / tolerance / annotation method を同時に集める。
+4. #178 multi-candidate output schema は、benchmark-only の candidate sources を review UI / public response に昇格する順序で進める。
+5. #111 chord selector redesign は、上記指標で「sequential accept loop がどの correction burden を生んでいるか」を測ってから着手する。
 
 ## 履歴
 
 - 2026-06-27: 新規作成。2026-06-26/27 再サーベイが一段落したため、読み順と設計判断上の優先文書を整理。
+- 2026-06-28: `note_f1_benchmark.py` / `review_priority_report.py` の実装状況を反映し、次作業を skeleton 実装から baseline 運用・review queue 接続・#111 前段計測へ更新。

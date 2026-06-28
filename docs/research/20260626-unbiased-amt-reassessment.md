@@ -31,7 +31,7 @@
 | post-processing | events.py 約27パス。**ほぼ局所/因果的** (隣接1〜2 event 参照)。コーパス全体書き換えは patterns.py の repeated triad / four-note の2つのみ | `events.py`, `patterns.py` |
 | multi-candidate | `alternateGroupings` は通常 response に出る。`rankedCandidates`/`secondaryDecisionTrail`/`residualCandidates` は **debug 限定** | `pipeline.py`, `app/models.py` |
 | fixture | 35 total / 33 completed / 1 pending / 1 rerecord (実測) | `expected.json` 集計 |
-| 評価 | API テスト 501 pass (xdist 20 並列で ~37s)。F1 ベンチは既知フレーズで飽和傾向 | `pytest.ini`, `note_f1_benchmark.py` |
+| 評価 | API テスト 501 pass (xdist 20 並列で ~37s)。`note_f1_benchmark.py` は one-best F1 に加え Candidate Recall@K / Correction Burden / HardMissRate / ConfidenceCalibration を出す | `pytest.ini`, `note_f1_benchmark.py` |
 
 **旧サーベイとの主要な差分 (=旧サーベイのバイアス):**
 - 旧: 「onset gate 未実装」→ 実: 実装済み (弱 AND)。
@@ -121,15 +121,15 @@
 
 各項目に**測定可能な exit criteria** を付す。日付ではなく条件で進める。
 
-#### NOW — 測れる状態を作る (低リスク)
-- docs 現状化 (本コミットで roadmap / research-mapping は対応済み。free-performance-readiness も追随)。
-- `note_f1_benchmark.py` に Candidate Recall + Correction Burden を追加し CI 配線。
-- onset gate の棄却を「drop」ではなく「低 confidence の candidate slot へ降格」に統一。
-- **exit:** 自由演奏 GT 20件以上で「F1 / Candidate Recall / Correction Burden」が自動計測され
-  ベースライン確立。
+#### NOW — 測定 skeleton を運用 loop に接続する (低リスク)
+- docs 現状化 (roadmap / research / free-performance-readiness の優先順位を、実装済み benchmark 前提へ更新)。
+- `note_f1_benchmark.py --json` の出力をテスター環境で baseline 保存し、差分レポート化する。
+- `review_priority_report.py` を review queue / capture workflow の運用に接続し、human review effort を hard miss / correction burden が大きい録音へ向ける。
+- onset gate の棄却を「drop」ではなく「低 confidence の candidate slot へ降格」に統一する設計を、#178 candidate schema と合わせて詰める。
+- **exit:** 自由演奏 GT 20件以上で「F1 / Candidate Recall / Correction Burden / review priority」が自動計測され、baseline と差分が保存される。
 
 #### NEXT — 候補保持の作り込み + 物理モデルは検証のみ
-- #178: debug 限定の rankedCandidates / dropped segment を**本出力 + review UI** に昇格。
+- #178: debug 限定の rankedCandidates / dropped segment を、まず benchmark/report source として安定化し、その後 **本出力 + review UI** に昇格。
 - #18: 自由演奏 corpus を増やす (mixed / strict / slide / arpeggio-like、録音環境を変える、
   `ground_truth.json` の `method` を明記)。
 - per-tine partial / note-state machine は **research branch の spike** (dual-run、main 投入は判断保留)。
@@ -195,3 +195,4 @@ DOI / 公式実装へ戻って確認する。
 ## 履歴
 - 2026-06-26: 新規作成。`20260406-*` のバイアス除去・現実装事実との再突合・最新研究 (Basic Pitch /
   PESTO / MT3 系 / AMT bias) の再収集を反映。
+- 2026-06-28: Candidate Recall / Correction Burden benchmark 実装後の現状へ更新。NOW を「指標 skeleton 実装」から「baseline 保存・review queue 接続・#178 candidate schema」へ移動。

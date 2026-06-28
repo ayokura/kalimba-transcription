@@ -116,20 +116,29 @@ This is where recording intent, rerecord guidance, fixture status, and audit not
 
 ## Current Medium-Term Themes
 
-1. gesture classification
-   - strict chord
-   - `slide_chord`
-   - `slide_chord` / sweep
-   - ambiguous
-2. debug review UX
+1. free-performance evaluation loop
+   - `note_f1_benchmark.py --json` baseline preservation
+   - Candidate Recall / Correction Burden / ConfidenceCalibration trend reports
+   - review priority report connected to review queue
+2. candidate-aware review UX
+   - `candidateSlots` / `alternateGroupings` / debug `rankedCandidates` surfaced with provenance
    - expected vs detected diff
    - rerecord / review-needed states
    - fragment warnings
-3. editor UX
+3. gesture classification
+   - strict chord
+   - `slide_chord`
+   - `slide_chord` / sweep
+   - `arpeggio`
+   - ambiguous
+4. editor UX
+   - enable candidate slot
+   - replace note from candidate
    - merge as chord
    - bundle as `slide_chord`
-4. broader recognition robustness
+5. broader recognition robustness
    - contact noise
    - room noise
    - mic position variance
+   - hard drops from sequential accept / chord selection
 
