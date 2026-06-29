@@ -50,7 +50,9 @@ from note_f1_benchmark import (  # noqa: E402
     CAPTURES_DIR,
     DATA_DIR,
     discover_tx_ids,
+    ground_truth_path_for,
     load_ground_truth,
+    transaction_dir_for,
 )
 
 # Window for associating a surfaced candidate / ranked segment with a ground-truth
@@ -65,7 +67,7 @@ def _note_name(note: dict) -> str:
 
 
 def transcribe(client: TestClient, tx_id: str) -> dict:
-    tx_dir = DATA_DIR / tx_id
+    tx_dir = transaction_dir_for(tx_id)
     request = json.loads((tx_dir / "request.json").read_text(encoding="utf-8"))
     response = client.post(
         "/api/transcriptions",
@@ -256,7 +258,7 @@ def main() -> int:
     conf_real: list[float] = []
     conf_noise: list[float] = []
     for tx_id in tx_ids:
-        truth = load_ground_truth(CAPTURES_DIR / tx_id / "ground_truth.json")
+        truth = load_ground_truth(ground_truth_path_for(tx_id))
         outcome = evaluate(transcribe(client, tx_id), truth)
         outcome["txId"] = tx_id
         results.append(outcome)

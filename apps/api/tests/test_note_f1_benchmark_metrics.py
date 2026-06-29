@@ -132,3 +132,26 @@ def test_confidence_calibration_uses_alternate_groupings_as_event_flags() -> Non
     assert outcome["confidence"]["highConfidenceWrongRate"] == pytest.approx(1.0)
     assert outcome["confidence"]["lowConfidenceCorrectRate"] == pytest.approx(0.0)
     assert outcome["confidence"]["candidateHighConfidenceWrongRate"] == pytest.approx(0.0)
+
+
+def test_repo_managed_corpus_discovery_precedes_local_transactions(tmp_path, monkeypatch) -> None:
+    tx_id = "tx-corpus"
+    corpus_root = tmp_path / "free-performance-corpus"
+    corpus_dir = corpus_root / tx_id
+    corpus_dir.mkdir(parents=True)
+    for name in ("audio.wav", "request.json", "ground_truth.json"):
+        (corpus_dir / name).write_text("{}", encoding="utf-8")
+
+    local_root = tmp_path / "transactions"
+    local_dir = local_root / tx_id
+    local_dir.mkdir(parents=True)
+    (local_dir / "audio.wav").write_text("local-audio", encoding="utf-8")
+    (local_dir / "request.json").write_text("{}", encoding="utf-8")
+
+    monkeypatch.setattr(bench, "FREE_PERFORMANCE_CORPUS_DIR", corpus_root)
+    monkeypatch.setattr(bench, "DATA_DIR", local_root)
+    monkeypatch.setattr(bench, "CAPTURES_DIR", tmp_path / "transaction-captures")
+
+    assert bench.discover_tx_ids() == [tx_id]
+    assert bench.transaction_dir_for(tx_id) == corpus_dir
+    assert bench.ground_truth_path_for(tx_id) == corpus_dir / "ground_truth.json"

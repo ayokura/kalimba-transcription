@@ -53,6 +53,28 @@
   - `review_needed`: metadata or interpretation still unclear
   - `reference_only`: retain for reference, not active regression
 
+## Corpus Management / Rights Review
+
+- Free-performance corpus management is documented in [`docs/corpus-management.md`](docs/corpus-management.md).
+- Repository-managed free-performance recordings live under
+  `apps/api/tests/fixtures/free-performance-corpus/<transaction-id>/`.
+- Audio / teacher data may be committed there only after a **human**
+  copyright/rights review. `metadata.json.rightsReview.status` must be
+  `approved_for_repository`, and `copyright.status` must be cleared
+  (`original_performance`, `public_domain`, or equivalent).
+- Useful but copyright-unknown or non-clearable recordings should remain
+  local-only in `data/transactions/` and/or ignored transaction-capture
+  fixtures. Do not commit their audio or teacher data.
+- When capture hardware is known, record it in corpus metadata (e.g.
+  `recording.device`, `recording.microphone`) because it may become useful for
+  future recording-profile calibration.
+- Review-UI-derived `ground_truth.json` (`method: "user_corrected"`) is reliable
+  primarily for note identity / order / grouping, but onset `timeSec` is
+  approximate. Recognizer event starts can deviate from perceptual/spectral
+  onsets, `inserted-slot` uses dropped-segment boundaries, and `inserted-manual`
+  is hand-placed. Use wider `toleranceSec` and require spectral/human
+  re-verification before timing-sensitive training or calibration.
+
 ## Fixture Alignment / Overrides
 
 - `score_structure.json` は楽譜の意図を表す。録音固有の演奏差分に合わせて変更しない。

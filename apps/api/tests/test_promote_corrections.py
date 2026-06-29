@@ -90,6 +90,7 @@ def test_completed_status_is_promoted(patched):
     gt = json.loads(gt_path.read_text())
     assert gt["source"]["reviewStatus"] == "review_completed"
     assert gt["source"]["provenance"] == "tester_corrected"
+    assert gt["source"]["timingAccuracy"]["onsetTiming"] == "approximate"
     assert {o["method"] for o in gt["onsets"]} == {"user_corrected"}
 
 

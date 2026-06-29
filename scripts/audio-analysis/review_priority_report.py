@@ -103,10 +103,18 @@ def build_rows() -> list[dict]:
     client = TestClient(app)
     rows: list[dict] = []
     for tx_id in bench.discover_tx_ids():
-        truth = bench.load_ground_truth(bench.CAPTURES_DIR / tx_id / "ground_truth.json")
+        truth = bench.load_ground_truth(bench.ground_truth_path_for(tx_id))
         payload = bench.transcribe_payload(client, tx_id, debug=True)
         metrics = bench.evaluate_payload(payload, truth)
-        status = _load_review_status(bench.DATA_DIR, tx_id)
+        review_status_path = bench.review_status_path_for(tx_id)
+        if review_status_path is not None:
+            try:
+                status_doc = json.loads(review_status_path.read_text(encoding="utf-8"))
+                status = status_doc.get("status") if isinstance(status_doc, dict) else None
+            except (OSError, json.JSONDecodeError):
+                status = None
+        else:
+            status = None
         priority = compute_priority(metrics, status)
         rows.append(
             {

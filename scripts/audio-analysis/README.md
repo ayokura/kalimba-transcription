@@ -112,8 +112,15 @@ onset 時刻 ± tolerance の note 単位マッチングで「実演奏にどれ
 debug 出力から `rankedCandidates` を拾い、通常 response の `alternateGroupings` / `candidateSlots`
 (soft alternate / dropped candidate) と合わせて JSON に source counts と recall/cost を出す。
 
-ground truth の置き場所: `apps/api/tests/fixtures/transaction-captures/<tx-id>/ground_truth.json`
-(audio と tuning は `data/transactions/<tx-id>/` から読む)。
+ground truth の置き場所:
+
+- repo 管理: `apps/api/tests/fixtures/free-performance-corpus/<tx-id>/ground_truth.json`
+  - `audio.wav` / `request.json` も同じ corpus item 内から読む
+- local/dev only: `apps/api/tests/fixtures/transaction-captures/<tx-id>/ground_truth.json`
+  - audio と tuning は `data/transactions/<tx-id>/` から読む
+
+repo 管理 corpus への昇格には human rights/copyright review が必要。
+詳細は `docs/corpus-management.md`。
 
 ```bash
 uv run python scripts/audio-analysis/note_f1_benchmark.py              # GT のある全録音
@@ -150,6 +157,10 @@ promote する (テスターが確認・修正を終えた録音のみを GT 候
 ゲートを無効化 (status ファイルの無い旧 corrections 用)。生成される GT の
 `source.provenance` は `tester_corrected` で、人間検証 (ear/spectrogram) tier とは
 区別される。
+
+この script は `ground_truth.json` 生成用の staging tool。repo 管理 corpus に昇格する場合は、
+human rights/copyright review 後に `apps/api/tests/fixtures/free-performance-corpus/<tx-id>/`
+へ `audio.wav` / `request.json` / `ground_truth.json` / `metadata.json` などを揃えて追加する。
 
 ### review_priority_report.py
 benchmark 指標 (note_f1_benchmark) と review status (`review_status.json`) を結合し、

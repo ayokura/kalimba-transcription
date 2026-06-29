@@ -19,8 +19,10 @@ schema is not widened here.  The script requests debug output so the benchmark
 can also summarize diagnostic ``rankedCandidates`` without making them public.
 
 Ground truth discovery (default):
+  apps/api/tests/fixtures/free-performance-corpus/<tx-id>/ground_truth.json
   apps/api/tests/fixtures/transaction-captures/<tx-id>/ground_truth.json
-with audio + tuning taken from data/transactions/<tx-id>/.
+Repo-managed corpus items carry their own audio.wav + request.json. Local
+transaction-captures fall back to data/transactions/<tx-id>/ for audio + tuning.
 
 Usage:
   uv run python scripts/audio-analysis/note_f1_benchmark.py            # all GT
@@ -53,6 +55,9 @@ from apps.api.app.main import app  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = Path(os.environ.get("KALIMBA_DATA_DIR", str(REPO_ROOT / "data"))) / "transactions"
 CAPTURES_DIR = REPO_ROOT / "apps" / "api" / "tests" / "fixtures" / "transaction-captures"
+FREE_PERFORMANCE_CORPUS_DIR = (
+    REPO_ROOT / "apps" / "api" / "tests" / "fixtures" / "free-performance-corpus"
+)
 
 DEFAULT_TOLERANCE_SEC = 0.05
 CANDIDATE_TIME_WINDOW_SEC = 0.18
@@ -86,8 +91,44 @@ def load_ground_truth(path: Path) -> list[dict]:
     return pairs
 
 
+def corpus_dir_for(tx_id: str) -> Path | None:
+    """Repo-managed corpus dir for tx_id, if present."""
+    path = FREE_PERFORMANCE_CORPUS_DIR / tx_id
+    if (path / "audio.wav").is_file() and (path / "request.json").is_file():
+        return path
+    return None
+
+
+def transaction_dir_for(tx_id: str) -> Path:
+    """Directory containing audio.wav/request.json for tx_id.
+
+    Prefer repo-managed free-performance corpus for reproducibility; fall back
+    to local data/transactions for dev-only transaction-capture ground truth.
+    """
+    return corpus_dir_for(tx_id) or (DATA_DIR / tx_id)
+
+
+def ground_truth_path_for(tx_id: str) -> Path:
+    corpus_dir = corpus_dir_for(tx_id)
+    if corpus_dir is not None and (corpus_dir / "ground_truth.json").is_file():
+        return corpus_dir / "ground_truth.json"
+    return CAPTURES_DIR / tx_id / "ground_truth.json"
+
+
+def review_status_path_for(tx_id: str) -> Path | None:
+    corpus_dir = corpus_dir_for(tx_id)
+    candidates = []
+    if corpus_dir is not None:
+        candidates.append(corpus_dir / "review_status.json")
+    candidates.append(DATA_DIR / tx_id / "review_status.json")
+    for path in candidates:
+        if path.is_file():
+            return path
+    return None
+
+
 def transcribe_payload(client: TestClient, tx_id: str, *, debug: bool = True) -> dict:
-    tx_dir = DATA_DIR / tx_id
+    tx_dir = transaction_dir_for(tx_id)
     audio_bytes = (tx_dir / "audio.wav").read_bytes()
     request = json.loads((tx_dir / "request.json").read_text(encoding="utf-8"))
     response = client.post(
@@ -683,13 +724,24 @@ def evaluate_payload(payload: dict, truth: list[dict]) -> dict:
 
 
 def discover_tx_ids() -> list[str]:
-    if not CAPTURES_DIR.is_dir():
-        return []
-    return sorted(
-        d.name
-        for d in CAPTURES_DIR.iterdir()
-        if (d / "ground_truth.json").is_file() and (DATA_DIR / d.name / "audio.wav").is_file()
-    )
+    discovered: set[str] = set()
+    if FREE_PERFORMANCE_CORPUS_DIR.is_dir():
+        discovered.update(
+            d.name
+            for d in FREE_PERFORMANCE_CORPUS_DIR.iterdir()
+            if (d / "ground_truth.json").is_file()
+            and (d / "audio.wav").is_file()
+            and (d / "request.json").is_file()
+        )
+    if CAPTURES_DIR.is_dir():
+        discovered.update(
+            d.name
+            for d in CAPTURES_DIR.iterdir()
+            if (d / "ground_truth.json").is_file()
+            and (transaction_dir_for(d.name) / "audio.wav").is_file()
+            and (transaction_dir_for(d.name) / "request.json").is_file()
+        )
+    return sorted(discovered)
 
 
 def main() -> int:
@@ -735,7 +787,7 @@ def main() -> int:
         "candidateBinCorrectCounts": [0.0 for _ in range(len(CALIBRATION_BINS) - 1)],
     }
     for tx_id in tx_ids:
-        truth = load_ground_truth(CAPTURES_DIR / tx_id / "ground_truth.json")
+        truth = load_ground_truth(ground_truth_path_for(tx_id))
         payload = transcribe_payload(client, tx_id, debug=True)
         outcome = evaluate_payload(payload, truth)
         outcome["txId"] = tx_id

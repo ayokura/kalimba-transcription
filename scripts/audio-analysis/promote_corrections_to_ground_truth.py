@@ -152,6 +152,18 @@ def build_ground_truth(tx_id: str, corrections: dict) -> dict:
             # provenance tier: tester-confirmed timeline, NOT human-verified onset
             # annotation. promote_corrections never claims ear/spectrogram tiers.
             "provenance": "tester_corrected",
+            "timingAccuracy": {
+                "onsetTiming": "approximate",
+                "noteIdentity": "review_corrected",
+                "caveat": (
+                    "Review UI corrections are reliable primarily for note identity, "
+                    "ordering, and grouping. Onset times are approximate: recognizer "
+                    "event starts can deviate from perceptual/spectral onsets, "
+                    "inserted-slot times use dropped-segment boundaries, and "
+                    "inserted-manual times are hand-placed. Use spectral/human "
+                    "verification before timing-sensitive training or calibration."
+                ),
+            },
         },
         "onsets": onsets,
     }

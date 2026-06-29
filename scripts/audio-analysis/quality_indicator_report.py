@@ -47,8 +47,10 @@ from note_f1_benchmark import (  # noqa: E402
     CAPTURES_DIR,
     DATA_DIR,
     discover_tx_ids,
+    ground_truth_path_for,
     load_ground_truth,
     match_pairs,
+    transaction_dir_for,
 )
 
 client = TestClient(app)
@@ -109,11 +111,11 @@ def main() -> int:
 
     # --- 1. F1 corpus correlation -----------------------------------------
     for tx_id in discover_tx_ids():
-        tx_dir = DATA_DIR / tx_id
+        tx_dir = transaction_dir_for(tx_id)
         if not (tx_dir / "audio.wav").is_file():
             continue
         qi, payload = _indicators_for(tx_dir)
-        truth = load_ground_truth(CAPTURES_DIR / tx_id / "ground_truth.json")
+        truth = load_ground_truth(ground_truth_path_for(tx_id))
         m = match_pairs(truth, _predicted_pairs(payload))
         out["f1Correlation"].append(
             {"txId": tx_id[:8], "f1": round(m["f1"], 4), "difficulty": qi.difficulty,
