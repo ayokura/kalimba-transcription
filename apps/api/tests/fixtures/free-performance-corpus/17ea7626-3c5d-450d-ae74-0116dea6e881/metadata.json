@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "corpusType": "free-performance",
+  "repositoryManaged": true,
+  "transactionId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+  "createdAt": "2026-06-27T09:59:23Z",
+  "promotedAt": "2026-06-30T00:00:00+09:00",
+  "status": "review_completed",
+  "categories": [
+    "tester_capture",
+    "free_performance",
+    "review_corrected",
+    "repo_managed_corpus"
+  ],
+  "recording": {
+    "device": "Samsung Galaxy S25 Ultra",
+    "microphone": "internal microphone",
+    "deviceNotes": "Recorded using the built-in microphone of a Galaxy S25 Ultra.",
+    "sampleRate": 48000,
+    "channels": 1,
+    "durationSec": 17.76,
+    "peakDb": -12.66,
+    "rmsDb": -33.55
+  },
+  "tuning": {
+    "selectedId": "kalimba-17-c",
+    "correctedId": null
+  },
+  "aggregates": {
+    "recognizerEventCount": 30,
+    "correctedEventCount": 37,
+    "candidateSlotCount": 5,
+    "originCounts": {
+      "recognizer": 28,
+      "edited": 2,
+      "inserted-slot": 4,
+      "inserted-manual": 3
+    }
+  },
+  "copyright": {
+    "status": "original_performance",
+    "workTitle": "Original free-form kalimba performance",
+    "publicDomainReason": null,
+    "repositoryAllowed": true
+  },
+  "timingAccuracy": {
+    "noteIdentity": "reliable",
+    "noteOrderAndCombination": "reliable",
+    "onsetTiming": "approximate",
+    "method": "user_corrected",
+    "reason": "Onset times come from the review UI: recognizer-origin events use the recognizer's detected event start (which itself can deviate slightly from the perceptual/spectral onset), inserted-manual events are hand-placed on the timeline, and inserted-slot events use a dropped-segment boundary.",
+    "safeFor": [
+      "score-level evaluation",
+      "note identity / order / combination evaluation"
+    ],
+    "cautionFor": [
+      "timing-sensitive training",
+      "tempo / rhythm modeling",
+      "onset-time learning",
+      "anything requiring spectral-grade onset accuracy"
+    ],
+    "refinement": "Optional. An agent or human can re-verify onset times with spectral analysis and, if done, raise the per-onset method to spectrogram_verified / aubio_cross_checked. Not required unless a timing-sensitive use needs it."
+  },
+  "rightsReview": {
+    "requiredForRepositoryManagement": true,
+    "status": "approved_for_repository",
+    "reviewedAt": "2026-06-30",
+    "reviewedBy": "human requester",
+    "decision": "include_audio_and_teacher_data_in_repository",
+    "reason": "The requester confirmed this recording is useful and has no copyright issue."
+  },
+  "captureConsent": {
+    "granted": true,
+    "grantedBy": "human requester",
+    "grantedAt": "2026-06-30"
+  },
+  "sourceFiles": {
+    "audio": "audio.wav",
+    "request": "request.json",
+    "corrections": "corrections.json",
+    "reviewStatus": "review_status.json",
+    "groundTruth": "ground_truth.json"
+  },
+  "notes": "First repository-managed free-performance corpus item promoted from review UI corrections."
+}

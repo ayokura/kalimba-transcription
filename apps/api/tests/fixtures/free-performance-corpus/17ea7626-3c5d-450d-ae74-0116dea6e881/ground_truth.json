@@ -1,0 +1,314 @@
+{
+  "version": 1,
+  "toleranceSec": 0.05,
+  "source": {
+    "type": "review-corrections",
+    "transactionId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+    "correctionsUpdatedAt": "2026-06-27T10:04:14+00:00",
+    "originCounts": {
+      "inserted-slot": 4,
+      "edited": 2,
+      "recognizer": 28,
+      "inserted-manual": 3
+    },
+    "reviewStatus": "review_completed",
+    "provenance": "tester_corrected",
+    "timingAccuracy": {
+      "onsetTiming": "approximate",
+      "noteIdentity": "review_corrected",
+      "caveat": "Review UI corrections are reliable primarily for note identity, ordering, and grouping. Onset times are approximate: recognizer event starts can deviate from perceptual/spectral onsets, inserted-slot times use dropped-segment boundaries, and inserted-manual times are hand-placed. Use spectral/human verification before timing-sensitive training or calibration."
+    }
+  },
+  "onsets": [
+    {
+      "timeSec": 0.4107,
+      "notes": [
+        "C4"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 1.248,
+      "notes": [
+        "C5"
+      ],
+      "method": "user_corrected",
+      "comment": "origin=edited"
+    },
+    {
+      "timeSec": 1.648,
+      "notes": [
+        "D5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 2.032,
+      "notes": [
+        "C4",
+        "E5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 2.384,
+      "notes": [
+        "G5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 2.7893,
+      "notes": [
+        "F5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 3.1787,
+      "notes": [
+        "A4",
+        "F5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 3.5573,
+      "notes": [
+        "A5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 3.756,
+      "notes": [
+        "G5"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.1,
+      "comment": "origin=inserted-manual"
+    },
+    {
+      "timeSec": 4.3093,
+      "notes": [
+        "E4",
+        "G5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 4.688,
+      "notes": [
+        "C6"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 5.351,
+      "notes": [
+        "B5"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.1,
+      "comment": "origin=inserted-manual"
+    },
+    {
+      "timeSec": 5.4453,
+      "notes": [
+        "A4",
+        "C6"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 5.84,
+      "notes": [
+        "G5",
+        "B5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 6.2507,
+      "notes": [
+        "E5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 6.6347,
+      "notes": [
+        "C5"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 7.008,
+      "notes": [
+        "D5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 7.3493,
+      "notes": [
+        "E5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 7.728,
+      "notes": [
+        "D4",
+        "F5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 8.112,
+      "notes": [
+        "G5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 8.4907,
+      "notes": [
+        "A5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 9.198,
+      "notes": [
+        "G5"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.1,
+      "comment": "origin=inserted-manual"
+    },
+    {
+      "timeSec": 9.2853,
+      "notes": [
+        "F5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 9.6427,
+      "notes": [
+        "E5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 10.032,
+      "notes": [
+        "F4",
+        "D5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 10.416,
+      "notes": [
+        "E5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 10.752,
+      "notes": [
+        "C5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 11.168,
+      "notes": [
+        "G4",
+        "B4"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 11.5467,
+      "notes": [
+        "C5"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 11.9093,
+      "notes": [
+        "D5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 12.272,
+      "notes": [
+        "D4",
+        "G4"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 12.6613,
+      "notes": [
+        "B4"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 13.0293,
+      "notes": [
+        "D5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 13.3227,
+      "notes": [
+        "G4",
+        "B4",
+        "D5",
+        "F5"
+      ],
+      "method": "user_corrected",
+      "comment": "origin=edited"
+    },
+    {
+      "timeSec": 13.8453,
+      "notes": [
+        "E5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 14.256,
+      "notes": [
+        "D5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 14.784,
+      "notes": [
+        "C4",
+        "E4",
+        "G4",
+        "C5"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    }
+  ]
+}
