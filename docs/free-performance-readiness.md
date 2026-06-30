@@ -4,13 +4,14 @@
 
 各 recognizer コンポーネントについて、Free Performance（楽譜知識なし・Expected Performance なしの自由演奏転写）への適合度を評価する。チケット処理のたびに関連コンポーネントを再評価し、このドキュメントを更新する。
 
-**最終更新: 2026-06-27 (librosa-free 化 #193 を本文に反映 + F1 held-out caveat 追記。詳細 stage 評価の本体は 2026-04-16 時点)**
+**最終更新: 2026-06-28 (free-performance metrics 実装状況と次作業の整理を追記。詳細 stage 評価の本体は 2026-04-16 時点)**
 
-> **2026-06-27 重要注記 (先に読む):**
+> **2026-06-27/28 重要注記 (先に読む):**
 >
 > 1. **recognizer は完全に librosa-free (#193, 14584e2)。** 本文中で「`librosa.onset.onset_strength`」「librosa 依存」「broadband onset detector (librosa)」等と記述している箇所は **2026-04-16 (#187) 時点の歴史的記述**であり現在は誤り。`onset_strength` / `rms` / `onset_detect` / `peak_pick` / `backtrack` / `mel` は `segments.py` で pure-numpy 移植済 (librosa 0.11 と数値等価検証済)、production はさらに Rust 共有コア (`kalimba_dsp`) に委譲している。**HPSS path は #193 で drop 済**。librosa は分析スクリプト / skill でのみ使用 (`apps/api/app/transcription/` に import ゼロ)。
 > 2. **onset DSP は Rust/WASM 移植済で `/wasm-demo` で in-browser 稼働。** Stage 2 の Browser 評価が ⚠️ だった主因は「librosa 依存」だったが、その blocker は解消済。残るのは segment 化ロジック (active range / collector / gap rescue) の WASM 移植。
 > 3. **F1=1.000 は『成功』ではなく tuning-set 飽和のサイン。** 現在の F1 micro=1.000 は 6 録音の tuning-target set (**held-out ゼロ**) での再現であり、free-performance が解けたことを意味しない。真の品質 gate は #18 の harder 新録音 (録音 gated)。本ドキュメントの各 stage readiness はこの caveat 前提で読む。詳細は reassessment §3.2。
+> 4. **測定 skeleton は実装済み。** `scripts/audio-analysis/note_f1_benchmark.py` は one-best F1 だけでなく Candidate Recall@K / Correction Burden / HardMissRate / ConfidenceCalibration を出す。`review_priority_report.py` はその metrics と review status を結合する。次の blocker は指標の設計ではなく、テスター環境 corpus で baseline を保存し、review queue / #178 candidate schema / #111 chord selector の判断に接続すること。
 >
 > 新規の設計判断では、まず [`recognition-roadmap.md`](./recognition-roadmap.md) の現行 fixture 状態と、バイアス除去版の [`docs/research/20260626-unbiased-amt-reassessment.md`](./research/20260626-unbiased-amt-reassessment.md) を確認すること。本ファイルの詳細 stage 評価は 2026-04-16 時点の履歴として扱い、必要な stage から順次更新する。
 
@@ -376,6 +377,13 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 - **patterns.py (Stage 6)** も同様に pure logic
 - segments.py の onset DSP は移植元 librosa 0.11 と数値等価検証済 (segments.py 冒頭の ISC 帰属 + 各 docstring 参照)。Rust 版も native/wasm parity を check_wasm.sh で pin
 
+### Evaluation / review loop
+
+- **測定 skeleton は実装済み**: `note_f1_benchmark.py` が one-best onset metrics、Candidate Recall@1/3/5、HardMissRate、Correction Burden、ConfidenceCalibration、debug ranked-candidate diagnostic recall を出す。
+- **次の整備対象は運用**: テスター環境の `ground_truth.json` corpus で baseline JSON を保存し、差分レポートを作る。
+- **review queue 接続**: `review_priority_report.py` が benchmark metrics と `review_status.json` を結合する。hard miss / correction burden が大きく、かつ review が open な録音を先に見る。
+- **#111 chord selector の前段**: sequential accept loop を先に直すのではなく、Candidate Recall / Correction Burden で「正解が候補には残っているのか」「完全に hard miss なのか」「どの candidate source で失われるのか」を分類してから設計する。
+
 ---
 
 ## 更新履歴
@@ -391,3 +399,4 @@ line 191-215 の suppress/simplify 系関数群。大半は時間 + 周波数比
 | 2026-04-09 | 34-key E83 fix + 34-key promote (`35bca12`, `7535464`) | Stage 3: `residual-forward-scan` を segment classifier として再利用する 2 段構成 fix (`residual-forward-scan-replaced-primary` + `forced_evidence_gates`) を「良い点」に追加。これにより 34-key BWV147 sequence-163 が 162/163 → 163/163 完全達成し、両 BWV147 sequence-163 fixture (17-key と 34-key) が completed regression target に。「懸念点」に新規課題 2 件追加: (1) 演奏者/テンポ違いに対する robustness の汎化検証 (現状は `residual-forward-scan` 発火 segment 限定)、(2) tertiary/secondary 区別の本質的是非 (将来の大規模リファクタ候補として記録) |
 | 2026-04-16 | #186 gap-rise rescue + #187 numba 排除 | Stage 2: gap-rise rescue を「良い点」に追加 (E148 C6 復活、17-key bwv147 164/164 completed 復帰)。Cross-cutting: onset_detect / beat_track の pure-numpy 化 (#187) を Streaming / Browser 両セクションに反映。numba がパイプラインの到達パスから排除され、残 librosa (onset_strength / HPSS / rms) は numba 非依存 |
 | 2026-06-27 | #193 librosa-free 完了の本文反映 + 研究再サーベイ整合 | ヘッダに重要注記を追加 (librosa-free #193 / onset DSP の Rust・WASM 移植 / F1=1.000 は held-out ゼロの tuning-set 飽和)。本文の「librosa.onset.onset_strength」「broadband onset detector (librosa)」「librosa 依存が onset_strength/HPSS/rms に集中」等の 2026-04-16 時点記述を訂正 (#193 で pure-numpy 移植 + Rust 委譲、HPSS path drop)。Stage 2 Browser 評価を ⚠️→🟡 (librosa blocker 解消、onset DSP は /wasm-demo で in-browser 稼働)。Cross-cutting Browser に #195 chunk_spectrum/rank_tuning_candidates の WASM 移植を反映 |
+| 2026-06-28 | free-performance metrics 実装状況の現状化 | `note_f1_benchmark.py` / `review_priority_report.py` が Candidate Recall / Correction Burden / review priority の skeleton を実装済みであることを追記。次作業を baseline 保存・review queue 接続・#178 candidate schema・#111 前段計測として整理 |

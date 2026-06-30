@@ -240,6 +240,13 @@ free-performance 化に向けて、既存の fixture exact-match / note F1 だ�
 
 ### 3.1 `note_f1_benchmark.py` の拡張
 
+> **実装状況 (2026-06-28):** この節の初期 skeleton は `scripts/audio-analysis/note_f1_benchmark.py` に実装済み。
+> 現在の出力は one-best onset metrics、Candidate Recall@1/3/5、HardMissRate、Correction Burden、
+> event/candidate confidence calibration、debug `rankedCandidates` 診断 recall を含む。
+> `scripts/audio-analysis/review_priority_report.py` は、その metrics と `review_status.json` を結合し、
+> human review effort の優先順位を出す。
+> 以降の焦点は、指標定義の発明ではなく **baseline 保存・CI/レポート化・review queue 接続**。
+
 出力 JSON 例:
 
 ```json
@@ -329,7 +336,7 @@ Candidate Recall を測るには、benchmark 時に以下を集める必要が�
 現状 `rankedCandidates` / `secondaryDecisionTrail` は debug 限定。
 本番 response にすぐ出さなくても、benchmark JSON には出せるようにする。
 
-### 3.5 CI への入れ方
+### 3.5 CI / review queue への入れ方
 
 completed fixture exact-match は維持する。
 追加するなら別レイヤ:
@@ -338,9 +345,11 @@ completed fixture exact-match は維持する。
 - candidate recall report
 - correction burden report
 - confidence calibration report
+- review priority report (`review_priority_report.py`)
 
 合否条件は最初は厳しくしすぎない。
 まず baseline を保存し、差分を可視化する。
+テスター環境でのみ扱う録音データがあるため、CI に入れる場合も「データが存在するときだけ実行」する optional/report job から始める。
 
 ---
 
@@ -388,7 +397,7 @@ completed fixture exact-match はリファクタの安全網。
 
 ## 5. 現行方針への反映
 
-- 次の実装着手は `Candidate Recall` / `Correction Burden` の benchmark skeleton が最優先。
+- `Candidate Recall` / `Correction Burden` の benchmark skeleton は実装済み。次の実装着手は baseline JSON の保存・差分レポート・review queue への露出。
 - #178 multi-candidate は UI だけでなく評価可能性の基盤。
 - #18 corpus 収集では、free-performance audio だけでなく `ground_truth.json` の onset time / tolerance / method を同時に集める。
 - #194 quality indicators は、ECE / needs-review precision / high-confidence wrong rate で再較正する。
@@ -397,3 +406,4 @@ completed fixture exact-match はリファクタの安全網。
 
 - 2026-06-26: 新規作成。mir_eval / MIREX / AMT Challenge / onset annotation の観点を整理。
 - 2026-06-27: 評価指標担当サーベイ結果を主ソースとして全文再稿。mir_eval, PEAMT, Onsets and Frames, MV2H, AMT Challenge, calibration を反映。
+- 2026-06-28: `note_f1_benchmark.py` / `review_priority_report.py` の実装状況を反映し、次焦点を skeleton 実装から baseline/CI/review queue 接続へ更新。

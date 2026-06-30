@@ -37,9 +37,10 @@
 
 33 completed fixtures が安定した regression baseline を形成している。主な残課題:
 
-- **34-key R1 E83 carryover** ([#153](https://github.com/ayokura/kalimba-transcription/issues/153) scope 外): L6 E82 `<D5,B4,G4>` の D5 carryover が threshold 突破して E83 (expected `G4`) に extra D5 として追加される。`recent-carryover-candidate` / `weak-secondary-onset` 等の既存 gate 領域。次セッションで energy trace 確認 → 別 issue 起票 or override 判断
-- **heuristic constants の audit** ([#162](https://github.com/ayokura/kalimba-transcription/issues/162)): #153 Phase A + B + #154 で導入した 27 個の新定数の inventory、環境依存性の特定、data-driven 化候補の抽出。設計 audit のみ
-- **peaks redesign / chord selector** ([#111](https://github.com/ayokura/kalimba-transcription/issues/111)): `_evidence_rescue_gate` の複雑化、sequential accept loop の構造的制約。Phase A/B 完了後の再評価マイルストーン待ち
+- **free-performance 評価 loop の運用化** ([#18](https://github.com/ayokura/kalimba-transcription/issues/18), [#178](https://github.com/ayokura/kalimba-transcription/issues/178), [#194](https://github.com/ayokura/kalimba-transcription/issues/194)): `note_f1_benchmark.py` は Candidate Recall@K / Correction Burden / HardMissRate / ConfidenceCalibration を出せる。次はテスター環境の `ground_truth.json` corpus で baseline を保存し、`review_priority_report.py` と review queue を接続する。
+- **candidate schema / hard-drop 回避** ([#178](https://github.com/ayokura/kalimba-transcription/issues/178)): debug `rankedCandidates` / dropped `candidateSlots` を benchmark/report source として安定化し、順次 review UI / public response へ昇格する。onset gate の棄却も「捨てる」より低 confidence candidate 化を優先する。
+- **peaks redesign / chord selector** ([#111](https://github.com/ayokura/kalimba-transcription/issues/111)): `_evidence_rescue_gate` の複雑化、sequential accept loop の構造的制約。着手前に Candidate Recall / Correction Burden で「順序依存がどの hard miss / correction cost を生むか」を測る。
+- **heuristic constants の data-driven 化** ([#131](https://github.com/ayokura/kalimba-transcription/issues/131), [#172](https://github.com/ayokura/kalimba-transcription/issues/172), [#173](https://github.com/ayokura/kalimba-transcription/issues/173), [#174](https://github.com/ayokura/kalimba-transcription/issues/174)): #162 の inventory audit は完了済み。今後は RecognizerSettings / per-tine / per-recording / BPM-adaptive calibration へ分割された successor で進める。
 - **`arpeggio` modeling** ([#6](https://github.com/ayokura/kalimba-transcription/issues/6)): `slide_chord` との分離。Phase 1 設計は [arpeggio-design.md](arpeggio-design.md) に記載
 
 ### 解決済 (#153 Phase A + B / #154 / #186 で完了)
@@ -102,11 +103,12 @@ Strategy B の gap-candidate 設計と candidate/promotion プロトタイプは
 
 ## Immediate Next Engineering Tasks
 
-1. 33 completed fixtures の regression baseline を維持する
-2. peaks redesign (#111): chord selector による sequential accept loop の構造改善
-3. ranked candidate 不在問題 (#125): onset-focused FFT window 等の spectral acquisition 改善
-4. BWV147 full-sequence の pending 解消（onset detection 層 + post-processing debt）
-5. `arpeggio` Phase 1 の vocabulary 導入（[arpeggio-design.md](arpeggio-design.md) 参照）
+1. 33 completed fixtures の regression baseline を維持する (`uv run pytest apps/api/tests -q` / `test_manual_capture_completed.py`)。
+2. テスター環境の free-performance `ground_truth.json` corpus で `note_f1_benchmark.py --json` を実行し、Candidate Recall / Correction Burden / ConfidenceCalibration の baseline を保存する。
+3. `review_priority_report.py` と review queue / capture workflow を接続し、hard miss と correction burden が大きい録音を優先レビューできる状態にする。
+4. #178: benchmark-only の candidate sources (`alternateGroupings`, `candidateSlots`, debug `rankedCandidates`) を review UI / public response に昇格する最小 schema を設計する。
+5. #111 peaks redesign: 上記 metrics で sequential accept loop の実害を分類してから chord selector の最小リファクタに入る。
+6. `arpeggio` Phase 1 の vocabulary 導入（[arpeggio-design.md](arpeggio-design.md) 参照）。ただし評価は Candidate Recall / Correction Burden と paired sample で見る。
 
 ## 将来のサンプル収集マトリクス
 
@@ -253,3 +255,7 @@ strict four-note rerecord の例:
 - repetitions: `5`
 - spacing: take 間に約 `1s` の無音
 - success criteria: `5 events`、各 `E4+G4+B4+D5`
+
+## 更新履歴
+
+- 2026-06-28: docs/research の再サーベイと実装済み `note_f1_benchmark.py` / `review_priority_report.py` を反映。Immediate tasks を「chord selector 直行」から「free-performance metrics baseline → review priority → candidate schema → #111」へ並べ替え。
