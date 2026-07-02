@@ -97,6 +97,19 @@ For review-UI corrections:
 human-verified onset annotation methods such as `ear_verified` or
 `spectrogram_verified`.
 
+Step 6 is scripted: after the human rights decision (step 5), run
+
+```bash
+uv run python scripts/audio-analysis/promote_corrections_to_ground_truth.py <tx-id> \
+    --to-corpus --copyright-status original_performance \
+    --rights-reviewed-by "human requester" [--device "..."] [--microphone "..."]
+```
+
+The script refuses to scaffold without an explicit `--copyright-status` and
+`--rights-reviewed-by` — it records the human decision, never assumes it.
+Then add the baseline entry (`note_f1_benchmark.py --write-baseline`) and
+commit the scaffold and baseline together.
+
 ## Benchmark behavior
 
 `note_f1_benchmark.py` discovers repository-managed corpus items first and then

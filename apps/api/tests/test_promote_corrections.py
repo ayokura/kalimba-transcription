@@ -166,3 +166,66 @@ def test_duplicate_audio_in_corpus_blocks_promotion(patched):
     rc = _run("tx-reupload", "--allow-duplicate")
     assert rc == 0
     assert (captures_dir / "tx-reupload" / "ground_truth.json").is_file()
+
+
+def test_to_corpus_requires_explicit_rights_decision(patched):
+    data_dir, _, _ = patched
+    _write_tx(data_dir, "tx-c", status="review_completed")
+    with pytest.raises(SystemExit) as excinfo:
+        _run("tx-c", "--to-corpus")
+    assert excinfo.value.code == 2
+
+
+def test_to_corpus_scaffolds_repo_corpus_entry(patched):
+    data_dir, captures_dir, corpus_dir = patched
+    _write_tx(data_dir, "tx-c", status="review_completed")
+    tx = data_dir / "tx-c"
+    (tx / "request.json").write_text(
+        json.dumps({"tuning": {"id": "kalimba-17-c"}}), encoding="utf-8"
+    )
+    (tx / "response.json").write_text(
+        json.dumps({"events": [{"id": "e1"}], "candidateSlots": [{"x": 1}]}),
+        encoding="utf-8",
+    )
+
+    rc = _run(
+        "tx-c",
+        "--to-corpus",
+        "--copyright-status", "original_performance",
+        "--rights-reviewed-by", "human requester",
+        "--device", "Test Phone",
+    )
+    assert rc == 0
+
+    dest = corpus_dir / "tx-c"
+    for name in (
+        "audio.wav",
+        "request.json",
+        "corrections.json",
+        "review_status.json",
+        "ground_truth.json",
+        "metadata.json",
+    ):
+        assert (dest / name).is_file(), name
+    meta = json.loads((dest / "metadata.json").read_text())
+    assert meta["rightsReview"]["status"] == "approved_for_repository"
+    assert meta["rightsReview"]["reviewedBy"] == "human requester"
+    assert meta["copyright"]["status"] == "original_performance"
+    assert meta["tuning"]["selectedId"] == "kalimba-17-c"
+    assert meta["aggregates"]["correctedEventCount"] == 2
+    assert meta["aggregates"]["recognizerEventCount"] == 1
+    assert meta["aggregates"]["candidateSlotCount"] == 1
+    assert meta["aggregates"]["originCounts"] == {"recognizer": 1, "inserted-slot": 1}
+    assert meta["recording"]["device"] == "Test Phone"
+    # b"RIFFfake" is not a decodable WAV: stats must degrade to None, not crash.
+    assert meta["recording"]["peakDb"] is None
+
+    # GT already existed (written by the same run); a second --to-corpus run
+    # without --force-corpus must not clobber the scaffold.
+    rc = _run(
+        "tx-c",
+        "--to-corpus",
+        "--copyright-status", "original_performance",
+        "--rights-reviewed-by", "human requester",
+    )
+    assert rc == 0  # prints SKIP corpus, exits cleanly
