@@ -76,6 +76,10 @@
 | **#18 録音依頼バッチ + #72 IA 判断依頼をユーザーへ提出** | A | **計画全体の律速**。録音依頼には mixed/strict/slide/arpeggio-like + 環境多様化 + calibration サンプル (acoustics survey 参照) に加え、**#194 用の「意図的に難しい free-performance」数本 (速い / 弱 attack / 多声)** を明記。rerecord fixture (four-note-repeat-02) の扱いも同梱で判断を仰ぐ。#72 IA 判断依頼も S4 を待たずここで提出しリードタイムを確保 |
 | 過適合ゲートの明文化 (AGENTS.md Recognizer Strategy Notes) | A | 「閾値調整を伴う recognizer 改修は GT レビュー済みの非飽和録音 2 件以上を条件とする。構造的欠陥修正 (#197 型) はこの限りでない」 |
 | #161 (pending fixture assertion) の方針決定 | B | 現存 pending は 1 fixture。enforce するか re-scope/close するか。reclassify にはユーザー許可が必要 |
+| 【監査反映】benchmark provenance に `kalimba_dsp_fingerprint()` を併記 | A | 2026-07-02 の 53 コミット監査で判明。Rust だけ変えた 2 つのベンチ結果が同一 fingerprint になる。baseline artifact 設計と同時に修正 |
+| 【監査反映】promote スクリプトの SHA dedup を free-performance-corpus 層まで拡張 | A | 同監査。同一音声の再アップロードでベンチが二重カウントする穴 |
+| 【監査反映】review_completed × 未保存 corrections のガード (web) | A | 同監査の最重要 workflow 欠陥: dirty 状態で review_completed を確定でき、古い corrections が GT 昇格対象になる |
+| 【監査反映】doc drift 一括修正 | A | roadmap E83 stale bullet / #162 closed 未反映 (roadmap+readiness) / readiness の「6録音 F1=1.000」stale / research index「次にやるなら」実装済み / testing.md の実在しない test_gap_filter 引用 |
 
 **Exit criteria**: corpus gate が CI で green / baseline artifact が commit 済み / 録音依頼 + IA 判断依頼がユーザーに届いている。
 
@@ -136,7 +140,7 @@ recognizer 非依存で今すぐ効く UX 改善。**スプリント末に計画
 | two-phase architecture (browser preview + batch finalize) の設計決定 | B | patterns.py の repeated_pattern_passes() に配線された full-batch normalizer 3 pass (+未配線 1、no-op 1) は streaming と構造的非互換 → two-phase 化は必須。**target SR の決定と #140 (SR 依存パラメータ) の扱いも設計入力に含める** (browser ライブ経路 48k vs fixture 44.1k/96k) |
 | COOP/COEP 方針決定 (SharedArrayBuffer / multi-thread WASM の前提) | B | browser survey §7 の明示警告。Next.js app への影響検証。single-thread 退避策も確認 |
 | B1 着手スライス: segments.py (1,354 行) の segment 化ロジック移植のうち **active range 計算を parity harness で pin するまで** | C | 着手条件 = A0 の segment 比較モード完成。TS 移植 vs Rust 共有コア拡張の方針決定込み。**B1 残余の帰着先は中間レビュー / S8 / 次期計画で明示する** (本計画内で B1 完遂は保証しない) |
-| wasm ビルドチェーン整備 (check_wasm.sh の CI 配線、vendoring 手順) | C | rustup target 追加はユーザー実行 (installer 運用ルール)。CI ジョブ追加コストの承認もユーザー判断 |
+| wasm ビルドチェーン整備 (check_wasm.sh の CI 配線、vendoring 手順) | C | rustup target 追加はユーザー実行 (installer 運用ルール)。CI ジョブ追加コストの承認もユーザー判断。**監査反映: parity ハーネスに実 fixture 音声 + 「audio→onset_strength→onset_detect」通し比較を追加** (現行は native 生成 envelope を両者に食わせるため FFT 段の wasm/native 乖離を検出できない)。Rust peak_pick の窓平均 dtype 整合 (numpy f32 累積 vs Rust f64 累積、frame-exact 主張の破れ) もここか S2 で判断 |
 
 **Exit criteria**: parity harness で browser/Python の onset + segment 出力差分が自動測定できる / two-phase 設計 (SR 方針込み) が文書化されている。
 

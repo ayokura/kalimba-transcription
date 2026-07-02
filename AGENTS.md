@@ -8,12 +8,14 @@
 
 ## Research References
 
-- AMT (Automatic Music Transcription) の研究サーベイと現行パイプラインへの適用分析が [`docs/research/`](/docs/research/) にある。
-- 設計判断やアルゴリズム選択の際は [`20260406-research-to-implementation-mapping.md`](/docs/research/20260406-research-to-implementation-mapping.md) を参照し、研究知見との整合性を確認すること。
-- 特に以下の点は設計上の前提として意識する:
+- AMT (Automatic Music Transcription) の研究サーベイと現行パイプラインへの適用分析が [`docs/research/`](/docs/research/) にある。読み順は [`index.md`](/docs/research/index.md)。
+- **新規の設計判断やアルゴリズム選択では、まず [`20260626-unbiased-amt-reassessment.md`](/docs/research/20260626-unbiased-amt-reassessment.md) を確認すること** (実コード確認済みの実装事実テーブル + NOW/NEXT/LATER 方針)。旧 `20260406-*` サーベイ群は LLM 由来バイアスありの deprecated 資料であり、設計判断の根拠に使わない。
+- 中期の作業計画とその優先順位は [`docs/sprint-plan-2026-07.md`](/docs/sprint-plan-2026-07.md) を参照。
+- 特に以下の点は設計上の前提として意識する (reassessment §1 の実装事実に基づく):
   - カリンバの倍音は非整数比（梁振動由来）— 整数倍 harmonic comb の限界を認識する
-  - onset の有無を note-on の gate として使う設計が共鳴 FP 抑制に最も効果的
-  - attack / body / late_decay の状態遷移モデルが sympathetic resonance との区別に有効
+  - onset gate は実装済み・既定有効 (broadband / per-note / backward-attack の弱 AND)。共鳴 FP 抑制の中核だが「安全に落とす」より「低 confidence 候補として保持する」方向が現方針
+  - attack / body / late_decay の note-state machine は**未実装**であり、導入は research spike / ablation 限定 (本線は broadband + patch、下記「Broadband patch vs per-note onset detection」参照)
+  - per-tine partial scoring は実装済みだが既定無効。信念による既定化はしない (#149)
 
 ## Product Vision and Technical Direction
 
@@ -162,6 +164,7 @@
 
 - Treat repeated-pattern normalizers as suspicious until proven necessary. Favor local/causal explanations over corpus-wide dominant-pattern rewrites.
 - Before large recognizer redesigns, add ablation controls and provenance first.
+- **過適合ゲート: 閾値調整を伴う recognizer 改修は、GT レビュー済みの非飽和録音 (F1 < 1.0) が 2 件以上あることを条件とする。** 非飽和録音 1 件を相手に閾値を調整すると、tuning-set 飽和 (F1=1.000 で指標が何も教えなくなった状態) の再演になる。構造的欠陥の修正 (onset は検出済みなのに segment が形成されない #197 型) はこの条件の対象外。F1=1.000 は成功指標ではなく飽和のサインとして扱う。
 - **Verify the physical premise before implementing rescue/suppression logic.** Before adding a new pass or tuning a gate, confirm with energy trace + narrow FFT probe + broadband onset times (`gapValidatedOnsetTimes`) that the proposed mechanism matches what the audio actually shows. The originally-stated cause is often wrong in subtle ways: e.g., #153 Phase B's E97 G4 was first thought to need a noise-floor multiplier change, but the actual cause was a broadband-detected onset that the segmenter discarded — a different mechanism entirely. Investigation-first prevents whole-day rabbit holes on the wrong rescue path.
 - **Discriminator design beats constant tuning.** When no threshold cleanly separates true positives from false positives, consider whether the candidate iteration order itself is wrong. #153 Phase B replaced narrow-FFT-score-ordered iteration with backward-attack-gain-ordered iteration, which changed the problem from "tighten the constants" to "evaluate the strongest fresh-attack signal first" — and several constants became unnecessary. Ordering by a single physical signal is often cleaner than ordering by a composite score and then patching exceptions.
 - **Heuristic constants live in `apps/api/app/transcription/constants.py`.** The original inventory audit [#162](https://github.com/ayokura/kalimba-transcription/issues/162) is **closed (completed)**; its data-driven-replacement work was split into open successors: [#131](https://github.com/ayokura/kalimba-transcription/issues/131) (migrate tunable thresholds to `RecognizerSettings`) and [#172](https://github.com/ayokura/kalimba-transcription/issues/172) / [#173](https://github.com/ayokura/kalimba-transcription/issues/173) / [#174](https://github.com/ayokura/kalimba-transcription/issues/174) (per-tine / per-recording / BPM-adaptive calibration). When adding a new constant, include its calibration data in the inline comment, and route any data-driven-replacement candidate to the relevant open successor (#131 or #172–#174). Do **not** append to the closed #162 audit body.
