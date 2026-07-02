@@ -46,6 +46,53 @@ jobs:
           MKL_NUM_THREADS: "1"
           NUMBA_OPT: "2"
 
+  # wasm↔native 数値等価チェック (crates/kalimba-dsp/check_wasm.sh)。
+  # test/web と独立した別ジョブにして、失敗の切り分けと将来の並列実行調整を
+  # しやすくしておく (2026-07-03 ユーザー承認)。
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write # Required for OIDC (takumi-guard)
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: flatt-security/setup-takumi-guard-pypi@v1
+        with:
+          bot-id: "BT01KP0J2WVXM2XRECK5RCT62XRH" # ayokura
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.14
+
+      - name: Install Rust toolchain (with wasm target)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/kalimba-dsp
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install wasm-pack (prebuilt binary)
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Install dependencies (native kalimba_dsp reference build)
+        run: uv sync --dev
+
+      - name: wasm equivalence check
+        run: crates/kalimba-dsp/check_wasm.sh
+
   web:
     runs-on: ubuntu-latest
     timeout-minutes: 10
