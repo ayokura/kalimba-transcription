@@ -134,6 +134,19 @@ It exits non-zero on any wasm-vs-native mismatch (binding-glue regression:
 `node`, and the uv-managed Python env. Extend `tools/wasm_reference.py` +
 `tools/check_wasm.cjs` when a new shared-core primitive is exposed to wasm.
 
+The same script also runs the **fixture parity harness** (A0, sprint-plan
+2026-07 S5): `tools/wasm_parity_reference.py` dumps committed fixture WAVs
+(44.1k / 48k / 96k) plus Python references — the native pyo3 through-path,
+the independent pure-numpy oracle (`segments._*_numpy`), and the
+`detect_segments` debug subset (active ranges / segment boundaries /
+discards) — and `tools/check_wasm_parity.cjs` replays the wasm build
+end-to-end (`audio -> onset_strength -> onset_detect`, no native-generated
+intermediates injected) against them. Envelope tolerances: 1e-4/1e-5 vs
+native, 1e-3/1e-3 vs numpy; onset frames must be frame-exact vs both.
+The segment-level reference has no wasm counterpart yet — it is the pinned
+contract for the B1 segment port, and the checker currently validates the
+manifest plumbing only.
+
 ### Host type-check of the wasm wrappers (no wasm target needed)
 
 `wasm-bindgen` compiles on the host, so you can type-check the wasm binding
