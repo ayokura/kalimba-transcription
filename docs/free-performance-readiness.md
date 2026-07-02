@@ -10,7 +10,7 @@
 >
 > 1. **recognizer は完全に librosa-free (#193, 14584e2)。** 本文中で「`librosa.onset.onset_strength`」「librosa 依存」「broadband onset detector (librosa)」等と記述している箇所は **2026-04-16 (#187) 時点の歴史的記述**であり現在は誤り。`onset_strength` / `rms` / `onset_detect` / `peak_pick` / `backtrack` / `mel` は `segments.py` で pure-numpy 移植済 (librosa 0.11 と数値等価検証済)、production はさらに Rust 共有コア (`kalimba_dsp`) に委譲している。**HPSS path は #193 で drop 済**。librosa は分析スクリプト / skill でのみ使用 (`apps/api/app/transcription/` に import ゼロ)。
 > 2. **onset DSP は Rust/WASM 移植済で `/wasm-demo` で in-browser 稼働。** Stage 2 の Browser 評価が ⚠️ だった主因は「librosa 依存」だったが、その blocker は解消済。残るのは segment 化ロジック (active range / collector / gap rescue) の WASM 移植。
-> 3. **F1=1.000 は『成功』ではなく tuning-set 飽和のサイン。** 現在の F1 micro=1.000 は 6 録音の tuning-target set (**held-out ゼロ**) での再現であり、free-performance が解けたことを意味しない。真の品質 gate は #18 の harder 新録音 (録音 gated)。本ドキュメントの各 stage readiness はこの caveat 前提で読む。詳細は reassessment §3.2。
+> 3. **F1=1.000 は『成功』ではなく tuning-set 飽和のサイン。** (2026-07-02 更新) F1 corpus は 7 録音・micro F1=**0.988** に拡張され、初の非飽和録音 `17ea7626` (F1=0.851, R=0.769) が加わった (#196 に物理検証済みの 3 機構分析、#197 が着手可能スライス)。残り 6 録音は依然 tuning-target set の飽和再現 (**held-out ゼロ**) であり、free-performance が解けたことを意味しない。真の品質 gate は #18 の harder 新録音 (録音 gated)。本ドキュメントの各 stage readiness はこの caveat 前提で読む。詳細は reassessment §3.2。
 >
 > 新規の設計判断では、まず [`recognition-roadmap.md`](./recognition-roadmap.md) の現行 fixture 状態と、バイアス除去版の [`docs/research/20260626-unbiased-amt-reassessment.md`](./research/20260626-unbiased-amt-reassessment.md) を確認すること。本ファイルの詳細 stage 評価は 2026-04-16 時点の履歴として扱い、必要な stage から順次更新する。
 
@@ -143,7 +143,7 @@ for segment in segments:
 ### 関連
 
 - **#154** Per-recording per-band noise floor measurement (2026-04-09 完了)
-- **#162** narrow-FFT-pass heuristic constants audit — `noise_floor` を使った threshold 置換が「Class B (環境依存だが正規化済)」の代表例
+- **#162** narrow-FFT-pass heuristic constants audit (**closed/completed**、後継は #131 / #172–#174) — `noise_floor` を使った threshold 置換が「Class B (環境依存だが正規化済)」の代表例
 
 ---
 
@@ -183,7 +183,7 @@ for segment in segments:
 - ~~**Ranked candidate 不在問題 / Octave-coincident chord aliasing**~~ → **#153 Phase A.2 で解決済** (`933d088`)。`merge_short_segment_guard_via_narrow_fft` が短い guarded singleton (例: E148 の C6 6.7ms gap-mute-dip 由来 segment) を後続 segment に narrow FFT cross-validation で rejoin する。E148 の他 E121/E127 prefix splitting / E97/E133 D5+F5 / E100 C4 / E97 G4 も Phase A.3/A.4 + Phase B で解決済 (詳細は recognition-roadmap.md の "解決済" 節)
 - ~~**Masked re-attack threshold**~~ → **#153 Phase A.4 で解決済** (`ed729bb`)。詳細は Stage 2 の同項目参照
 - **Pre-segment attack の structural gap** → **#153 Phase B で workaround 解決** (`36cb3de`): events.py 側に新 pass `recover_pre_segment_attack_via_narrow_fft` を追加。本質的には Stage 2 で broadband onset を全部 segment 化すべきだが、その再設計は大規模なので Stage 5/7 layer での補完を採用 (詳細は Stage 2 の structural gap 節 + Stage 5 参照)
-- **Heuristic constants の環境依存性** → **#162 で audit 中**。Phase A + B で 27 個の新定数を追加した経験から、Class C (環境依存で未正規化) に該当する定数の data-driven 化候補を抽出する作業を起票済
+- **Heuristic constants の環境依存性** → **#162 の audit は完了 (closed)**。data-driven 化の後継は #131 (RecognizerSettings 移行) と #172–#174 (per-tine / per-recording / BPM-adaptive 較正) に分割済み
 - **演奏者/テンポ違いに対する robustness — 汎化検証が必要**: 34-key E83 fix (`35bca12`) で、同じ score でも演奏速度が 4 倍違うと carryover の量が大きく変わり、recognizer の secondary slot の挙動が変わることが確認された (17-key の 1.93s 間隔は通り、34-key の 0.48s 間隔は通らなかった)。今回の fix は **`residual-forward-scan` が発火した segment** に対象を絞った安全な対応だが、より広い carryover-prone segment に対しては未対応。次に新しい failure case (異なる promotion path / 通常 segment での carryover) が出てきた段階で、より一般的な segment classifier (e.g. `broadbandOnsetGain < threshold`) ベースの forced evidence gates 適用を検討する。**Free Performance では演奏者/楽器/テンポの組み合わせが事前に分からない**ため、この robustness 汎化は本質的な課題
 - **tertiary / secondary 区別の本質的な是非** (将来検討): E83 fix の経験から、carryover-prone segment では「secondary slot か tertiary slot か」という区別自体が弱く、「全 candidate に物理的 attack evidence を要求すべき」という方向の設計が示唆される。現状は `forced_evidence_gates` という限定的トリガーで slot 区別を維持しているが、将来的には tertiary 固有の gate を secondary normal path にも常時適用する大規模リファクタが選択肢として残る (E83 解決時にユーザーから提示された方向)。今回は限定対応で 162/163 → 163/163 達成したため見送り
 

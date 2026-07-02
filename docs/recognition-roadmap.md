@@ -37,8 +37,7 @@
 
 33 completed fixtures が安定した regression baseline を形成している。主な残課題:
 
-- **34-key R1 E83 carryover** ([#153](https://github.com/ayokura/kalimba-transcription/issues/153) scope 外): L6 E82 `<D5,B4,G4>` の D5 carryover が threshold 突破して E83 (expected `G4`) に extra D5 として追加される。`recent-carryover-candidate` / `weak-secondary-onset` 等の既存 gate 領域。次セッションで energy trace 確認 → 別 issue 起票 or override 判断
-- **heuristic constants の audit** ([#162](https://github.com/ayokura/kalimba-transcription/issues/162)): #153 Phase A + B + #154 で導入した 27 個の新定数の inventory、環境依存性の特定、data-driven 化候補の抽出。設計 audit のみ
+- **heuristic constants の data-driven 化** ([#162](https://github.com/ayokura/kalimba-transcription/issues/162) の audit は **closed (completed)**): 後継は [#131](https://github.com/ayokura/kalimba-transcription/issues/131) (RecognizerSettings 移行) と [#172](https://github.com/ayokura/kalimba-transcription/issues/172)–[#174](https://github.com/ayokura/kalimba-transcription/issues/174) (per-tine / per-recording / BPM-adaptive 較正)。新楽器/環境録音が固定閾値を破った時に再訪
 - **peaks redesign / chord selector** ([#111](https://github.com/ayokura/kalimba-transcription/issues/111)): `_evidence_rescue_gate` の複雑化、sequential accept loop の構造的制約。Phase A/B 完了後の再評価マイルストーン待ち
 - **`arpeggio` modeling** ([#6](https://github.com/ayokura/kalimba-transcription/issues/6)): `slide_chord` との分離。Phase 1 設計は [arpeggio-design.md](arpeggio-design.md) に記載
 

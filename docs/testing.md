@@ -260,7 +260,7 @@ This makes later fixture review and independent audit much easier.
 
 ### Tier 3: Ablation / Variant Tests
 
-`test_ablation_pure.py`, `test_gap_filter.py` 等。フィーチャーフラグの ON/OFF で既存 fixture が壊れないかを検証。
+`test_ablation_pure.py`, `test_ablation_attack_validated.py` 等。フィーチャーフラグの ON/OFF で既存 fixture が壊れないかを検証。
 
 ### テスト追加ガイドライン
 

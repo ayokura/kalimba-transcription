@@ -83,15 +83,9 @@ per-tine partial / note-state / resonance handling の spike 前に参照する�
 
 ## 次にやるなら
 
-最も自然な次作業は、`note_f1_benchmark.py` に以下の skeleton を追加すること。
+**(2026-07-02 更新)** 当初推奨していた `note_f1_benchmark.py` への skeleton 追加 (Candidate Recall@K / Correction Burden / HardMissRate / ConfidenceCalibration) は **ab2cca3 で実装済み** (`test_note_f1_benchmark_metrics.py` が検証)。
 
-- onset-only one-best metrics
-- Candidate Recall@K
-- Correction Burden の粗い編集コスト
-- HardMissRate
-- ConfidenceCalibration の初期集計
-
-その後、#18 の free-performance corpus 拡張と #178 の candidate output schema を接続する。
+次の作業は [`docs/sprint-plan-2026-07.md`](../sprint-plan-2026-07.md) の Sprint 1 に従う: free-performance corpus の CI regression gate 化 (per-recording baseline)、#18 corpus 拡張の録音依頼、#178 candidate output の本出力接続。
 
 ## 履歴
 
