@@ -75,7 +75,7 @@
 | CI (test.yml) の `uv python install 3.12` を 3.14 に修正 | A | pyproject `>=3.14,<3.15` との矛盾解消 |
 | **#18 録音依頼バッチ + #72 IA 判断依頼をユーザーへ提出** | A | **計画全体の律速**。録音依頼には mixed/strict/slide/arpeggio-like + 環境多様化 + calibration サンプル (acoustics survey 参照) に加え、**#194 用の「意図的に難しい free-performance」数本 (速い / 弱 attack / 多声)** を明記。rerecord fixture (four-note-repeat-02) の扱いも同梱で判断を仰ぐ。#72 IA 判断依頼も S4 を待たずここで提出しリードタイムを確保 |
 | 過適合ゲートの明文化 (AGENTS.md Recognizer Strategy Notes) | A | 「閾値調整を伴う recognizer 改修は GT レビュー済みの非飽和録音 2 件以上を条件とする。構造的欠陥修正 (#197 型) はこの限りでない」 |
-| #161 (pending fixture assertion) の方針決定 | B | 現存 pending は 1 fixture。enforce するか re-scope/close するか。reclassify にはユーザー許可が必要 |
+| #161 (pending fixture assertion) の方針決定 | B | **判断済み (2026-07-02): 必要になるまで pending** (自由演奏拡充で pending fixture が再発しうるため issue は open 維持、enforce 実装は保留) |
 | 【監査反映】benchmark provenance に `kalimba_dsp_fingerprint()` を併記 | A | 2026-07-02 の 53 コミット監査で判明。Rust だけ変えた 2 つのベンチ結果が同一 fingerprint になる。baseline artifact 設計と同時に修正 |
 | 【監査反映】promote スクリプトの SHA dedup を free-performance-corpus 層まで拡張 | A | 同監査。同一音声の再アップロードでベンチが二重カウントする穴 |
 | 【監査反映】review_completed × 未保存 corrections のガード (web) | A | 同監査の最重要 workflow 欠陥: dirty 状態で review_completed を確定でき、古い corrections が GT 昇格対象になる |
@@ -124,7 +124,7 @@ recognizer 非依存で今すぐ効く UX 改善。**スプリント末に計画
 | 音のワンタップ置換 / 既存 event の timeSec 微調整 / redo | B | 現状: 置換 = 削除+追加の 2 操作、timeSec 編集不可、redo なし |
 | 代表修正シナリオの操作数計測 (Playwright e2e で before/after) | B | FP 削除 / FN 挿入 / 音高置換の 3 シナリオ。S3 で配線した e2e 基盤を利用 |
 | /review/queue への review_priority_report スコア統合 | C | 「次にレビューすべき録音」の提示。corpus 拡充の人的効率化。優先度はレビュー待ち件数次第 |
-| #72 IA 判断 (S1 で依頼済み) の決定分 cleanup 着手 | C | orphan /review stack (~700 行+テスト) と TranscriptionStudio dead code は判断が出れば機械的に整理できる。**判断が S4 内に出ない場合は pending と記録し、後半計画は web レーン該当分を open branch として確定してよい** |
+| #72 IA 判断の決定分 cleanup 着手 | B | **判断済み (2026-07-02)**: (1) orphan /review stack は削除 (useAudioPlayback 等の再利用部品は保持)、(2) Capture Pack ZIP は keep (将来のアップロード/デバッグ用途)、(3) 段階分割 UI (capture→transcribe→review→arrange) を目指す — arrange は入力を決めれば独立検討可能。TranscriptionStudio dead code 除去と合わせて S4 で実施 |
 | 新録音の登録 / review 支援 / GT 昇格 (到着次第、以降毎スプリント継続) | C | 録音到着に依存。recorded_only 2 件と c9e6f699 の処理も含む |
 | **中間レビュー: Sprint 5-8 の再計画** | A | 録音到着状況・#197 後の残 FN・IA 判断 (あれば) の 3 入力で後半を確定させる |
 
