@@ -166,6 +166,20 @@ recognizer 非依存で今すぐ効く UX 改善。**スプリント末に計画
 
 **Exit criteria**: parity harness で browser/Python の onset + segment 出力差分が自動測定できる / two-phase 設計 (SR 方針込み) が文書化されている。
 
+**実績 (2026-07-03, exit criteria 達成)**:
+
+- **A0 完了** (5c86860, b75f1e6): 実 fixture WAV 4 本 (44.1k / 48k / 96k) で
+  wasm 通し経路 (audio→onset_strength→onset_detect) を native + 独立 numpy オラクルと突合。
+  onset frame は 3 SR とも frame-exact 一致 (監査指摘の FFT 段 gap を閉塞)。check_wasm.sh 5 段構成
+- **wasm CI ジョブ追加** (ed3f2d3、ユーザー承認): test/web と独立の別ジョブ。rustup target はユーザー実行済み
+- **two-phase 設計文書化** (e8cb355 → docs/browser-two-phase-design.md): Phase P/F 分離、FFT の wasm 一本化
+  (AnalyserNode 不採用)、browser SR=48k 固定 + #140 現状維持 (過適合ゲート充足まで)、COOP/COEP 不採用 (再評価トリガー付き)
+- **B1 スライス 1 完了** (e9f90c3): active range 計算 (rms 閾値 + 走査 + merge) を Rust 共有コアに移植、
+  実装言語判断は Rust 拡張で確定。wasm 出力を実 fixture の detect_segments debug と実差分比較 (24/24)、
+  pyo3 側は test_segment_dsp_rust.py で差分検証。**B1 残余** (short-bridge 抑制 / 境界生成 / collector /
+  discard — attack profile 系への依存が深い) **の帰着先は S8 or 次期計画で確定** (計画どおり本計画内での完遂は非保証)
+- 残: /wasm-demo 試聴検証 (ユーザーアクション、手順提示済み)
+
 ### Sprint 6: 機構 2 (carryover) or causal onset 【確度 C】
 
 **分岐スプリント**。実施自体は確定 (どちらかの分岐は必ず実施)、内容が外部条件依存のため C。
