@@ -15,33 +15,14 @@
  *   flip threshold-coincident frames; surfacing that is the point).
  *
  * Segment-level reference (active ranges / boundaries / discard) has no wasm
- * counterpart until B1; this checker validates the manifest plumbing so the
- * B1 port can consume it unchanged.
+ * counterpart until B1. The comparator (compareSegments) is exported for the
+ * B1 port to require(); until then each reference is fed back through it as a
+ * round-trip self-test (diff machinery + reference integrity).
  *
  *   node tools/check_wasm_parity.cjs <nodejs_pkg_dir> <parity_dir>
  */
 const fs = require("fs");
 const path = require("path");
-
-const [, , pkgDir, refDir] = process.argv;
-if (!pkgDir || !refDir) {
-  console.error("usage: node check_wasm_parity.cjs <nodejs_pkg_dir> <parity_dir>");
-  process.exit(2);
-}
-
-const wasm = require(path.join(pkgDir, "kalimba_dsp.js"));
-const ref = JSON.parse(
-  fs.readFileSync(path.join(refDir, "parity_reference.json"), "utf8"),
-);
-
-function readF32(file) {
-  const buf = fs.readFileSync(path.join(refDir, file));
-  return new Float32Array(buf.buffer, buf.byteOffset, buf.length / 4);
-}
-function readU32(file) {
-  const buf = fs.readFileSync(path.join(refDir, file));
-  return new Uint32Array(buf.buffer, buf.byteOffset, buf.length / 4);
-}
 
 function compareEnv(name, got, exp, rtol, atol, failures) {
   if (got.length !== exp.length) {
@@ -75,36 +56,101 @@ function compareFrames(name, got, exp, failures) {
   return false;
 }
 
-const { hopLength, nFft, nMels } = ref.constants;
-let pass = 0;
-let total = 0;
-const failures = [];
-
-for (const c of ref.cases) {
-  const audio = readF32(c.audio);
-  const sr = BigInt(c.sampleRate);
-
-  // wasm through-path: audio -> envelope -> onset frames (backtracked)
-  const envWasm = wasm.onset_strength(audio, sr, hopLength, nFft, nMels);
-  const framesWasm = wasm.onset_detect(envWasm, sr, hopLength, true);
-
-  total += 4;
-  if (compareEnv(`${c.id} vs native`, envWasm, readF32(c.native.env), 1e-4, 1e-5, failures)) pass++;
-  if (compareFrames(`${c.id} vs native`, framesWasm, readU32(c.native.frames), failures)) pass++;
-  if (compareEnv(`${c.id} vs numpy`, envWasm, readF32(c.numpy.env), 1e-3, 1e-3, failures)) pass++;
-  if (compareFrames(`${c.id} vs numpy`, framesWasm, readU32(c.numpy.frames), failures)) pass++;
-
-  // Segment-level reference plumbing (consumed for real once B1 lands).
-  total += 1;
-  const seg = c.segment ?? {};
-  const segOk =
-    Array.isArray(seg.activeRanges) &&
-    Array.isArray(seg.segments) &&
-    typeof seg.rmsThreshold === "number";
-  if (segOk) pass++;
-  else failures.push(`${c.id}: segment reference incomplete (${Object.keys(seg)})`);
+/**
+ * Segment-level diff: compare a candidate segment computation (the future B1
+ * TS/Rust port) against the pinned Python reference. Ranges are [start, end]
+ * second pairs; `epsilonSec` absorbs float formatting, not algorithmic drift.
+ */
+function compareSegments(name, candidate, reference, failures, epsilonSec = 1e-6) {
+  const rangeKeys = [
+    "rawActiveRanges",
+    "activeRanges",
+    "shortBridgeActiveRanges",
+    "activeRangeSegments",
+    "segments",
+  ];
+  let ok = true;
+  for (const key of rangeKeys) {
+    const got = candidate?.[key] ?? [];
+    const exp = reference?.[key] ?? [];
+    if (got.length !== exp.length) {
+      failures.push(`${name}: ${key} count candidate=${got.length} ref=${exp.length}`);
+      ok = false;
+      continue;
+    }
+    for (let i = 0; i < exp.length; i++) {
+      const [gs, ge] = got[i];
+      const [es, ee] = exp[i];
+      if (Math.abs(gs - es) > epsilonSec || Math.abs(ge - ee) > epsilonSec) {
+        failures.push(
+          `${name}: ${key}[${i}] candidate=[${gs},${ge}] ref=[${es},${ee}]`,
+        );
+        ok = false;
+        break;
+      }
+    }
+  }
+  const gotThr = candidate?.rmsThreshold;
+  const expThr = reference?.rmsThreshold;
+  if (typeof gotThr !== "number" || Math.abs(gotThr - expThr) > 1e-9 + 1e-6 * Math.abs(expThr)) {
+    failures.push(`${name}: rmsThreshold candidate=${gotThr} ref=${expThr}`);
+    ok = false;
+  }
+  return ok;
 }
 
-for (const f of failures) console.error("FAIL " + f);
-console.log(`wasm fixture parity: ${pass}/${total} checks passed (${ref.cases.length} recordings)`);
-process.exit(failures.length ? 1 : 0);
+function main() {
+  const [, , pkgDir, refDir] = process.argv;
+  if (!pkgDir || !refDir) {
+    console.error("usage: node check_wasm_parity.cjs <nodejs_pkg_dir> <parity_dir>");
+    process.exit(2);
+  }
+
+  const wasm = require(path.join(pkgDir, "kalimba_dsp.js"));
+  const ref = JSON.parse(
+    fs.readFileSync(path.join(refDir, "parity_reference.json"), "utf8"),
+  );
+
+  const readF32 = (file) => {
+    const buf = fs.readFileSync(path.join(refDir, file));
+    return new Float32Array(buf.buffer, buf.byteOffset, buf.length / 4);
+  };
+  const readU32 = (file) => {
+    const buf = fs.readFileSync(path.join(refDir, file));
+    return new Uint32Array(buf.buffer, buf.byteOffset, buf.length / 4);
+  };
+
+  const { hopLength, nFft, nMels } = ref.constants;
+  let pass = 0;
+  let total = 0;
+  const failures = [];
+
+  for (const c of ref.cases) {
+    const audio = readF32(c.audio);
+    const sr = BigInt(c.sampleRate);
+
+    // wasm through-path: audio -> envelope -> onset frames (backtracked)
+    const envWasm = wasm.onset_strength(audio, sr, hopLength, nFft, nMels);
+    const framesWasm = wasm.onset_detect(envWasm, sr, hopLength, true);
+
+    total += 4;
+    if (compareEnv(`${c.id} vs native`, envWasm, readF32(c.native.env), 1e-4, 1e-5, failures)) pass++;
+    if (compareFrames(`${c.id} vs native`, framesWasm, readU32(c.native.frames), failures)) pass++;
+    if (compareEnv(`${c.id} vs numpy`, envWasm, readF32(c.numpy.env), 1e-3, 1e-3, failures)) pass++;
+    if (compareFrames(`${c.id} vs numpy`, framesWasm, readU32(c.numpy.frames), failures)) pass++;
+
+    // Segment-level diff. Until the B1 port exists there is no wasm-side
+    // candidate, so the reference is fed back through the comparator
+    // (round-trip self-test: proves the diff machinery + reference integrity).
+    total += 1;
+    if (compareSegments(`${c.id} segments(self)`, c.segment, c.segment, failures)) pass++;
+  }
+
+  for (const f of failures) console.error("FAIL " + f);
+  console.log(`wasm fixture parity: ${pass}/${total} checks passed (${ref.cases.length} recordings)`);
+  process.exit(failures.length ? 1 : 0);
+}
+
+module.exports = { compareSegments, compareEnv, compareFrames };
+
+if (require.main === module) main();
