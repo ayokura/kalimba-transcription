@@ -335,7 +335,11 @@ function ReviewEditorReady({
         </p>
       </header>
 
-      <ReviewStatusPanel transactionId={transactionId} initialStatus={initialReviewStatus} />
+      <ReviewStatusPanel
+        transactionId={transactionId}
+        initialStatus={initialReviewStatus}
+        hasUnsavedCorrections={dirty}
+      />
 
       <section className="review-playback">
         <audio

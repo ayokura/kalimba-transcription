@@ -56,4 +56,36 @@ describe("ReviewStatusPanel", () => {
       expect(screen.getByRole("status").textContent).toContain("保存できませんでした");
     });
   });
+
+  it("blocks review_completed while corrections are unsaved", async () => {
+    render(
+      <ReviewStatusPanel
+        transactionId="tx-1"
+        initialStatus={null}
+        hasUnsavedCorrections
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /確認・修正完了/ }));
+
+    expect(saveReviewStatus).not.toHaveBeenCalled();
+    expect(screen.getByRole("status").textContent).toContain("未保存の修正があります");
+  });
+
+  it("still allows non-completion statuses while corrections are unsaved", async () => {
+    saveReviewStatus.mockResolvedValue({ version: 1, status: "recorded_only" });
+    render(
+      <ReviewStatusPanel
+        transactionId="tx-1"
+        initialStatus={null}
+        hasUnsavedCorrections
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /録音だけ提出/ }));
+
+    await waitFor(() => {
+      expect(saveReviewStatus).toHaveBeenCalledWith("tx-1", "recorded_only");
+    });
+  });
 });

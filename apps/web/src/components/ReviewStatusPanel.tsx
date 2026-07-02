@@ -11,17 +11,30 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 export function ReviewStatusPanel({
   transactionId,
   initialStatus,
+  hasUnsavedCorrections = false,
 }: {
   transactionId: string;
   initialStatus: ReviewStatusPayload | null;
+  hasUnsavedCorrections?: boolean;
 }) {
   const [current, setCurrent] = useState<ReviewStatusValue | null>(
     initialStatus?.status ?? null,
   );
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [blockedMessage, setBlockedMessage] = useState<string | null>(null);
 
   const choose = useCallback(
     async (status: ReviewStatusValue) => {
+      // review_completed is the only status that gates corrections -> GT
+      // promotion; confirming it while corrections are unsaved would promote
+      // a stale corrections.json if the tab closes without saving.
+      if (status === "review_completed" && hasUnsavedCorrections) {
+        setBlockedMessage(
+          "未保存の修正があります。先に「保存」を押してから「確認・修正完了」にしてください。",
+        );
+        return;
+      }
+      setBlockedMessage(null);
       setSaveState("saving");
       try {
         const saved = await saveReviewStatus(transactionId, status);
@@ -31,7 +44,7 @@ export function ReviewStatusPanel({
         setSaveState("error");
       }
     },
-    [transactionId],
+    [transactionId, hasUnsavedCorrections],
   );
 
   return (
@@ -59,7 +72,9 @@ export function ReviewStatusPanel({
         ))}
       </div>
       <p className="review-status-feedback muted" role="status">
-        {saveState === "saving"
+        {blockedMessage
+          ? blockedMessage
+          : saveState === "saving"
           ? "保存中…"
           : saveState === "error"
           ? "状態を保存できませんでした"
