@@ -229,8 +229,13 @@ pub fn onset_strength(
 }
 
 /// Greedy peak picker. Mirror of `segments._peak_pick_numpy` (librosa
-/// `util.peak_pick`, sparse=True). Window means evaluated in f64; threshold
-/// comparisons in f64 (numpy upcasts `float32 mean + python float delta`).
+/// `util.peak_pick`, sparse=True). Window means are accumulated in f64 here,
+/// whereas numpy's `np.mean` over a float32 envelope accumulates in float32
+/// (it only upcasts to f64 when adding the python-float delta afterwards).
+/// The two can differ by ~1e-8, so agreement with the numpy reference is not
+/// guaranteed bit-for-bit when a frame value coincides with the threshold —
+/// in practice unobserved (2026-07-02 audit; dtype alignment is tracked in
+/// the sprint plan, Sprint 2/5).
 #[allow(clippy::too_many_arguments)]
 pub fn peak_pick(
     x: &[f32],

@@ -49,7 +49,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from apps.api.app.fingerprints import recognizer_fingerprint  # noqa: E402
+from apps.api.app.fingerprints import (  # noqa: E402
+    kalimba_dsp_fingerprint,
+    recognizer_fingerprint,
+)
 from apps.api.app.main import app  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -850,7 +853,10 @@ def main() -> int:
                 candidate_bins.append({"range": [round(lo, 1), round(min(hi, 1.0), 1)], "count": 0})
         candidate_ece = weighted_error
     summary = {
-        "recognizerFingerprint": recognizer_fingerprint()[:16],
+        # Python sources only — a kalimba_dsp (Rust) rebuild does NOT change
+        # this value, so always read it together with kalimbaDspFingerprint.
+        "recognizerFingerprint": recognizer_fingerprint(),
+        "kalimbaDspFingerprint": kalimba_dsp_fingerprint(),
         "recordings": len(results),
         "microPrecision": micro_p,
         "microRecall": micro_r,
@@ -938,7 +944,8 @@ def main() -> int:
     print(
         f"\nmicro P={summary['microPrecision']:.3f} R={summary['microRecall']:.3f}"
         f" F1={summary['microF1']:.3f}  ({summary['recordings']} recordings,"
-        f" recognizer {summary['recognizerFingerprint']})"
+        f" recognizer {summary['recognizerFingerprint']}"
+        f" dsp {summary['kalimbaDspFingerprint']})"
     )
     print(
         "candidate "

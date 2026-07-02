@@ -54,11 +54,14 @@ def _write_tx(data_dir: Path, tx_id: str, *, status: str | None, with_correction
 def patched(tmp_path, monkeypatch):
     data_dir = tmp_path / "transactions"
     captures_dir = tmp_path / "captures"
+    corpus_dir = tmp_path / "corpus"
     data_dir.mkdir()
     captures_dir.mkdir()
+    corpus_dir.mkdir()
     monkeypatch.setattr(promote, "DATA_DIR", data_dir)
     monkeypatch.setattr(promote, "CAPTURES_DIR", captures_dir)
-    return data_dir, captures_dir
+    monkeypatch.setattr(promote, "CORPUS_DIR", corpus_dir)
+    return data_dir, captures_dir, corpus_dir
 
 
 def _run(*argv: str) -> int:
@@ -73,7 +76,7 @@ def _run(*argv: str) -> int:
 
 
 def test_load_review_status(patched):
-    data_dir, _ = patched
+    data_dir, _, _ = patched
     _write_tx(data_dir, "tx-1", status="review_completed")
     assert promote.load_review_status("tx-1") == "review_completed"
     _write_tx(data_dir, "tx-2", status=None)
@@ -81,7 +84,7 @@ def test_load_review_status(patched):
 
 
 def test_completed_status_is_promoted(patched):
-    data_dir, captures_dir = patched
+    data_dir, captures_dir, _ = patched
     _write_tx(data_dir, "tx-done", status="review_completed")
     rc = _run("tx-done")
     assert rc == 0
@@ -95,7 +98,7 @@ def test_completed_status_is_promoted(patched):
 
 
 def test_recorded_only_is_skipped_by_default(patched):
-    data_dir, captures_dir = patched
+    data_dir, captures_dir, _ = patched
     _write_tx(data_dir, "tx-raw", status="recorded_only")
     rc = _run("tx-raw")
     assert rc == 0
@@ -103,7 +106,7 @@ def test_recorded_only_is_skipped_by_default(patched):
 
 
 def test_missing_status_is_skipped_by_default(patched):
-    data_dir, captures_dir = patched
+    data_dir, captures_dir, _ = patched
     _write_tx(data_dir, "tx-nostatus", status=None)
     rc = _run("tx-nostatus")
     assert rc == 0
@@ -111,7 +114,7 @@ def test_missing_status_is_skipped_by_default(patched):
 
 
 def test_ignore_status_bypasses_gate(patched):
-    data_dir, captures_dir = patched
+    data_dir, captures_dir, _ = patched
     _write_tx(data_dir, "tx-legacy", status=None)
     rc = _run("tx-legacy", "--ignore-status")
     assert rc == 0
@@ -119,7 +122,7 @@ def test_ignore_status_bypasses_gate(patched):
 
 
 def test_require_status_override(patched):
-    data_dir, captures_dir = patched
+    data_dir, captures_dir, _ = patched
     _write_tx(data_dir, "tx-uncertain", status="uncertain")
     _run("tx-uncertain")
     assert not (captures_dir / "tx-uncertain" / "ground_truth.json").exists()
@@ -128,7 +131,7 @@ def test_require_status_override(patched):
 
 
 def test_existing_gt_not_overwritten_without_force(patched):
-    data_dir, captures_dir = patched
+    data_dir, captures_dir, _ = patched
     _write_tx(data_dir, "tx-existing", status="review_completed")
     gt_dir = captures_dir / "tx-existing"
     gt_dir.mkdir(parents=True, exist_ok=True)
@@ -139,3 +142,27 @@ def test_existing_gt_not_overwritten_without_force(patched):
     _run("tx-existing")
     gt = json.loads((gt_dir / "ground_truth.json").read_text())
     assert gt["onsets"][0]["method"] == "ear_verified"
+
+
+def test_duplicate_audio_in_corpus_blocks_promotion(patched):
+    """Same audio already committed to the repo-managed corpus → skip.
+
+    Without the corpus layer in the SHA dedup, a re-upload of promoted audio
+    would gain a second GT under a new tx-id and be double-counted by the
+    benchmark (2026-07-02 audit finding)."""
+    data_dir, captures_dir, corpus_dir = patched
+    _write_tx(data_dir, "tx-reupload", status="review_completed")
+    corpus_tx = corpus_dir / "tx-original"
+    corpus_tx.mkdir(parents=True)
+    # Same bytes as _write_tx writes for audio.wav.
+    (corpus_tx / "audio.wav").write_bytes(b"RIFFfake")
+    (corpus_tx / "ground_truth.json").write_text(
+        json.dumps({"version": 1, "onsets": []}), encoding="utf-8"
+    )
+    rc = _run("tx-reupload")
+    assert rc == 0
+    assert not (captures_dir / "tx-reupload" / "ground_truth.json").exists()
+
+    rc = _run("tx-reupload", "--allow-duplicate")
+    assert rc == 0
+    assert (captures_dir / "tx-reupload" / "ground_truth.json").is_file()

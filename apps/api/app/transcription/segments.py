@@ -266,8 +266,15 @@ def _onset_strength_numpy(
 # Production onset DSP — delegated to the Rust shared core (kalimba_dsp).
 #
 # The `_*_numpy` functions above remain the differential-equivalence reference
-# (imported by tests/test_onset_dsp_rust.py). The Rust ports are frame-exact to
-# them (verified on synthetic audio + the full fixture suite) and 10-17x faster
+# (imported by tests/test_onset_dsp_rust.py). Their "verified against librosa
+# 0.11" docstrings record the one-time verification done at port time (#193);
+# librosa is a dev-only dependency now, so CI pins Rust<->numpy mutual
+# agreement plus the fixture regression suite, not librosa itself. Known
+# precision caveat: Rust peak_pick accumulates window means in f64 while
+# np.mean on a float32 envelope accumulates in float32 (~1e-8 divergence,
+# only observable at exact threshold coincidences — see 2026-07-02 audit).
+# The Rust ports are otherwise frame-exact to the references
+# (verified on synthetic audio + the full fixture suite) and 10-17x faster
 # (onset features were ~30% of transcription wall time: 1.8s/14.6s for the
 # g-low/96kHz bwv147 fixtures -> ~0.16s/1.0s). Same crate backs the browser
 # (WASM) pipeline. `audio` is coerced to C-contiguous float32 (no-op for the

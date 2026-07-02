@@ -44,6 +44,7 @@ import os  # noqa: E402
 
 DATA_DIR = Path(os.environ.get("KALIMBA_DATA_DIR", str(REPO_ROOT / "data"))) / "transactions"
 CAPTURES_DIR = REPO_ROOT / "apps" / "api" / "tests" / "fixtures" / "transaction-captures"
+CORPUS_DIR = REPO_ROOT / "apps" / "api" / "tests" / "fixtures" / "free-performance-corpus"
 
 DEFAULT_TOLERANCE_SEC = 0.05
 # inserted-slot: startTime is the dropped segment's boundary, not a measured onset.
@@ -101,16 +102,30 @@ def load_corrections(tx_id: str) -> dict | None:
 
 
 def existing_gt_hashes() -> dict[str, str]:
-    """audio SHA-256 → tx-id for every capture dir that already has GT."""
+    """audio SHA-256 → tx-id for every capture/corpus dir that already has GT.
+
+    Covers both GT layers that note_f1_benchmark.discover_tx_ids() reads:
+    the repo-managed free-performance corpus (committed audio.wav) and the
+    local transaction-captures (audio resolved via DATA_DIR). Without the
+    corpus layer, a re-upload of already-promoted audio would get a second
+    GT under a new tx-id and be double-counted by the benchmark.
+    """
     result: dict[str, str] = {}
-    if not CAPTURES_DIR.is_dir():
-        return result
-    for d in sorted(CAPTURES_DIR.iterdir()):
-        if not (d / "ground_truth.json").is_file():
-            continue
-        sha = audio_sha256(d.name)
-        if sha:
-            result[sha] = d.name
+    if CORPUS_DIR.is_dir():
+        for d in sorted(CORPUS_DIR.iterdir()):
+            if not (d / "ground_truth.json").is_file():
+                continue
+            audio = d / "audio.wav"
+            if audio.is_file():
+                sha = hashlib.sha256(audio.read_bytes()).hexdigest()
+                result[sha] = d.name
+    if CAPTURES_DIR.is_dir():
+        for d in sorted(CAPTURES_DIR.iterdir()):
+            if not (d / "ground_truth.json").is_file():
+                continue
+            sha = audio_sha256(d.name)
+            if sha:
+                result.setdefault(sha, d.name)
     return result
 
 

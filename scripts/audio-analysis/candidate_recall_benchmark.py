@@ -44,7 +44,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from apps.api.app.fingerprints import recognizer_fingerprint  # noqa: E402
+from apps.api.app.fingerprints import (  # noqa: E402
+    kalimba_dsp_fingerprint,
+    recognizer_fingerprint,
+)
 from apps.api.app.main import app  # noqa: E402
 from note_f1_benchmark import (  # noqa: E402
     CAPTURES_DIR,
@@ -276,7 +279,9 @@ def main() -> int:
     micro_primary = agg["primaryTp"] / agg["truth"] if agg["truth"] else 1.0
     micro_aug = (agg["primaryTp"] + agg["recovered"]) / agg["truth"] if agg["truth"] else 1.0
     summary = {
-        "recognizerFingerprint": recognizer_fingerprint()[:16],
+        # Python sources only — pair with kalimbaDspFingerprint (Rust binary).
+        "recognizerFingerprint": recognizer_fingerprint(),
+        "kalimbaDspFingerprint": kalimba_dsp_fingerprint(),
         "recordings": len(results),
         "microPrimaryRecall": micro_primary,
         "microAugmentedRecall": micro_aug,
@@ -315,7 +320,8 @@ def main() -> int:
         f"  FN={summary['totalFalseNegatives']} recovered={summary['totalRecovered']}"
         f"\ncandidate pool={summary['candidatePoolSize']} noise={summary['candidateNoiseRate']*100:.1f}%"
         f"  mean confidence real={cr} noise={cn}"
-        f"\n({summary['recordings']} recordings, recognizer {summary['recognizerFingerprint']})"
+        f"\n({summary['recordings']} recordings, recognizer {summary['recognizerFingerprint']}"
+        f" dsp {summary['kalimbaDspFingerprint']})"
     )
     if summary["microPrimaryRecall"] >= 0.999:
         print(
