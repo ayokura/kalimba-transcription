@@ -1,16 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { ExpectedKeySelector } from "@/components/ExpectedKeySelector";
-import { InitialResultSummary } from "@/components/InitialResultSummary";
 import { NotationPanel } from "@/components/NotationPanel";
 import { RecorderPanel } from "@/components/RecorderPanel";
 import { TuningPanel } from "@/components/TuningPanel";
-import { removeReviewAudio, saveReviewAudio } from "@/lib/reviewAudioStore";
-import { createReviewSession, removeReviewSession, saveReviewSession } from "@/lib/reviewSession";
 import {
   CaptureAssessmentDetails,
   CaptureIntent,
@@ -23,10 +18,6 @@ import {
 } from "@/lib/api";
 import { buildCaptureArchive, downloadBlob } from "@/lib/archive";
 import { InstrumentTuning, NotationMode, TranscriptionResult, TuningNote } from "@/lib/types";
-
-type TranscriptionStudioProps = {
-  mode: "user" | "debug";
-};
 
 const INTENT_OPTIONS: Array<{ value: CaptureIntent; label: string; description: string }> = [
   { value: "strict_chord", label: "同時和音", description: "同じタイミングで鳴らす前提です。" },
@@ -624,25 +615,6 @@ function buildRecaptureGuidance(
   return guidance;
 }
 
-function buildResultOnlyAssessment(result: TranscriptionResult | null): CaptureAssessmentDetails | null {
-  if (!result || result.warnings.length === 0) {
-    return null;
-  }
-
-  return {
-    status: "review_needed",
-    label: "要確認",
-    summary: "自動採譜結果の確認が必要です。",
-    reason: result.warnings.join(" / "),
-    mismatchCount: 0,
-    expectedEventCount: 0,
-    detectedEventCount: result.events.length,
-    extraEventCount: 0,
-    missingEventCount: 0,
-    events: [],
-  };
-}
-
 function buildDraftCaptureScenario(captureCaseId: string, suggestedCaptureId: string) {
   return captureCaseId.trim().length > 0 ? captureCaseId.trim() : suggestedCaptureId;
 }
@@ -672,16 +644,14 @@ function hasProtectedExpectedDraft(
   return pendingExpectedKeys.length > 0 || expectedEvents.length > 0 || expectedImportText.trim().length > 0;
 }
 
-export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
-  const isDebug = mode === "debug";
-  const router = useRouter();
+export function TranscriptionStudio() {
   const [tunings, setTunings] = useState<InstrumentTuning[]>([]);
   const [selectedTuningId, setSelectedTuningId] = useState<string>("");
   const [customName, setCustomName] = useState("Custom Tuning");
   const [customNotes, setCustomNotes] = useState("C4,D4,E4,G4,A4,C5,E5,G5");
   const [recording, setRecording] = useState<Blob | null>(null);
   const [result, setResult] = useState<TranscriptionResult | null>(null);
-  const [notationMode, setNotationMode] = useState<NotationMode>(isDebug ? "western" : "score");
+  const [notationMode, setNotationMode] = useState<NotationMode>("western");
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -689,7 +659,6 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
   const [captureMemo, setCaptureMemo] = useState("");
   const [captureIntent, setCaptureIntent] = useState<CaptureIntent>("unknown");
   const [lastCapture, setLastCapture] = useState<TranscriptionCapture | null>(null);
-  const [latestReviewSessionId, setLatestReviewSessionId] = useState<string | null>(null);
   const [isSavingCapture, setIsSavingCapture] = useState(false);
   const [pendingExpectedKeys, setPendingExpectedKeys] = useState<number[]>([]);
   const [expectedRepeatCount, setExpectedRepeatCount] = useState("1");
@@ -759,8 +728,6 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     [analyzedNoteNamesByKey, lastCapture],
   );
   const recaptureGuidance = useMemo(() => buildRecaptureGuidance(captureReview, lastCapture?.requestPayload.captureIntent ?? "unknown"), [captureReview, lastCapture]);
-  const userReview = useMemo(() => buildResultOnlyAssessment(result), [result]);
-  const activeReview = isDebug ? captureReview : userReview;
   const analysisStatus = useMemo(() => {
     if (!recording) {
       return {
@@ -799,13 +766,6 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     setResult(null);
     setLastCapture(null);
     setActiveEventId(null);
-    setLatestReviewSessionId((current) => {
-      if (current) {
-        removeReviewSession(current);
-        removeReviewAudio(current);
-      }
-      return null;
-    });
   }
 
   function confirmTuningDraftDiscard() {
@@ -936,30 +896,8 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
       });
       setCaptureCaseId(resolvedCaseId);
       setResult(capture.responsePayload);
-      const nextActiveEventId = capture.responsePayload.events[0]?.id ?? null;
-      setActiveEventId(nextActiveEventId);
+      setActiveEventId(capture.responsePayload.events[0]?.id ?? null);
       setLastCapture(capture);
-      if (!isDebug) {
-        const reviewSession = createReviewSession({
-          capture,
-          acquisitionMode: "live_mic",
-          notationMode,
-          activeEventId: nextActiveEventId,
-        });
-        saveReviewSession(reviewSession);
-        saveReviewAudio(reviewSession.sessionId, capture.audioWav);
-        setLatestReviewSessionId((current) => {
-          if (current && current !== reviewSession.sessionId) {
-            removeReviewSession(current);
-            removeReviewAudio(current);
-          }
-          return reviewSession.sessionId;
-        });
-        const transactionId = capture.responsePayload.transactionId;
-        if (transactionId) {
-          router.push(`/score/${transactionId}`);
-        }
-      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "解析に失敗しました。");
     } finally {
@@ -1238,113 +1176,32 @@ export function TranscriptionStudio({ mode }: TranscriptionStudioProps) {
     </div>
   );
 
-  const userPrimary = (
-    <div className="stack gap-xl">
-      <RecorderPanel disabled={isAnalyzing || isSavingCapture} hasRecording={Boolean(recording)} onRecordingReady={handleRecordingReady} />
-      <div className="file-upload-row">
-        <label className="file-upload-label">
-          WAVファイルをアップロード
-          <input
-            type="file"
-            accept="audio/wav,audio/wave,.wav"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleRecordingReady(file);
-            }}
-            disabled={isAnalyzing || isSavingCapture}
-          />
-        </label>
-      </div>
-      <TuningPanel
-        tunings={tunings}
-        selectedId={selectedTuningId}
-        onSelect={handleTuningSelect}
-        customName={customName}
-        customNotes={customNotes}
-        hasProtectedDraft={hasProtectedDraft}
-        onCustomNameChange={handleCustomNameChange}
-        onCustomNotesChange={handleCustomNotesChange}
-      />
-
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">Workflow</p>
-            <h2>解析を実行</h2>
-          </div>
-        </div>
-        <p className="muted">録音と調律を用意したら解析します。詳細な再現データ収集は debug capture 画面で行います。</p>
-        <div className="summary-strip">
-          <span>{analysisStatus.label}</span>
-          <span>{analysisStatus.detail}</span>
-        </div>
-        <div className="debug-capture-grid">
-          <button className="primary wide" onClick={handleAnalyze} disabled={!recording || !selectedTuning || isAnalyzing}>
-            {isAnalyzing ? "解析中..." : "自動採譜する"}
-          </button>
-          <a href="/debug/capture" className="debug-link-card">
-            <strong>Debug capture 画面へ</strong>
-            <span>expected performance、保存パック、認識評価を扱います。</span>
-          </a>
-        </div>
-      </section>
-    </div>
-  );
-
-  const userSecondary = (
-    <div className="stack gap-xl">
-      <InitialResultSummary result={result} review={activeReview} reviewSessionId={latestReviewSessionId} />
-    </div>
-  );
-
   return (
     <main className="shell">
       <section className="hero">
         <div>
-          <p className="eyebrow">{isDebug ? "Kalimba Debug Capture" : "Kalimba Score MVP"}</p>
-          <h1>{isDebug ? "認識評価用のデータ収集と比較。" : "カリンバ演奏を録音して、そのまま譜面へ。"}</h1>
+          <p className="eyebrow">Kalimba Debug Capture</p>
+          <h1>認識評価用のデータ収集と比較。</h1>
           <p className="hero-copy">
-            {isDebug
-              ? "手動テスト用の expected performance、保存パック、認識結果比較を 1 画面で扱います。通常表記を優先して認識精度を確認できます。"
-              : "マイク録音からカリンバ向けの譜面へ変換します。ドレミ縦並び譜を中心に、数字譜と通常表記も同じ解析結果から切り替え表示できます。"}
+            手動テスト用の expected performance、保存パック、認識結果比較を 1 画面で扱います。通常表記を優先して認識精度を確認できます。
           </p>
         </div>
         <div className="hero-card">
-          <p>{isDebug ? "Debug Shortcuts" : "対応範囲"}</p>
+          <p>Debug Shortcuts</p>
           <ul>
-            {isDebug ? (
-              <>
-                <li><a href="/">利用者向け画面へ戻る</a></li>
-                <li>録音意図の指定</li>
-                <li>Expected performance の入力</li>
-                <li>Capture pack の保存</li>
-              </>
-            ) : (
-              <>
-                <li>ブラウザ録音</li>
-                <li>サーバー側解析</li>
-                <li>和音イベント検出</li>
-                <li><a href="/debug/capture">Debug capture 画面</a></li>
-              </>
-            )}
+            <li><a href="/">利用者向け画面へ戻る</a></li>
+            <li>録音意図の指定</li>
+            <li>Expected performance の入力</li>
+            <li>Capture pack の保存</li>
           </ul>
         </div>
       </section>
 
       {error ? <div className="error-banner">{error}</div> : null}
 
-      <div className={isDebug ? "workspace-grid debug-workspace-grid" : result ? "workspace-grid" : "workspace-grid workspace-grid-preanalysis"}>
-        {isDebug ? (
-          <>
-            {debugMain}
-            {debugSide}
-          </>
-        ) : (
-          <>
-            {userPrimary}
-            {result ? userSecondary : null}
-          </>
-        )}
+      <div className="workspace-grid debug-workspace-grid">
+        {debugMain}
+        {debugSide}
       </div>
     </main>
   );

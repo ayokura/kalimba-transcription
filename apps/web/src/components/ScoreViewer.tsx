@@ -192,6 +192,14 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
         />
       ) : null}
 
+      {result.warnings.length > 0 ? (
+        <div className="warning-box">
+          {result.warnings.map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
+        </div>
+      ) : null}
+
       <MemoEditor transactionId={transactionId} initialMemo={initialMemo} />
 
       <section className="score-viewer-playback">
