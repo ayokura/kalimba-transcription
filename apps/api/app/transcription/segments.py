@@ -856,6 +856,69 @@ def collect_attack_validated_gap_segments(
     return segments
 
 
+def collect_trailing_chord_cluster_segments(
+    active_ranges: list[tuple[float, float]],
+    onset_times: list[float],
+    onset_profiles: dict[float, OnsetAttackProfile],
+    audio_duration: float,
+    accepted_trailing: list[float] | None = None,
+) -> list[tuple[float, float]]:
+    """Rescue trailing strummed-chord clusters that per-onset gates reject (#197).
+
+    The per-onset trailing gates (`_valid_attack_gap_onsets`) mis-measure
+    clustered onsets structurally: within a strum, each onset's pre-window
+    contains the just-struck energy of its cluster sibling (suppressing
+    broadband gain below GAP_ONSET_MIN_BROADBAND_GAIN), and a low-register
+    chord carries little >=2 kHz energy (failing the high-band flux arms of
+    is_valid_attack). Those gates were calibrated for isolated gap onsets.
+
+    The cluster itself is the discriminator instead: >=2 gap-validated onsets
+    within CANDIDATE_PROMOTION_CLUSTER_MAX_INTERVAL of each other, anchored by
+    at least one individually valid attack, become ONE segment spanning the
+    cluster (a strum is one musical event; segment_peaks selects the chord
+    notes from the spanning window). Evidence: 17ea7626 @14.66-14.86s — 4
+    gap-validated onsets (IOI 0.059-0.080s), head hb-flux 1.64 (valid attack),
+    per-onset gains 0.87-2.76 all suppressed by cluster siblings, while the
+    band energy trace shows clear fresh attacks for C4+E4+G4+C5 (#196/#197).
+
+    Only onsets after the last accepted trailing candidate are considered, so
+    per-onset trailing segments are never duplicated or reshaped.
+    """
+    if not active_ranges:
+        return []
+    search_start = active_ranges[-1][1] + 0.05
+    if accepted_trailing:
+        search_start = max(search_start, accepted_trailing[-1] + 0.005)
+    candidates = [
+        time for time in onset_times if search_start < time < audio_duration + 0.01
+    ]
+    if len(candidates) < 2:
+        return []
+
+    clusters: list[list[float]] = [[candidates[0]]]
+    for onset_time in candidates[1:]:
+        if onset_time - clusters[-1][-1] <= CANDIDATE_PROMOTION_CLUSTER_MAX_INTERVAL:
+            clusters[-1].append(onset_time)
+        else:
+            clusters.append([onset_time])
+
+    segments: list[tuple[float, float]] = []
+    for cluster in clusters:
+        if len(cluster) < 2:
+            continue
+        anchored = any(
+            (profile := onset_profiles.get(round(time, 4))) is not None
+            and profile.is_valid_attack
+            for time in cluster
+        )
+        if not anchored:
+            continue
+        end_time = min(cluster[-1] + ATTACK_VALIDATED_GAP_SEGMENT_DURATION, audio_duration)
+        if end_time - cluster[0] >= 0.08:
+            segments.append((cluster[0], end_time))
+    return segments
+
+
 def build_gap_ioi_diagnostics(
     active_ranges: list[tuple[float, float]],
     onset_times: list[float],
@@ -1237,6 +1300,21 @@ def detect_segments(
                 filtered_gap_candidates,
             )
 
+    trailing_chord_cluster_segments: list[tuple[float, float]] = []
+    if (
+        active_ranges
+        and not mid_performance_end
+        and cfg.use_attack_validated_gap_collector
+        and not cfg.ablate_trailing_chord_cluster
+    ):
+        trailing_chord_cluster_segments = collect_trailing_chord_cluster_segments(
+            active_ranges,
+            gap_onset_times,
+            onset_attack_profiles,
+            audio_duration,
+            filtered_gap_candidates.trailing if filtered_gap_candidates is not None else None,
+        )
+
     segments: list[Segment] = []
     active_range_segments: list[tuple[float, float]] = []
     for range_index, (range_start, range_end) in enumerate(active_ranges):
@@ -1305,6 +1383,7 @@ def detect_segments(
         (multi_onset_gap_segments, "multiOnsetGap", False),
         (sparse_gap_tail_segments, "sparseGapTail", True),
         (attack_validated_gap_segments, "attackValidatedGap", True),
+        (trailing_chord_cluster_segments, "trailingChordCluster", True),
     ]
     for collector_segments, source_name, estimated in collector_sources:
         source_tag = frozenset({source_name})
@@ -1342,6 +1421,7 @@ def detect_segments(
         "multiOnsetGapSegments": [[round(start, 4), round(end, 4)] for start, end in multi_onset_gap_segments],
         "sparseGapTailSegments": [[round(start, 4), round(end, 4)] for start, end in sparse_gap_tail_segments],
         "attackValidatedGapSegments": [[round(start, 4), round(end, 4)] for start, end in attack_validated_gap_segments],
+        "trailingChordClusterSegments": [[round(start, 4), round(end, 4)] for start, end in trailing_chord_cluster_segments],
         "segments": [[round(start, 4), round(end, 4)] for start, end in segments],
         "rmsThreshold": round(threshold, 6),
         "tempoRaw": round(tempo, 4),

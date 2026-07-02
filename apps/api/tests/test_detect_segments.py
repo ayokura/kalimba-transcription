@@ -393,3 +393,105 @@ def test_mid_performance_flags_do_not_affect_inter_range_segments() -> None:
         for s_norm, s_both in zip(core_normal, core_both):
             assert abs(s_norm[0] - s_both[0]) <= tol
             assert abs(s_norm[1] - s_both[1]) <= tol
+
+
+# --- #197: trailing strummed-chord cluster rescue -------------------------
+
+def _profile(time: float, gain: float, hb_flux: float, valid: bool) -> OnsetAttackProfile:
+    return OnsetAttackProfile(time, gain, hb_flux, hb_flux / 4.0, valid)
+
+
+def test_trailing_chord_cluster_forms_single_spanning_segment() -> None:
+    """17ea7626-shaped case: 4 gap-validated trailing onsets, only the head
+    individually attack-valid, per-onset gains suppressed by cluster siblings."""
+    from app.transcription import collect_trailing_chord_cluster_segments
+
+    active_ranges = [(0.0, 13.7653)]
+    onsets = [14.656, 14.7147, 14.784, 14.864]
+    profiles = {
+        14.656: _profile(14.656, 0.87, 1.64, True),
+        14.7147: _profile(14.7147, 1.18, 0.79, False),
+        14.784: _profile(14.784, 1.70, 0.54, False),
+        14.864: _profile(14.864, 2.76, 0.33, False),
+    }
+    segments = collect_trailing_chord_cluster_segments(
+        active_ranges, onsets, profiles, audio_duration=18.516, accepted_trailing=[14.256]
+    )
+    assert len(segments) == 1
+    start, end = segments[0]
+    assert start == pytest.approx(14.656)
+    assert end == pytest.approx(14.864 + 0.24)
+
+
+def test_trailing_cluster_requires_valid_attack_anchor() -> None:
+    from app.transcription import collect_trailing_chord_cluster_segments
+
+    active_ranges = [(0.0, 10.0)]
+    onsets = [10.5, 10.56, 10.63]
+    profiles = {t: _profile(t, 1.2, 0.4, False) for t in onsets}
+    assert (
+        collect_trailing_chord_cluster_segments(active_ranges, onsets, profiles, 12.0)
+        == []
+    )
+
+
+def test_trailing_cluster_requires_at_least_two_onsets() -> None:
+    from app.transcription import collect_trailing_chord_cluster_segments
+
+    active_ranges = [(0.0, 10.0)]
+    profiles = {10.5: _profile(10.5, 0.9, 1.7, True)}
+    assert (
+        collect_trailing_chord_cluster_segments(active_ranges, [10.5], profiles, 12.0)
+        == []
+    )
+
+
+def test_trailing_cluster_skips_onsets_before_last_accepted_trailing() -> None:
+    """Onsets at or before the last per-onset-accepted trailing candidate are
+    already segmented by the existing collector and must not be re-clustered."""
+    from app.transcription import collect_trailing_chord_cluster_segments
+
+    active_ranges = [(0.0, 10.0)]
+    onsets = [10.3, 10.38, 11.5, 11.58]
+    profiles = {t: _profile(t, 1.5, 1.7, True) for t in onsets}
+    segments = collect_trailing_chord_cluster_segments(
+        active_ranges, onsets, profiles, 13.0, accepted_trailing=[10.3, 10.38]
+    )
+    assert segments == [(11.5, pytest.approx(11.58 + 0.24))]
+
+
+def test_trailing_cluster_splits_on_wide_gaps() -> None:
+    """Onsets separated by more than the cluster interval form separate
+    clusters; a lone onset between clusters is not rescued."""
+    from app.transcription import collect_trailing_chord_cluster_segments
+
+    active_ranges = [(0.0, 10.0)]
+    onsets = [10.5, 10.56, 11.2, 12.0, 12.06]
+    profiles = {t: _profile(t, 1.5, 1.7, True) for t in onsets}
+    segments = collect_trailing_chord_cluster_segments(
+        active_ranges, onsets, profiles, 14.0
+    )
+    assert [round(s, 2) for s, _ in segments] == [10.5, 12.0]
+
+
+def test_trailing_cluster_disabled_by_ablation_flag() -> None:
+    """detect_segments must not emit trailingChordCluster segments when the
+    ablation flag is set (constructed audio with a trailing strum cluster)."""
+    from app.transcription import settings as recognizer_settings
+
+    sample_rate = 44100
+    lead = synthesize_note(523.2511306011972, sample_rate=sample_rate, duration=0.4)
+    gap = np.zeros(int(sample_rate * 0.6), dtype=np.float32)
+    strum = np.concatenate([
+        synthesize_note(261.6255653005986, sample_rate=sample_rate, duration=0.06),
+        synthesize_note(329.6275569128699, sample_rate=sample_rate, duration=0.06),
+        synthesize_note(391.99543598174927, sample_rate=sample_rate, duration=0.5),
+    ])
+    audio = np.concatenate([lead, gap, strum, np.zeros(int(sample_rate * 0.3), dtype=np.float32)]).astype(np.float32)
+
+    with recognizer_settings.override(ablate_trailing_chord_cluster=True):
+        debug_ablated = detect_segments(audio, sample_rate).debug
+
+    assert debug_ablated["trailingChordClusterSegments"] == []
+    # The default path may or may not rescue this synthetic strum (depends on
+    # per-onset validation), but the ablation flag must force-empty the list.

@@ -7,7 +7,7 @@
       "truthNotes": 12
     },
     "17ea7626-3c5d-450d-ae74-0116dea6e881": {
-      "minF1": 0.851,
+      "minF1": 0.863,
       "maxHardMisses": 7,
       "truthNotes": 52
     },
@@ -37,7 +37,7 @@
       "truthNotes": 5
     }
   },
-  "updatedAt": "2026-07-02T06:27:51+00:00",
-  "recognizerFingerprint": "37c4766ac70ffd2f",
+  "updatedAt": "2026-07-02T14:34:55+00:00",
+  "recognizerFingerprint": "8f8b92b9a5a4d9dc",
   "kalimbaDspFingerprint": "b5688f4db575441d"
 }

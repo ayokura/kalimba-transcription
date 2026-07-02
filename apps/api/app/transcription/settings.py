@@ -67,6 +67,9 @@ class RecognizerSettings:
     # Ablation switches (True = disable the feature)
     ablate_sparse_gap_tail: bool = False
     ablate_multi_onset_gap: bool = False
+    # #197: trailing strummed-chord cluster rescue (one segment per cluster of
+    # >=2 gap-validated trailing onsets with a valid-attack anchor).
+    ablate_trailing_chord_cluster: bool = False
     ablate_collapse_active_range_head: bool = False
     ablate_snap_range_start_to_onset: bool = False
 
