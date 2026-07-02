@@ -120,6 +120,30 @@ test("review queue lists recordings and filters by status", async ({ page }) => 
   await expect(page.getByText("1 件")).toBeVisible();
 });
 
+test("review editor supports kalimba-keyboard replace with undo/redo and timing nudge", async ({ page }) => {
+  await mockTranscriptionApi(page);
+  await page.goto("/score/tx-e2e/review");
+  await expect(page.getByRole("heading", { name: "確認と修正" })).toBeVisible();
+
+  // 単音イベントを選択 → 鍵盤タップで置換 (置換モードが既定)
+  await page.getByRole("button", { name: /0\.00s/ }).click();
+  await page
+    .getByRole("group", { name: "音を選択" })
+    .getByRole("button", { name: /E4/ })
+    .click();
+  await expect(page.getByRole("button", { name: /0\.00s/ })).toContainText("ミ");
+
+  // undo で元の音へ、redo で置換後へ戻る
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect(page.getByRole("button", { name: /0\.00s/ })).toContainText("ド");
+  await page.getByRole("button", { name: "やり直す" }).click();
+  await expect(page.getByRole("button", { name: /0\.00s/ })).toContainText("ミ");
+
+  // タイミング微調整: +10ms で 0.01s 表示になり、カードは選択されたまま
+  await page.getByRole("button", { name: "+10ms" }).click();
+  await expect(page.getByRole("button", { name: /0\.01s/ })).toContainText("ミ");
+});
+
 test("saved corrections survive re-transcription onset shifts (round-trip)", async ({ page }) => {
   await mockTranscriptionApi(page);
   // 保存時点の corrections は timeSec=0.03 (現 transcription の evt-1 は 0)。

@@ -35,13 +35,15 @@ test("ops: 音高置換 (単音イベント C4 → E4)", async ({ page, ops }) =
   await page.goto("/score/tx-e2e/review");
   await expect(page.getByRole("heading", { name: "確認と修正" })).toBeVisible();
 
-  // 現行 UI は置換 = 追加 + 除去の合成。removeNote は最後の 1 音を消せない
-  // ガードがあるため、単音イベントでは必ず「追加 → 除去」の順になる。
-  // (1) イベント選択 → (2) 「音を追加」select で E4 → (3) C4 を外す
+  // 単音イベントは鍵盤 picker の置換モードが既定。
+  // (1) イベント選択 → (2) 鍵盤で E4 をタップ = 2 操作で置換完了。
+  // 旧 UI (select で追加 → × で除去) は 3 操作だった (2aaa13c 時点の計測)。
   await ops.click(page.getByRole("button", { name: /0\.00s/ }));
-  await ops.select(page.getByLabel("音を追加"), "E4");
-  await ops.click(page.getByRole("button", { name: "C4 を外す" }));
+  await ops.click(
+    page.getByRole("group", { name: "音を選択" }).getByRole("button", { name: /E4/ }),
+  );
 
   await expect(page.getByText("未保存の修正があります")).toBeVisible();
-  expect(ops.count).toBe(3);
+  await expect(page.getByRole("button", { name: /0\.00s/ })).toContainText("ミ");
+  expect(ops.count).toBe(2);
 });

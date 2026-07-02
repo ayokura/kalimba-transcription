@@ -873,6 +873,37 @@ button:disabled {
   text-orientation: mixed;
 }
 
+/* review 編集用 compact picker (KalimbaNotePicker) */
+.kalimba-keys.rail.compact {
+  min-width: 0;
+  grid-template-columns: repeat(var(--kalimba-key-count, 17), minmax(32px, 1fr));
+  gap: 4px;
+}
+
+.kalimba-key.rail.compact {
+  padding: 6px 2px 8px;
+  border-radius: 12px 12px 14px 14px;
+  gap: 4px;
+}
+
+.kalimba-key:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+}
+
+.kalimba-key-doremi {
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.kalimba-key-note.compact {
+  font-size: 0.66rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .expected-repeat-field {
   min-width: 120px;
 }
@@ -2156,14 +2187,60 @@ button:disabled {
   color: #fff;
 }
 
-.review-note-add {
-  border: 1px dashed var(--line);
+.review-note-chip.replace-target {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.review-note-picker {
+  width: 100%;
+}
+
+.review-pick-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.review-pick-mode .review-mode-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.review-mode-btn {
+  border: 1px solid var(--line);
   border-radius: 999px;
   background: transparent;
-  padding: 5px 10px;
-  font-size: 0.85rem;
+  padding: 4px 12px;
+  font-size: 0.82rem;
   color: var(--muted);
-  max-width: 100%;
+}
+
+.review-mode-btn[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.review-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.review-time-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.review-time-value {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  min-width: 58px;
+  text-align: center;
 }
 
 .review-suggestions {

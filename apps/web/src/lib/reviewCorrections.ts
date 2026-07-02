@@ -237,10 +237,15 @@ function withEvent(
   eventId: string,
   update: (event: ReviewEvent) => ReviewEvent,
 ): ReviewState {
-  return {
-    ...state,
-    events: state.events.map((event) => (event.id === eventId ? update(event) : event)),
-  };
+  // no-op 更新では state の参照を保つ (undo 履歴に空編集を積まないため)
+  let changed = false;
+  const events = state.events.map((event) => {
+    if (event.id !== eventId) return event;
+    const updated = update(event);
+    if (updated !== event) changed = true;
+    return updated;
+  });
+  return changed ? { ...state, events } : state;
 }
 
 function markEdited(event: ReviewEvent): ReviewOrigin {
@@ -261,6 +266,45 @@ export function addNote(state: ReviewState, eventId: string, note: ScoreNote): R
     if (event.notes.some((existing) => noteName(existing) === noteName(note))) return event;
     return { ...event, notes: sortNotes([...event.notes, note]), origin: markEdited(event) };
   });
+}
+
+/**
+ * イベント内の 1 音を別の音へ置き換える (ワンタップ置換)。
+ * removeNote の「最後の 1 音は消せない」ガードに縛られないので、
+ * 単音イベントでも add → remove の 2 操作を経ずに置換できる。
+ * 置換先が既に含まれている場合は旧音の除去に縮退する (全消しには
+ * しない — イベント自体の削除は toggleRemoved の責務)。
+ */
+export function replaceNote(
+  state: ReviewState,
+  eventId: string,
+  oldName: string,
+  note: ScoreNote,
+): ReviewState {
+  return withEvent(state, eventId, (event) => {
+    if (!event.notes.some((existing) => noteName(existing) === oldName)) return event;
+    if (oldName === noteName(note)) return event;
+    if (event.notes.some((existing) => noteName(existing) === noteName(note))) {
+      const remaining = event.notes.filter((existing) => noteName(existing) !== oldName);
+      if (remaining.length === 0) return event;
+      return { ...event, notes: sortNotes(remaining), origin: markEdited(event) };
+    }
+    const notes = event.notes.map((existing) =>
+      noteName(existing) === oldName ? note : existing,
+    );
+    return { ...event, notes: sortNotes(notes), origin: markEdited(event) };
+  });
+}
+
+/** 既存イベントの timeSec を書き換える (0 秒未満はクランプ)。時刻順を保つため再ソートする。 */
+export function setEventTime(state: ReviewState, eventId: string, timeSec: number): ReviewState {
+  const clamped = Math.max(0, timeSec);
+  const target = state.events.find((event) => event.id === eventId);
+  if (!target || target.timeSec === clamped) return state;
+  const events = state.events.map((event) =>
+    event.id === eventId ? { ...event, timeSec: clamped, origin: markEdited(event) } : event,
+  );
+  return { ...state, events: sortEvents(events) };
 }
 
 export function toggleRemoved(state: ReviewState, eventId: string): ReviewState {

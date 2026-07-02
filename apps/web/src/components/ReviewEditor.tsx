@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DoReMiScore } from "@/components/DoReMiScore";
+import { KalimbaNotePicker } from "@/components/KalimbaNotePicker";
 import {
   fetchCorrections,
   fetchTranscription,
@@ -20,8 +21,10 @@ import {
   insertEvent,
   noteName,
   removeNote,
+  replaceNote,
   resolveScoreNote,
   restoreStateFromCorrections,
+  setEventTime,
   toCorrectionsPayload,
   toDisplayScoreEvents,
   toggleRemoved,
@@ -144,6 +147,14 @@ type TimelineItem =
   | { kind: "event"; timeSec: number; event: ReviewEvent }
   | { kind: "slot"; timeSec: number; slot: CandidateSlot; slotIndex: number };
 
+// undo/redo を 1 つの純粋 state で管理する (updater 内での別 setState への
+// 副作用を避け、StrictMode の updater 二重呼び出しでも壊れない)
+type EditHistory = {
+  past: ReviewState[];
+  present: ReviewState;
+  future: ReviewState[];
+};
+
 function ReviewEditorReady({
   transactionId,
   result,
@@ -151,12 +162,14 @@ function ReviewEditorReady({
   initialCorrections,
   initialReviewStatus,
 }: ReadyProps) {
-  const [reviewState, setReviewState] = useState<ReviewState>(() =>
-    initialCorrections
+  const [editHistory, setEditHistory] = useState<EditHistory>(() => ({
+    past: [],
+    present: initialCorrections
       ? restoreStateFromCorrections(result, initialCorrections)
       : buildInitialState(result),
-  );
-  const [history, setHistory] = useState<ReviewState[]>([]);
+    future: [],
+  }));
+  const reviewState = editHistory.present;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const lastSavedRef = useRef<string>(
@@ -177,24 +190,34 @@ function ReviewEditorReady({
     [result.events],
   );
 
-  const apply = useCallback(
-    (next: (state: ReviewState) => ReviewState) => {
-      setReviewState((current) => {
-        const updated = next(current);
-        if (updated === current) return current;
-        setHistory((stack) => [...stack, current]);
-        return updated;
-      });
-    },
-    [],
-  );
+  const apply = useCallback((next: (state: ReviewState) => ReviewState) => {
+    setEditHistory((current) => {
+      const updated = next(current.present);
+      if (updated === current.present) return current;
+      // 新しい編集で redo 先は無効になる (通常の undo/redo 意味論)
+      return { past: [...current.past, current.present], present: updated, future: [] };
+    });
+  }, []);
 
   const undo = useCallback(() => {
-    setHistory((stack) => {
-      if (stack.length === 0) return stack;
-      const previous = stack[stack.length - 1];
-      setReviewState(previous);
-      return stack.slice(0, -1);
+    setEditHistory((current) => {
+      if (current.past.length === 0) return current;
+      return {
+        past: current.past.slice(0, -1),
+        present: current.past[current.past.length - 1],
+        future: [...current.future, current.present],
+      };
+    });
+  }, []);
+
+  const redo = useCallback(() => {
+    setEditHistory((current) => {
+      if (current.future.length === 0) return current;
+      return {
+        past: [...current.past, current.present],
+        present: current.future[current.future.length - 1],
+        future: current.future.slice(0, -1),
+      };
     });
   }, []);
 
@@ -303,13 +326,14 @@ function ReviewEditorReady({
 
   const displayEvents = useMemo(() => toDisplayScoreEvents(reviewState), [reviewState]);
 
+  // KalimbaNotePicker は物理配置順が前提なので tuning.notes の並びを保つ
+  // (frequency ソートすると実機の鍵盤レイアウトが崩れる)
   const pickerNotes = useMemo(() => {
     return result.instrumentTuning.notes
       .map((tuningNote) =>
         resolveScoreNote(tuningNote.noteName, knownNotes, result.instrumentTuning),
       )
-      .filter((note): note is ScoreNote => note !== null)
-      .sort((a, b) => a.frequency - b.frequency);
+      .filter((note): note is ScoreNote => note !== null);
   }, [result.instrumentTuning, knownNotes]);
 
   return (
@@ -386,6 +410,12 @@ function ReviewEditorReady({
               onAudition={() => auditionEvent(item.event)}
               onRemoveNote={(name) => apply((s) => removeNote(s, item.event.id, name))}
               onAddNote={(note) => apply((s) => addNote(s, item.event.id, note))}
+              onReplaceNote={(name, note) =>
+                apply((s) => replaceNote(s, item.event.id, name, note))
+              }
+              onNudgeTime={(deltaSec) =>
+                apply((s) => setEventTime(s, item.event.id, item.event.timeSec + deltaSec))
+              }
               onToggleRemoved={() => apply((s) => toggleRemoved(s, item.event.id))}
             />
           ) : (
@@ -404,9 +434,17 @@ function ReviewEditorReady({
             type="button"
             className="review-btn"
             onClick={undo}
-            disabled={history.length === 0}
+            disabled={editHistory.past.length === 0}
           >
             元に戻す
+          </button>
+          <button
+            type="button"
+            className="review-btn"
+            onClick={redo}
+            disabled={editHistory.future.length === 0}
+          >
+            やり直す
           </button>
           <button type="button" className="review-btn" onClick={resetAll}>
             認識結果にリセット
@@ -449,6 +487,8 @@ function EventCard({
   onAudition,
   onRemoveNote,
   onAddNote,
+  onReplaceNote,
+  onNudgeTime,
   onToggleRemoved,
 }: {
   event: ReviewEvent;
@@ -459,17 +499,41 @@ function EventCard({
   onAudition: () => void;
   onRemoveNote: (name: string) => void;
   onAddNote: (note: ScoreNote) => void;
+  onReplaceNote: (name: string, note: ScoreNote) => void;
+  onNudgeTime: (deltaSec: number) => void;
   onToggleRemoved: () => void;
 }) {
+  // 鍵盤タップの意味: 置換 (armed な既存音と入れ替え) or 追加。
+  // 最頻の修正は単音イベントの音高間違いなので、単音では置換を既定にする。
+  const [pickMode, setPickMode] = useState<"replace" | "add">(
+    event.notes.length === 1 ? "replace" : "add",
+  );
+  const [replaceTargetName, setReplaceTargetName] = useState<string | null>(null);
+
+  const soleName = event.notes.length === 1 ? noteName(event.notes[0]) : null;
+  const armedTarget =
+    replaceTargetName && event.notes.some((n) => noteName(n) === replaceTargetName)
+      ? replaceTargetName
+      : null;
+  const effectiveTarget = soleName ?? armedTarget;
+
+  const handlePick = (note: ScoreNote) => {
+    if (pickMode === "replace" && effectiveTarget) {
+      onReplaceNote(effectiveTarget, note);
+      setReplaceTargetName(null);
+    } else {
+      // 置換対象が未選択の場合も破壊的でない追加に倒す (ヒント文で案内)
+      onAddNote(note);
+    }
+  };
+
   const noteSuggestions = (suggestions ?? [])
     .filter((alt) => alt.alternateNote !== null)
     .filter(
       (alt) => !event.notes.some((n) => noteName(n) === noteName(alt.alternateNote as ScoreNote)),
     );
 
-  const addableNotes = pickerNotes.filter(
-    (note) => !event.notes.some((existing) => noteName(existing) === noteName(note)),
-  );
+  const existingNames = new Set(event.notes.map(noteName));
 
   const classNames = [
     "review-card",
@@ -500,40 +564,72 @@ function EventCard({
       {selected && !event.removed ? (
         <div className="review-card-editor">
           <div className="review-chip-row">
-            {event.notes.map((note) => (
-              <span key={noteName(note)} className="review-note-chip">
-                {note.labelDoReMi} <small>{noteName(note)}</small>
-                {event.notes.length > 1 ? (
-                  <button
-                    type="button"
-                    className="review-chip-x"
-                    aria-label={`${noteName(note)} を外す`}
-                    onClick={() => onRemoveNote(noteName(note))}
-                  >
-                    ×
-                  </button>
-                ) : null}
-              </span>
-            ))}
-            {addableNotes.length > 0 ? (
-              <select
-                className="review-note-add"
-                value=""
-                aria-label="音を追加"
-                onChange={(e) => {
-                  const note = addableNotes.find((n) => noteName(n) === e.target.value);
-                  if (note) onAddNote(note);
-                }}
-              >
-                <option value="">＋ 音を追加</option>
-                {addableNotes.map((note) => (
-                  <option key={noteName(note)} value={noteName(note)}>
-                    {note.labelDoReMi} ({noteName(note)})
-                  </option>
-                ))}
-              </select>
-            ) : null}
+            {event.notes.map((note) => {
+              const name = noteName(note);
+              const isTarget = pickMode === "replace" && effectiveTarget === name;
+              return (
+                <span
+                  key={name}
+                  className={`review-note-chip${isTarget ? " replace-target" : ""}`}
+                  onClick={
+                    pickMode === "replace" && event.notes.length > 1
+                      ? () => setReplaceTargetName(name)
+                      : undefined
+                  }
+                >
+                  {note.labelDoReMi} <small>{name}</small>
+                  {event.notes.length > 1 ? (
+                    <button
+                      type="button"
+                      className="review-chip-x"
+                      aria-label={`${name} を外す`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveNote(name);
+                      }}
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </span>
+              );
+            })}
           </div>
+
+          <div className="review-pick-mode" role="group" aria-label="鍵盤タップ時の動作">
+            <button
+              type="button"
+              className="review-mode-btn"
+              aria-pressed={pickMode === "replace"}
+              onClick={() => setPickMode("replace")}
+            >
+              置換
+            </button>
+            <button
+              type="button"
+              className="review-mode-btn"
+              aria-pressed={pickMode === "add"}
+              onClick={() => setPickMode("add")}
+            >
+              追加
+            </button>
+            <span className="review-mode-hint">
+              {pickMode === "replace"
+                ? event.notes.length > 1
+                  ? effectiveTarget
+                    ? `鍵盤をタップすると ${effectiveTarget} と入れ替えます`
+                    : "置換する音のチップを選んでから鍵盤をタップ (未選択のタップは追加)"
+                  : "鍵盤をタップすると音を入れ替えます"
+                : "鍵盤をタップすると和音に追加します"}
+            </span>
+          </div>
+
+          <KalimbaNotePicker
+            notes={pickerNotes}
+            disabledNames={existingNames}
+            onPick={handlePick}
+            label="音を選択"
+          />
 
           {noteSuggestions.length > 0 ? (
             <div className="review-suggestions">
@@ -545,7 +641,7 @@ function EventCard({
                     key={noteName(note)}
                     type="button"
                     className="review-suggestion-chip"
-                    onClick={() => onAddNote(note)}
+                    onClick={() => handlePick(note)}
                   >
                     ＋{note.labelDoReMi} <small>{Math.round(alt.confidence * 100)}%</small>
                   </button>
@@ -553,6 +649,39 @@ function EventCard({
               })}
             </div>
           ) : null}
+
+          <div className="review-time-row" role="group" aria-label="タイミング微調整">
+            <span className="review-time-label">タイミング</span>
+            <button
+              type="button"
+              className="review-btn review-btn-small"
+              onClick={() => onNudgeTime(-0.05)}
+            >
+              −50ms
+            </button>
+            <button
+              type="button"
+              className="review-btn review-btn-small"
+              onClick={() => onNudgeTime(-0.01)}
+            >
+              −10ms
+            </button>
+            <span className="review-time-value">{formatTime(event.timeSec)}</span>
+            <button
+              type="button"
+              className="review-btn review-btn-small"
+              onClick={() => onNudgeTime(0.01)}
+            >
+              +10ms
+            </button>
+            <button
+              type="button"
+              className="review-btn review-btn-small"
+              onClick={() => onNudgeTime(0.05)}
+            >
+              +50ms
+            </button>
+          </div>
 
           <div className="review-card-actions">
             <button type="button" className="review-btn review-btn-small" onClick={onAudition}>
@@ -641,24 +770,20 @@ function InsertAtPlayheadControl({
   notes: ScoreNote[];
   onInsert: (note: ScoreNote) => void;
 }) {
+  const [open, setOpen] = useState(false);
   return (
     <div className="review-insert-control">
-      <select
-        className="review-note-add"
-        value=""
-        aria-label="再生位置に音を挿入"
-        onChange={(e) => {
-          const note = notes.find((n) => noteName(n) === e.target.value);
-          if (note) onInsert(note);
-        }}
+      <button
+        type="button"
+        className="review-btn review-btn-small"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
       >
-        <option value="">＋ 再生位置に音を挿入…</option>
-        {notes.map((note) => (
-          <option key={noteName(note)} value={noteName(note)}>
-            {note.labelDoReMi} ({noteName(note)})
-          </option>
-        ))}
-      </select>
+        ＋ 再生位置に音を挿入…
+      </button>
+      {open ? (
+        <KalimbaNotePicker notes={notes} onPick={onInsert} label="再生位置に挿入する音を選択" />
+      ) : null}
     </div>
   );
 }

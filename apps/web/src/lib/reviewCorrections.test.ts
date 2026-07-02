@@ -7,9 +7,11 @@ import {
   hasActiveEventAt,
   insertEvent,
   removeNote,
+  replaceNote,
   resolveScoreNote,
   restoreStateFromCorrections,
   buildKnownNoteIndex,
+  setEventTime,
   toCorrectionsPayload,
   toggleRemoved,
 } from "@/lib/reviewCorrections";
@@ -111,6 +113,60 @@ describe("note editing", () => {
     expect(state.events[0].origin).toBe("edited");
     state = removeNote(state, "evt-1", "D4");
     expect(state.events[0].notes).toHaveLength(1);
+  });
+});
+
+describe("replaceNote (ワンタップ置換)", () => {
+  it("単音イベントでも 1 操作で置換できる (removeNote の最後の 1 音ガードに縛られない)", () => {
+    const result = makeResult();
+    let state = buildInitialState(result);
+    state = removeNote(state, "evt-1", "D5"); // D4 単音にする
+    const replaced = replaceNote(state, "evt-1", "D4", F4);
+    const evt1 = replaced.events.find((e) => e.id === "evt-1");
+    expect(evt1?.notes.map((n) => `${n.pitchClass}${n.octave}`)).toEqual(["F4"]);
+    expect(evt1?.origin).toBe("edited");
+  });
+
+  it("和音では対象の 1 音だけを入れ替え、frequency 順を保つ", () => {
+    const state = buildInitialState(makeResult());
+    const replaced = replaceNote(state, "evt-1", "D5", F4); // [D4, D5] → [D4, F4]
+    const evt1 = replaced.events.find((e) => e.id === "evt-1");
+    expect(evt1?.notes.map((n) => `${n.pitchClass}${n.octave}`)).toEqual(["D4", "F4"]);
+  });
+
+  it("置換先が既に含まれる場合は旧音の除去に縮退する", () => {
+    const state = buildInitialState(makeResult());
+    const replaced = replaceNote(state, "evt-1", "D4", D5); // [D4, D5] + (D4→D5) → [D5]
+    const evt1 = replaced.events.find((e) => e.id === "evt-1");
+    expect(evt1?.notes.map((n) => `${n.pitchClass}${n.octave}`)).toEqual(["D5"]);
+  });
+
+  it("旧音が存在しない・同一音への置換は no-op (state 参照を保つ)", () => {
+    const state = buildInitialState(makeResult());
+    expect(replaceNote(state, "evt-1", "G4", F4)).toBe(state);
+    expect(replaceNote(state, "evt-1", "D4", D4)).toBe(state);
+  });
+});
+
+describe("setEventTime (タイミング微調整)", () => {
+  it("timeSec を書き換えて時刻順に再ソートし、edited へ昇格する", () => {
+    const state = buildInitialState(makeResult());
+    const updated = setEventTime(state, "evt-1", 8.0); // evt-2 (7.069) を追い越す
+    expect(updated.events.map((e) => e.id)).toEqual(["evt-2", "evt-1"]);
+    const evt1 = updated.events.find((e) => e.id === "evt-1");
+    expect(evt1?.timeSec).toBe(8.0);
+    expect(evt1?.origin).toBe("edited");
+  });
+
+  it("負の時刻は 0 にクランプする", () => {
+    const state = buildInitialState(makeResult());
+    const updated = setEventTime(state, "evt-1", -0.5);
+    expect(updated.events.find((e) => e.id === "evt-1")?.timeSec).toBe(0);
+  });
+
+  it("同一時刻への設定は no-op (state 参照を保つ)", () => {
+    const state = buildInitialState(makeResult());
+    expect(setEventTime(state, "evt-1", 4.445)).toBe(state);
   });
 });
 
