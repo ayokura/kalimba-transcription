@@ -116,20 +116,14 @@ This is where recording intent, rerecord guidance, fixture status, and audit not
 
 ## Current Medium-Term Themes
 
-1. gesture classification
-   - strict chord
-   - `slide_chord`
-   - `slide_chord` / sweep
-   - ambiguous
-2. debug review UX
-   - expected vs detected diff
-   - rerecord / review-needed states
-   - fragment warnings
-3. editor UX
-   - merge as chord
-   - bundle as `slide_chord`
-4. broader recognition robustness
-   - contact noise
-   - room noise
-   - mic position variance
+中期の作業計画は [sprint-plan-2026-07.md](sprint-plan-2026-07.md) を参照
+(8スプリント構成、確度評価 A-D 付き、exit criteria 駆動)。
+
+計画の 3 レーン:
+
+1. recognizer / 評価ループ (corpus CI gate、#197、候補保持、#178 / #194)
+2. web / UX (correction burden 削減、IA 整理 #72 / #16)
+3. browser / WASM (parity harness、two-phase 設計、causal onset)
+
+横断ストリーム: corpus 収集 (ユーザー録音 #18 + review + rights review) が律速。
 
