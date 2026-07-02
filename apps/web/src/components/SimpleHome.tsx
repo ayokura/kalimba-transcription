@@ -15,8 +15,6 @@ import {
   MIC_AUDIO_CONSTRAINTS,
   type AudioLevels,
 } from "@/lib/audio";
-import { createReviewSession, saveReviewSession } from "@/lib/reviewSession";
-import { saveReviewAudio } from "@/lib/reviewAudioStore";
 import {
   loadRecentTranscriptions,
   pushRecentTranscription,
@@ -251,21 +249,13 @@ export function SimpleHome() {
   }
 
   const runTranscription = useCallback(
-    async (blob: Blob, tuning: InstrumentTuning, source: "mic" | "file" | null, force: boolean) => {
+    async (blob: Blob, tuning: InstrumentTuning, force: boolean) => {
       const requestId = ++analyzeRequestIdRef.current;
       setStage("analyzing");
       setError(null);
       try {
         const capture = await createTranscriptionWithCapture(blob, tuning, { force });
         if (requestId !== analyzeRequestIdRef.current) return; // superseded
-        const session = createReviewSession({
-          capture,
-          acquisitionMode: source === "file" ? "uploaded_file" : "live_mic",
-          notationMode: "score",
-          activeEventId: null,
-        });
-        saveReviewSession(session);
-        saveReviewAudio(session.sessionId, capture.audioWav);
         const transactionId = capture.responsePayload.transactionId;
         if (transactionId) {
           discardBackup();
@@ -303,13 +293,13 @@ export function SimpleHome() {
     } catch {
       // ignore hash/lookup failures and proceed to POST
     }
-    await runTranscription(recording, selectedTuning, recordingSource, false);
+    await runTranscription(recording, selectedTuning, false);
   }
 
   async function handleForceRerun() {
     if (!recording || !selectedTuning) return;
     setDedupPrompt(null);
-    await runTranscription(recording, selectedTuning, recordingSource, true);
+    await runTranscription(recording, selectedTuning, true);
   }
 
   function handleOpenExisting(transactionId: string) {
@@ -319,7 +309,7 @@ export function SimpleHome() {
 
   async function handleResend() {
     if (!recording || !selectedTuning) return;
-    await runTranscription(recording, selectedTuning, recordingSource, false);
+    await runTranscription(recording, selectedTuning, false);
   }
 
   const isRecording = stage === "recording";
