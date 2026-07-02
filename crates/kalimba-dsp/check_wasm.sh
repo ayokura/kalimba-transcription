@@ -20,13 +20,23 @@ NODE_PKG="$WORK/pkg-node"
 REF_DIR="$WORK/ref"
 mkdir -p "$REF_DIR"
 
-echo "[1/3] building nodejs-target wasm"
+PARITY_DIR="$WORK/parity"
+mkdir -p "$PARITY_DIR"
+
+echo "[1/5] building nodejs-target wasm"
 ( cd "$CRATE_DIR" && wasm-pack build --target nodejs --out-dir "$NODE_PKG" -- \
     --no-default-features --features wasm ) >/dev/null
 
-echo "[2/3] generating native reference values"
+echo "[2/5] generating native reference values (synthetic)"
 ( cd "$REPO_ROOT" && PYTHONPATH=apps/api uv run python \
     "$CRATE_DIR/tools/wasm_reference.py" "$REF_DIR" )
 
-echo "[3/3] checking wasm outputs vs native"
+echo "[3/5] checking wasm outputs vs native (synthetic)"
 node "$CRATE_DIR/tools/check_wasm.cjs" "$NODE_PKG" "$REF_DIR"
+
+echo "[4/5] generating fixture parity references (real WAVs, native + numpy + segments)"
+( cd "$REPO_ROOT" && PYTHONPATH=apps/api uv run python \
+    "$CRATE_DIR/tools/wasm_parity_reference.py" "$PARITY_DIR" )
+
+echo "[5/5] checking wasm through-path (audio->onset_strength->onset_detect) vs references"
+node "$CRATE_DIR/tools/check_wasm_parity.cjs" "$NODE_PKG" "$PARITY_DIR"
