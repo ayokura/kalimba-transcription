@@ -32,9 +32,12 @@ import { InstrumentTuning } from "@/lib/types";
 
 type Stage = "idle" | "recording" | "ready" | "analyzing";
 
-// -15 dB: 実データ較正 (2da2e1ac peak -17.4dB で 3 events の実質失敗を捕捉、
-// ad0b0a57 peak -8.1dB の正常録音は誤警告しない)
-const LOW_LEVEL_PEAK_DB = -15;
+// -35 dB: テスター運用で -15 dB 警告が驚かせてしまったため、配線ミス級の
+// 実質無音だけを捕捉する暫定値に緩和 (2026-07-03 ユーザー指示)。適正値の
+// 再調整は録音プロファイル較正の後続作業。旧較正値 -15 dB の根拠:
+// 2da2e1ac peak -17.4dB (3 events の実質失敗) を捕捉、ad0b0a57 peak -8.1dB
+// の正常録音は誤警告しない — この帯域 (-35〜-15dB) は現在警告対象外になる。
+const LOW_LEVEL_PEAK_DB = -35;
 const ANALYZE_RETRY_PROMPT_MS = 20_000;
 
 type DedupPrompt = {

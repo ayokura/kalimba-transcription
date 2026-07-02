@@ -67,9 +67,10 @@ TOP_N_PEAKS = 24
 PEAK_MIN_RELATIVE_POWER = 1e-4
 OUTSIDE_PC_MIN_SHARE = 0.03
 # Low-gain recordings (calibration: 4bc99bd1 peak -17.4 dBFS scored a spurious
-# 0.828 from noise peaks) get the dedicated low-volume warning instead; skip
-# the mismatch advisory below this peak level. Mirrors the web client's
-# LOW_LEVEL_PEAK_DB = -15 (SimpleHome.tsx).
+# 0.828 from noise peaks): skip the mismatch advisory below this peak level.
+# Note: the web client's low-volume warning (LOW_LEVEL_PEAK_DB, SimpleHome.tsx)
+# was relaxed to -35 dB (2026-07-03) and no longer mirrors this constant; this
+# skip keeps its own calibration.
 LOW_GAIN_SKIP_PEAK_DBFS = -15.0
 
 _PC_NAMES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
