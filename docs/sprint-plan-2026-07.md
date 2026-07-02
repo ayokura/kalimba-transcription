@@ -130,6 +130,28 @@ recognizer 非依存で今すぐ効く UX 改善。**スプリント末に計画
 
 **Exit criteria**: 代表修正シナリオの操作数削減が e2e 計測で確認できる / UX 改修が prod 反映済み / 後半 4 スプリントが再確定している。
 
+**実績 (2026-07-03 完了)**:
+
+- **#72 cleanup 完了**: TranscriptionStudio user-mode dead code 除去 + ScoreViewer warnings 表示 (8af0c72)、orphan /review stack 削除 1,182 行 (1181c76)。useAudioPlayback / reviewSession / reviewAudioStore はユーザー指示どおり部品として温存
+- **UX 改修完了** (e07901f): KalimbaNotePicker (Range Map の review 移管)、ワンタップ置換 (replaceNote reducer)、timeSec ±10/50ms 微調整、redo。操作数計測: **音高置換 3→2 操作** (e2e review-edit-ops、before=2aaa13c)、FP 削除 2 / FN 挿入 1 (据え置き)
+- **割り込み対応**: 低音量警告閾値 -15→-35 dB 緩和 (01bf136、ユーザー指示。適正値の再較正は後続)
+- **/review/queue への priority スコア統合は defer**: 調査の結果、review_priority_report のスコアは ground_truth 必須で、live queue の母集団 (data/transactions、GT 0 件) とほぼ交差しない。載せても大半が「スコアなし」になり、算出も per-recording フル再採譜でレイテンシ非現実的。**将来形は GT 不要の quality_indicators.py (実装済み・未配線・PROVISIONAL) を list_review_queue 側に配線する案** — 指標検証 (#194) が先行条件なので S7 の #194 判断と束ねる。priority_report 自体は corpus 限定のベンチマークツールとして現行運用を維持
+- prod 反映済み (prod=e07901f、api/web/tunnel active、health 200)。中間レビューは下記「中間レビュー (2026-07-03)」参照
+
+### 中間レビュー (2026-07-03, Sprint 4 末)
+
+3 入力の確認結果と後半 4 スプリントの確定:
+
+1. **録音到着状況**: 新着なし。recorded_only 2 件 (1955b5bd / 98019f67、低信号) と c9e6f699 検証待ちは継続。bbd6797f (review_completed) は fixture 層に GT 済みで新規性なし。**GT レビュー済み非飽和録音は依然 17ea7626 の 1 件のみ**
+2. **#197 後の残 FN**: 変化なし (S4 は recognizer 非接触)。#196 の分類どおり Mech2 = 8 FN、Mech3 = 13.323s D5/F5 FN + E6 FP
+3. **IA 判断**: #72 判断 1-3 とも S4 で反映完了。追加の IA 判断は未発生
+
+**判定: S5-8 は計画どおり継続 (構成変更なし)**。ただし:
+
+- **S6 分岐は現状のままなら条件未成立 (非飽和 GT 1 件 < 2 件) → A1 causal onset 側が本命見込み**。S6 着手時に再判定し、それまでに録音 + レビューが進めば Mech2 patch 側に切替
+- S7 の #194 較正判断に「quality_indicators の queue 配線 (S4 defer 分) を較正通過時のセット項目とする」を追加
+- S5 の wasm ビルドチェーン (rustup target 追加 + CI ジョブ追加可否) はユーザーアクション待ちのまま — S5 着手時に依頼を再提示する
+
 ### Sprint 5: browser track 起動 【確度 B】
 
 研究方針では LATER だが、録音待ちで recognizer 本線が細る時期の並行レーンとして起動する。**精度に関わる移植より先に、検証基盤と architecture 決定を置く** (browser survey の推奨順)。
@@ -169,7 +191,7 @@ recognizer 非依存で今すぐ効く UX 改善。**スプリント末に計画
 |---|---|---|
 | #178: onset-gate 降格分・dropped segments の本出力への載せ込み + review UI 表示 | B | NEXT の中心 (issue 本文 Phase 1 の完遂)。schema (candidateSlots / alternateGroupings) は実装済みなので、スコープは**候補充填カバレッジの拡大と UI 表示**。#16 の event-first correction workflow と接続 |
 | Candidate Recall による #178 効果検証 | C | corpus 拡充が前提。未達なら検証のみ録音到着後へ持ち越し (実装は先行してよい) |
-| #194: quality indicators 再較正 (ECE / reliability / flagged precision) | C | 前提 = harder 録音が corpus に入り F1 分散が生じていること。較正自体は小さい (~0.5 sp)。**検証が通らなければ drop の判断も正当** (issue 本文に明記済み) |
+| #194: quality indicators 再較正 (ECE / reliability / flagged precision) | C | 前提 = harder 録音が corpus に入り F1 分散が生じていること。較正自体は小さい (~0.5 sp)。**検証が通らなければ drop の判断も正当** (issue 本文に明記済み)。**較正通過時は quality_indicators の /review/queue 配線 (S4 defer 分) をセットで実施** |
 | per-event confidence 信号の設計 (under-detection を捉える slot/timeline-level 信号) | D | event-level flag では under-detection を構造的に捉えられない。carryover-rejection 密度 / segment 形成 gap 等の新信号 emit が必要。別スライスとして扱う |
 | PESTO 検証 spike (research line) | D | streaming VQT + ONNX + 自己教師あり (130k params) で唯一の有望外部コンポーネント。monophonic なので pitch id の第 2 意見と位置づけ。**LGPL-3.0 のライセンス採否判断 (ユーザー) が先**。1 スプリント検証で捨てる覚悟 |
 
