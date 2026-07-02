@@ -211,3 +211,78 @@ describe("resolveScoreNote", () => {
     expect(resolveScoreNote("G9", index, result.instrumentTuning)).toBeNull();
   });
 });
+
+describe("restoreStateFromCorrections — 再採譜への頑健性 (2026-07-02 監査)", () => {
+  it("recognizer の onset が数十 ms ずれても corrections が全滅しない", () => {
+    const result = makeResult();
+    // 保存時点 (旧 recognizer): 4.445 / 7.069。再採譜で +30ms / -20ms ずれた想定。
+    result.events[0].startTimeSec = 4.475;
+    result.events[1].startTimeSec = 7.049;
+    const corrections: CorrectionsPayload = {
+      version: 1,
+      events: [
+        { timeSec: 4.445, notes: ["D4", "F4", "D5"], origin: "edited" },
+        { timeSec: 7.069, notes: ["D4", "D5"], origin: "recognizer" },
+      ],
+    };
+    const state = restoreStateFromCorrections(result, corrections);
+    const active = activeEvents(state);
+    expect(active).toHaveLength(2);
+    // 挿入イベント化していない (recognizer 枠に束ねられている)
+    expect(active.every((e) => e.sourceEventId !== null)).toBe(true);
+    expect(active[0].notes.map((n) => `${n.pitchClass}${n.octave}`)).toEqual(["D4", "F4", "D5"]);
+    expect(active[0].origin).toBe("edited");
+    // timeline は現在の transcription の時刻に追従する
+    expect(active[0].timeSec).toBe(4.475);
+    expect(state.events.some((e) => e.removed)).toBe(false);
+  });
+
+  it("50ms を超えるずれは従来どおり removed + 挿入に分解される", () => {
+    const result = makeResult();
+    result.events[0].startTimeSec = 4.6; // 155ms ずれ
+    const corrections: CorrectionsPayload = {
+      version: 1,
+      events: [{ timeSec: 4.445, notes: ["D4", "D5"], origin: "recognizer" }],
+    };
+    const state = restoreStateFromCorrections(result, corrections);
+    expect(state.events.find((e) => e.id === "evt-1")?.removed).toBe(true);
+    expect(state.events.some((e) => e.id === "ins-1")).toBe(true);
+  });
+
+  it("密集区間では最近傍優先で誤束ねしない", () => {
+    const result = makeResult();
+    // 60ms 間隔の隣接イベントが双方 +20ms ずれた想定
+    result.events[0].startTimeSec = 4.465; // 旧 4.445
+    result.events[1].startTimeSec = 4.525; // 旧 4.505
+    const corrections: CorrectionsPayload = {
+      version: 1,
+      events: [
+        { timeSec: 4.445, notes: ["F4"], origin: "edited" },
+        { timeSec: 4.505, notes: ["D4"], origin: "edited" },
+      ],
+    };
+    const state = restoreStateFromCorrections(result, corrections);
+    const byId = new Map(state.events.map((e) => [e.id, e]));
+    expect(byId.get("evt-1")?.notes.map((n) => `${n.pitchClass}${n.octave}`)).toEqual(["F4"]);
+    expect(byId.get("evt-2")?.notes.map((n) => `${n.pitchClass}${n.octave}`)).toEqual(["D4"]);
+    expect(state.events.some((e) => e.removed)).toBe(false);
+  });
+
+  it("tight 一致が relaxed 束ねより常に優先される", () => {
+    const result = makeResult();
+    // evt-1 (4.445) に tight 一致する correction と、40ms 先の correction が併存
+    const corrections: CorrectionsPayload = {
+      version: 1,
+      events: [
+        { timeSec: 4.485, notes: ["F4"], origin: "inserted-manual" },
+        { timeSec: 4.445, notes: ["D4", "D5"], origin: "recognizer" },
+      ],
+    };
+    const state = restoreStateFromCorrections(result, corrections);
+    const evt1 = state.events.find((e) => e.id === "evt-1");
+    expect(evt1?.notes.map((n) => `${n.pitchClass}${n.octave}`)).toEqual(["D4", "D5"]);
+    expect(evt1?.origin).toBe("recognizer");
+    // 4.485 の correction は挿入イベントとして残る
+    expect(state.events.some((e) => e.id.startsWith("ins-") && e.timeSec === 4.485)).toBe(true);
+  });
+});

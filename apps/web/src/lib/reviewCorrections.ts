@@ -23,6 +23,11 @@ export type ReviewState = {
 };
 
 const TIME_MATCH_TOLERANCE_SEC = 0.005;
+// 再採譜 (recognizer 改善後) では event の startTimeSec が数十 ms 単位でずれうる
+// (backtrack / segment 形成の変化)。保存済み corrections がそれで全滅しないよう、
+// tight 突合で残ったペアはこの窓内で最近傍から束ねる (50ms は
+// note_f1_benchmark の既定 onset tolerance と同値)。
+const TIME_REMATCH_TOLERANCE_SEC = 0.05;
 
 // サーバー側 PITCH_CLASS_TO_DOREMI (apps/api/app/transcription/constants.py) と同じ表記
 const DOREMI_BY_PITCH_CLASS: Record<string, string> = {
@@ -125,33 +130,63 @@ export function buildInitialState(result: TranscriptionResult): ReviewState {
 }
 
 /**
+ * recognizer イベントと corrections の突合。2 段階:
+ * 1. tight (±5ms): 同一 transcription 由来の完全一致
+ * 2. relaxed (±50ms): 再採譜で onset がずれたペアを、全候補ペアの
+ *    |Δt| 昇順 (最近傍優先) で貪欲に束ねる — 密集区間で隣のイベントに
+ *    誤って束ねられるのを防ぐため、イベント順ではなく距離順で確定する
+ */
+function matchCorrectionsToEvents(
+  events: { startTimeSec: number }[],
+  corrections: CorrectionsPayload,
+): Map<number, number> {
+  const assignment = new Map<number, number>();
+  const usedCorrections = new Set<number>();
+
+  for (const tolerance of [TIME_MATCH_TOLERANCE_SEC, TIME_REMATCH_TOLERANCE_SEC]) {
+    const pairs: { eventIndex: number; correctionIndex: number; dt: number }[] = [];
+    events.forEach((event, eventIndex) => {
+      if (assignment.has(eventIndex)) return;
+      corrections.events.forEach((correction, correctionIndex) => {
+        if (usedCorrections.has(correctionIndex)) return;
+        const dt = Math.abs(correction.timeSec - event.startTimeSec);
+        if (dt <= tolerance) pairs.push({ eventIndex, correctionIndex, dt });
+      });
+    });
+    pairs.sort((a, b) => a.dt - b.dt);
+    for (const pair of pairs) {
+      if (assignment.has(pair.eventIndex) || usedCorrections.has(pair.correctionIndex)) continue;
+      assignment.set(pair.eventIndex, pair.correctionIndex);
+      usedCorrections.add(pair.correctionIndex);
+    }
+  }
+  return assignment;
+}
+
+/**
  * 保存済み corrections から状態を復元する。corrections は「最終形のイベント列」
  * なので、recognizer イベントとは timeSec で突合する:
  * - 一致した correction → その recognizer イベント枠に correction の notes を採用
  * - 一致しなかった recognizer イベント → removed
  * - どの recognizer イベントとも一致しない correction → 挿入イベント
+ *
+ * 突合は tight (±5ms) → relaxed (±50ms、最近傍優先) の 2 段。再採譜で
+ * recognizer の onset が少しずれても、保存済み corrections が
+ * 「全 removed + 全挿入」に化けないための頑健化 (2026-07-02 監査)。
  */
 export function restoreStateFromCorrections(
   result: TranscriptionResult,
   corrections: CorrectionsPayload,
 ): ReviewState {
   const knownNotes = buildKnownNoteIndex(result);
-  const consumed = new Set<number>();
   const events: ReviewEvent[] = [];
   let nextInsertId = 1;
 
-  const matchCorrection = (timeSec: number): number | null => {
-    for (let i = 0; i < corrections.events.length; i += 1) {
-      if (consumed.has(i)) continue;
-      if (Math.abs(corrections.events[i].timeSec - timeSec) <= TIME_MATCH_TOLERANCE_SEC) {
-        return i;
-      }
-    }
-    return null;
-  };
+  const assignment = matchCorrectionsToEvents(result.events, corrections);
+  const consumed = new Set<number>(assignment.values());
 
-  for (const event of result.events) {
-    const matchIndex = matchCorrection(event.startTimeSec);
+  for (const [eventIndex, event] of result.events.entries()) {
+    const matchIndex = assignment.get(eventIndex) ?? null;
     if (matchIndex === null) {
       events.push({
         id: event.id,
@@ -163,7 +198,6 @@ export function restoreStateFromCorrections(
       });
       continue;
     }
-    consumed.add(matchIndex);
     const correction = corrections.events[matchIndex];
     const notes = correction.notes
       .map((name) => resolveScoreNote(name, knownNotes, result.instrumentTuning))
