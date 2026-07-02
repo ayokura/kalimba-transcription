@@ -153,8 +153,9 @@
 
 詳細は [`docs/testing.md`](docs/testing.md) を参照。AGENTS.md では以下のみ常時ルールとして維持する。
 
-- テストは **Mechanism / Fixture regression / Ablation-variant** の3層モデルに従う。
+- テストは **Mechanism / Fixture regression / Ablation-variant / Corpus benchmark regression** の4層モデルに従う。
 - Fixture regression の権威は `test_manual_capture_completed.py` の parameterized test と `expected.json`。
+- Corpus benchmark regression の権威は `free-performance-corpus/benchmark_baseline.json` の per-recording floor (`test_free_performance_corpus.py` が検証)。baseline の更新は改善方向のみ (`--write-baseline`)。低下を伴う更新は fixture policy 相当の明示的 tradeoff 判断が必要。
 - Fixture test で `payload["debug"]` の内部構造を exact-match しない。
 - Mechanism test は構築入力または marshal した中間データを使い、フルパイプライン実行に依存しない。
 - `ground_truth.json` は人間確認済み onset 時刻を絶対秒で記録する optional timing assertion。

@@ -225,9 +225,9 @@ Example:
 
 This makes later fixture review and independent audit much easier.
 
-## Test Architecture (3-Tier Model)
+## Test Architecture (4-Tier Model)
 
-テストは3層に分かれる。この節をテスト設計の詳細な参照先とし、`AGENTS.md`
+テストは4層に分かれる。この節をテスト設計の詳細な参照先とし、`AGENTS.md`
 には全エージェントが常時守るべき要約だけを置く。
 
 | Tier | 目的 | 入力 | アサーション対象 |
@@ -235,6 +235,7 @@ This makes later fixture review and independent audit much easier.
 | **Mechanism** | 個別の recognizer 関数の動作確認 | 構築した `RawEvent` / `NoteCandidate`、または marshal した中間データ | 関数の戻り値 |
 | **Fixture regression** | 実音声に対する転写結果の回帰検出 | WAV ファイル (HTTP 経由) | `expected.json` のアサーション (イベント数、ノートセット、順序) |
 | **Ablation / variant** | フィーチャーフラグ変更が既存 fixture を壊さないか | WAV ファイル + monkeypatch | `expected.json` のアサーション |
+| **Corpus benchmark regression** | free-performance 録音に対する GT との距離 (note F1) の下限維持 | repo 管理 corpus の WAV (HTTP 経由) | `benchmark_baseline.json` の per-recording floor (minF1 / maxHardMisses) |
 
 ### Tier 1: Mechanism Tests
 
@@ -261,6 +262,27 @@ This makes later fixture review and independent audit much easier.
 ### Tier 3: Ablation / Variant Tests
 
 `test_ablation_pure.py`, `test_ablation_attack_validated.py` 等。フィーチャーフラグの ON/OFF で既存 fixture が壊れないかを検証。
+
+### Tier 4: Corpus Benchmark Regression Tests
+
+`test_free_performance_corpus.py`。repo 管理 corpus
+(`fixtures/free-performance-corpus/<tx-id>/`) の各録音を実際に転写し、
+human-derived `ground_truth.json` に対する note F1 / hardMisses を
+**`benchmark_baseline.json` に記録した per-recording floor と比較**する。
+
+- Tier 2 が「転写 = 楽譜 (exact match)」を守るのに対し、Tier 4 は
+  「GT との距離が悪化しない」ことを守る。**アサーション権威は
+  `expected.json` ではなく `free-performance-corpus/benchmark_baseline.json`**。
+- baseline の更新は改善方向のみ:
+  `uv run python scripts/audio-analysis/note_f1_benchmark.py --write-baseline`
+  は minF1 の低下 / maxHardMisses の増加を拒否する
+  (`--allow-baseline-regression` は fixture policy 相当の明示的
+  tradeoff 判断がある場合のみ)。
+- corpus governance (人間の rights review 済みであること) も同ファイルで
+  機械検査する (`rightsReview.status` / `copyright.status`)。
+- CI で守れるのは git-tracked corpus のみ。local-only 録音
+  (transaction-captures) は recognizer 変更時に
+  `note_f1_benchmark.py --check-baseline` を手動実行して確認する。
 
 ### テスト追加ガイドライン
 

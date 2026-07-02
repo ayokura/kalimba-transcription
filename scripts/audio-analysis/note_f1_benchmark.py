@@ -41,8 +41,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
@@ -747,11 +749,146 @@ def discover_tx_ids() -> list[str]:
     return sorted(discovered)
 
 
+# ---------------------------------------------------------------------------
+# Per-recording regression baseline (Tier 4 corpus gate).
+#
+# The baseline file records, per recording, the floor the current recognizer
+# must not fall below (minF1) and the hard-miss ceiling (maxHardMisses).
+# test_free_performance_corpus.py asserts these in CI for repo-managed corpus
+# recordings; `--check-baseline` does the same locally over every discovered
+# recording (including local-only captures that CI cannot see).
+#
+# Update discipline (docs/corpus-management.md): baselines move in the
+# improvement direction only. `--write-baseline` refuses to lower minF1 /
+# raise maxHardMisses unless --allow-baseline-regression is passed, which
+# requires an explicit fixture-policy-style tradeoff decision.
+# ---------------------------------------------------------------------------
+
+BASELINE_PATH = FREE_PERFORMANCE_CORPUS_DIR / "benchmark_baseline.json"
+
+
+def load_baseline() -> dict:
+    if not BASELINE_PATH.is_file():
+        return {"version": 1, "recordings": {}}
+    return json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+
+
+def _baseline_floor_f1(f1: float) -> float:
+    """3-decimal floor so the stored floor never exceeds the measured F1."""
+    return math.floor(f1 * 1000) / 1000
+
+
+def check_baseline_violations(results: list[dict], baseline: dict) -> list[str]:
+    violations: list[str] = []
+    entries = baseline.get("recordings", {})
+    for r in results:
+        entry = entries.get(r["txId"])
+        if entry is None:
+            violations.append(
+                f"{r['txId']}: no baseline entry — run --write-baseline to record one"
+            )
+            continue
+        if r["f1"] < float(entry["minF1"]) - 1e-9:
+            violations.append(
+                f"{r['txId']}: F1 {r['f1']:.3f} < baseline minF1 {entry['minF1']:.3f}"
+            )
+        hard = int(r["candidates"]["hardMisses"])
+        if hard > int(entry["maxHardMisses"]):
+            violations.append(
+                f"{r['txId']}: hardMisses {hard} > baseline max {entry['maxHardMisses']}"
+            )
+    return violations
+
+
+def write_baseline(results: list[dict], *, allow_regression: bool) -> list[str]:
+    baseline = load_baseline()
+    entries = baseline.setdefault("recordings", {})
+    messages: list[str] = []
+    for r in results:
+        measured_min = _baseline_floor_f1(r["f1"])
+        measured_hard = int(r["candidates"]["hardMisses"])
+        old = entries.get(r["txId"])
+        if old is None:
+            entries[r["txId"]] = {
+                "minF1": measured_min,
+                "maxHardMisses": measured_hard,
+                "truthNotes": r["truthNotes"],
+            }
+            messages.append(
+                f"ADD  {r['txId']}: minF1={measured_min:.3f} maxHardMisses={measured_hard}"
+            )
+            continue
+        new_min = measured_min if allow_regression else max(float(old["minF1"]), measured_min)
+        new_hard = (
+            measured_hard if allow_regression else min(int(old["maxHardMisses"]), measured_hard)
+        )
+        if not allow_regression and (
+            measured_min < float(old["minF1"]) or measured_hard > int(old["maxHardMisses"])
+        ):
+            messages.append(
+                f"HOLD {r['txId']}: measured (F1 floor {measured_min:.3f},"
+                f" hard {measured_hard}) regresses recorded"
+                f" (minF1 {old['minF1']:.3f}, maxHardMisses {old['maxHardMisses']});"
+                " kept the stricter values — use --allow-baseline-regression only"
+                " after an explicit tradeoff decision"
+            )
+        elif new_min != float(old["minF1"]) or new_hard != int(old["maxHardMisses"]):
+            messages.append(
+                f"UP   {r['txId']}: minF1 {old['minF1']:.3f}->{new_min:.3f}"
+                f" maxHardMisses {old['maxHardMisses']}->{new_hard}"
+            )
+        entries[r["txId"]] = {
+            "minF1": new_min,
+            "maxHardMisses": new_hard,
+            "truthNotes": r["truthNotes"],
+        }
+    baseline["version"] = 1
+    baseline["updatedAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+    baseline["recognizerFingerprint"] = recognizer_fingerprint()
+    baseline["kalimbaDspFingerprint"] = kalimba_dsp_fingerprint()
+    baseline["recordings"] = dict(sorted(entries.items()))
+    BASELINE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    BASELINE_PATH.write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8")
+    messages.append(f"baseline written: {BASELINE_PATH.relative_to(REPO_ROOT)}")
+    return messages
+
+
+def _baseline_cli(args: argparse.Namespace, results: list[dict]) -> int:
+    """Handle --write-baseline / --check-baseline (stderr so --json stays clean)."""
+    if args.write_baseline:
+        for line in write_baseline(results, allow_regression=args.allow_baseline_regression):
+            print(line, file=sys.stderr)
+    if args.check_baseline:
+        violations = check_baseline_violations(results, load_baseline())
+        if violations:
+            print("\nBASELINE VIOLATIONS:", file=sys.stderr)
+            for v in violations:
+                print(f"  {v}", file=sys.stderr)
+            return 1
+        print("baseline check: OK", file=sys.stderr)
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Note-level F1 benchmark")
     parser.add_argument("tx_ids", nargs="*", help="transaction IDs (default: all with ground_truth.json)")
     parser.add_argument("--json", action="store_true", help="emit machine-readable JSON")
     parser.add_argument("--verbose", action="store_true", help="list FP/FN pairs per recording")
+    parser.add_argument(
+        "--check-baseline",
+        action="store_true",
+        help="compare results against benchmark_baseline.json and exit 1 on violation",
+    )
+    parser.add_argument(
+        "--write-baseline",
+        action="store_true",
+        help="record/update per-recording baselines (improvement direction only)",
+    )
+    parser.add_argument(
+        "--allow-baseline-regression",
+        action="store_true",
+        help="let --write-baseline lower minF1 / raise maxHardMisses (explicit tradeoff only)",
+    )
     args = parser.parse_args()
 
     tx_ids = args.tx_ids or discover_tx_ids()
@@ -921,7 +1058,7 @@ def main() -> int:
         for r in results:
             r.pop("_confidenceCounts", None)
         print(json.dumps({"summary": summary, "results": results}, indent=2))
-        return 0
+        return _baseline_cli(args, results)
 
     print(
         f"{'tx':38} {'GT':>4} {'pred':>4} {'TP':>4} {'P':>6} {'R':>6} {'F1':>6}"
@@ -970,7 +1107,7 @@ def main() -> int:
     fep_text = f"{fep:.3f}" if fep is not None else "n/a"
     mer_text = f"{mer:.3f}" if mer is not None else "n/a"
     print(f"confidence flaggedPrecision={fep_text} missedErrorRate={mer_text}")
-    return 0
+    return _baseline_cli(args, results)
 
 
 if __name__ == "__main__":

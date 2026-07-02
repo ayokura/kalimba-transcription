@@ -104,6 +104,30 @@ local transaction-capture ground truth. Repository-managed corpus items carry
 their own audio and request data, so they are reproducible outside the original
 recording environment.
 
+## Regression baseline (Tier 4 gate)
+
+`free-performance-corpus/benchmark_baseline.json` records, per recording, the
+note-F1 floor (`minF1`) and hard-miss ceiling (`maxHardMisses`) the current
+recognizer must maintain. `apps/api/tests/test_free_performance_corpus.py`
+asserts these in CI for every git-tracked corpus recording, plus the
+governance requirements above (`rightsReview.status`, `copyright.status`).
+
+Update discipline:
+
+- Baselines move in the **improvement direction only**. After a recognizer
+  improvement, run
+  `uv run python scripts/audio-analysis/note_f1_benchmark.py --write-baseline`
+  and commit the updated baseline together with the change that earned it.
+- `--write-baseline` refuses to lower `minF1` / raise `maxHardMisses`. A
+  lowering update requires `--allow-baseline-regression` and an explicit
+  tradeoff decision recorded like a fixture-policy decision. Never lower a
+  baseline just to make CI pass.
+- When adding a recording to the corpus, add its baseline entry in the same
+  commit (the test suite fails on a corpus recording without one).
+- Local-only recordings (transaction-captures) also carry baseline entries but
+  are invisible to CI; after recognizer changes, run
+  `note_f1_benchmark.py --check-baseline` locally to cover them.
+
 ## Timing accuracy caveat (review-corrected ground truth)
 
 Ground truth promoted from the web review UI (`method: "user_corrected"`,
