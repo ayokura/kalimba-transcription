@@ -235,3 +235,32 @@ test("review queue lists recordings and filters by status", async ({ page }) => 
   await page.getByRole("button", { name: "録り直しが必要" }).click();
   await expect(page.getByText("1 件")).toBeVisible();
 });
+
+test("saved corrections survive re-transcription onset shifts (round-trip)", async ({ page }) => {
+  await mockTranscriptionApi(page);
+  // 保存時点の corrections は timeSec=0.03 (現 transcription の evt-1 は 0)。
+  // 再採譜で onset が 30ms ずれた状況を模す: relaxed 突合で evt-1 に束ねられ、
+  // 「削除済 + 挿入」に分解されないことを検証する。
+  await page.route("**/api/transcriptions/tx-e2e/corrections", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        corrections: {
+          version: 1,
+          events: [{ timeSec: 0.03, notes: ["C4", "E4"], origin: "edited" }],
+        },
+      }),
+    });
+  });
+
+  await page.goto("/score/tx-e2e/review");
+  await expect(page.getByRole("heading", { name: "確認と修正" })).toBeVisible();
+
+  // 削除済カードが存在しない = correction が recognizer イベント枠に復元された
+  // (突合が壊れていると evt-1 が「削除済」+ ins-1 挿入に分解される)
+  await expect(page.getByText("修正済").first()).toBeVisible();
+  await expect(page.getByText("削除済")).toHaveCount(0);
+  // 復元直後は保存済み状態と等価 (dirty ではない) — 保存ボタンは無効のまま
+  await expect(page.getByRole("button", { name: "修正を保存" })).toBeDisabled();
+});

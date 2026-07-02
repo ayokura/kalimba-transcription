@@ -43,6 +43,7 @@ import argparse
 import json
 import math
 import os
+import random
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -683,6 +684,61 @@ def compute_confidence_calibration(
     }
 
 
+# mir_eval convention (onset tolerance 50ms; pitch 50 cents is equivalent to
+# exact note-name matching for tuning-quantized kalimba notes). REPORT-ONLY:
+# review-derived GT timing is approximate (docs/corpus-management.md), so this
+# strict fixed-tolerance value is for external comparison and must NOT be used
+# by the Tier 4 baseline gate (which uses the tolerance-aware F1 above).
+MIR_EVAL_ONSET_TOLERANCE_SEC = 0.05
+
+
+def mir_eval_compat_metrics(payload: dict, truth: list[dict]) -> dict:
+    strict_truth = [{**gt, "tol": MIR_EVAL_ONSET_TOLERANCE_SEC} for gt in truth]
+    match = match_pairs(strict_truth, collect_one_best(payload))
+    return {
+        "toleranceSec": MIR_EVAL_ONSET_TOLERANCE_SEC,
+        "tp": match["tp"],
+        "onsetPrecision": match["precision"],
+        "onsetRecall": match["recall"],
+        "onsetF1": match["f1"],
+    }
+
+
+def bootstrap_micro_f1_ci(
+    results: list[dict], iterations: int = 1000, seed: int = 42
+) -> dict | None:
+    """Recording-level bootstrap 95% CI for micro F1 (deterministic seed).
+
+    With a handful of recordings the interval is wide/degenerate by design —
+    it exists to keep small-corpus improvement claims honest, not to bless
+    them (evaluation survey: small-corpus deltas are noise-chasing without an
+    uncertainty estimate).
+    """
+    if not results:
+        return None
+    rng = random.Random(seed)
+    n = len(results)
+    values: list[float] = []
+    for _ in range(iterations):
+        sample = [results[rng.randrange(n)] for _ in range(n)]
+        tp = sum(r["tp"] for r in sample)
+        truth = sum(r["truthNotes"] for r in sample)
+        predicted = sum(r["predictedNotes"] for r in sample)
+        precision = tp / predicted if predicted else (1.0 if not truth else 0.0)
+        recall = tp / truth if truth else 1.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+        values.append(f1)
+    values.sort()
+    low = values[int(0.025 * (iterations - 1))]
+    high = values[int(0.975 * (iterations - 1))]
+    return {
+        "iterations": iterations,
+        "seed": seed,
+        "recordings": n,
+        "microF1CI95": [round(low, 4), round(high, 4)],
+    }
+
+
 def evaluate_payload(payload: dict, truth: list[dict]) -> dict:
     primary = collect_one_best(payload)
     match = match_pairs(truth, primary)
@@ -853,6 +909,21 @@ def write_baseline(results: list[dict], *, allow_regression: bool) -> list[str]:
     return messages
 
 
+def _micro_mir_eval(results: list[dict]) -> dict:
+    tp = sum(r["mirEvalCompat"]["tp"] for r in results)
+    truth = sum(r["truthNotes"] for r in results)
+    predicted = sum(r["predictedNotes"] for r in results)
+    precision = tp / predicted if predicted else (1.0 if not truth else 0.0)
+    recall = tp / truth if truth else 1.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+    return {
+        "toleranceSec": MIR_EVAL_ONSET_TOLERANCE_SEC,
+        "onsetPrecision": precision,
+        "onsetRecall": recall,
+        "onsetF1": f1,
+    }
+
+
 def _baseline_cli(args: argparse.Namespace, results: list[dict]) -> int:
     """Handle --write-baseline / --check-baseline (stderr so --json stays clean)."""
     if args.write_baseline:
@@ -931,6 +1002,7 @@ def main() -> int:
         payload = transcribe_payload(client, tx_id, debug=True)
         outcome = evaluate_payload(payload, truth)
         outcome["txId"] = tx_id
+        outcome["mirEvalCompat"] = mir_eval_compat_metrics(payload, truth)
         results.append(outcome)
         total["tp"] += outcome["tp"]
         total["truth"] += outcome["truthNotes"]
@@ -1002,7 +1074,10 @@ def main() -> int:
             "onsetPrecision": micro_p,
             "onsetRecall": micro_r,
             "onsetF1": micro_f1,
+            # Report-only strict fixed-tolerance variant (never gates baselines).
+            "mirEvalCompat": _micro_mir_eval(results),
         },
+        "bootstrap": bootstrap_micro_f1_ci(results),
         "candidates": {
             "recallAt1": total["candidateHits"]["1"] / total["truth"] if total["truth"] else 1.0,
             "recallAt3": total["candidateHits"]["3"] / total["truth"] if total["truth"] else 1.0,
@@ -1083,6 +1158,16 @@ def main() -> int:
         f" F1={summary['microF1']:.3f}  ({summary['recordings']} recordings,"
         f" recognizer {summary['recognizerFingerprint']}"
         f" dsp {summary['kalimbaDspFingerprint']})"
+    )
+    mir = summary["oneBest"]["mirEvalCompat"]
+    boot = summary["bootstrap"]
+    boot_text = (
+        f"[{boot['microF1CI95'][0]:.3f}, {boot['microF1CI95'][1]:.3f}]" if boot else "n/a"
+    )
+    print(
+        f"mir_eval-compat (±50ms fixed, report-only) P={mir['onsetPrecision']:.3f}"
+        f" R={mir['onsetRecall']:.3f} F1={mir['onsetF1']:.3f}"
+        f"  bootstrap F1 CI95={boot_text}"
     )
     print(
         "candidate "

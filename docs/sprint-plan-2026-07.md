@@ -104,8 +104,8 @@
 
 | 作業 | 確度 | 補足 |
 |---|---|---|
-| onset-gate 棄却の「低 confidence candidate slot への降格」統一 | B | reassessment NOW (b)。安全に落とすのではなく候補として保持。Candidate Recall の分母が揃う。**「新規 suppression pass 追加」ではなく既存棄却の降格化**である点に注意 |
-| rankedCandidates / droppedSegments の benchmark JSON 出力 | B | evaluation survey §3.4: 本番 response に出す前に benchmark には出せるようにする。#178 の soft-reject→候補出力 (issue 本文 Phase 1) の計測準備 |
+| onset-gate 棄却の「低 confidence candidate slot への降格」統一 | A | **検証済み・実装済みと確定 (2026-07-02)**: primary 棄却 (onset-gate-no-evidence 含む) → dropped-segment candidate slot (drop reason 別 confidence)、secondary 棄却 → soft alternates、が #178 Phase 1/2 で既に本 response schema に載っている。17ea7626 で実証 (slot 5 件 + alternates 4 件、FN の C5@11.547 / C5@6.635 / E4@14.784 が候補として観測可能)。**残スコープ = hard miss 7 件の coverage 拡大 + review UI 表示 → S7 (#178)** |
+| rankedCandidates / droppedSegments の benchmark JSON 出力 | A | **実装済みと確定 (ab2cca3)**: collect_surface_candidates (candidateSlots + alternateGroupings) + collect_debug_ranked_candidates が benchmark に既存。candidateSources 集計も出力済み |
 | benchmark の mir_eval 互換 onset-only F1 (±50ms / 50cents) + bootstrap CI (B=1000) 追加 | B | evaluation survey §2 準拠。**外部比較用の報告値のみで gate には使わない** (GT timing が近似のため)。小 corpus での改善判定が noise chasing になるのを防ぐ |
 | corrections↔再採譜の timeSec ±0.005s 突合脆性の修正 | B | recognizer が改善するほど review 途中の corrections が壊れる隠れ依存 (reviewCorrections.ts の TIME_MATCH_TOLERANCE_SEC=0.005)。sourceEventId ベース突合 or tolerance 拡大。**完了後に #197 を prod 反映** |
 | Playwright e2e の CI 配線 + corrections round-trip テスト追加 | B | UI 改修スプリント (4, 7, 8) の安全網。webServer 設定済みで配線コストは小 |

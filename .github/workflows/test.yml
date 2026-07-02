@@ -70,3 +70,10 @@ jobs:
 
       - name: Unit tests
         run: npm --workspace apps/web run test
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+        working-directory: apps/web
+
+      - name: E2E smoke tests (production build)
+        run: npm --workspace apps/web run e2e

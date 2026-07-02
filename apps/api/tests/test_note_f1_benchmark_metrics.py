@@ -155,3 +155,30 @@ def test_repo_managed_corpus_discovery_precedes_local_transactions(tmp_path, mon
     assert bench.discover_tx_ids() == [tx_id]
     assert bench.transaction_dir_for(tx_id) == corpus_dir
     assert bench.ground_truth_path_for(tx_id) == corpus_dir / "ground_truth.json"
+
+
+def test_mir_eval_compat_uses_fixed_tolerance() -> None:
+    """Per-onset toleranceSec (e.g. 0.2 for inserted-manual) must not leak
+    into the strict mir_eval-compatible report value (fixed 50ms)."""
+    payload = {"events": [{"id": "e1", "startTimeSec": 1.10, "notes": [_note("C4")]}]}
+    truth = [{"time": 1.0, "note": "C4", "tol": 0.2}]
+    lenient = bench.match_pairs(truth, bench.collect_one_best(payload))
+    assert lenient["tp"] == 1  # wide per-onset tolerance matches at dt=0.10
+    strict = bench.mir_eval_compat_metrics(payload, truth)
+    assert strict["tp"] == 0  # 50ms fixed tolerance does not
+    assert strict["toleranceSec"] == 0.05
+    assert strict["onsetF1"] == 0.0
+
+
+def test_bootstrap_ci_is_deterministic_and_bounded() -> None:
+    results = [
+        {"tp": 10, "truthNotes": 10, "predictedNotes": 10},
+        {"tp": 8, "truthNotes": 10, "predictedNotes": 9},
+        {"tp": 5, "truthNotes": 10, "predictedNotes": 11},
+    ]
+    first = bench.bootstrap_micro_f1_ci(results, iterations=200)
+    second = bench.bootstrap_micro_f1_ci(results, iterations=200)
+    assert first == second  # seeded → reproducible
+    low, high = first["microF1CI95"]
+    assert 0.0 <= low <= high <= 1.0
+    assert bench.bootstrap_micro_f1_ci([]) is None
