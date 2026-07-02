@@ -56,6 +56,10 @@ mod onset;
 /// the browser pipeline step after onset detection. See `pitch.rs`.
 mod pitch;
 
+/// Segment-stage DSP (active-range extraction from the RMS envelope) —
+/// first B1 slice of the segments.py port. See `segment.rs`.
+mod segment;
+
 thread_local! {
     static FFT_PLANNER: RefCell<FftPlanner<f32>> = RefCell::new(FftPlanner::<f32>::new());
     static HANNING_CACHE: RefCell<HashMap<usize, Vec<f32>>> = RefCell::new(HashMap::new());
@@ -846,6 +850,49 @@ mod python_binding {
         Ok(crate::onset::onset_detect(slice, sample_rate, hop_length, backtrack))
     }
 
+    #[pyfunction]
+    fn rms_threshold(rms: PyReadonlyArray1<f32>) -> PyResult<f64> {
+        let arr = rms.as_array();
+        let slice = arr.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("rms must be a C-contiguous float32 array")
+        })?;
+        Ok(crate::segment::rms_threshold(slice))
+    }
+
+    #[pyfunction]
+    fn raw_active_ranges<'py>(
+        py: Python<'py>,
+        rms: PyReadonlyArray1<f32>,
+        sample_rate: i64,
+        hop_length: usize,
+        duration_sec: f64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let arr = rms.as_array();
+        let slice = arr.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("rms must be a C-contiguous float32 array")
+        })?;
+        Ok(PyArray1::from_vec(
+            py,
+            crate::segment::raw_active_ranges(slice, sample_rate, hop_length, duration_sec),
+        ))
+    }
+
+    #[pyfunction]
+    fn merge_time_ranges<'py>(
+        py: Python<'py>,
+        flat_ranges: PyReadonlyArray1<f64>,
+        gap_tolerance: f64,
+    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
+        let arr = flat_ranges.as_array();
+        let slice = arr.as_slice().ok_or_else(|| {
+            pyo3::exceptions::PyValueError::new_err("flat_ranges must be a C-contiguous float64 array")
+        })?;
+        Ok(PyArray1::from_vec(
+            py,
+            crate::segment::merge_time_ranges(slice, gap_tolerance),
+        ))
+    }
+
     #[pymodule]
     fn kalimba_dsp(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(scan_gap_for_mute_dip_with_window, m)?)?;
@@ -862,6 +909,9 @@ mod python_binding {
         m.add_function(wrap_pyfunction!(peak_pick, m)?)?;
         m.add_function(wrap_pyfunction!(onset_backtrack, m)?)?;
         m.add_function(wrap_pyfunction!(onset_detect, m)?)?;
+        m.add_function(wrap_pyfunction!(rms_threshold, m)?)?;
+        m.add_function(wrap_pyfunction!(raw_active_ranges, m)?)?;
+        m.add_function(wrap_pyfunction!(merge_time_ranges, m)?)?;
         Ok(())
     }
 }
@@ -1037,6 +1087,29 @@ mod wasm_binding {
         backtrack: bool,
     ) -> Vec<u32> {
         crate::onset::onset_detect(onset_env, sample_rate, hop_length as usize, backtrack)
+    }
+
+    /// Active-range RMS threshold (detect_segments head, B1 slice).
+    #[wasm_bindgen]
+    pub fn rms_threshold(rms: &[f32]) -> f64 {
+        crate::segment::rms_threshold(rms)
+    }
+
+    /// Raw active ranges as flat `[start0, end0, ...]` seconds (Float64Array).
+    #[wasm_bindgen]
+    pub fn raw_active_ranges(
+        rms: &[f32],
+        sample_rate: i64,
+        hop_length: u32,
+        duration_sec: f64,
+    ) -> Vec<f64> {
+        crate::segment::raw_active_ranges(rms, sample_rate, hop_length as usize, duration_sec)
+    }
+
+    /// Merge time-ordered flat `[start, end]` pairs within `gap_tolerance` seconds.
+    #[wasm_bindgen]
+    pub fn merge_time_ranges(flat_ranges: &[f64], gap_tolerance: f64) -> Vec<f64> {
+        crate::segment::merge_time_ranges(flat_ranges, gap_tolerance)
     }
 
     #[wasm_bindgen]

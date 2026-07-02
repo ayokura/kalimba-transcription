@@ -61,14 +61,18 @@ function compareFrames(name, got, exp, failures) {
  * TS/Rust port) against the pinned Python reference. Ranges are [start, end]
  * second pairs; `epsilonSec` absorbs float formatting, not algorithmic drift.
  */
-function compareSegments(name, candidate, reference, failures, epsilonSec = 1e-6) {
-  const rangeKeys = [
-    "rawActiveRanges",
-    "activeRanges",
-    "shortBridgeActiveRanges",
-    "activeRangeSegments",
-    "segments",
-  ];
+const ALL_RANGE_KEYS = [
+  "rawActiveRanges",
+  "activeRanges",
+  "shortBridgeActiveRanges",
+  "activeRangeSegments",
+  "segments",
+];
+
+function compareSegments(name, candidate, reference, failures, opts = {}) {
+  const epsilonSec = opts.epsilonSec ?? 1e-6;
+  const rangeKeys = opts.keys ?? ALL_RANGE_KEYS;
+  const checkThreshold = opts.checkThreshold ?? true;
   let ok = true;
   for (const key of rangeKeys) {
     const got = candidate?.[key] ?? [];
@@ -90,13 +94,25 @@ function compareSegments(name, candidate, reference, failures, epsilonSec = 1e-6
       }
     }
   }
-  const gotThr = candidate?.rmsThreshold;
-  const expThr = reference?.rmsThreshold;
-  if (typeof gotThr !== "number" || Math.abs(gotThr - expThr) > 1e-9 + 1e-6 * Math.abs(expThr)) {
-    failures.push(`${name}: rmsThreshold candidate=${gotThr} ref=${expThr}`);
-    ok = false;
+  if (checkThreshold) {
+    const thresholdAtol = opts.thresholdAtol ?? 1e-9;
+    const gotThr = candidate?.rmsThreshold;
+    const expThr = reference?.rmsThreshold;
+    if (
+      typeof gotThr !== "number" ||
+      Math.abs(gotThr - expThr) > thresholdAtol + 1e-6 * Math.abs(expThr)
+    ) {
+      failures.push(`${name}: rmsThreshold candidate=${gotThr} ref=${expThr}`);
+      ok = false;
+    }
   }
   return ok;
+}
+
+function flatToPairs(flat) {
+  const pairs = [];
+  for (let i = 0; i < flat.length; i += 2) pairs.push([flat[i], flat[i + 1]]);
+  return pairs;
 }
 
 function main() {
@@ -139,9 +155,33 @@ function main() {
     if (compareEnv(`${c.id} vs numpy`, envWasm, readF32(c.numpy.env), 1e-3, 1e-3, failures)) pass++;
     if (compareFrames(`${c.id} vs numpy`, framesWasm, readU32(c.numpy.frames), failures)) pass++;
 
-    // Segment-level diff. Until the B1 port exists there is no wasm-side
-    // candidate, so the reference is fed back through the comparator
-    // (round-trip self-test: proves the diff machinery + reference integrity).
+    // Segment-level diff, part 1 — B1 slice 1 (active ranges) now has a wasm
+    // implementation: rms -> threshold -> raw ranges -> merge, compared
+    // against the Python detect_segments debug reference.
+    const rmsWasm = wasm.rms(audio, nFft, hopLength);
+    const rawFlat = wasm.raw_active_ranges(rmsWasm, sr, hopLength, c.samples / c.sampleRate);
+    const mergedFlat = wasm.merge_time_ranges(rawFlat, 0.06);
+    const candidate = {
+      rawActiveRanges: flatToPairs(rawFlat),
+      activeRanges: flatToPairs(mergedFlat),
+      rmsThreshold: wasm.rms_threshold(rmsWasm),
+    };
+    // The Python debug reference rounds ranges to 4 decimals (5e-5 max error)
+    // and rmsThreshold to 6 decimals (5e-7). Real algorithmic drift moves a
+    // boundary by >= one hop (2.7ms @96k), ~45x above this epsilon.
+    total += 1;
+    if (
+      compareSegments(`${c.id} segments(wasm B1)`, candidate, c.segment, failures, {
+        keys: ["rawActiveRanges", "activeRanges"],
+        epsilonSec: 6e-5,
+        thresholdAtol: 6e-7,
+      })
+    )
+      pass++;
+
+    // Part 2 — keys not yet ported (shortBridge / boundaries / discards) are
+    // fed back through the comparator as a round-trip self-test (diff
+    // machinery + reference integrity) until their B1 slices land.
     total += 1;
     if (compareSegments(`${c.id} segments(self)`, c.segment, c.segment, failures)) pass++;
   }
