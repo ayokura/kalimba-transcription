@@ -185,6 +185,19 @@ def summarize_group(
     request = read_json(primary / "request.json") or {}
     tuning_id = (request.get("tuning") or {}).get("id")
 
+    # 譜面の成否を試聴と突き合わせられるよう、認識結果のイベント列 (音名) と
+    # 期待列 (expectedPerformance があれば) を持たせる
+    recognized_events = [
+        "+".join(f"{note['pitchClass']}{note['octave']}" for note in event.get("notes", []))
+        for event in response.get("events", [])
+    ][:64]
+    expected_perf = request.get("expectedPerformance") or None
+    expected_events = (
+        [str(ev.get("display", "")).replace(" ", "") for ev in expected_perf.get("events", [])]
+        if expected_perf
+        else None
+    )
+
     statuses = {}
     memo = None
     corrections = False
@@ -251,6 +264,8 @@ def summarize_group(
         "tuningId": tuning_id,
         "storedEvents": stored_events,
         "freshEvents": fresh_events,
+        "recognizedEvents": recognized_events,
+        "expectedEvents": expected_events,
         "warnings": warnings,
         "memo": memo,
         "reviewStatuses": statuses,

@@ -327,6 +327,8 @@ export type DevTriageRecording = {
   tuningId: string | null;
   storedEvents: number | null;
   freshEvents: number | null;
+  recognizedEvents?: string[];
+  expectedEvents?: string[] | null;
   warnings: string[];
   memo: string | null;
   reviewStatuses: Record<string, string | null>;

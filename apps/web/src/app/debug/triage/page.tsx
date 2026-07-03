@@ -61,7 +61,19 @@ export default function DebugTriagePage() {
   const [recording, setRecording] = useState<Blob | null>(null);
   const [busy, setBusy] = useState(false);
   const [captureNote, setCaptureNote] = useState<string | null>(null);
+  const [lastCaptureEvents, setLastCaptureEvents] = useState<string[] | null>(null);
   const [savingTx, setSavingTx] = useState<string | null>(null);
+
+  // 録音の聞き返し用 (提出前に自分の演奏を確認できる)
+  const recordingUrl = useMemo(
+    () => (recording ? URL.createObjectURL(recording) : null),
+    [recording],
+  );
+  useEffect(() => {
+    return () => {
+      if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+    };
+  }, [recordingUrl]);
 
   const loadSummary = useCallback(() => {
     fetchDevTriage()
@@ -99,10 +111,13 @@ export default function DebugTriagePage() {
         force: true,
       });
       const txId = capture.responsePayload.transactionId;
-      const events = capture.responsePayload.events.length;
-      setCaptureNote(
-        `登録しました: ${txId} (${events} events)。一覧は triage スクリプト再実行後に更新されます。`,
+      const recognized = capture.responsePayload.events.map((event) =>
+        event.notes.map((note) => `${note.pitchClass}${note.octave}`).join("+"),
       );
+      setCaptureNote(
+        `登録しました: ${txId} (${recognized.length} events)。一覧は triage スクリプト再実行後に更新されます。`,
+      );
+      setLastCaptureEvents(recognized);
       setRecording(null);
     } catch (err) {
       setCaptureNote(err instanceof Error ? err.message : "採譜に失敗しました");
@@ -180,6 +195,12 @@ export default function DebugTriagePage() {
             hasRecording={Boolean(recording)}
             onRecordingReady={(blob) => setRecording(blob)}
           />
+          {recordingUrl ? (
+            <div className="stack" style={{ gap: 4 }}>
+              <span className="muted">録音の聞き返し (提出前確認):</span>
+              <audio controls src={recordingUrl} style={{ width: "100%" }} />
+            </div>
+          ) : null}
           <div className="row wrap" style={{ gap: 8 }}>
             <button
               type="button"
@@ -191,6 +212,21 @@ export default function DebugTriagePage() {
             </button>
             {captureNote ? <span className="muted">{captureNote}</span> : null}
           </div>
+          {lastCaptureEvents ? (
+            <div className="warning-box">
+              <p>
+                <strong>認識結果</strong> ({lastCaptureEvents.length} events):{" "}
+                {lastCaptureEvents.join(" ")}
+              </p>
+              {menuItem.events ? (
+                <p className="muted">
+                  期待列 ({menuItem.events.length} events):{" "}
+                  {menuItem.events.map((names) => names.join("+")).join(" ")} —
+                  予想どおり壊れていれば成功 (非飽和 GT 候補)
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -238,6 +274,19 @@ export default function DebugTriagePage() {
                 {rec.memo ? (
                   <p className="muted" style={{ margin: "4px 0" }}>
                     memo: {rec.memo}
+                  </p>
+                ) : null}
+                {rec.recognizedEvents && rec.recognizedEvents.length > 0 ? (
+                  <p className="muted" style={{ margin: "4px 0", fontFamily: "monospace", fontSize: "0.8rem" }}>
+                    認識: {rec.recognizedEvents.join(" ")}
+                    {rec.storedEvents != null && rec.storedEvents > rec.recognizedEvents.length
+                      ? ` … (先頭 ${rec.recognizedEvents.length}/${rec.storedEvents})`
+                      : ""}
+                  </p>
+                ) : null}
+                {rec.expectedEvents && rec.expectedEvents.length > 0 ? (
+                  <p className="muted" style={{ margin: "4px 0", fontFamily: "monospace", fontSize: "0.8rem" }}>
+                    期待: {rec.expectedEvents.join(" ")}
                   </p>
                 ) : null}
                 <audio
