@@ -223,6 +223,26 @@ uv run python scripts/audio-analysis/derive_ground_truth_from_score.py <tx-id> \
 uv run python scripts/audio-analysis/calibrate_tuning_mismatch.py
 ```
 
+### augmentation_robustness.py
+
+DSP augmentation 頑健性マップ (S2 bets #1、**report-only**)。repo 管理 free-performance
+corpus の各録音に、音高・onset 時刻を保存する既知 DSP 変換 (gain scaling / 加法性ノイズ
+white・pink / 合成残響 IR / low-pass) を強度を振って適用し、元の `ground_truth.json` を
+そのまま使い回して note_f1_benchmark と同じマッチングロジック (import して再利用) で
+F1 を再計測する。ピッチが変わる変換 (speed change / time-stretch) は GT の音高が壊れるため
+使用禁止。変換後 audio はメモリ上のみでコミットしない。乱数は固定 seed (crc32 由来) で
+再現可能。
+
+**AGENTS.md guardrail 7 に従い report-only**: 回帰 gate にも過適合ゲート/S5 分岐条件の
+非飽和 n にも算入しない。出力は `scripts/audio-analysis/reports/augmentation_robustness.{json,md}`
+(軽量、コミット対象)。md には「note_f1_benchmark.py との baseline F1 一致確認」と
+「予測される recognizer 弱点機構」の解釈セクションが含まれる。
+
+```bash
+uv run python scripts/audio-analysis/augmentation_robustness.py
+uv run python scripts/audio-analysis/augmentation_robustness.py --tx <tx-id> --json --no-write
+```
+
 ## 判定基準
 
 ### ノイズ vs 楽音の判定

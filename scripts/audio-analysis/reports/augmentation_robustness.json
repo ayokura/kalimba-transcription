@@ -1,0 +1,834 @@
+{
+  "summary": {
+    "generatedAt": "2026-07-03T20:40:31+00:00",
+    "baseSeed": 20260704,
+    "recognizerFingerprint": "0c21e79da21194ae",
+    "kalimbaDspFingerprint": "b5688f4db575441d",
+    "txIds": [
+      "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "bbd6797f-da44-4e89-b2bf-21b803f3f129"
+    ],
+    "reportOnly": true,
+    "note": "report-only per docs/sprint-plan-2026-07b.md S2 bets #1 / AGENTS.md guardrail 7: not a regression gate, not counted toward overfitting-gate or S5-branch non-saturated-recording n.",
+    "referenceCheck": [
+      {
+        "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+        "noteF1BenchmarkF1": 0.8631578947368421,
+        "augmentationBaselineF1": 0.8631578947368421,
+        "matches": true
+      },
+      {
+        "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+        "noteF1BenchmarkF1": 1.0,
+        "augmentationBaselineF1": 1.0,
+        "matches": true
+      }
+    ]
+  },
+  "results": [
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "none",
+      "level": "baseline",
+      "params": {},
+      "truthNotes": 52,
+      "predictedNotes": 43,
+      "tp": 41,
+      "precision": 0.9534883720930233,
+      "recall": 0.7884615384615384,
+      "f1": 0.8631578947368421,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "gain",
+      "level": "-30dB",
+      "params": {
+        "gainDb": -30.0,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 2,
+      "tp": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "warnings": [
+        "Only a small number of note events were detected."
+      ]
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "gain",
+      "level": "-20dB",
+      "params": {
+        "gainDb": -20.0,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 2,
+      "tp": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "warnings": [
+        "Only a small number of note events were detected."
+      ]
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "gain",
+      "level": "-10dB",
+      "params": {
+        "gainDb": -10.0,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 43,
+      "tp": 37,
+      "precision": 0.8604651162790697,
+      "recall": 0.7115384615384616,
+      "f1": 0.7789473684210527,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "gain",
+      "level": "0dB",
+      "params": {
+        "gainDb": 0.0,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 43,
+      "tp": 41,
+      "precision": 0.9534883720930233,
+      "recall": 0.7884615384615384,
+      "f1": 0.8631578947368421,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "gain",
+      "level": "+6dB",
+      "params": {
+        "gainDb": 6.0,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 45,
+      "tp": 42,
+      "precision": 0.9333333333333333,
+      "recall": 0.8076923076923077,
+      "f1": 0.8659793814432989,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "noise_white",
+      "level": "snr30",
+      "params": {
+        "snrDb": 30.0,
+        "color": "white",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 26,
+      "tp": 25,
+      "precision": 0.9615384615384616,
+      "recall": 0.4807692307692308,
+      "f1": 0.6410256410256411,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "noise_white",
+      "level": "snr20",
+      "params": {
+        "snrDb": 20.0,
+        "color": "white",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 23,
+      "tp": 17,
+      "precision": 0.7391304347826086,
+      "recall": 0.3269230769230769,
+      "f1": 0.4533333333333333,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "noise_white",
+      "level": "snr10",
+      "params": {
+        "snrDb": 10.0,
+        "color": "white",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 16,
+      "tp": 14,
+      "precision": 0.875,
+      "recall": 0.2692307692307692,
+      "f1": 0.411764705882353,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "noise_white",
+      "level": "snr5",
+      "params": {
+        "snrDb": 5.0,
+        "color": "white",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 19,
+      "tp": 16,
+      "precision": 0.8421052631578947,
+      "recall": 0.3076923076923077,
+      "f1": 0.4507042253521127,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "noise_white",
+      "level": "snr0",
+      "params": {
+        "snrDb": 0.0,
+        "color": "white",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 13,
+      "tp": 13,
+      "precision": 1.0,
+      "recall": 0.25,
+      "f1": 0.4,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "noise_pink",
+      "level": "snr30",
+      "params": {
+        "snrDb": 30.0,
+        "color": "pink",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 37,
+      "tp": 31,
+      "precision": 0.8378378378378378,
+      "recall": 0.5961538461538461,
+      "f1": 0.6966292134831461,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "noise_pink",
+      "level": "snr20",
+      "params": {
+        "snrDb": 20.0,
+        "color": "pink",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 24,
+      "tp": 21,
+      "precision": 0.875,
+      "recall": 0.40384615384615385,
+      "f1": 0.5526315789473685,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "noise_pink",
+      "level": "snr10",
+      "params": {
+        "snrDb": 10.0,
+        "color": "pink",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 16,
+      "tp": 15,
+      "precision": 0.9375,
+      "recall": 0.28846153846153844,
+      "f1": 0.44117647058823534,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "noise_pink",
+      "level": "snr5",
+      "params": {
+        "snrDb": 5.0,
+        "color": "pink",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 16,
+      "tp": 14,
+      "precision": 0.875,
+      "recall": 0.2692307692307692,
+      "f1": 0.411764705882353,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "noise_pink",
+      "level": "snr0",
+      "params": {
+        "snrDb": 0.0,
+        "color": "pink",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 25,
+      "tp": 16,
+      "precision": 0.64,
+      "recall": 0.3076923076923077,
+      "f1": 0.4155844155844156,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "reverb",
+      "level": "light",
+      "params": {
+        "rt60Sec": 0.3,
+        "wet": 0.2,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 39,
+      "tp": 34,
+      "precision": 0.8717948717948718,
+      "recall": 0.6538461538461539,
+      "f1": 0.7472527472527474,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "reverb",
+      "level": "medium",
+      "params": {
+        "rt60Sec": 0.6,
+        "wet": 0.3,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 39,
+      "tp": 34,
+      "precision": 0.8717948717948718,
+      "recall": 0.6538461538461539,
+      "f1": 0.7472527472527474,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "reverb",
+      "level": "heavy",
+      "params": {
+        "rt60Sec": 1.2,
+        "wet": 0.4,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 37,
+      "tp": 29,
+      "precision": 0.7837837837837838,
+      "recall": 0.5576923076923077,
+      "f1": 0.651685393258427,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "reverb",
+      "level": "extreme",
+      "params": {
+        "rt60Sec": 2.0,
+        "wet": 0.5,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 33,
+      "tp": 24,
+      "precision": 0.7272727272727273,
+      "recall": 0.46153846153846156,
+      "f1": 0.5647058823529413,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "lowpass",
+      "level": "8000hz",
+      "params": {
+        "cutoffHz": 8000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 44,
+      "tp": 41,
+      "precision": 0.9318181818181818,
+      "recall": 0.7884615384615384,
+      "f1": 0.8541666666666667,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "lowpass",
+      "level": "4000hz",
+      "params": {
+        "cutoffHz": 4000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 47,
+      "tp": 40,
+      "precision": 0.851063829787234,
+      "recall": 0.7692307692307693,
+      "f1": 0.8080808080808081,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "lowpass",
+      "level": "2000hz",
+      "params": {
+        "cutoffHz": 2000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 47,
+      "tp": 36,
+      "precision": 0.7659574468085106,
+      "recall": 0.6923076923076923,
+      "f1": 0.7272727272727273,
+      "warnings": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "lowpass",
+      "level": "1000hz",
+      "params": {
+        "cutoffHz": 1000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 52,
+      "predictedNotes": 24,
+      "tp": 21,
+      "precision": 0.875,
+      "recall": 0.40384615384615385,
+      "f1": 0.5526315789473685,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "none",
+      "level": "baseline",
+      "params": {},
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 20,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "gain",
+      "level": "-30dB",
+      "params": {
+        "gainDb": -30.0,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 4,
+      "tp": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "warnings": [
+        "Only a small number of note events were detected."
+      ]
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "gain",
+      "level": "-20dB",
+      "params": {
+        "gainDb": -20.0,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 18,
+      "tp": 15,
+      "precision": 0.8333333333333334,
+      "recall": 0.75,
+      "f1": 0.7894736842105262,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "gain",
+      "level": "-10dB",
+      "params": {
+        "gainDb": -10.0,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 16,
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1": 0.8000000000000002,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "gain",
+      "level": "0dB",
+      "params": {
+        "gainDb": 0.0,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 20,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "gain",
+      "level": "+6dB",
+      "params": {
+        "gainDb": 6.0,
+        "clippedFraction": 3.5286811201445346e-06
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 20,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "noise_white",
+      "level": "snr30",
+      "params": {
+        "snrDb": 30.0,
+        "color": "white",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 16,
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1": 0.8000000000000002,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "noise_white",
+      "level": "snr20",
+      "params": {
+        "snrDb": 20.0,
+        "color": "white",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 21,
+      "tp": 13,
+      "precision": 0.6190476190476191,
+      "recall": 0.65,
+      "f1": 0.6341463414634146,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "noise_white",
+      "level": "snr10",
+      "params": {
+        "snrDb": 10.0,
+        "color": "white",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 21,
+      "tp": 9,
+      "precision": 0.42857142857142855,
+      "recall": 0.45,
+      "f1": 0.4390243902439024,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "noise_white",
+      "level": "snr5",
+      "params": {
+        "snrDb": 5.0,
+        "color": "white",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 19,
+      "tp": 11,
+      "precision": 0.5789473684210527,
+      "recall": 0.55,
+      "f1": 0.5641025641025641,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "noise_white",
+      "level": "snr0",
+      "params": {
+        "snrDb": 0.0,
+        "color": "white",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 15,
+      "tp": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "noise_pink",
+      "level": "snr30",
+      "params": {
+        "snrDb": 30.0,
+        "color": "pink",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 20,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "noise_pink",
+      "level": "snr20",
+      "params": {
+        "snrDb": 20.0,
+        "color": "pink",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 8,
+      "precision": 0.4,
+      "recall": 0.4,
+      "f1": 0.4000000000000001,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "noise_pink",
+      "level": "snr10",
+      "params": {
+        "snrDb": 10.0,
+        "color": "pink",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 21,
+      "tp": 9,
+      "precision": 0.42857142857142855,
+      "recall": 0.45,
+      "f1": 0.4390243902439024,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "noise_pink",
+      "level": "snr5",
+      "params": {
+        "snrDb": 5.0,
+        "color": "pink",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 18,
+      "tp": 5,
+      "precision": 0.2777777777777778,
+      "recall": 0.25,
+      "f1": 0.2631578947368421,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "noise_pink",
+      "level": "snr0",
+      "params": {
+        "snrDb": 0.0,
+        "color": "pink",
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "reverb",
+      "level": "light",
+      "params": {
+        "rt60Sec": 0.3,
+        "wet": 0.2,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 20,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "reverb",
+      "level": "medium",
+      "params": {
+        "rt60Sec": 0.6,
+        "wet": 0.3,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 20,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "reverb",
+      "level": "heavy",
+      "params": {
+        "rt60Sec": 1.2,
+        "wet": 0.4,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 16,
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1": 0.8000000000000002,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "reverb",
+      "level": "extreme",
+      "params": {
+        "rt60Sec": 2.0,
+        "wet": 0.5,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 18,
+      "tp": 16,
+      "precision": 0.8888888888888888,
+      "recall": 0.8,
+      "f1": 0.8421052631578948,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "lowpass",
+      "level": "8000hz",
+      "params": {
+        "cutoffHz": 8000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 20,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "lowpass",
+      "level": "4000hz",
+      "params": {
+        "cutoffHz": 4000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 20,
+      "tp": 16,
+      "precision": 0.8,
+      "recall": 0.8,
+      "f1": 0.8000000000000002,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "lowpass",
+      "level": "2000hz",
+      "params": {
+        "cutoffHz": 2000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 19,
+      "tp": 15,
+      "precision": 0.7894736842105263,
+      "recall": 0.75,
+      "f1": 0.7692307692307692,
+      "warnings": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "lowpass",
+      "level": "1000hz",
+      "params": {
+        "cutoffHz": 1000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "truthNotes": 20,
+      "predictedNotes": 17,
+      "tp": 13,
+      "precision": 0.7647058823529411,
+      "recall": 0.65,
+      "f1": 0.7027027027027027,
+      "warnings": []
+    }
+  ]
+}
