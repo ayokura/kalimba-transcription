@@ -11,6 +11,7 @@
 - AMT (Automatic Music Transcription) の研究サーベイと現行パイプラインへの適用分析が [`docs/research/`](/docs/research/) にある。読み順は [`index.md`](/docs/research/index.md)。
 - **新規の設計判断やアルゴリズム選択では、まず [`20260626-unbiased-amt-reassessment.md`](/docs/research/20260626-unbiased-amt-reassessment.md) を確認すること** (実コード確認済みの実装事実テーブル + NOW/NEXT/LATER 方針)。旧 `20260406-*` サーベイ群は LLM 由来バイアスありの deprecated 資料であり、設計判断の根拠に使わない。
 - 中期の作業計画とその優先順位は [`docs/sprint-plan-2026-07b.md`](/docs/sprint-plan-2026-07b.md) (第 2 期、2026-07-04〜) を参照。第 1 期 [`docs/sprint-plan-2026-07.md`](/docs/sprint-plan-2026-07.md) は superseded (実績記録として凍結)。
+- 期をまたぐ戦略判断の経緯は [`docs/decision-log.md`](/docs/decision-log.md) に日付入りで記録されている。大きな方向転換をした時はここに追記する (追記のみ、書き換え不可)。
 - 特に以下の点は設計上の前提として意識する (reassessment §1 の実装事実に基づく):
   - カリンバの倍音は非整数比（梁振動由来）— 整数倍 harmonic comb の限界を認識する
   - onset gate は実装済み・既定有効 (broadband / per-note / backward-attack の弱 AND)。共鳴 FP 抑制の中核だが「安全に落とす」より「低 confidence 候補として保持する」方向が現方針
