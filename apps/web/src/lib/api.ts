@@ -59,7 +59,7 @@ export type ManualCaptureExpectedEvent = {
 };
 
 export type ManualCaptureExpectedPerformance = {
-  source: "clickable-kalimba-ui";
+  source: "clickable-kalimba-ui" | "adversarial-menu";
   version: 1;
   summary: string;
   defaultCaptureIntent?: CaptureIntent | null;
@@ -313,6 +313,48 @@ export async function saveReviewStatus(
   }
   const payload = (await response.json()) as { reviewStatus: ReviewStatusPayload };
   return payload.reviewStatus;
+}
+
+// --- Dev-only (temporary): /debug/triage が使う。ページと一緒に撤去する ---
+
+export type DevTriageRecording = {
+  sha16: string;
+  primaryTx: string;
+  duplicateTxs: string[];
+  durationSec: number;
+  sampleRate: number;
+  peakDbfs: number | null;
+  tuningId: string | null;
+  storedEvents: number | null;
+  freshEvents: number | null;
+  warnings: string[];
+  memo: string | null;
+  reviewStatuses: Record<string, string | null>;
+  hasCorrections: boolean;
+  gtLayer: string | null;
+  score: number;
+  signals: string[];
+};
+
+export type DevTriageSummary = {
+  generatedAt: string;
+  recognizerFingerprint: string;
+  totals: {
+    transactionDirs: number;
+    uniqueRecordings: number;
+    withGt: number;
+    statusCounts: Record<string, number>;
+  };
+  recordings: DevTriageRecording[];
+};
+
+export async function fetchDevTriage(): Promise<DevTriageSummary> {
+  const response = await fetch(`${API_BASE_URL}/api/dev/triage`, { cache: "no-store" });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    throw new Error(detail?.detail ?? "Failed to load triage summary.");
+  }
+  return (await response.json()) as DevTriageSummary;
 }
 
 export async function fetchReviewQueue(

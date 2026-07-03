@@ -21,6 +21,7 @@ from .storage import (
     compute_audio_sha256,
     find_transaction_by_hash_and_tuning,
     generate_transaction_id,
+    get_data_dir,
     get_transaction_audio_sha256,
     get_transaction_timestamps,
     list_recent_transactions,
@@ -195,6 +196,32 @@ def get_review_queue(limit: int = 50, status: str | None = None) -> list[dict]:
     if status is not None and status not in _REVIEW_STATUS_VALUES:
         raise HTTPException(status_code=400, detail="Invalid review status filter.")
     return list_review_queue(capped, status=status)
+
+
+# Dev-only (第 2 期 S1 の計器修理): transactions_triage.py の出力に live の
+# review status を重ねて /debug/triage ページへ供給する。temporary — 開発が
+# 落ち着いたら /debug/triage と一緒に撤去する (sprint-plan-2026-07b S1)。
+@app.get("/api/dev/triage")
+def get_dev_triage() -> dict:
+    summary_path = get_data_dir() / "triage_summary.json"
+    if not summary_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "triage_summary.json not found. Run "
+                "`uv run python scripts/audio-analysis/transactions_triage.py` first."
+            ),
+        )
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    for recording in summary.get("recordings", []):
+        statuses: dict[str, str | None] = {}
+        for tx_id in [recording.get("primaryTx"), *recording.get("duplicateTxs", [])]:
+            if not tx_id:
+                continue
+            payload = load_review_status(tx_id)
+            statuses[tx_id] = payload.get("status") if payload else None
+        recording["reviewStatuses"] = statuses
+    return summary
 
 
 @app.get("/api/transcriptions/{transaction_id}")
