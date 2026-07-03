@@ -236,3 +236,72 @@ def test_transcription_response_includes_duration_sec():
         assert "durationSec" in event
         assert isinstance(event["durationSec"], float)
         assert event["durationSec"] >= 0
+
+
+def test_capture_metadata_persisted_to_request_json():
+    """capture メタデータのサーバー側永続化 (2026-07-04 監査の回帰 pin)。
+
+    /debug/triage の敵対的録音で「expectedPerformance がクライアントの
+    Capture Pack ZIP にしか残らず data/transactions で失われる」欠落が発覚。
+    GT 化の自動整列は保存済み expectedPerformance に依存するため、
+    scenario / expectedPerformance / memo 等が request.json / memo.txt に
+    残ることを pin する。
+    """
+    import os
+    from pathlib import Path
+
+    audio = synthesize_note(261.63, duration=0.5)
+    audio_data = wav_bytes(audio)
+    tuning = {"name": "Test 17-C", "notes": [{"noteName": "C4"}]}
+    expected_performance = {
+        "source": "adversarial-menu",
+        "version": 1,
+        "summary": "テスト",
+        "defaultCaptureIntent": "separated_notes",
+        "events": [
+            {
+                "index": 1,
+                "keys": [{"key": 1, "noteName": "C4"}],
+                "display": "C4",
+                "intent": "separated_notes",
+            }
+        ],
+    }
+    response = client.post(
+        "/api/transcriptions",
+        data={
+            "tuning": json.dumps(tuning),
+            "scenario": "adversarial-test",
+            "expectedNote": "C4",
+            "expectedPerformance": json.dumps(expected_performance),
+            "memo": "adversarial-menu: test",
+            "captureIntent": "separated_notes",
+            "sourceProfile": "acoustic_real",
+        },
+        files={"file": ("audio.wav", audio_data, "audio/wav")},
+    )
+    assert response.status_code == 200
+    tx_id = response.json()["transactionId"]
+
+    tx_dir = Path(os.environ["KALIMBA_DATA_DIR"]) / "transactions" / tx_id
+    request = json.loads((tx_dir / "request.json").read_text(encoding="utf-8"))
+    assert request["scenario"] == "adversarial-test"
+    assert request["expectedNote"] == "C4"
+    assert request["expectedPerformance"]["events"][0]["display"] == "C4"
+    assert request["captureIntent"] == "separated_notes"
+    assert request["sourceProfile"] == "acoustic_real"
+    assert (tx_dir / "memo.txt").read_text(encoding="utf-8") == "adversarial-menu: test"
+
+
+def test_invalid_expected_performance_is_rejected():
+    audio = synthesize_note(261.63, duration=0.5)
+    audio_data = wav_bytes(audio)
+    tuning = {"name": "Test 17-C", "notes": [{"noteName": "C4"}]}
+
+    for bad_value in ("not-json", json.dumps({"no": "events"})):
+        response = client.post(
+            "/api/transcriptions",
+            data={"tuning": json.dumps(tuning), "expectedPerformance": bad_value},
+            files={"file": ("audio.wav", audio_data, "audio/wav")},
+        )
+        assert response.status_code == 400

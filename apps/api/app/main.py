@@ -115,12 +115,35 @@ async def create_transcription(
     midPerformanceEnd: bool = Form(False),
     force: bool = Form(False),
     dryRun: bool = Form(False),
+    scenario: str | None = Form(None),
+    expectedNote: str | None = Form(None),
+    expectedPerformance: str | None = Form(None),
+    memo: str | None = Form(None),
+    captureIntent: str | None = Form(None),
+    sourceProfile: str | None = Form(None),
 ) -> TranscriptionResult:
     audio_bytes = await file.read()
     await file.seek(0)
 
     parsed_tuning = parse_tuning_json(tuning)
     audio_sha256 = compute_audio_sha256(audio_bytes)
+
+    # capture メタデータ (期待列など) はサーバー側 request.json に永続化する。
+    # 2026-07-04 監査: 従来これらはクライアントの Capture Pack ZIP にしか
+    # 残らず、data/transactions 側では失われていた (/debug/triage の敵対的
+    # 録音で発覚)。GT 化の自動整列は保存された expectedPerformance に依存する。
+    expected_performance: dict | None = None
+    if expectedPerformance:
+        try:
+            parsed_expected = json.loads(expectedPerformance)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=400, detail="expectedPerformance must be valid JSON.") from exc
+        if not isinstance(parsed_expected, dict) or not isinstance(parsed_expected.get("events"), list):
+            raise HTTPException(
+                status_code=400,
+                detail="expectedPerformance must be an object with an events array.",
+            )
+        expected_performance = parsed_expected
 
     if not dryRun and not force:
         existing_id = find_transaction_by_hash_and_tuning(audio_sha256, parsed_tuning.id)
@@ -156,10 +179,22 @@ async def create_transcription(
         "recognizerFingerprint": recognizer_fingerprint(),
         "dspFingerprint": kalimba_dsp_fingerprint(),
     }
+    if scenario and scenario.strip():
+        request_params["scenario"] = scenario.strip()
+    if expectedNote and expectedNote.strip():
+        request_params["expectedNote"] = expectedNote.strip()
+    if expected_performance is not None:
+        request_params["expectedPerformance"] = expected_performance
+    if captureIntent and captureIntent.strip():
+        request_params["captureIntent"] = captureIntent.strip()
+    if sourceProfile and sourceProfile.strip():
+        request_params["sourceProfile"] = sourceProfile.strip()
     response_dict = result.model_dump(by_alias=True)
     debug_dict = response_dict.get("debug")
 
     save_transaction(transaction_id, audio_bytes, request_params, response_dict, debug_dict)
+    if memo and memo.strip():
+        save_memo(transaction_id, memo.strip())
 
     return result
 

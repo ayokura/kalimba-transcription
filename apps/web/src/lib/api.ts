@@ -165,6 +165,30 @@ export async function createTranscriptionWithCapture(
   if (options.force) {
     formData.append("force", "true");
   }
+  // capture メタデータをサーバー側 request.json にも永続化する (2026-07-04 まで
+  // これらはクライアントの requestPayload = Capture Pack ZIP にしか残らず、
+  // data/transactions では失われていた)
+  const scenarioText = options.scenario?.trim();
+  if (scenarioText) {
+    formData.append("scenario", scenarioText);
+  }
+  const expectedNoteText = cleanOptionalText(options.expectedNote);
+  if (expectedNoteText) {
+    formData.append("expectedNote", expectedNoteText);
+  }
+  if (options.expectedPerformance) {
+    formData.append("expectedPerformance", JSON.stringify(options.expectedPerformance));
+  }
+  const memoText = cleanOptionalText(options.memo);
+  if (memoText) {
+    formData.append("memo", memoText);
+  }
+  if (options.captureIntent) {
+    formData.append("captureIntent", options.captureIntent);
+  }
+  if (options.sourceProfile) {
+    formData.append("sourceProfile", options.sourceProfile);
+  }
 
   const response = await fetch(`${API_BASE_URL}/api/transcriptions`, {
     method: "POST",
