@@ -28,11 +28,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 # --- Recording-quality calibration (provisional) ---------------------------
-# Peak level mapped to [0, 1]. The web client warns below -15 dBFS and
-# tuning_check skips spectral analysis there, so treat that as the low anchor;
-# a comfortably-loud capture (>= -6 dBFS) scores full marks.
+# Peak level mapped to [0, 1]. The web client's low-volume warning
+# (LOW_LEVEL_PEAK_DB, SimpleHome.tsx) was relaxed from -15 to -35 dBFS on
+# 2026-07-03 (tester feedback: -15 warned on recordings that were actually
+# fine). Treat that -35 dBFS floor as the zero anchor here too, so a
+# recording the web does *not* warn about never gets scored as
+# recording_quality == 0; a comfortably-loud capture (>= -6 dBFS) scores full
+# marks. Note tuning_check.LOW_GAIN_SKIP_PEAK_DBFS intentionally kept its own
+# -15 dBFS calibration (see its comment) and no longer mirrors this constant.
 GAIN_FULL_DBFS = -6.0
-GAIN_ZERO_DBFS = -20.0
+GAIN_ZERO_DBFS = -35.0
 # Weight of gain vs tuning-fit coverage in the recording-quality score.
 RECORDING_GAIN_WEIGHT = 0.6
 RECORDING_COVERAGE_WEIGHT = 0.4

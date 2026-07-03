@@ -50,7 +50,10 @@ def test_many_candidate_slots_lower_confidence() -> None:
 
 
 def test_poor_tuning_coverage_and_low_gain_flags_red() -> None:
-    qi = compute_quality_indicators(_events(10, with_alts=8), [{"confidence": 0.1}] * 8, tuning_coverage=0.5, peak_dbfs=-18.0)
+    # peak_dbfs=-25.0 sits well above the web's -35 dBFS warning floor (so the
+    # web itself would not warn) but is still well below GAIN_FULL_DBFS,
+    # combined with poor coverage + high ambiguity to push difficulty > 0.6.
+    qi = compute_quality_indicators(_events(10, with_alts=8), [{"confidence": 0.1}] * 8, tuning_coverage=0.5, peak_dbfs=-25.0)
     assert qi.flag == "red"
     assert qi.difficulty > 0.6
 

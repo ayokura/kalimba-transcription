@@ -139,6 +139,16 @@ uv run python scripts/audio-analysis/note_f1_benchmark.py <tx-id> --verbose  # F
 uv run python scripts/audio-analysis/note_f1_benchmark.py --json
 ```
 
+`--write-baseline` は `benchmark_baseline.json` の更新に加えて
+`apps/api/tests/fixtures/free-performance-corpus/benchmark_history.jsonl` へ
+1 行 append する (`append_history()`)。baseline は現在の floor しか持たず上書き
+されるため、fingerprint 別の F1 推移を後から追えるようにする最小の受け皿。
+1 行 = flat JSON (`ts` / `recognizerFingerprint` / `kalimbaDspFingerprint` /
+`recordings` / `microF1` / `microPrecision` / `microRecall` /
+`perRecording: {txId: f1}`)。非飽和 (F1 < 1.0) の GT レビュー済み録音が
+2 件以上揃ってから分析価値が出る計器なので、現時点では記録のみで分析ツールは
+未実装。
+
 ### candidate_recall_benchmark.py
 multi-candidate 出力の有効性を測る (#178 Phase 2)。note_f1_benchmark が primary 出力のみを
 測るのに対し、本ツールは「primary が外した GT 音を、surfaced 候補 (event `alternateGroupings`

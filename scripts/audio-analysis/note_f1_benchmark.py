@@ -909,6 +909,56 @@ def write_baseline(results: list[dict], *, allow_regression: bool) -> list[str]:
     return messages
 
 
+# ---------------------------------------------------------------------------
+# F1 x recognizer-fingerprint time series (append-only, minimal receiver).
+#
+# `benchmark_baseline.json` only records the current floor; it overwrites in
+# place and cannot show a trend. This JSONL file appends one row per
+# `--write-baseline` run so a later analysis pass can plot F1 drift against
+# recognizer code changes. It is a minimal receiver for a signal that only
+# becomes informative once there are >= 2 GT-reviewed non-saturated (F1 < 1.0)
+# recordings (AGENTS.md "過適合ゲート") — recorded now anyway since the cost
+# of appending is negligible and history before that point is still useful
+# context once it does.
+# ---------------------------------------------------------------------------
+
+HISTORY_PATH = FREE_PERFORMANCE_CORPUS_DIR / "benchmark_history.jsonl"
+
+
+def append_history(results: list[dict], summary: dict) -> str:
+    """Append one flat-JSON row to benchmark_history.jsonl.
+
+    Row schema (one JSON object per line, UTF-8, LF-terminated):
+      ts:                   UTC ISO-8601 timestamp of this --write-baseline run
+      recognizerFingerprint: see apps/api/app/fingerprints.py (Python sources
+                             only; independent of kalimbaDspFingerprint)
+      kalimbaDspFingerprint: hash of the loaded kalimba_dsp extension binary
+      recordings:            number of GT recordings evaluated this run
+      microF1 / microPrecision / microRecall: corpus-aggregate one-best metrics
+      perRecording:          {txId: f1} for every evaluated recording
+
+    Example line:
+      {"kalimbaDspFingerprint": "absent", "microF1": 1.0, "microPrecision": 1.0,
+       "microRecall": 1.0, "perRecording": {"bbd6797f...": 1.0},
+       "recognizerFingerprint": "a1b2c3d4e5f6a7b8", "recordings": 1,
+       "ts": "2026-07-04T12:00:00+00:00"}
+    """
+    HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    row = {
+        "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00"),
+        "recognizerFingerprint": summary["recognizerFingerprint"],
+        "kalimbaDspFingerprint": summary["kalimbaDspFingerprint"],
+        "recordings": summary["recordings"],
+        "microF1": summary["microF1"],
+        "microPrecision": summary["microPrecision"],
+        "microRecall": summary["microRecall"],
+        "perRecording": {r["txId"]: r["f1"] for r in results},
+    }
+    with HISTORY_PATH.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, sort_keys=True) + "\n")
+    return f"history appended: {HISTORY_PATH.relative_to(REPO_ROOT)}"
+
+
 def _micro_mir_eval(results: list[dict]) -> dict:
     tp = sum(r["mirEvalCompat"]["tp"] for r in results)
     truth = sum(r["truthNotes"] for r in results)
@@ -924,11 +974,12 @@ def _micro_mir_eval(results: list[dict]) -> dict:
     }
 
 
-def _baseline_cli(args: argparse.Namespace, results: list[dict]) -> int:
+def _baseline_cli(args: argparse.Namespace, results: list[dict], summary: dict) -> int:
     """Handle --write-baseline / --check-baseline (stderr so --json stays clean)."""
     if args.write_baseline:
         for line in write_baseline(results, allow_regression=args.allow_baseline_regression):
             print(line, file=sys.stderr)
+        print(append_history(results, summary), file=sys.stderr)
     if args.check_baseline:
         violations = check_baseline_violations(results, load_baseline())
         if violations:
@@ -1133,7 +1184,7 @@ def main() -> int:
         for r in results:
             r.pop("_confidenceCounts", None)
         print(json.dumps({"summary": summary, "results": results}, indent=2))
-        return _baseline_cli(args, results)
+        return _baseline_cli(args, results, summary)
 
     print(
         f"{'tx':38} {'GT':>4} {'pred':>4} {'TP':>4} {'P':>6} {'R':>6} {'F1':>6}"
@@ -1192,7 +1243,7 @@ def main() -> int:
     fep_text = f"{fep:.3f}" if fep is not None else "n/a"
     mer_text = f"{mer:.3f}" if mer is not None else "n/a"
     print(f"confidence flaggedPrecision={fep_text} missedErrorRate={mer_text}")
-    return _baseline_cli(args, results)
+    return _baseline_cli(args, results, summary)
 
 
 if __name__ == "__main__":
