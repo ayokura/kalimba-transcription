@@ -127,6 +127,10 @@
 - onset gate の棄却を「drop」ではなく「低 confidence の candidate slot へ降格」に統一。
 - **exit:** 自由演奏 GT 20件以上で「F1 / Candidate Recall / Correction Burden」が自動計測され
   ベースライン確立。
+  - **(2026-07-04 改訂)** 計測機構は完成・CI 配線済みだが「GT 20 件」の固定目標は
+    tuning-set 飽和 (F1=1.000 の録音を何件積んでも計器にならない) を考慮していなかったため、
+    第 2 期計画 ([sprint-plan-2026-07b.md](../sprint-plan-2026-07b.md)) が
+    **非飽和 held-out n≥2 → n≥3 → n≥5 の段階目標**で置換した。件数より識別力を優先する。
 
 #### NEXT — 候補保持の作り込み + 物理モデルは検証のみ
 - #178: debug 限定の rankedCandidates / dropped segment を**本出力 + review UI** に昇格。
