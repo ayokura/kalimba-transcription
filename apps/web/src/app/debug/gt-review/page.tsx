@@ -52,7 +52,9 @@ export default function DebugGtReviewPage() {
 
   useEffect(() => {
     fetchGtDrafts()
-      .then((data) => {
+      .then((sorted) => {
+        // 軽い録音から裁定できるよう行数昇順 (敵対的テイク → 崩壊自由演奏)
+        const data = [...sorted].sort((a, b) => a.rows.length - b.rows.length);
         setDrafts(data);
         setSelected((prev) => prev ?? data[0]?.tx8 ?? null);
         const initial: Record<string, GtDraftVerdict> = {};
