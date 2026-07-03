@@ -1,8 +1,8 @@
 # 中期作業計画: 8スプリント (2026-07 起点)
 
-**作成: 2026-07-02 / 状態: active / tracking issue: [#199](https://github.com/ayokura/kalimba-transcription/issues/199) / 権威戦略doc: [research/20260626-unbiased-amt-reassessment.md](research/20260626-unbiased-amt-reassessment.md)**
+**作成: 2026-07-02 / 状態: superseded (2026-07-04) / 後継: [sprint-plan-2026-07b.md](sprint-plan-2026-07b.md) / tracking issue: [#199](https://github.com/ayokura/kalimba-transcription/issues/199)**
 
-進捗・スプリント境界の記録は #199 のコメントで行い、計画本体の改訂はこのファイルを更新する。
+> **本計画は第 2 期計画に置き換えられた。** S1–S5 のインライン実績記録は歴史記録として凍結保持し、未着手だった S6–S8 は後継計画に吸収・再設計された。以後の改訂はしない。
 
 ## 目的と位置づけ
 
