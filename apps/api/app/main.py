@@ -259,6 +259,61 @@ def get_dev_triage() -> dict:
     return summary
 
 
+# Dev-only (第 2 期 S2 の GT 化フロー): gt_draft.py が出力した行データを
+# /debug/gt-review ページへ供給し、ユーザーの裁定 (verdict) を保存する。
+# temporary — GT 化の運用が落ち着いたら /debug/gt-review と一緒に撤去する。
+_GT_DRAFT_TX8_RE = re.compile(r"^[0-9a-f]{8}$")
+
+
+class GtDraftVerdictPayload(BaseModel):
+    # 行 index (文字列化した 1-based) -> {decision: accept|fix|ignore, notes?: [..]}
+    rows: dict[str, dict]
+    # 未配置 expected index -> {decision: discard|place, timeSec?: float}
+    unplaced: dict[str, dict] = {}
+    done: bool = False
+
+
+@app.get("/api/dev/gt-drafts")
+def get_dev_gt_drafts() -> dict:
+    drafts_dir = get_data_dir() / "gt_drafts"
+    rows_files = sorted(drafts_dir.glob("*.rows.json")) if drafts_dir.is_dir() else []
+    if not rows_files:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No GT drafts found. Run "
+                "`uv run python scripts/audio-analysis/gt_draft.py <tx-prefix>` first."
+            ),
+        )
+    drafts = []
+    for path in rows_files:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        verdict_path = drafts_dir / f"{doc['tx8']}.verdict.json"
+        doc["verdict"] = (
+            json.loads(verdict_path.read_text(encoding="utf-8"))
+            if verdict_path.is_file()
+            else None
+        )
+        drafts.append(doc)
+    return {"drafts": drafts}
+
+
+@app.put("/api/dev/gt-drafts/{tx8}/verdict")
+def put_dev_gt_draft_verdict(tx8: str, payload: GtDraftVerdictPayload) -> dict:
+    if not _GT_DRAFT_TX8_RE.match(tx8):
+        raise HTTPException(status_code=400, detail="Invalid draft id.")
+    drafts_dir = get_data_dir() / "gt_drafts"
+    if not (drafts_dir / f"{tx8}.rows.json").is_file():
+        raise HTTPException(status_code=404, detail="GT draft not found.")
+    document = payload.model_dump()
+    document["tx8"] = tx8
+    document["savedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    (drafts_dir / f"{tx8}.verdict.json").write_text(
+        json.dumps(document, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
+    )
+    return {"verdict": document}
+
+
 @app.get("/api/transcriptions/{transaction_id}")
 def get_transcription(transaction_id: str) -> dict:
     _validate_transaction_id(transaction_id)

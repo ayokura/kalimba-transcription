@@ -19,6 +19,7 @@ events=1/slots=0 are still fully analyzable):
 
 Outputs (data/gt_drafts/, gitignored):
   <tx8>.md                  — 試聴確認用の整列表 (ユーザー向け)
+  <tx8>.rows.json           — /debug/gt-review ページ用の行データ (機械可読)
   <tx8>.ground_truth.json   — draft GT (schema = transaction-captures GT;
                               method: agent_draft)。ユーザー確認後に method を
                               ear_verified へ書き換えて
@@ -312,6 +313,7 @@ def build_draft(tx_dir: Path, menu_id: str | None, out_dir: Path) -> Path:
         "|---|------|--------------------|---------|------------|------|----------|------|",
     ]
     draft_onsets = []
+    ui_rows: list[dict] = []
     for i, p in enumerate(pitches):
         t = p["timeSec"]
         tp = p["top"]
@@ -359,6 +361,23 @@ def build_draft(tx_dir: Path, menu_id: str | None, out_dir: Path) -> Path:
             draft_onsets.append(
                 {"timeSec": t, "notes": gt_notes, "method": "agent_draft", "comment": comment}
             )
+        ui_rows.append(
+            {
+                "index": i + 1,
+                "timeSec": t,
+                "top": tp,
+                "lowEvidence": bool(p.get("lowEvidence")),
+                "recognized": rec,
+                "slot": slot,
+                "expectedIndex": (m[0] + 1) if m is not None else None,
+                "expectedNotes": expected[m[0]] if m is not None else None,
+                "flag": {"✅": "ok", "⚠PITCH": "pitch", "⚠CHORD": "chord", "⚠EXTRA": "extra"}.get(
+                    flag, "ear"
+                ),
+                "draftNotes": gt_notes,
+                "comment": comment,
+            }
+        )
 
     if not expected and pitches:
         # 自由演奏: 全行耳確認は重いので、フレーズ単位で俯瞰できる推定メロディを
@@ -433,6 +452,31 @@ def build_draft(tx_dir: Path, menu_id: str | None, out_dir: Path) -> Path:
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     (out_dir / f"{tx8}.ground_truth.json").write_text(
         json.dumps(draft_gt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    # /debug/gt-review (temporary dev ページ) 用の機械可読な行データ。
+    # 同名 tine (34L-C) を dedupe した音名リストを修正 UI の note picker に使う。
+    seen_names: set[str] = set()
+    tuning_note_names = []
+    for n in notes_sorted:
+        if n["noteName"] not in seen_names:
+            seen_names.add(n["noteName"])
+            tuning_note_names.append(n["noteName"])
+    ui_doc = {
+        "txId": tx_id,
+        "tx8": tx8,
+        "durationSec": round(duration, 3),
+        "sampleRate": sr,
+        "memo": memo,
+        "menuId": menu_id,
+        "expectedSource": expected_src,
+        "expectedCount": len(expected) if expected else None,
+        "generatedAt": draft_gt["source"]["generatedAt"],
+        "tuningNotes": tuning_note_names,
+        "rows": ui_rows,
+        "unplacedExpected": unplaced,
+    }
+    (out_dir / f"{tx8}.rows.json").write_text(
+        json.dumps(ui_doc, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     n_check = sum(1 for o in draft_onsets if "NEEDS EAR CHECK" in o["comment"])
     print(

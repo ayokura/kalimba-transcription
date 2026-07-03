@@ -383,6 +383,78 @@ export async function fetchDevTriage(): Promise<DevTriageSummary> {
   return (await response.json()) as DevTriageSummary;
 }
 
+// --- Dev-only (temporary): /debug/gt-review が使う。ページと一緒に撤去する ---
+
+export type GtDraftTopCandidate = { note: string; score: number; share: number };
+
+export type GtDraftRowFlag = "ok" | "pitch" | "chord" | "extra" | "ear";
+
+export type GtDraftRow = {
+  index: number;
+  timeSec: number;
+  top: GtDraftTopCandidate[];
+  lowEvidence?: boolean;
+  recognized: string;
+  slot: string;
+  expectedIndex: number | null;
+  expectedNotes: string[] | null;
+  flag: GtDraftRowFlag;
+  draftNotes: string[];
+  comment: string;
+};
+
+export type GtDraftRowVerdict = {
+  decision: "accept" | "fix" | "ignore";
+  notes?: string[];
+};
+
+export type GtDraftUnplacedVerdict = {
+  decision: "discard" | "place";
+  timeSec?: number;
+};
+
+export type GtDraftVerdict = {
+  rows: Record<string, GtDraftRowVerdict>;
+  unplaced: Record<string, GtDraftUnplacedVerdict>;
+  done: boolean;
+  savedAt?: string;
+};
+
+export type GtDraft = {
+  txId: string;
+  tx8: string;
+  durationSec: number;
+  sampleRate: number;
+  memo: string | null;
+  menuId: string | null;
+  expectedSource: string;
+  expectedCount: number | null;
+  generatedAt: string;
+  tuningNotes: string[];
+  rows: GtDraftRow[];
+  unplacedExpected: { index: number; notes: string[] }[];
+  verdict: GtDraftVerdict | null;
+};
+
+export async function fetchGtDrafts(): Promise<GtDraft[]> {
+  const response = await fetch(`${API_BASE_URL}/api/dev/gt-drafts`, { cache: "no-store" });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    throw new Error(detail?.detail ?? "Failed to load GT drafts.");
+  }
+  const data = (await response.json()) as { drafts: GtDraft[] };
+  return data.drafts;
+}
+
+export async function saveGtDraftVerdict(tx8: string, verdict: GtDraftVerdict): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/dev/gt-drafts/${tx8}/verdict`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(verdict),
+  });
+  if (!response.ok) throw new Error("Failed to save GT draft verdict.");
+}
+
 export async function fetchReviewQueue(
   options: { limit?: number; status?: ReviewStatusValue | null } = {},
 ): Promise<ReviewQueueEntry[]> {
