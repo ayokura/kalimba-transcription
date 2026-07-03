@@ -178,7 +178,10 @@ recognizer 非依存で今すぐ効く UX 改善。**スプリント末に計画
   実装言語判断は Rust 拡張で確定。wasm 出力を実 fixture の detect_segments debug と実差分比較 (24/24)、
   pyo3 側は test_segment_dsp_rust.py で差分検証。**B1 残余** (short-bridge 抑制 / 境界生成 / collector /
   discard — attack profile 系への依存が深い) **の帰着先は S8 or 次期計画で確定** (計画どおり本計画内での完遂は非保証)
-- 残: /wasm-demo 試聴検証 (ユーザーアクション、手順提示済み)
+- **/wasm-demo 試聴検証 合格** (2026-07-03 ユーザー実施): scale 17 音 + mixed 6 イベント (和音 top-1 込み) が
+  音名・順序とも一致。デモ側の余分 onset はすべてサーバー生 onset 列にも存在する実音 (active range フィルタで
+  除去される類) で、wasm 偽検出ゼロ — two-phase 設計 (Phase P = raw preview) の前提を実証。
+  次スライス候補: B1 の raw_active_ranges を wasm-demo に配線して Phase P でも範囲外 onset を落とす
 
 ### Sprint 6: 機構 2 (carryover) or causal onset 【確度 C】
 
