@@ -100,6 +100,17 @@ synthetic 単一 line で動作する。
 uv run python scripts/audio-analysis/score_alignment_diagnosis.py <fixture> [--verbose] [--mode events|segments] [--line L1]
 ```
 
+### transactions_triage.py
+data/transactions の生録音バックログを sha256 + サンプル相関で dedupe し、unique
+録音ごとに崩壊シグナル (events≤1 / 低密度 / 現行 recognizer との drift / 埋もれ
+corrections / 低 peak / 人間判定済み) を集計して「非飽和 GT 候補になりそうな順」に
+ランキングする (第 2 期 S1 の計器修理)。report-only — 回帰 gate や過適合ゲートの
+n には使わない。出力 `data/triage_summary.json` は /debug/triage ページの供給源。
+
+```bash
+uv run python scripts/audio-analysis/transactions_triage.py [--no-retranscribe]
+```
+
 ### note_f1_benchmark.py
 free-performance 録音に対する layered benchmark。既存の note-level Precision / Recall / F1
 を one-best onset-only 指標として維持しつつ、survey 反映の skeleton として
