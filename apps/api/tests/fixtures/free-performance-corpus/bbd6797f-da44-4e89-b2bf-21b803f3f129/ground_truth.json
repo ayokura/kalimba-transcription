@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "toleranceSec": 0.08,
+  "onsets": [
+    {"timeSec": 2.624, "notes": ["E4", "G4", "B4", "D5"], "method": "ear_verified", "comment": "slide chord (sub-onsets 2.62/2.72/2.88)"},
+    {"timeSec": 7.883, "notes": ["E4", "G4", "B4", "D5"], "method": "ear_verified"},
+    {"timeSec": 12.899, "notes": ["E4", "G4", "B4", "D5"], "method": "ear_verified"},
+    {"timeSec": 18.669, "notes": ["E4", "G4", "B4", "D5"], "method": "ear_verified"},
+    {"timeSec": 22.952, "notes": ["E4", "G4", "B4", "D5"], "method": "ear_verified", "comment": "最終打鍵。27.99s は微弱ノイズ、29.42s は録音停止クリック"}
+  ],
+  "comment": "audioSha256 prefix 4e0f6c49。E4+G4+B4+D5 slide chord x5。旧 recognizer の A4@4.41 は FP (A4 帯域エネルギーは和音残響の 1/100 以下)。2026-06-13 spectrogram+energy trace 検証後にユーザー耳確認で確定"
+}

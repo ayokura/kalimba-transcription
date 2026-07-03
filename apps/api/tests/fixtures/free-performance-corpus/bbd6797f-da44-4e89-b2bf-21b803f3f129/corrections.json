@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-27T06:03:29+00:00",
+  "events": [
+    {
+      "timeSec": 2.624,
+      "notes": [
+        "E4",
+        "G4",
+        "B4",
+        "D5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 7.8827,
+      "notes": [
+        "E4",
+        "G4",
+        "B4",
+        "D5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 12.8987,
+      "notes": [
+        "E4",
+        "G4",
+        "B4",
+        "D5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 18.6693,
+      "notes": [
+        "E4",
+        "G4",
+        "B4",
+        "D5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 22.952,
+      "notes": [
+        "E4",
+        "G4",
+        "B4",
+        "D5"
+      ],
+      "origin": "recognizer"
+    }
+  ]
+}

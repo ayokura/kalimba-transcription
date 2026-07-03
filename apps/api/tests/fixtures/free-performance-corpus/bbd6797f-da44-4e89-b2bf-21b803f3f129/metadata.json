@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "corpusType": "free-performance",
+  "repositoryManaged": true,
+  "transactionId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+  "createdAt": "2026-04-17T17:01:24Z",
+  "promotedAt": "2026-07-03T19:52:30+00:00",
+  "status": "review_completed",
+  "categories": [
+    "tester_capture",
+    "free_performance",
+    "review_corrected",
+    "repo_managed_corpus"
+  ],
+  "recording": {
+    "device": null,
+    "microphone": null,
+    "deviceNotes": null,
+    "sampleRate": 96000,
+    "channels": 1,
+    "durationSec": 29.52,
+    "peakDb": -3.0,
+    "rmsDb": -31.48
+  },
+  "tuning": {
+    "selectedId": "kalimba-17-c",
+    "correctedId": null
+  },
+  "aggregates": {
+    "recognizerEventCount": 6,
+    "correctedEventCount": 5,
+    "candidateSlotCount": 2,
+    "originCounts": {
+      "recognizer": 5
+    }
+  },
+  "copyright": {
+    "status": "original_performance",
+    "workTitle": "Original free-form kalimba performance",
+    "publicDomainReason": null,
+    "repositoryAllowed": true
+  },
+  "timingAccuracy": {
+    "noteIdentity": "reliable",
+    "noteOrderAndCombination": "reliable",
+    "onsetTiming": "approximate",
+    "method": "user_corrected",
+    "reason": "Onset times come from the review UI: recognizer-origin events use the recognizer's detected event start (which itself can deviate slightly from the perceptual/spectral onset), inserted-manual events are hand-placed on the timeline, and inserted-slot events use a dropped-segment boundary.",
+    "safeFor": [
+      "score-level evaluation",
+      "note identity / order / combination evaluation"
+    ],
+    "cautionFor": [
+      "timing-sensitive training",
+      "tempo / rhythm modeling",
+      "onset-time learning",
+      "anything requiring spectral-grade onset accuracy"
+    ],
+    "refinement": "Optional. An agent or human can re-verify onset times with spectral analysis and, if done, raise the per-onset method to spectrogram_verified / aubio_cross_checked. Not required unless a timing-sensitive use needs it."
+  },
+  "rightsReview": {
+    "requiredForRepositoryManagement": true,
+    "status": "approved_for_repository",
+    "reviewedAt": "2026-07-03",
+    "reviewedBy": "ayokura",
+    "decision": "include_audio_and_teacher_data_in_repository",
+    "reason": "本人演奏の技術練習パターン (E4+G4+B4+D5 和音 x5)。2026-07-04 ユーザー承認"
+  },
+  "captureConsent": {
+    "granted": true,
+    "grantedBy": "ayokura",
+    "grantedAt": "2026-07-03"
+  },
+  "sourceFiles": {
+    "audio": "audio.wav",
+    "request": "request.json",
+    "corrections": "corrections.json",
+    "reviewStatus": "review_status.json",
+    "groundTruth": "ground_truth.json"
+  },
+  "notes": null
+}
