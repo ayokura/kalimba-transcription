@@ -664,13 +664,20 @@ def test_segment_peaks_keeps_high_score_primary_with_low_fundamental_ratio(
 def _build_iterative_suppression_fakes():
     """Build fake functions for iterative suppression tests.
 
-    Scenario: primary=C5, secondary=A4, tertiary candidate=C4 (octave of C5).
-    C4 is rejected in the 1st pass for harmonic-related but should be
-    recovered by the 2nd pass with iterative suppression.
+    Scenario: primary=C5, secondary=A4, tertiary candidate=C6 (octave above
+    C5, keys {5,6,16} = physically playable).  C6 is rejected in the 1st
+    pass for harmonic-related but should be recovered by the 2nd pass with
+    iterative suppression.
+
+    The alias candidate must sit ABOVE its related selected note: since the
+    S5 agenda 3 direction split, downward candidates bypass the
+    harmonic-related gate entirely (kalimba beams produce no subharmonics),
+    so only an upward candidate exercises the reject→iterative-recover path
+    this fixture validates.
     """
     c5 = NoteCandidate(key=5, note=Note.from_name("C5"))
     a4 = NoteCandidate(key=6, note=Note.from_name("A4"))
-    c4 = NoteCandidate(key=9, note=Note.from_name("C4"))
+    c6 = NoteCandidate(key=16, note=Note.from_name("C6"))
 
     rank_calls = 0
 
@@ -682,17 +689,17 @@ def _build_iterative_suppression_fakes():
             return [
                 NoteHypothesis(c5, 800.0, 0.0, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0),
                 NoteHypothesis(a4, 200.0, 0.0, 0.0, 0.98, 0.0, 0.0, 0.0, 0.0),
-                NoteHypothesis(c4, 150.0, 0.0, 0.0, 0.40, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(c6, 150.0, 0.0, 0.0, 0.40, 0.0, 0.0, 0.0, 0.0),
             ]
         if rank_calls == 2:
-            # Residual after C5 suppression: A4 dominates, C4 has low FR
+            # Residual after C5 suppression: A4 dominates, C6 has low FR
             return [
                 NoteHypothesis(a4, 180.0, 0.0, 0.0, 0.98, 0.0, 0.0, 0.0, 0.0),
-                NoteHypothesis(c4, 120.0, 0.0, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0),
+                NoteHypothesis(c6, 120.0, 0.0, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0),
             ]
-        # Iterative residual (C5+A4 suppressed): C4 fundamental stands out
+        # Iterative residual (C5+A4 suppressed): C6 fundamental stands out
         return [
-            NoteHypothesis(c4, 110.0, 0.0, 0.0, 0.80, 0.0, 0.0, 0.0, 0.0),
+            NoteHypothesis(c6, 110.0, 0.0, 0.0, 0.80, 0.0, 0.0, 0.0, 0.0),
         ]
 
     def fake_onset_gain(_audio, _sr, _start, _end, freq, **_kwargs):
@@ -701,19 +708,19 @@ def _build_iterative_suppression_fakes():
         return 25.0
 
     def fake_backward_gain(_audio, _sr, _start, freq):
-        # Low backward_gain (< TERTIARY_MIN_BACKWARD_ATTACK_GAIN=20) so the
-        # #152 harmonic-related bypass does not trigger; this scenario must
-        # validate iterative suppression as the only recovery path for C4.
+        # Backward gain is irrelevant to the upward harmonic-related gate
+        # (the S5 agenda 3 bypass is downward-only); keep it low so no other
+        # evidence path interferes with the iterative recovery under test.
         return 5.0
 
-    return c4, a4, c5, fake_rank, fake_onset_gain, fake_backward_gain
+    return c6, a4, c5, fake_rank, fake_onset_gain, fake_backward_gain
 
 
 def test_iterative_suppression_recovers_octave_tertiary(monkeypatch: pytest.MonkeyPatch) -> None:
-    """2nd pass recovers C4 in C5+A4+C4 chord (C4 is octave of C5)."""
+    """2nd pass recovers C6 in C5+A4+C6 chord (C6 is octave above C5)."""
     import app.transcription as transcription
 
-    c4, a4, c5, fake_rank, fake_onset, fake_backward = _build_iterative_suppression_fakes()
+    c6, a4, c5, fake_rank, fake_onset, fake_backward = _build_iterative_suppression_fakes()
     tuning = get_default_tunings()[0]
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
@@ -731,7 +738,7 @@ def test_iterative_suppression_recovers_octave_tertiary(monkeypatch: pytest.Monk
     note_names = {c.note_name for c in candidates}
     assert "C5" in note_names, f"expected C5 in {note_names}"
     assert "A4" in note_names, f"expected A4 in {note_names}"
-    assert "C4" in note_names, f"expected C4 in {note_names} (iterative suppression recovery)"
+    assert "C6" in note_names, f"expected C6 in {note_names} (iterative suppression recovery)"
 
     trail = debug["secondaryDecisionTrail"]
     iter_accepted = [
@@ -739,14 +746,14 @@ def test_iterative_suppression_recovers_octave_tertiary(monkeypatch: pytest.Monk
         if e["accepted"] and "iterative-suppression-tertiary" in e.get("reasons", [])
     ]
     assert len(iter_accepted) == 1
-    assert iter_accepted[0]["noteName"] == "C4"
+    assert iter_accepted[0]["noteName"] == "C6"
 
 
 def test_iterative_suppression_ablation_flag_off(monkeypatch: pytest.MonkeyPatch) -> None:
     """With USE_ITERATIVE_HARMONIC_SUPPRESSION=False, 2nd pass does not run."""
     import app.transcription as transcription
 
-    c4, a4, c5, fake_rank, fake_onset, fake_backward = _build_iterative_suppression_fakes()
+    c6, a4, c5, fake_rank, fake_onset, fake_backward = _build_iterative_suppression_fakes()
     tuning = get_default_tunings()[0]
 
     monkeypatch.setattr(transcription.peaks, "rank_tuning_candidates", fake_rank)
@@ -764,7 +771,7 @@ def test_iterative_suppression_ablation_flag_off(monkeypatch: pytest.MonkeyPatch
     note_names = {c.note_name for c in candidates}
     assert "C5" in note_names
     assert "A4" in note_names
-    assert "C4" not in note_names, "C4 should NOT be recovered with flag off"
+    assert "C6" not in note_names, "C6 should NOT be recovered with flag off"
 
     trail = debug["secondaryDecisionTrail"]
     iter_entries = [

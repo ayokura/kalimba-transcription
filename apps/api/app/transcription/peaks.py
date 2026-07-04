@@ -2624,27 +2624,31 @@ def _select_candidates(
             # ── harmonic-related check against full selected set ──
             octave_dyad_allowed_full = allow_octave_secondary(primary, hypothesis, selected)
             if any(are_harmonic_related(hypothesis.candidate, existing) for existing in selected) and not octave_dyad_allowed_full:
-                # Bypass: a high backward_attack_gain is independent evidence
-                # that this note had its own recent strong attack (just before
-                # the segment), so it should not be suppressed as an alias of
-                # a different selected note.  Restrict the bypass to cases
-                # where the hypothesis is BELOW every harmonically-related
-                # selected note: subharmonic alias is physically less likely
-                # than upward harmonic leakage, so a lower-octave candidate
-                # with independent attack evidence is more likely a real
-                # note.  An upper-octave candidate (e.g., E6 vs E5) is much
-                # more often the true note's 2nd harmonic.  See #152.
-                hyp_backward_gain = evidence.backward_attack_gain(hypothesis.candidate.frequency)
+                # Direction split (#152 → S5 agenda 3, 2026-07-05 audit of all
+                # gate firings on 17ea7626 + a9e30986 vs ear-verified GT):
+                #
+                # - UPWARD candidates (above a related selected note) are
+                #   overwhelmingly the selected note's 2nd/3rd harmonic alias
+                #   (all 4 firings on 17ea7626, e.g. E6 = A4's 3rd at 6.635s)
+                #   → keep gating.
+                # - DOWNWARD candidates are overwhelmingly real strokes: 5 of
+                #   6 downward firings on a9e30986 were GT accompaniment notes
+                #   (gliss C4/E4/G4 under the melody).  Kalimba beam vibration
+                #   produces no subharmonics, so a downward alias needs a
+                #   spectral-processing artifact — rare (1 of 6: D4@34.293s).
+                #
+                # The former bypass additionally demanded
+                # backward_attack_gain ≥ TERTIARY_MIN_BACKWARD_ATTACK_GAIN,
+                # which continuous gliss re-strokes never satisfy (measured
+                # 1.6–7.3 vs threshold): the note is still ringing from its
+                # own previous stroke.  Drop the gain requirement — direction
+                # alone decides.
                 lower_than_all_related = all(
                     hypothesis.candidate.frequency < existing.frequency
                     for existing in selected
                     if are_harmonic_related(hypothesis.candidate, existing)
                 )
-                independent_attack_evidence = (
-                    lower_than_all_related
-                    and hyp_backward_gain >= TERTIARY_MIN_BACKWARD_ATTACK_GAIN
-                )
-                if not independent_attack_evidence:
+                if not lower_than_all_related:
                     if "harmonic-related-to-selected" not in _disabled:
                         phase_b_reasons.append("harmonic-related-to-selected")
             # ── Semitone leakage gate (all candidates, not just tertiary) ──
