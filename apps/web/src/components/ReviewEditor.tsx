@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DoReMiScore } from "@/components/DoReMiScore";
+import {
+  type AudioBoostChain,
+  boostDbForPeak,
+  closeAudioBoost,
+  ensureAudioBoost,
+} from "@/lib/audioBoost";
+import { computeAudioLevels } from "@/lib/audio";
 import { KalimbaNotePicker } from "@/components/KalimbaNotePicker";
 import {
   fetchCorrections,
@@ -79,6 +86,7 @@ type LoadState =
       audioUrl: string;
       corrections: CorrectionsPayload | null;
       reviewStatus: ReviewStatusPayload | null;
+      peakDb: number | null;
     }
   | { kind: "error"; message: string };
 
@@ -102,7 +110,17 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
         ]);
         if (cancelled) return;
         objectUrl = URL.createObjectURL(audioBlob);
-        setState({ kind: "ready", result, audioUrl: objectUrl, corrections, reviewStatus });
+        // 静音録音の試聴ブースト量算出用 (失敗しても主導線は妨げない)
+        const levels = await computeAudioLevels(audioBlob).catch(() => null);
+        if (cancelled) return;
+        setState({
+          kind: "ready",
+          result,
+          audioUrl: objectUrl,
+          corrections,
+          reviewStatus,
+          peakDb: levels?.peakDb ?? null,
+        });
       } catch (err) {
         if (cancelled) return;
         setState({
@@ -145,6 +163,7 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
       audioUrl={state.audioUrl}
       initialCorrections={state.corrections}
       initialReviewStatus={state.reviewStatus}
+      peakDb={state.peakDb}
     />
   );
 }
@@ -155,6 +174,7 @@ type ReadyProps = {
   audioUrl: string;
   initialCorrections: CorrectionsPayload | null;
   initialReviewStatus: ReviewStatusPayload | null;
+  peakDb: number | null;
 };
 
 type TimelineItem =
@@ -175,6 +195,7 @@ function ReviewEditorReady({
   audioUrl,
   initialCorrections,
   initialReviewStatus,
+  peakDb,
 }: ReadyProps) {
   const [editHistory, setEditHistory] = useState<EditHistory>(() => ({
     past: [],
@@ -197,6 +218,16 @@ function ReviewEditorReady({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const stopAtRef = useRef<number | null>(null);
   const programmaticSeekRef = useRef(false);
+  // 静音録音のブースト + 片チャンネル無音ステレオの両耳化 (lib/audioBoost)
+  const boostChainRef = useRef<AudioBoostChain | null>(null);
+  const reviewBoostDb = boostDbForPeak(peakDb);
+  const ensureReviewBoost = useCallback(() => {
+    ensureAudioBoost(audioRef.current, boostChainRef, reviewBoostDb);
+  }, [reviewBoostDb]);
+  useEffect(() => {
+    return () => closeAudioBoost(boostChainRef);
+  }, []);
+
   // イベント前後の loop 再生 (#16 §4.3 最小形): 曖昧イベントの聴き比べ用。
   // ON のとき、区間再生の終端で停止せず区間頭へ戻って繰り返す
   const [loopEnabled, setLoopEnabled] = useState(false);
@@ -447,6 +478,7 @@ function ReviewEditorReady({
           src={audioUrl}
           controls
           onTimeUpdate={handleTimeUpdate}
+          onPlay={ensureReviewBoost}
           onSeeking={() => {
             // auditionEvent 由来の programmatic seek では stopAt を維持し、
             // ユーザーが自分でシークした時だけ区間再生を解除する
@@ -458,6 +490,9 @@ function ReviewEditorReady({
           }}
           className="review-audio"
         />
+        {reviewBoostDb > 0 ? (
+          <span className="muted">+{reviewBoostDb.toFixed(0)}dB ブースト / 両耳化</span>
+        ) : null}
         <button
           type="button"
           className="review-btn review-btn-small"

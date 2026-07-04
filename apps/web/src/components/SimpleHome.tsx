@@ -15,6 +15,12 @@ import {
   MIC_AUDIO_CONSTRAINTS,
   type AudioLevels,
 } from "@/lib/audio";
+import {
+  type AudioBoostChain,
+  boostDbForPeak,
+  closeAudioBoost,
+  ensureAudioBoost,
+} from "@/lib/audioBoost";
 import { collectClientDeviceInfo } from "@/lib/clientInfo";
 import {
   loadRecentTranscriptions,
@@ -69,14 +75,9 @@ export function SimpleHome() {
   // 録音時の入力デバイス名 (MediaStreamTrack.label)。インターフェース利用なら
   // そのデバイス名が入る。ファイルアップロードでは null
   const micLabelRef = useRef<string | null>(null);
-  // プレビューブースト (WebAudio): createMediaElementSource は element ごとに
-  // 一度しか作れないため、element と一緒にチェーンを保持し identity 変化で作り直す
+  // プレビューブースト + 片チャンネル無音ステレオの両耳化 (lib/audioBoost)
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
-  const boostChainRef = useRef<{
-    el: HTMLAudioElement;
-    ctx: AudioContext;
-    gain: GainNode;
-  } | null>(null);
+  const boostChainRef = useRef<AudioBoostChain | null>(null);
 
   // タブクラッシュ対策: 録音/WAV を IndexedDB にバックアップし、採譜成功で削除する。
   const backupRecording = useCallback(
@@ -193,39 +194,15 @@ export function SimpleHome() {
 
   const selectedTuning = tunings.find((t) => t.id === selectedTuningId) ?? null;
 
-  // 静かな録音 (iPhone 内蔵マイク等) の聴き直し用ブースト量。標準 audio 要素の
-  // volume は 1.0 が上限だが、WebAudio の GainNode なら超えられる
-  const previewBoostDb =
-    audioLevels && audioLevels.peakDb < -6 ? Math.min(-6 - audioLevels.peakDb, 30) : 0;
+  // 静かな録音 (iPhone 内蔵マイク等) の聴き直し用ブースト量
+  const previewBoostDb = boostDbForPeak(audioLevels?.peakDb);
 
   const ensurePreviewBoost = useCallback(() => {
-    const el = previewAudioRef.current;
-    if (!el) return;
-    try {
-      let chain = boostChainRef.current;
-      if (!chain || chain.el !== el) {
-        if (chain) void chain.ctx.close().catch(() => {});
-        const ctx = new AudioContext();
-        const source = ctx.createMediaElementSource(el);
-        const gain = ctx.createGain();
-        source.connect(gain);
-        gain.connect(ctx.destination);
-        chain = { el, ctx, gain };
-        boostChainRef.current = chain;
-      }
-      chain.gain.gain.value = Math.pow(10, previewBoostDb / 20);
-      void chain.ctx.resume();
-    } catch {
-      // WebAudio 不可の環境では素の再生にフォールバック
-    }
+    ensureAudioBoost(previewAudioRef.current, boostChainRef, previewBoostDb);
   }, [previewBoostDb]);
 
   useEffect(() => {
-    return () => {
-      const chain = boostChainRef.current;
-      boostChainRef.current = null;
-      if (chain) void chain.ctx.close().catch(() => {});
-    };
+    return () => closeAudioBoost(boostChainRef);
   }, []);
 
   async function startRecording() {
