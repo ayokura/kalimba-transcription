@@ -407,6 +407,8 @@ export type GtDraftRowVerdict = {
   decision?: "accept" | "fix" | "ignore";
   notes?: string[];
   comment?: string;
+  // この onset に主旋律が含まれない (伴奏のみ) — decision と独立
+  accompanimentOnly?: boolean;
 };
 
 export type GtDraftUnplacedVerdict = {
@@ -418,6 +420,7 @@ export type GtDraftAddedNote = {
   timeSec: number;
   notes: string[];
   comment?: string;
+  accompanimentOnly?: boolean;
 };
 
 export type GtDraftVerdict = {

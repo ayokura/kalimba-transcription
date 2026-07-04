@@ -51,6 +51,7 @@ export default function DebugGtReviewPage() {
     timeSec: number;
     notes: string[];
     comment: string;
+    accompanimentOnly: boolean;
   } | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -125,6 +126,7 @@ export default function DebugGtReviewPage() {
         const merged = { ...(v.rows[key] ?? {}), ...patch };
         if (patch.decision !== undefined && patch.notes === undefined) delete merged.notes;
         if (merged.comment === "") delete merged.comment;
+        if (merged.accompanimentOnly === false) delete merged.accompanimentOnly;
         const rows = { ...v.rows };
         if (Object.keys(merged).length === 0) {
           delete rows[key];
@@ -287,7 +289,12 @@ export default function DebugGtReviewPage() {
                   setAddDraft(null);
                 } else {
                   const t = audioRef.current?.currentTime ?? 0;
-                  setAddDraft({ timeSec: Math.round(t * 1000) / 1000, notes: [], comment: "" });
+                  setAddDraft({
+                    timeSec: Math.round(t * 1000) / 1000,
+                    notes: [],
+                    comment: "",
+                    accompanimentOnly: false,
+                  });
                 }
               }}
             >
@@ -376,6 +383,18 @@ export default function DebugGtReviewPage() {
                 ))}
               </div>
               <div className="row wrap" style={{ gap: 6, marginTop: 6 }}>
+                <button
+                  type="button"
+                  className={`review-btn review-btn-small${addDraft.accompanimentOnly ? " review-btn-primary" : ""}`}
+                  title="この onset に主旋律は含まれない (伴奏のみ)"
+                  onClick={() =>
+                    setAddDraft((prev) =>
+                      prev ? { ...prev, accompanimentOnly: !prev.accompanimentOnly } : prev,
+                    )
+                  }
+                >
+                  伴奏のみ
+                </button>
                 <input
                   type="text"
                   value={addDraft.comment}
@@ -395,6 +414,7 @@ export default function DebugGtReviewPage() {
                       notes: [...addDraft.notes],
                     };
                     if (addDraft.comment) entry.comment = addDraft.comment;
+                    if (addDraft.accompanimentOnly) entry.accompanimentOnly = true;
                     updateVerdict(draft.tx8, (v) => ({
                       ...v,
                       added: [...(v.added ?? []), entry].sort((a, b) => a.timeSec - b.timeSec),
@@ -430,6 +450,7 @@ export default function DebugGtReviewPage() {
                     ▶ {entry.timeSec.toFixed(2)}s
                   </button>
                   <span className="pill">GT: {formatNotes(entry.notes)}</span>
+                  {entry.accompanimentOnly ? <span className="pill">伴奏のみ</span> : null}
                   {entry.comment ? <span className="muted">💬 {entry.comment}</span> : null}
                   <button
                     type="button"
@@ -526,6 +547,7 @@ export default function DebugGtReviewPage() {
                     {finalNotes !== null && effective ? (
                       <span className="pill">GT: {formatNotes(finalNotes)}</span>
                     ) : null}
+                    {rv?.accompanimentOnly ? <span className="pill">伴奏のみ</span> : null}
                     {effective?.decision === "ignore" ? <span className="pill">無視</span> : null}
                   </div>
                   <div className="row wrap" style={{ gap: 6, marginTop: 4 }}>
@@ -573,6 +595,21 @@ export default function DebugGtReviewPage() {
                       onClick={() => mergeRowVerdict(draft.tx8, row.index, { decision: "ignore" })}
                     >
                       無視 (ノイズ/演奏外)
+                    </button>
+                    <button
+                      type="button"
+                      className={`review-btn review-btn-small${rv?.accompanimentOnly ? " review-btn-primary" : ""}`}
+                      title="この onset に主旋律は含まれない (伴奏のみ)"
+                      onClick={() =>
+                        mergeRowVerdict(
+                          draft.tx8,
+                          row.index,
+                          { accompanimentOnly: !rv?.accompanimentOnly },
+                          false,
+                        )
+                      }
+                    >
+                      伴奏のみ
                     </button>
                     <button
                       type="button"

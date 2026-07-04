@@ -66,29 +66,33 @@ def finalize(tx8: str, force: bool) -> bool:
             comment_parts.append(f"user corrected (draft: {'+'.join(row['draftNotes'])})")
         if rv.get("comment"):
             comment_parts.append(rv["comment"])
-        onsets.append(
-            {
-                "timeSec": row["timeSec"],
-                "notes": notes,
-                "method": "ear_verified",
-                "comment": "; ".join(comment_parts) if comment_parts else "gt-review verdict",
-            }
-        )
+        onset = {
+            "timeSec": row["timeSec"],
+            "notes": notes,
+            "method": "ear_verified",
+            "comment": "; ".join(comment_parts) if comment_parts else "gt-review verdict",
+        }
+        # 主旋律を含まない onset (伴奏のみ)。旋律抽出評価で層別できるよう
+        # role として構造化して残す (F1 benchmark は notes/timeSec のみ読む)
+        if rv.get("accompanimentOnly"):
+            onset["role"] = "accompaniment"
+        onsets.append(onset)
 
     for entry in verdict.get("added") or []:
         counts["added"] += 1
         comment = "user-added via /debug/gt-review (見逃し onset, timing は再生位置由来)"
         if entry.get("comment"):
             comment += f"; {entry['comment']}"
-        onsets.append(
-            {
-                "timeSec": entry["timeSec"],
-                "notes": entry["notes"],
-                "method": "ear_verified",
-                "toleranceSec": MANUAL_TOLERANCE_SEC,
-                "comment": comment,
-            }
-        )
+        onset = {
+            "timeSec": entry["timeSec"],
+            "notes": entry["notes"],
+            "method": "ear_verified",
+            "toleranceSec": MANUAL_TOLERANCE_SEC,
+            "comment": comment,
+        }
+        if entry.get("accompanimentOnly"):
+            onset["role"] = "accompaniment"
+        onsets.append(onset)
 
     undecided_unplaced: list[int] = []
     for u in doc.get("unplacedExpected") or []:
