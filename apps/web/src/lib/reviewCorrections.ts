@@ -317,6 +317,67 @@ export function toggleRemoved(state: ReviewState, eventId: string): ReviewState 
   return withEvent(state, eventId, (event) => ({ ...event, removed: !event.removed }));
 }
 
+/**
+ * merge/split サジェスト (#16 §4.2) の適用。
+ * splitEvent: イベントを notes グループ×時刻に分割する (最初のグループは
+ * 元イベントを編集、残りは inserted-manual ではなく edited 由来の新規行として挿入)。
+ */
+export function splitEvent(
+  state: ReviewState,
+  eventId: string,
+  groups: ScoreNote[][],
+  times: number[],
+): ReviewState {
+  if (groups.length < 2 || groups.length !== times.length) return state;
+  const target = state.events.find((e) => e.id === eventId);
+  if (!target || target.removed) return state;
+  let nextInsertId = state.nextInsertId;
+  const newEvents: ReviewEvent[] = [];
+  for (let i = 1; i < groups.length; i += 1) {
+    if (groups[i].length === 0) return state;
+    newEvents.push({
+      id: `ins-${nextInsertId}`,
+      timeSec: Math.max(0, times[i]),
+      notes: sortNotes(groups[i]),
+      origin: "edited",
+      removed: false,
+      accompanimentOnly: false,
+      sourceEventId: null,
+    });
+    nextInsertId += 1;
+  }
+  const events = state.events.map((e) =>
+    e.id === eventId
+      ? { ...e, notes: sortNotes(groups[0]), timeSec: Math.max(0, times[0]), origin: "edited" as const }
+      : e,
+  );
+  return { events: sortEvents([...events, ...newEvents]), nextInsertId };
+}
+
+/** merge サジェストの適用: 対象イベントの notes を統合結果に置換し、相方を削除状態にする */
+export function applyMergeSuggestion(
+  state: ReviewState,
+  eventId: string,
+  combinedNotes: ScoreNote[],
+  combinesWithIds: string[],
+): ReviewState {
+  if (combinedNotes.length === 0) return state;
+  const withIds = new Set(combinesWithIds);
+  let changed = false;
+  const events = state.events.map((e) => {
+    if (e.id === eventId && !e.removed) {
+      changed = true;
+      return { ...e, notes: sortNotes(combinedNotes), origin: "edited" as const };
+    }
+    if (withIds.has(e.id) && !e.removed) {
+      changed = true;
+      return { ...e, removed: true };
+    }
+    return e;
+  });
+  return changed ? { events, nextInsertId: state.nextInsertId } : state;
+}
+
 export function toggleAccompanimentOnly(state: ReviewState, eventId: string): ReviewState {
   return withEvent(state, eventId, (event) => ({
     ...event,

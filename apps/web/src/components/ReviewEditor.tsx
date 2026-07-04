@@ -16,6 +16,8 @@ import {
   activeEvents,
   hasActiveEventAt,
   addNote,
+  applyMergeSuggestion,
+  splitEvent,
   buildInitialState,
   buildKnownNoteIndex,
   insertEvent,
@@ -45,6 +47,10 @@ import { ReviewStatusPanel } from "@/components/ReviewStatusPanel";
 
 const AUDITION_LEAD_SEC = 0.15;
 const AUDITION_MAX_SEC = 4.0;
+// これ未満の confidence の候補 slot は既定で折りたたむ (#178 で slot が増えた分の
+// ノイズ対策)。0.25 未満 = residual-decay(0.15)/score-too-low(0.05)/
+// gate-no-evidence(0.05)/low-register(0.10)。sub-onset(0.30)/orphan(0.50) 以上は表示
+const LOW_CONFIDENCE_SLOT_THRESHOLD = 0.25;
 
 const ORIGIN_LABELS: Record<ReviewOrigin, string> = {
   recognizer: "認識",
@@ -191,6 +197,12 @@ function ReviewEditorReady({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const stopAtRef = useRef<number | null>(null);
   const programmaticSeekRef = useRef(false);
+  // イベント前後の loop 再生 (#16 §4.3 最小形): 曖昧イベントの聴き比べ用。
+  // ON のとき、区間再生の終端で停止せず区間頭へ戻って繰り返す
+  const [loopEnabled, setLoopEnabled] = useState(false);
+  const loopStartRef = useRef<number | null>(null);
+  const loopEnabledRef = useRef(false);
+  loopEnabledRef.current = loopEnabled;
 
   const knownNotes = useMemo(() => buildKnownNoteIndex(result), [result]);
   const sourceEventById = useMemo(
@@ -272,6 +284,7 @@ function ReviewEditorReady({
       const followers = visibleEvents.filter((e) => e.timeSec > event.timeSec + 0.01);
       const nextStart = followers.length > 0 ? followers[0].timeSec : event.timeSec + AUDITION_MAX_SEC;
       stopAtRef.current = Math.min(nextStart, event.timeSec + AUDITION_MAX_SEC);
+      loopStartRef.current = Math.max(0, event.timeSec - AUDITION_LEAD_SEC);
       // この currentTime 代入も onSeeking を発火させるため、programmatic seek を
       // マークして stopAt の解除対象から除外する (ユーザー操作の seek のみ解除)
       programmaticSeekRef.current = true;
@@ -285,6 +298,11 @@ function ReviewEditorReady({
     const audio = audioRef.current;
     if (!audio) return;
     if (stopAtRef.current !== null && audio.currentTime >= stopAtRef.current) {
+      if (loopEnabledRef.current && loopStartRef.current !== null) {
+        programmaticSeekRef.current = true;
+        audio.currentTime = loopStartRef.current;
+        return;
+      }
       audio.pause();
       stopAtRef.current = null;
     }
@@ -326,6 +344,10 @@ function ReviewEditorReady({
   }, [result.events, result.candidateSlots]);
 
   const [showOnlyNeedsReview, setShowOnlyNeedsReview] = useState(false);
+  // 低確度 slot の折りたたみ (#178 で slot が増えた分のノイズ対策)。
+  // 0.25 未満 = residual-decay / score-too-low / gate-no-evidence / low-register。
+  // orphan / boundary / mute-dip / sub-onset (>=0.30) は既定で表示
+  const [showLowConfidenceSlots, setShowLowConfidenceSlots] = useState(false);
 
   const timeline = useMemo<TimelineItem[]>(() => {
     const items: TimelineItem[] = reviewState.events.map((event) => ({
@@ -338,10 +360,21 @@ function ReviewEditorReady({
       // state で判定することで、保存済み corrections から復元された
       // inserted-slot イベントとの重複表示 (=重複挿入) を防ぐ
       if (hasActiveEventAt(reviewState, slot.startTime)) return;
+      if (!showLowConfidenceSlots && slot.confidence < LOW_CONFIDENCE_SLOT_THRESHOLD) return;
       items.push({ kind: "slot", timeSec: slot.startTime, slot, slotIndex });
     });
     return items.sort((a, b) => a.timeSec - b.timeSec);
-  }, [reviewState, result.candidateSlots]);
+  }, [reviewState, result.candidateSlots, showLowConfidenceSlots]);
+
+  const hiddenLowConfidenceCount = useMemo(
+    () =>
+      (result.candidateSlots ?? []).filter(
+        (slot) =>
+          slot.confidence < LOW_CONFIDENCE_SLOT_THRESHOLD &&
+          !hasActiveEventAt(reviewState, slot.startTime),
+      ).length,
+    [result.candidateSlots, reviewState],
+  );
 
   const needsReviewCount = useMemo(
     () =>
@@ -425,6 +458,15 @@ function ReviewEditorReady({
           }}
           className="review-audio"
         />
+        <button
+          type="button"
+          className="review-btn review-btn-small"
+          aria-pressed={loopEnabled}
+          title="イベント再生を区間ループにする (曖昧イベントの聴き比べ用)"
+          onClick={() => setLoopEnabled((prev) => !prev)}
+        >
+          {loopEnabled ? "✓ ループ再生" : "ループ再生"}
+        </button>
         <InsertAtPlayheadControl notes={pickerNotes} onInsert={handleInsertAtPlayhead} />
       </section>
 
@@ -446,6 +488,16 @@ function ReviewEditorReady({
           >
             要確認のみ ({needsReviewCount})
           </button>
+          {hiddenLowConfidenceCount > 0 || showLowConfidenceSlots ? (
+            <button
+              type="button"
+              className="review-mode-btn"
+              aria-pressed={showLowConfidenceSlots}
+              onClick={() => setShowLowConfidenceSlots((prev) => !prev)}
+            >
+              低確度候補 ({hiddenLowConfidenceCount})
+            </button>
+          ) : null}
           <span className="muted">
             {showOnlyNeedsReview
               ? `要確認 ${needsReviewCount} 件を表示中 (全 ${timeline.length} 件)`
@@ -485,6 +537,20 @@ function ReviewEditorReady({
               onToggleRemoved={() => apply((s) => toggleRemoved(s, item.event.id))}
               onToggleAccompaniment={() =>
                 apply((s) => toggleAccompanimentOnly(s, item.event.id))
+              }
+              onApplySplit={(groups) => {
+                const source = item.event.sourceEventId
+                  ? sourceEventById.get(item.event.sourceEventId)
+                  : undefined;
+                const dur = source?.durationSec ?? 0.3;
+                // 分割後の後半時刻は持続時間の中点で近似 (±ms 調整は既存の nudge で)
+                const times = groups.map((_, i) =>
+                  item.event.timeSec + (i * dur) / groups.length,
+                );
+                apply((s) => splitEvent(s, item.event.id, groups, times));
+              }}
+              onApplyMerge={(combinedNotes, withIds) =>
+                apply((s) => applyMergeSuggestion(s, item.event.id, combinedNotes, withIds))
               }
             />
           ) : (
@@ -561,6 +627,8 @@ function EventCard({
   onNudgeTime,
   onToggleRemoved,
   onToggleAccompaniment,
+  onApplySplit,
+  onApplyMerge,
 }: {
   event: ReviewEvent;
   selected: boolean;
@@ -575,6 +643,8 @@ function EventCard({
   onNudgeTime: (deltaSec: number) => void;
   onToggleRemoved: () => void;
   onToggleAccompaniment: () => void;
+  onApplySplit: (groups: ScoreNote[][]) => void;
+  onApplyMerge: (combinedNotes: ScoreNote[], withIds: string[]) => void;
 }) {
   // 鍵盤タップの意味: 置換 (armed な既存音と入れ替え) or 追加。
   // 最頻の修正は単音イベントの音高間違いなので、単音では置換を既定にする。
@@ -605,6 +675,10 @@ function EventCard({
     .filter(
       (alt) => !event.notes.some((n) => noteName(n) === noteName(alt.alternateNote as ScoreNote)),
     );
+
+  const structureSuggestions = (suggestions ?? []).filter(
+    (alt) => (alt.splitInto && alt.splitInto.length > 1) || (alt.combinedNotes && alt.combinedNotes.length > 0),
+  );
 
   const existingNames = new Set(event.notes.map(noteName));
 
@@ -730,6 +804,50 @@ function EventCard({
                     ＋{note.labelDoReMi} <small>{Math.round(alt.confidence * 100)}%</small>
                   </button>
                 );
+              })}
+            </div>
+          ) : null}
+
+          {structureSuggestions.length > 0 ? (
+            <div className="review-suggestions">
+              <span className="review-suggestions-label">グルーピング候補:</span>
+              {structureSuggestions.map((alt, i) => {
+                if (alt.splitInto && alt.splitInto.length > 1) {
+                  const label = alt.splitInto
+                    .map((g) => g.map((n) => n.labelDoReMi).join("+"))
+                    .join(" / ");
+                  return (
+                    <button
+                      key={`split-${i}`}
+                      type="button"
+                      className="review-suggestion-chip"
+                      title="このイベントを 2 打に分割する (時刻は近似、後で微調整可)"
+                      onClick={() => onApplySplit(alt.splitInto as ScoreNote[][])}
+                    >
+                      ⑃ 分割: {label} <small>{Math.round(alt.confidence * 100)}%</small>
+                    </button>
+                  );
+                }
+                if (alt.combinedNotes && alt.combinedNotes.length > 0) {
+                  const label = alt.combinedNotes.map((n) => n.labelDoReMi).join("+");
+                  return (
+                    <button
+                      key={`merge-${i}`}
+                      type="button"
+                      className="review-suggestion-chip"
+                      title="隣接イベントと 1 打に統合する"
+                      onClick={() =>
+                        onApplyMerge(
+                          alt.combinedNotes as ScoreNote[],
+                          alt.combinesWith ?? [],
+                        )
+                      }
+                    >
+                      ⑂ 統合: {label} <small>{Math.round(alt.confidence * 100)}%</small>
+                    </button>
+                  );
+                }
+                return null;
               })}
             </div>
           ) : null}

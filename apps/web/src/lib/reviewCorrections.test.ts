@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   activeEvents,
   addNote,
+  applyMergeSuggestion,
+  splitEvent,
   buildInitialState,
   hasActiveEventAt,
   insertEvent,
@@ -199,6 +201,36 @@ describe("event-level operations", () => {
     const restored = restoreStateFromCorrections(result, payload);
     expect(restored.events.find((e) => e.id === "evt-1")?.accompanimentOnly).toBe(true);
     expect(restored.events.find((e) => e.id === "evt-2")?.accompanimentOnly).toBe(false);
+  });
+});
+
+describe("merge/split suggestions (#16 §4.2)", () => {
+  it("splitEvent divides notes into timed events and marks edited", () => {
+    const state = buildInitialState(makeResult());
+    const split = splitEvent(state, "evt-1", [[D4], [D5]], [4.445, 4.6]);
+    const active = activeEvents(split);
+    expect(active).toHaveLength(3);
+    expect(active[0].notes.map((n) => `${n.pitchClass}${n.octave}`)).toEqual(["D4"]);
+    expect(active[0].origin).toBe("edited");
+    expect(active[1].id).toBe("ins-1");
+    expect(active[1].timeSec).toBeCloseTo(4.6);
+    expect(active[1].notes.map((n) => `${n.pitchClass}${n.octave}`)).toEqual(["D5"]);
+  });
+
+  it("applyMergeSuggestion replaces notes and removes the partner event", () => {
+    const state = buildInitialState(makeResult());
+    const merged = applyMergeSuggestion(state, "evt-1", [D4, D5, F4], ["evt-2"]);
+    const active = activeEvents(merged);
+    expect(active).toHaveLength(1);
+    expect(active[0].notes.map((n) => `${n.pitchClass}${n.octave}`)).toEqual(["D4", "F4", "D5"]);
+    expect(active[0].origin).toBe("edited");
+    expect(merged.events.find((e) => e.id === "evt-2")?.removed).toBe(true);
+  });
+
+  it("splitEvent は不正入力で no-op (groups と times の不一致・空グループ)", () => {
+    const state = buildInitialState(makeResult());
+    expect(splitEvent(state, "evt-1", [[D4], [D5]], [4.445])).toBe(state);
+    expect(splitEvent(state, "evt-1", [[D4], []], [4.445, 4.6])).toBe(state);
   });
 });
 
