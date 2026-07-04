@@ -62,12 +62,12 @@
       "truthNotes": 18
     },
     "ebecf0c6-7e41-430b-bd60-8111a495185e": {
-      "minF1": 0.742,
-      "maxHardMisses": 1,
+      "minF1": 0.842,
+      "maxHardMisses": 0,
       "truthNotes": 18
     }
   },
-  "updatedAt": "2026-07-04T11:59:23+00:00",
-  "recognizerFingerprint": "cd6d52fea9850345",
+  "updatedAt": "2026-07-04T15:41:05+00:00",
+  "recognizerFingerprint": "42c6e9765e8e640a",
   "kalimbaDspFingerprint": "b5688f4db575441d"
 }

@@ -637,3 +637,67 @@ def test_classify_event_gesture_slide_chord_from_gliss_like_family_without_neigh
     merged_event = RawEvent(start_time=0.0, end_time=1.1, notes=[e4, g4, b4, d5], is_gliss_like=True)
 
     assert classify_event_gesture(merged_event, 0, raw_events, [merged_event]) == "slide_chord"
+
+
+def _merge_gliss_split(raw_events: list[RawEvent]) -> list[RawEvent]:
+    from app.transcription.events import merge_gliss_split_segments
+
+    import numpy as np
+
+    tuning = get_default_tunings()[0]
+    audio = np.zeros(48000, dtype=np.float64)
+    return merge_gliss_split_segments(raw_events, audio, 48000, tuning)
+
+
+def test_merge_gliss_split_segments_keeps_disjoint_singleton_strokes() -> None:
+    # ebecf0c6 (GT-verified dense alternating D5/F5): two adjacent
+    # singleton segments with different pitch classes are independent
+    # strokes and must not fuse into a phantom chord.
+    d5 = NoteCandidate(key=13, note=Note.from_name("D5"))
+    f5 = NoteCandidate(key=15, note=Note.from_name("F5"))
+
+    raw_events = [
+        RawEvent(7.781, 7.936, [d5], False, "D5", 207.7),
+        RawEvent(7.936, 8.224, [f5], False, "F5", 134.4),
+    ]
+
+    merged = _merge_gliss_split(raw_events)
+
+    assert [[n.note_name for n in e.notes] for e in merged] == [["D5"], ["F5"]]
+
+
+def test_merge_gliss_split_segments_merges_octave_split_singletons() -> None:
+    # 17ea7626 C4+C5 / d7a82772 E4+E5: one attack whose 2nd-partial
+    # energy lands in its own segment — same pitch class, so the
+    # independent-stroke guard does not apply.
+    c4 = NoteCandidate(key=7, note=Note.from_name("C4"))
+    c5 = NoteCandidate(key=14, note=Note.from_name("C5"))
+
+    raw_events = [
+        RawEvent(1.248, 1.428, [c4], False, "C4", 36.5),
+        RawEvent(1.428, 1.648, [c5], False, "C5", 36.5),
+    ]
+
+    merged = _merge_gliss_split(raw_events)
+
+    assert len(merged) == 1
+    assert sorted(n.note_name for n in merged[0].notes) == ["C4", "C5"]
+
+
+def test_merge_gliss_split_segments_merges_polyphonic_split() -> None:
+    # A polyphonic side means a split gliss/chord (G-low E163 shape),
+    # not two singleton strokes — merge stays allowed even with
+    # disjoint note sets.
+    g4 = NoteCandidate(key=11, note=Note.from_name("G4"))
+    b4 = NoteCandidate(key=12, note=Note.from_name("B4"))
+    f5 = NoteCandidate(key=15, note=Note.from_name("F5"))
+
+    raw_events = [
+        RawEvent(0.5, 0.6, [g4, b4], False, "B4", 111.7),
+        RawEvent(0.62, 0.77, [f5], False, "F5", 397.4),
+    ]
+
+    merged = _merge_gliss_split(raw_events)
+
+    assert len(merged) == 1
+    assert sorted(n.note_name for n in merged[0].notes) == ["B4", "F5", "G4"]

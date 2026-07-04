@@ -2015,6 +2015,24 @@ def merge_gliss_split_segments(
         if first_duration > max_first_duration:
             merged.append(event)
             continue
+        # Independent-stroke guard: a singleton→singleton pair with
+        # different pitch classes is two separate strokes, not a split
+        # gliss/chord — merging fuses alternating dense playing into
+        # phantom chords (ebecf0c6 GT: D5/F5 at ~200 ms spacing).  All
+        # legitimate split shapes observed in data escape this test:
+        # shared notes (Pattern A prefix subset; Pattern B [B4,G4]+[F5,B4]),
+        # a polyphonic side (G-low E163 [A3,D4,G3]+[A4,F#4]), or a
+        # same-pitch-class octave split of one attack (17ea7626 C4+C5,
+        # d7a82772 E4+E5 — 2nd-partial energy landing in its own segment).
+        # backward_attack_gain cannot separate these: gliss notes are all
+        # fresh attacks, exactly like independent strokes.
+        if (
+            len(event.notes) == 1
+            and len(next_event.notes) == 1
+            and event.notes[0].pitch_class != next_event.notes[0].pitch_class
+        ):
+            merged.append(event)
+            continue
         # Build the merged note set by union with semitone dedup.  Notes
         # from the longer event win in semitone conflicts (better FFT
         # resolution → more reliable per-note energies).  Both events were
