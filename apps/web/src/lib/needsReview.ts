@@ -12,7 +12,8 @@ export const ALTERNATE_CONFIDENCE_MIN = 0.5;
 export type NeedsReviewReasonKey =
   | "strong-alternate"
   | "ambiguous-grouping"
-  | "adjacent-slot";
+  | "adjacent-slot"
+  | "low-confidence-gate";
 
 export type NeedsReviewReason = {
   key: NeedsReviewReasonKey;
@@ -24,6 +25,12 @@ export function needsReviewReasons(
   slots: CandidateSlot[],
 ): NeedsReviewReason[] {
   const reasons: NeedsReviewReason[] = [];
+  // S5 agenda 2 (#141): onset gate が棄却の代わりに保持した低 confidence event。
+  // 発火率は低い (非飽和 6 録音で 2 event) が、gate が疑った event そのものなので
+  // 要確認バッジの筆頭理由として出す。
+  if (event.lowConfidenceReason) {
+    reasons.push({ key: "low-confidence-gate", label: "打鍵証拠が弱い" });
+  }
   const strongAlternate = (event.alternateGroupings ?? []).some(
     (alt) => alt.confidence >= ALTERNATE_CONFIDENCE_MIN,
   );

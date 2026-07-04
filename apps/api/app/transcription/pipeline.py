@@ -101,7 +101,8 @@ _DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
     "residual-decay-no-reattack": 0.15,
     "low_register_sparse_gap_tail": 0.10,
     "primary-score-too-low": 0.05,
-    "onset-gate-no-evidence": 0.05,
+    # "onset-gate-no-evidence" no longer reaches here: S5 agenda 2 turned the
+    # onset gate into an event-preserving demotion (ScoreEvent.lowConfidenceReason).
 }
 
 # Thresholds for promoting an orphan-onset candidate to a primary RawEvent
@@ -203,6 +204,9 @@ async def transcribe_audio(
     raw_events: list[RawEvent] = []
     segment_candidates_debug: list[dict[str, Any]] = []
     dropped_slots: list[RawCandidateSlot] = []  # #178 Phase 2: preserved dropped segments
+    # S5 agenda 2: (start, end, reason) of segments a gate demoted (kept but
+    # flagged) — re-attached to overlapping final events at serialization.
+    demoted_ranges: list[tuple[float, float, str]] = []
     all_onset_times = [float(value) for value in segment_debug.get("onsetTimes", [])]
     segment_contexts = build_segment_debug_contexts(
         segments,
@@ -388,6 +392,13 @@ async def transcribe_audio(
                 alternate_groupings=list(seg_result.soft_alternates),
             )
         )
+        if seg_result.demoted_reason:
+            # S5 agenda 2: remember the demoted segment's time range instead
+            # of tagging the RawEvent — post-processing passes rebuild
+            # RawEvents freely (note strips, merges) and would silently drop
+            # a per-event flag.  Serialization re-attaches the flag to any
+            # final event overlapping a demoted range.
+            demoted_ranges.append((start_time, end_time, seg_result.demoted_reason))
         if debug and candidate_debug:
             segment_candidates_debug.append(candidate_debug)
 
@@ -704,6 +715,14 @@ async def transcribe_audio(
                 isGlissLike=event.is_gliss_like,
                 gesture=classify_event_gesture(event, index - 1, raw_events, merged_events),
                 alternateGroupings=alt_groupings,
+                lowConfidenceReason=next(
+                    (
+                        reason
+                        for d_start, d_end, reason in demoted_ranges
+                        if event.start_time < d_end and d_start < event.end_time
+                    ),
+                    None,
+                ),
             )
         )
 

@@ -90,6 +90,14 @@ describe("needsReviewReasons", () => {
     expect(needsReviewReasons(makeEvent(), [makeSlot(2.7)])).toEqual([]);
   });
 
+  it("lowConfidenceReason 付き event は打鍵証拠弱として要確認 (S5 agenda 2)", () => {
+    const reasons = needsReviewReasons(
+      makeEvent({ lowConfidenceReason: "onset-gate-no-evidence" }),
+      [],
+    );
+    expect(reasons.map((r) => r.key)).toEqual(["low-confidence-gate"]);
+  });
+
   it("複数条件は全て列挙する", () => {
     const grouping = {
       combinesWith: null,

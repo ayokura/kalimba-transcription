@@ -75,6 +75,14 @@ class ScoreEvent(BaseModel):
     alternate_groupings: list[AlternateGrouping] | None = Field(
         default=None, alias="alternateGroupings",
     )
+    # S5 agenda 2 (#141): set when a recognizer gate demoted this event
+    # instead of rejecting it (e.g. "onset-gate-no-evidence").  The event
+    # is a kept-but-flagged low-confidence candidate; review UIs should
+    # surface it as 要確認.  None/absent = normal confidence (backward
+    # compatible with stored payloads).
+    low_confidence_reason: str | None = Field(
+        default=None, alias="lowConfidenceReason",
+    )
 
     model_config = {"populate_by_name": True}
 

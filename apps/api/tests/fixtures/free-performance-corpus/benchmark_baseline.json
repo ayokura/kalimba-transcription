@@ -57,17 +57,17 @@
       "truthNotes": 46
     },
     "ea7edd71-e815-4638-a248-a47fe21e5061": {
-      "minF1": 0.833,
+      "minF1": 0.864,
       "maxHardMisses": 0,
       "truthNotes": 18
     },
     "ebecf0c6-7e41-430b-bd60-8111a495185e": {
-      "minF1": 0.842,
+      "minF1": 0.871,
       "maxHardMisses": 0,
       "truthNotes": 18
     }
   },
-  "updatedAt": "2026-07-04T15:41:05+00:00",
-  "recognizerFingerprint": "42c6e9765e8e640a",
+  "updatedAt": "2026-07-04T15:58:29+00:00",
+  "recognizerFingerprint": "8e80b0b7a98d1108",
   "kalimbaDspFingerprint": "b5688f4db575441d"
 }

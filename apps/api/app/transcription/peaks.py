@@ -1290,6 +1290,9 @@ class SegmentPeaksResult:
     dropped_candidates: list[NoteCandidate] = field(default_factory=list)
     dropped_reason: str = ""
     dropped_sub_onset_rescues: list[float] = field(default_factory=list)
+    # S5 agenda 2: non-empty when a gate demoted (kept but flagged) the
+    # segment instead of rejecting it, e.g. "onset-gate-no-evidence".
+    demoted_reason: str = ""
 
 
 @dataclass(slots=True)
@@ -1344,6 +1347,9 @@ class _PrimaryDecision:
     promotions: list[str]
     rejected: bool
     rejection_reason: str | None
+    # S5 agenda 2: gate verdicts that keep the event but flag it as low
+    # confidence (candidate-preserving demotion instead of rejection).
+    demoted_reason: str | None = None
 
 
 @dataclass(slots=True)
@@ -2072,11 +2078,15 @@ def _resolve_primary(
     # Ensure primary_onset_gain is computed (some promotion paths leave it None).
     if primary_onset_gain is None:
         primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
-    # Onset gate (#141): reject primary with no onset evidence from any
-    # source — broadband, per-note, or backward attack.  Catches
-    # resonance-only segments that the residual-decay check misses
-    # (when the note is not in recent_note_names).
+    # Onset gate (#141, S5 agenda 2): a primary with no onset evidence from
+    # any source — broadband, per-note, or backward attack — used to be
+    # rejected outright.  Ablation observatory (2026-07-04, 53-toggle round 1)
+    # measured the rejection as a pure cost on current data (+0.0085 micro F1
+    # when disabled, fixtures intact), so the gate now *demotes* instead of
+    # rejecting: the event is emitted normally but carries
+    # low_confidence_reason="onset-gate-no-evidence" for review-UI surfacing.
     # Exempt: first segment, promoted primaries, confirmed_primary (mute-dip).
+    _demoted_reason: str | None = None
     if (
         not _rejected
         and settings.get().use_onset_gate
@@ -2086,12 +2096,12 @@ def _resolve_primary(
         and primary_onset_gain < ONSET_GATE_MIN_ONSET_GAIN
         and evidence.backward_attack_gain(primary.candidate.frequency) < ONSET_GATE_MIN_BACKWARD_GAIN
     ):
-        _rejected = True
-        _rejection_reason = "onset-gate-no-evidence"
+        _demoted_reason = "onset-gate-no-evidence"
     decision = _PrimaryDecision(
         initial_primary=initial_primary_name, final_primary=primary.candidate.note_name,
         onset_gain=primary_onset_gain, promotions=promotions,
         rejected=_rejected, rejection_reason=_rejection_reason,
+        demoted_reason=_demoted_reason,
     )
     return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug, decision)
 
@@ -3625,6 +3635,7 @@ def segment_peaks(
         primary=primary,
         trace=trace,
         soft_alternates=selection.soft_alternates,
+        demoted_reason=primary_result.decision.demoted_reason or "",
     )
 
 def has_kalimba_sustain_profile(

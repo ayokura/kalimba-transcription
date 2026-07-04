@@ -127,8 +127,9 @@ def test_segment_peaks_suppresses_recent_upper_carryover_with_weak_onset() -> No
 
 
 
-def test_onset_gate_rejects_resonance_only_segment() -> None:
-    """#141: A segment with no broadband, per-note, or backward onset evidence is rejected."""
+def test_onset_gate_demotes_resonance_only_segment() -> None:
+    """#141 / S5 agenda 2: a segment with no broadband, per-note, or backward
+    onset evidence is kept but demoted to a low-confidence candidate."""
     tuning = get_default_tunings()[0]
     # Create a signal that represents resonance only: a slowly decaying note
     # with NO fresh attack. Simulate by using a sustain-only envelope
@@ -153,8 +154,13 @@ def test_onset_gate_rejects_resonance_only_segment() -> None:
     )
     candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
-    # With onset gate, the segment should be rejected (no candidates)
-    assert candidates == []
+    # With the onset gate, the segment is kept (candidates present) but
+    # flagged as a low-confidence demotion instead of being rejected.
+    assert candidates
+    assert _r.demoted_reason == "onset-gate-no-evidence"
+    assert _r.trace is not None
+    assert _r.trace.primary.demoted_reason == "onset-gate-no-evidence"
+    assert not _r.trace.primary.rejected
 
 
 def test_onset_gate_allows_segment_with_fresh_attack() -> None:
@@ -201,14 +207,11 @@ def test_onset_gate_respects_feature_flag() -> None:
         )
         candidates, debug, primary, _trace = _r.candidates, _r.debug, _r.primary, _r.trace
 
-    # Without the gate, resonance energy is accepted as a note
-    # (this verifies the gate is actually what rejects it when enabled)
-    if not candidates:
-        # If even without the gate it's empty, the signal is too weak
-        # for the spectral scorer — adjust test signal strength
-        pass
-    # The important thing: this shouldn't crash
-    assert True
+    # With the flag off, the gate is skipped entirely: no demotion flag
+    # is recorded even on a resonance-only segment.
+    assert _r.demoted_reason == ""
+    if _r.trace is not None:
+        assert _r.trace.primary.demoted_reason is None
 
 
 def test_segment_peaks_keeps_fresh_recent_upper_dyad_when_both_notes_attack() -> None:

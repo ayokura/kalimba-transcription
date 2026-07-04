@@ -49,6 +49,9 @@ export type ScoreEvent = {
   isGlissLike: boolean;
   gesture: string;
   alternateGroupings?: AlternateGrouping[] | null;
+  // S5 agenda 2 (#141): recognizer gate が棄却の代わりに低 confidence 降格した
+  // event。値は降格理由 (例 "onset-gate-no-evidence")。absent/null = 通常。
+  lowConfidenceReason?: string | null;
 };
 
 export type ReviewOrigin = "recognizer" | "edited" | "inserted-slot" | "inserted-manual";
