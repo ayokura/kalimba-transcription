@@ -300,9 +300,18 @@ def test_client_user_agent_is_persisted():
     audio = synthesize_note(261.63, duration=0.5)
     audio_data = wav_bytes(audio)
     tuning = {"name": "Test 17-C", "notes": [{"noteName": "C4"}]}
+    client_info = {
+        "micLabel": "USB Audio CODEC",
+        "platform": "MacIntel",
+        "maxTouchPoints": 5,
+    }
     response = client.post(
         "/api/transcriptions",
-        data={"tuning": json.dumps(tuning), "force": "true"},
+        data={
+            "tuning": json.dumps(tuning),
+            "force": "true",
+            "clientInfo": json.dumps(client_info),
+        },
         files={"file": ("audio.wav", audio_data, "audio/wav")},
         headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X)"},
     )
@@ -310,6 +319,8 @@ def test_client_user_agent_is_persisted():
     tx_dir = Path(os.environ["KALIMBA_DATA_DIR"]) / "transactions" / response.json()["transactionId"]
     request = json.loads((tx_dir / "request.json").read_text(encoding="utf-8"))
     assert request["client"]["userAgent"] == "Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X)"
+    # web が集める生シグナル (mic label = オーディオインターフェース名等) も残る
+    assert request["client"]["device"] == client_info
 
 
 def test_invalid_expected_performance_is_rejected():

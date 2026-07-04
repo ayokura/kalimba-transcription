@@ -122,6 +122,7 @@ async def create_transcription(
     memo: str | None = Form(None),
     captureIntent: str | None = Form(None),
     sourceProfile: str | None = Form(None),
+    clientInfo: str | None = Form(None),
 ) -> TranscriptionResult:
     audio_bytes = await file.read()
     await file.seek(0)
@@ -191,10 +192,22 @@ async def create_transcription(
     if sourceProfile and sourceProfile.strip():
         request_params["sourceProfile"] = sourceProfile.strip()
     # 録音デバイス推定の手がかり (テスター録音の recording-profile 較正用,
-    # 2026-07-04 テスターFB)。tunnel/Next proxy は元の User-Agent を素通しする。
+    # 2026-07-04/05 テスターFB)。tunnel/Next proxy は元の User-Agent を素通しする。
+    # clientInfo は web が集めた生シグナル (mic label / platform / maxTouchPoints —
+    # iPadOS Safari は Mac UA を名乗るため UA 単体では iPad 判別不能)。解釈せず保存。
+    client_meta: dict = {}
     user_agent = (http_request.headers.get("user-agent") or "").strip()
     if user_agent:
-        request_params["client"] = {"userAgent": user_agent[:512]}
+        client_meta["userAgent"] = user_agent[:512]
+    if clientInfo and len(clientInfo) <= 2000:
+        try:
+            parsed_client_info = json.loads(clientInfo)
+        except json.JSONDecodeError:
+            parsed_client_info = None
+        if isinstance(parsed_client_info, dict):
+            client_meta["device"] = parsed_client_info
+    if client_meta:
+        request_params["client"] = client_meta
     response_dict = result.model_dump(by_alias=True)
     debug_dict = response_dict.get("debug")
 

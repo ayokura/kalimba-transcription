@@ -100,6 +100,8 @@ export type CreateTranscriptionOptions = {
   midPerformanceStart?: boolean;
   midPerformanceEnd?: boolean;
   force?: boolean;
+  /** 録音デバイス推定用の生シグナル (mic label / platform 等) — request.json の client.device へ */
+  clientInfo?: Record<string, unknown> | null;
 };
 
 export type RecentTranscriptionEntry = {
@@ -188,6 +190,9 @@ export async function createTranscriptionWithCapture(
   }
   if (options.sourceProfile) {
     formData.append("sourceProfile", options.sourceProfile);
+  }
+  if (options.clientInfo) {
+    formData.append("clientInfo", JSON.stringify(options.clientInfo));
   }
 
   const response = await fetch(`${API_BASE_URL}/api/transcriptions`, {
@@ -443,6 +448,8 @@ export type GtDraft = {
   expectedSource: string;
   expectedCount: number | null;
   generatedAt: string;
+  /** 元録音の peak dBFS (正規化前)。試聴ブースト量の根拠 */
+  inputPeakDbfs?: number | null;
   tuningNotes: string[];
   rows: GtDraftRow[];
   unplacedExpected: { index: number; notes: string[] }[];

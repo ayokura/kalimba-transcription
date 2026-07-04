@@ -96,11 +96,11 @@ def resolve_tx(prefix: str) -> Path:
     return matches[0]
 
 
-def load_audio(tx_dir: Path) -> tuple[np.ndarray, int]:
+def load_audio(tx_dir: Path) -> tuple[np.ndarray, int, dict]:
     audio, sr = sf.read(tx_dir / "audio.wav", dtype="float32")
     # server parity: 優勢チャンネル選択 + 増幅のみ peak 正規化 (2026-07-05)
-    audio, _conditioning, _peak = condition_input_audio(np.asarray(audio))
-    return audio, int(sr)
+    audio, conditioning, _peak = condition_input_audio(np.asarray(audio))
+    return audio, int(sr), conditioning
 
 
 def detect_raw_onsets(audio: np.ndarray, sr: int) -> list[float]:
@@ -257,7 +257,7 @@ def align_expected(
 def build_draft(tx_dir: Path, menu_id: str | None, out_dir: Path) -> Path:
     tx_id = tx_dir.name
     tx8 = tx_id[:8]
-    audio, sr = load_audio(tx_dir)
+    audio, sr, input_conditioning = load_audio(tx_dir)
     duration = len(audio) / sr
 
     request = json.loads((tx_dir / "request.json").read_text(encoding="utf-8"))
@@ -473,6 +473,8 @@ def build_draft(tx_dir: Path, menu_id: str | None, out_dir: Path) -> Path:
         "expectedSource": expected_src,
         "expectedCount": len(expected) if expected else None,
         "generatedAt": draft_gt["source"]["generatedAt"],
+        # 元録音の peak (正規化前)。/debug/gt-review の試聴ブースト量の根拠
+        "inputPeakDbfs": input_conditioning.get("inputPeakDbfs"),
         "tuningNotes": tuning_note_names,
         "rows": ui_rows,
         "unplacedExpected": unplaced,

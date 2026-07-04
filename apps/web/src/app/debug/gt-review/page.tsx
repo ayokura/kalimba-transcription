@@ -58,6 +58,13 @@ export default function DebugGtReviewPage() {
   const playheadRef = useRef<HTMLSpanElement | null>(null);
   const pauseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  // 静かな録音 (iPhone 内蔵マイク -26〜-33dBFS) の裁定試聴用ブースト。
+  // createMediaElementSource は element ごとに一度なのでチェーンを保持
+  const boostChainRef = useRef<{
+    el: HTMLAudioElement;
+    ctx: AudioContext;
+    gain: GainNode;
+  } | null>(null);
 
   // 再生位置のミリ秒表示。React state だと 211 行ページが 60fps で再レンダー
   // されるため、rAF で span を直接更新する
@@ -139,6 +146,41 @@ export default function DebugGtReviewPage() {
     },
     [updateVerdict],
   );
+
+  const previewBoostDb = useMemo(() => {
+    const peak = draft?.inputPeakDbfs;
+    return typeof peak === "number" && peak < -6 ? Math.min(-6 - peak, 30) : 0;
+  }, [draft]);
+
+  const ensurePreviewBoost = useCallback(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    try {
+      let chain = boostChainRef.current;
+      if (!chain || chain.el !== el) {
+        if (chain) void chain.ctx.close().catch(() => {});
+        const ctx = new AudioContext();
+        const source = ctx.createMediaElementSource(el);
+        const gain = ctx.createGain();
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        chain = { el, ctx, gain };
+        boostChainRef.current = chain;
+      }
+      chain.gain.gain.value = Math.pow(10, previewBoostDb / 20);
+      void chain.ctx.resume();
+    } catch {
+      // WebAudio 不可の環境では素の再生にフォールバック
+    }
+  }, [previewBoostDb]);
+
+  useEffect(() => {
+    return () => {
+      const chain = boostChainRef.current;
+      boostChainRef.current = null;
+      if (chain) void chain.ctx.close().catch(() => {});
+    };
+  }, []);
 
   const playAt = useCallback((timeSec: number) => {
     const audio = audioRef.current;
@@ -237,11 +279,18 @@ export default function DebugGtReviewPage() {
               preload="auto"
               src={`/api/transcriptions/${draft.txId}/audio`}
               style={{ width: "100%" }}
+              onPlay={ensurePreviewBoost}
             />
             <div className="row wrap" style={{ gap: 6, alignItems: "center", marginTop: 4 }}>
               <span style={{ fontFamily: "monospace", fontSize: "1.05rem" }}>
                 再生位置: <span ref={playheadRef}>0.000</span>s
               </span>
+              {previewBoostDb > 0 ? (
+                <span className="muted">
+                  試聴 +{previewBoostDb.toFixed(0)}dB ブースト (元 peak{" "}
+                  {draft.inputPeakDbfs?.toFixed(1)}dB)
+                </span>
+              ) : null}
               {[-0.1, -0.01, 0.01, 0.1].map((delta) => (
                 <button
                   key={delta}
