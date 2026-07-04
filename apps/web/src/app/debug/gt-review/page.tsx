@@ -13,6 +13,7 @@ import {
   fetchGtDrafts,
   saveGtDraftVerdict,
   type GtDraft,
+  type GtDraftAddedNote,
   type GtDraftRow,
   type GtDraftRowVerdict,
   type GtDraftVerdict,
@@ -30,7 +31,7 @@ const PLAY_LEAD_SEC = 0.7;
 const PLAY_SNIPPET_SEC = 2.5;
 
 function emptyVerdict(): GtDraftVerdict {
-  return { rows: {}, unplaced: {}, done: false };
+  return { rows: {}, unplaced: {}, added: [], comment: "", done: false };
 }
 
 function formatNotes(notes: string[] | null | undefined): string {
@@ -45,6 +46,12 @@ export default function DebugGtReviewPage() {
   const [saveState, setSaveState] = useState<Record<string, "saving" | "saved" | "error">>({});
   const [pickerRow, setPickerRow] = useState<number | null>(null);
   const [pickerNotes, setPickerNotes] = useState<string[]>([]);
+  const [commentRow, setCommentRow] = useState<number | null>(null);
+  const [addDraft, setAddDraft] = useState<{
+    timeSec: number;
+    notes: string[];
+    comment: string;
+  } | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const pauseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,18 +101,23 @@ export default function DebugGtReviewPage() {
     [scheduleSave],
   );
 
-  const setRowVerdict = useCallback(
-    (tx8: string, index: number, rowVerdict: GtDraftRowVerdict | null) => {
+  // decision の設定は既存の comment を保持したまま merge する (逆も同様)
+  const mergeRowVerdict = useCallback(
+    (tx8: string, index: number, patch: GtDraftRowVerdict, closePicker = true) => {
       updateVerdict(tx8, (v) => {
+        const key = String(index);
+        const merged = { ...(v.rows[key] ?? {}), ...patch };
+        if (patch.decision !== undefined && patch.notes === undefined) delete merged.notes;
+        if (merged.comment === "") delete merged.comment;
         const rows = { ...v.rows };
-        if (rowVerdict === null) {
-          delete rows[String(index)];
+        if (Object.keys(merged).length === 0) {
+          delete rows[key];
         } else {
-          rows[String(index)] = rowVerdict;
+          rows[key] = merged;
         }
         return { ...v, rows };
       });
-      setPickerRow(null);
+      if (closePicker) setPickerRow(null);
     },
     [updateVerdict],
   );
@@ -125,7 +137,9 @@ export default function DebugGtReviewPage() {
   const decidedCount = useCallback(
     (d: GtDraft): number => {
       const v = verdicts[d.tx8] ?? emptyVerdict();
-      return d.rows.filter((row) => v.rows[String(row.index)] || row.flag === "ok").length;
+      // comment だけの行は未裁定扱い
+      return d.rows.filter((row) => v.rows[String(row.index)]?.decision || row.flag === "ok")
+        .length;
     },
     [verdicts],
   );
@@ -216,8 +230,9 @@ export default function DebugGtReviewPage() {
                 updateVerdict(draft.tx8, (v) => {
                   const rows = { ...v.rows };
                   for (const row of draft.rows) {
-                    if (!rows[String(row.index)] && row.flag !== "ok") {
-                      rows[String(row.index)] = { decision: "accept" };
+                    const key = String(row.index);
+                    if (!rows[key]?.decision && row.flag !== "ok") {
+                      rows[key] = { ...(rows[key] ?? {}), decision: "accept" };
                     }
                   }
                   return { ...v, rows };
@@ -225,6 +240,20 @@ export default function DebugGtReviewPage() {
               }
             >
               未裁定を全てドラフト通りにする
+            </button>
+            <button
+              type="button"
+              className={`review-btn review-btn-small${addDraft ? " review-btn-primary" : ""}`}
+              onClick={() => {
+                if (addDraft) {
+                  setAddDraft(null);
+                } else {
+                  const t = audioRef.current?.currentTime ?? 0;
+                  setAddDraft({ timeSec: Math.round(t * 1000) / 1000, notes: [], comment: "" });
+                }
+              }}
+            >
+              ＋ 再生位置にノートを追加…
             </button>
             <label className="muted" style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <input
@@ -238,11 +267,168 @@ export default function DebugGtReviewPage() {
             </label>
           </div>
 
+          {addDraft ? (
+            <div className="warning-box" style={{ margin: "8px 0" }}>
+              <p>
+                <strong>ノート追加</strong> — 認識器が検出しなかった音を GT に足します。
+                再生を止めた位置が初期値です。
+              </p>
+              <div className="row wrap" style={{ gap: 6, alignItems: "center" }}>
+                <button
+                  type="button"
+                  className="review-btn review-btn-small"
+                  onClick={() => playAt(addDraft.timeSec)}
+                >
+                  ▶ {addDraft.timeSec.toFixed(2)}s
+                </button>
+                {[-0.2, -0.05, 0.05, 0.2].map((delta) => (
+                  <button
+                    key={delta}
+                    type="button"
+                    className="review-btn review-btn-small"
+                    onClick={() =>
+                      setAddDraft((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              timeSec:
+                                Math.round(Math.max(0, prev.timeSec + delta) * 1000) / 1000,
+                            }
+                          : prev,
+                      )
+                    }
+                  >
+                    {delta > 0 ? `+${delta}` : delta}s
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="review-btn review-btn-small"
+                  onClick={() => {
+                    const t = audioRef.current?.currentTime ?? 0;
+                    setAddDraft((prev) =>
+                      prev ? { ...prev, timeSec: Math.round(t * 1000) / 1000 } : prev,
+                    );
+                  }}
+                >
+                  再生位置を再取得
+                </button>
+              </div>
+              <div className="row wrap" style={{ gap: 4, marginTop: 6 }}>
+                {draft.tuningNotes.map((note) => (
+                  <button
+                    key={note}
+                    type="button"
+                    className={`review-btn review-btn-small${addDraft.notes.includes(note) ? " review-btn-primary" : ""}`}
+                    onClick={() =>
+                      setAddDraft((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              notes: prev.notes.includes(note)
+                                ? prev.notes.filter((n) => n !== note)
+                                : [...prev.notes, note],
+                            }
+                          : prev,
+                      )
+                    }
+                  >
+                    {note}
+                  </button>
+                ))}
+              </div>
+              <div className="row wrap" style={{ gap: 6, marginTop: 6 }}>
+                <input
+                  type="text"
+                  value={addDraft.comment}
+                  placeholder="コメント (任意。例: 小さいが確かに弾いている)"
+                  style={{ flex: 1, minWidth: 200, padding: "4px 8px" }}
+                  onChange={(e) =>
+                    setAddDraft((prev) => (prev ? { ...prev, comment: e.target.value } : prev))
+                  }
+                />
+                <button
+                  type="button"
+                  className="review-btn review-btn-small review-btn-primary"
+                  disabled={addDraft.notes.length === 0}
+                  onClick={() => {
+                    const entry: GtDraftAddedNote = {
+                      timeSec: addDraft.timeSec,
+                      notes: [...addDraft.notes],
+                    };
+                    if (addDraft.comment) entry.comment = addDraft.comment;
+                    updateVerdict(draft.tx8, (v) => ({
+                      ...v,
+                      added: [...(v.added ?? []), entry].sort((a, b) => a.timeSec - b.timeSec),
+                    }));
+                    setAddDraft(null);
+                  }}
+                >
+                  {addDraft.timeSec.toFixed(2)}s に {formatNotes(addDraft.notes)} を追加
+                </button>
+                <button
+                  type="button"
+                  className="review-btn review-btn-small"
+                  onClick={() => setAddDraft(null)}
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {(verdict.added ?? []).length > 0 ? (
+            <div className="stack" style={{ gap: 4, margin: "8px 0" }}>
+              <p className="muted" style={{ margin: 0 }}>
+                追加ノート (手動):
+              </p>
+              {(verdict.added ?? []).map((entry, i) => (
+                <div key={`${entry.timeSec}-${i}`} className="row wrap" style={{ gap: 8 }}>
+                  <button
+                    type="button"
+                    className="review-btn review-btn-small"
+                    onClick={() => playAt(entry.timeSec)}
+                  >
+                    ▶ {entry.timeSec.toFixed(2)}s
+                  </button>
+                  <span className="pill">GT: {formatNotes(entry.notes)}</span>
+                  {entry.comment ? <span className="muted">💬 {entry.comment}</span> : null}
+                  <button
+                    type="button"
+                    className="review-btn review-btn-small"
+                    onClick={() =>
+                      updateVerdict(draft.tx8, (v) => ({
+                        ...v,
+                        added: (v.added ?? []).filter((_, j) => j !== i),
+                      }))
+                    }
+                  >
+                    削除
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <textarea
+            value={verdict.comment ?? ""}
+            placeholder="この録音全体へのコメント (任意)"
+            rows={2}
+            style={{ width: "100%", padding: "6px 8px", margin: "4px 0 8px" }}
+            onChange={(e) =>
+              updateVerdict(draft.tx8, (v) => ({ ...v, comment: e.target.value }))
+            }
+          />
+
           <div className="stack" style={{ gap: 6 }}>
             {draft.rows.map((row) => {
               const rv = verdict.rows[String(row.index)];
               const effective =
-                rv ?? (row.flag === "ok" ? ({ decision: "accept" } as GtDraftRowVerdict) : null);
+                rv?.decision != null
+                  ? rv
+                  : row.flag === "ok"
+                    ? ({ decision: "accept" } as GtDraftRowVerdict)
+                    : null;
               const finalNotes =
                 effective?.decision === "ignore"
                   ? null
@@ -308,7 +494,7 @@ export default function DebugGtReviewPage() {
                     <button
                       type="button"
                       className={`review-btn review-btn-small${effective?.decision === "accept" ? " review-btn-primary" : ""}`}
-                      onClick={() => setRowVerdict(draft.tx8, row.index, { decision: "accept" })}
+                      onClick={() => mergeRowVerdict(draft.tx8, row.index, { decision: "accept" })}
                     >
                       ドラフト通り ({formatNotes(row.draftNotes)})
                     </button>
@@ -322,7 +508,7 @@ export default function DebugGtReviewPage() {
                             : ""
                         }`}
                         onClick={() =>
-                          setRowVerdict(draft.tx8, row.index, {
+                          mergeRowVerdict(draft.tx8, row.index, {
                             decision: "fix",
                             notes: [top1.note],
                           })
@@ -346,9 +532,16 @@ export default function DebugGtReviewPage() {
                     <button
                       type="button"
                       className={`review-btn review-btn-small${effective?.decision === "ignore" ? " review-btn-primary" : ""}`}
-                      onClick={() => setRowVerdict(draft.tx8, row.index, { decision: "ignore" })}
+                      onClick={() => mergeRowVerdict(draft.tx8, row.index, { decision: "ignore" })}
                     >
                       無視 (ノイズ/演奏外)
+                    </button>
+                    <button
+                      type="button"
+                      className={`review-btn review-btn-small${rv?.comment ? " review-btn-primary" : ""}`}
+                      onClick={() => setCommentRow(commentRow === row.index ? null : row.index)}
+                    >
+                      💬{rv?.comment ? " あり" : ""}
                     </button>
                   </div>
                   {pickerRow === row.index ? (
@@ -374,7 +567,7 @@ export default function DebugGtReviewPage() {
                         className="review-btn review-btn-small review-btn-primary"
                         disabled={pickerNotes.length === 0}
                         onClick={() =>
-                          setRowVerdict(draft.tx8, row.index, {
+                          mergeRowVerdict(draft.tx8, row.index, {
                             decision: "fix",
                             notes: [...pickerNotes],
                           })
@@ -383,6 +576,28 @@ export default function DebugGtReviewPage() {
                         この音で確定 ({formatNotes(pickerNotes)})
                       </button>
                     </div>
+                  ) : null}
+                  {commentRow === row.index ? (
+                    <div style={{ marginTop: 6 }}>
+                      <input
+                        type="text"
+                        value={rv?.comment ?? ""}
+                        placeholder="この行へのコメント (例: 弾き直し、爪ノイズ、聞き取れず)"
+                        style={{ width: "100%", padding: "4px 8px" }}
+                        onChange={(e) =>
+                          mergeRowVerdict(
+                            draft.tx8,
+                            row.index,
+                            { comment: e.target.value },
+                            false,
+                          )
+                        }
+                      />
+                    </div>
+                  ) : rv?.comment ? (
+                    <p className="muted" style={{ margin: "4px 0 0" }}>
+                      💬 {rv.comment}
+                    </p>
                   ) : null}
                 </div>
               );

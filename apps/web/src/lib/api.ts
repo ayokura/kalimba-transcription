@@ -404,8 +404,9 @@ export type GtDraftRow = {
 };
 
 export type GtDraftRowVerdict = {
-  decision: "accept" | "fix" | "ignore";
+  decision?: "accept" | "fix" | "ignore";
   notes?: string[];
+  comment?: string;
 };
 
 export type GtDraftUnplacedVerdict = {
@@ -413,9 +414,18 @@ export type GtDraftUnplacedVerdict = {
   timeSec?: number;
 };
 
+export type GtDraftAddedNote = {
+  timeSec: number;
+  notes: string[];
+  comment?: string;
+};
+
 export type GtDraftVerdict = {
   rows: Record<string, GtDraftRowVerdict>;
   unplaced: Record<string, GtDraftUnplacedVerdict>;
+  // 認識器が検出しなかった音 (行にも MISS にも無い) のユーザー手動追加
+  added?: GtDraftAddedNote[];
+  comment?: string;
   done: boolean;
   savedAt?: string;
 };

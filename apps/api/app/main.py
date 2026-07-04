@@ -266,10 +266,14 @@ _GT_DRAFT_TX8_RE = re.compile(r"^[0-9a-f]{8}$")
 
 
 class GtDraftVerdictPayload(BaseModel):
-    # 行 index (文字列化した 1-based) -> {decision: accept|fix|ignore, notes?: [..]}
+    # 行 index (文字列化した 1-based) -> {decision?: accept|fix|ignore, notes?, comment?}
     rows: dict[str, dict]
     # 未配置 expected index -> {decision: discard|place, timeSec?: float}
     unplaced: dict[str, dict] = {}
+    # 認識器が完全に見逃した音のユーザー手動追加 [{timeSec, notes, comment?}]
+    added: list[dict] = []
+    # 録音全体への自由コメント
+    comment: str = ""
     done: bool = False
 
 

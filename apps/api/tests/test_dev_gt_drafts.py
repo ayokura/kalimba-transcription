@@ -61,8 +61,10 @@ def test_dev_gt_drafts_lists_rows_and_merges_verdict(tmp_path, monkeypatch):
     assert drafts[0]["verdict"] is None
 
     verdict = {
-        "rows": {"1": {"decision": "fix", "notes": ["D4"]}},
+        "rows": {"1": {"decision": "fix", "notes": ["D4"], "comment": "弾き直し"}},
         "unplaced": {"2": {"decision": "place", "timeSec": 3.5}},
+        "added": [{"timeSec": 7.25, "notes": ["C4"], "comment": "認識器が見逃した音"}],
+        "comment": "全体コメント",
         "done": True,
     }
     saved = client.put("/api/dev/gt-drafts/aabbccdd/verdict", json=verdict)
@@ -70,7 +72,11 @@ def test_dev_gt_drafts_lists_rows_and_merges_verdict(tmp_path, monkeypatch):
     assert saved.json()["verdict"]["savedAt"]
 
     merged = client.get("/api/dev/gt-drafts").json()["drafts"][0]["verdict"]
-    assert merged["rows"]["1"] == {"decision": "fix", "notes": ["D4"]}
+    assert merged["rows"]["1"] == {"decision": "fix", "notes": ["D4"], "comment": "弾き直し"}
+    assert merged["added"] == [
+        {"timeSec": 7.25, "notes": ["C4"], "comment": "認識器が見逃した音"}
+    ]
+    assert merged["comment"] == "全体コメント"
     assert merged["done"] is True
 
 
