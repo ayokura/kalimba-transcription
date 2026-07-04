@@ -13,6 +13,8 @@ export type ReviewEvent = {
   notes: ScoreNote[];
   origin: ReviewOrigin;
   removed: boolean;
+  /** この onset に主旋律が含まれない (伴奏のみ)。GT 昇格時に role: accompaniment */
+  accompanimentOnly: boolean;
   /** recognizer 出力由来の場合は元 event id (alternateGroupings 参照用) */
   sourceEventId: string | null;
 };
@@ -122,6 +124,7 @@ export function buildInitialState(result: TranscriptionResult): ReviewState {
         notes: sortNotes(event.notes),
         origin: "recognizer" as const,
         removed: false,
+        accompanimentOnly: false,
         sourceEventId: event.id,
       })),
     ),
@@ -194,6 +197,7 @@ export function restoreStateFromCorrections(
         notes: sortNotes(event.notes),
         origin: "recognizer",
         removed: true,
+        accompanimentOnly: false,
         sourceEventId: event.id,
       });
       continue;
@@ -208,6 +212,7 @@ export function restoreStateFromCorrections(
       notes: sortNotes(notes.length > 0 ? notes : event.notes),
       origin: correction.origin ?? "recognizer",
       removed: false,
+      accompanimentOnly: correction.accompanimentOnly ?? false,
       sourceEventId: event.id,
     });
   }
@@ -224,6 +229,7 @@ export function restoreStateFromCorrections(
       notes: sortNotes(notes),
       origin: correction.origin ?? "inserted-manual",
       removed: false,
+      accompanimentOnly: correction.accompanimentOnly ?? false,
       sourceEventId: null,
     });
     nextInsertId += 1;
@@ -311,6 +317,13 @@ export function toggleRemoved(state: ReviewState, eventId: string): ReviewState 
   return withEvent(state, eventId, (event) => ({ ...event, removed: !event.removed }));
 }
 
+export function toggleAccompanimentOnly(state: ReviewState, eventId: string): ReviewState {
+  return withEvent(state, eventId, (event) => ({
+    ...event,
+    accompanimentOnly: !event.accompanimentOnly,
+  }));
+}
+
 export function insertEvent(
   state: ReviewState,
   timeSec: number,
@@ -325,6 +338,7 @@ export function insertEvent(
     notes: sortNotes(notes),
     origin,
     removed: false,
+    accompanimentOnly: false,
     sourceEventId: null,
   };
   return {
@@ -359,6 +373,7 @@ export function toCorrectionsPayload(state: ReviewState): CorrectionsPayload {
       timeSec: event.timeSec,
       notes: event.notes.map(noteName),
       origin: event.origin,
+      ...(event.accompanimentOnly ? { accompanimentOnly: true } : {}),
     })),
   };
 }

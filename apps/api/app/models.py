@@ -102,6 +102,9 @@ class CorrectionEvent(BaseModel):
     time_sec: float = Field(alias="timeSec")
     notes: list[str] = Field(min_length=1)
     origin: Literal["recognizer", "edited", "inserted-slot", "inserted-manual"] = "recognizer"
+    # この onset に主旋律が含まれない (伴奏のみ)。GT 昇格時に role: accompaniment
+    # へ変換され、旋律抽出評価の層別に使う (gt-review 側と同じ意味論, 2026-07-05)
+    accompaniment_only: bool = Field(default=False, alias="accompanimentOnly")
 
     model_config = {"populate_by_name": True}
 

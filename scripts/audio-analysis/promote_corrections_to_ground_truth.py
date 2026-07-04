@@ -167,6 +167,10 @@ def build_ground_truth(tx_id: str, corrections: dict) -> dict:
             onset["toleranceSec"] = ORIGIN_TOLERANCE_SEC[origin]
         if origin != "recognizer":
             onset["comment"] = f"origin={origin}"
+        # 主旋律を含まない onset (伴奏のみ)。gt-review 側と同じ意味論で
+        # role として構造化 (旋律抽出評価の層別用、2026-07-05)
+        if event.get("accompanimentOnly"):
+            onset["role"] = "accompaniment"
         onsets.append(onset)
     review_status = load_review_status(tx_id)
     return {

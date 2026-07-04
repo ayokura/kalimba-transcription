@@ -13,6 +13,7 @@ import {
   buildKnownNoteIndex,
   setEventTime,
   toCorrectionsPayload,
+  toggleAccompanimentOnly,
   toggleRemoved,
 } from "@/lib/reviewCorrections";
 import { CorrectionsPayload, ScoreNote, TranscriptionResult } from "@/lib/types";
@@ -183,6 +184,21 @@ describe("event-level operations", () => {
     const state = insertEvent(buildInitialState(makeResult()), 5.5, [F4], "inserted-manual");
     const ids = state.events.map((e) => e.id);
     expect(ids).toEqual(["evt-1", "ins-1", "evt-2"]);
+  });
+
+  it("toggleAccompanimentOnly round-trips through payload and restore", () => {
+    const result = makeResult();
+    const state = toggleAccompanimentOnly(buildInitialState(result), "evt-1");
+    expect(state.events.find((e) => e.id === "evt-1")?.accompanimentOnly).toBe(true);
+
+    const payload = toCorrectionsPayload(state);
+    expect(payload.events[0].accompanimentOnly).toBe(true);
+    // フラグなしイベントには key 自体を含めない (旧スキーマ互換)
+    expect("accompanimentOnly" in payload.events[1]).toBe(false);
+
+    const restored = restoreStateFromCorrections(result, payload);
+    expect(restored.events.find((e) => e.id === "evt-1")?.accompanimentOnly).toBe(true);
+    expect(restored.events.find((e) => e.id === "evt-2")?.accompanimentOnly).toBe(false);
   });
 });
 

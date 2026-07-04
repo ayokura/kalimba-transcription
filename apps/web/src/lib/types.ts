@@ -57,6 +57,8 @@ export type CorrectionEventPayload = {
   timeSec: number;
   notes: string[];
   origin: ReviewOrigin;
+  /** この onset に主旋律が含まれない (伴奏のみ)。GT 昇格時に role: accompaniment */
+  accompanimentOnly?: boolean;
 };
 
 export type CorrectionsPayload = {

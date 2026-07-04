@@ -47,7 +47,7 @@ def test_corrections_roundtrip():
         "version": 1,
         "events": [
             {"timeSec": 1.05, "notes": ["C4"], "origin": "recognizer"},
-            {"timeSec": 2.5, "notes": ["D4", "D5"], "origin": "edited"},
+            {"timeSec": 2.5, "notes": ["D4", "D5"], "origin": "edited", "accompanimentOnly": True},
             {"timeSec": 3.75, "notes": ["E4"], "origin": "inserted-manual"},
         ],
     }
@@ -57,6 +57,8 @@ def test_corrections_roundtrip():
     assert saved["version"] == 1
     assert saved["updatedAt"]
     assert [e["notes"] for e in saved["events"]] == [["C4"], ["D4", "D5"], ["E4"]]
+    # 伴奏のみフラグは round-trip で保持される (GT 昇格時に role: accompaniment)
+    assert [e.get("accompanimentOnly") for e in saved["events"]] == [False, True, False]
 
     get_response = client.get(f"/api/transcriptions/{tid}/corrections")
     assert get_response.status_code == 200

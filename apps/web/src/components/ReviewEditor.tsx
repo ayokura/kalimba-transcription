@@ -26,6 +26,7 @@ import {
   restoreStateFromCorrections,
   setEventTime,
   toCorrectionsPayload,
+  toggleAccompanimentOnly,
   toDisplayScoreEvents,
   toggleRemoved,
   type ReviewEvent,
@@ -482,6 +483,9 @@ function ReviewEditorReady({
                 apply((s) => setEventTime(s, item.event.id, item.event.timeSec + deltaSec))
               }
               onToggleRemoved={() => apply((s) => toggleRemoved(s, item.event.id))}
+              onToggleAccompaniment={() =>
+                apply((s) => toggleAccompanimentOnly(s, item.event.id))
+              }
             />
           ) : (
             <SlotCard
@@ -556,6 +560,7 @@ function EventCard({
   onReplaceNote,
   onNudgeTime,
   onToggleRemoved,
+  onToggleAccompaniment,
 }: {
   event: ReviewEvent;
   selected: boolean;
@@ -569,6 +574,7 @@ function EventCard({
   onReplaceNote: (name: string, note: ScoreNote) => void;
   onNudgeTime: (deltaSec: number) => void;
   onToggleRemoved: () => void;
+  onToggleAccompaniment: () => void;
 }) {
   // 鍵盤タップの意味: 置換 (armed な既存音と入れ替え) or 追加。
   // 最頻の修正は単音イベントの音高間違いなので、単音では置換を既定にする。
@@ -623,6 +629,9 @@ function EventCard({
             </span>
           ))}
         </span>
+        {event.accompanimentOnly && !event.removed ? (
+          <span className="review-origin-badge">伴奏のみ</span>
+        ) : null}
         {reviewReasons.length > 0 && !event.removed ? (
           <span
             className="review-needs-review-badge"
@@ -761,6 +770,15 @@ function EventCard({
           <div className="review-card-actions">
             <button type="button" className="review-btn review-btn-small" onClick={onAudition}>
               ▶ この部分を再生
+            </button>
+            <button
+              type="button"
+              className="review-btn review-btn-small"
+              aria-pressed={event.accompanimentOnly}
+              title="この音に主旋律は含まれない (伴奏のみ)"
+              onClick={onToggleAccompaniment}
+            >
+              {event.accompanimentOnly ? "✓ 伴奏のみ" : "伴奏のみ"}
             </button>
             <button
               type="button"
