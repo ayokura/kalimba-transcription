@@ -2052,7 +2052,7 @@ def _resolve_primary(
             if h.candidate.note_name not in _ranked_by_name:
                 _ranked_by_name[h.candidate.note_name] = h
         alternative_primary = None
-        bg_qualified: list[NoteHypothesis] = []
+        reset_qualified: list[tuple[NoteHypothesis, float]] = []
         for note_name in ctx.recent_note_names:
             hyp = _ranked_by_name.get(note_name)
             if hyp is None:
@@ -2060,21 +2060,38 @@ def _resolve_primary(
             if evidence.has_mute_dip_reattack(hyp.candidate.frequency):
                 if alternative_primary is None or hyp.score > alternative_primary.score:
                     alternative_primary = hyp
-            elif (
-                evidence.backward_attack_gain(hyp.candidate.frequency)
-                >= RESIDUAL_REATTACK_MIN_BACKWARD_GAIN
-            ):
-                bg_qualified.append(hyp)
-        if alternative_primary is None and len(bg_qualified) == 1:
-            # Un-muted re-stroke rescue fires only when exactly ONE recent
-            # note shows the backward-gain rise.  In dense alternating
-            # playing several recent notes rise at once (measured: ebecf0c6
-            # D5/F5 both ≥ 1.3 at 3.184/7.936, d7a82772 G4+E5 at 20.027)
-            # and the waveform cannot say which one was struck — rescuing
-            # there regressed both recordings below their baseline floors,
-            # so ambiguity falls through to the rejection path (slot
-            # preservation) instead.
-            alternative_primary = bg_qualified[0]
+            else:
+                ev = phase_reset_evidence(
+                    ctx.audio, ctx.sample_rate, ctx.start_time,
+                    hyp.candidate.frequency,
+                )
+                if (
+                    ev is not None
+                    and ev[0] >= PHASE_RESET_MIN_PHASE_RMS
+                    and ev[1] >= PHASE_RESET_MIN_JERK
+                ):
+                    reset_qualified.append((hyp, ev[1]))
+        if alternative_primary is None and reset_qualified:
+            # Un-muted re-stroke rescue: the candidate passed the absolute
+            # reset bars; now guard against bleed — a strong simultaneous
+            # stroke on ANOTHER tine contaminates the candidate's narrow
+            # band and fakes a reset.  Measure the reset jerk of every
+            # tuning note: if some other tine resets ≥ 5× harder, the
+            # candidate is the victim of that stroke's leakage, not a
+            # stroke itself (bleed FPs measured 7.8–31×; genuine re-strokes
+            # under simultaneous playing stay within 4.8×).
+            best_hyp, best_jerk = max(reset_qualified, key=lambda item: item[1])
+            max_other_jerk = 0.0
+            for note in ctx.tuning.notes:
+                if note.note_name == best_hyp.candidate.note_name:
+                    continue
+                other = phase_reset_evidence(
+                    ctx.audio, ctx.sample_rate, ctx.start_time, note.frequency,
+                )
+                if other is not None:
+                    max_other_jerk = max(max_other_jerk, other[1])
+            if max_other_jerk <= best_jerk * PHASE_RESET_MAX_DOMINANCE_RATIO:
+                alternative_primary = best_hyp
         if alternative_primary is None:
             # Octave-up rescue: check 1 and 2 octaves above.
             for octave_mult in (2, 4):
@@ -4014,6 +4031,59 @@ def _has_sub_onset_mute_dip_reattack(
 
     recovery_ratio = post_energy / (pre_energy + 1e-6)
     return recovery_ratio >= MUTE_DIP_REATTACK_MIN_RECOVERY_RATIO
+
+
+def phase_reset_evidence(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    frequency: float,
+    *,
+    band_half_ratio: float = PHASE_RESET_BAND_HALF_RATIO,
+) -> tuple[float, float] | None:
+    """Measure tine-vibration reset evidence at *onset_time* (S5 / #141 spike).
+
+    A replucked tine restarts its vibration: the narrow-band instantaneous
+    phase breaks from its pre-onset linear trend and the envelope rises
+    sharply.  Pure resonance keeps ringing phase-continuously.  Probe
+    measurements on 14 ear/GT-labelled instants (2026-07-05, see
+    scripts/audio-analysis/research/README.md): re-strokes show phase RMS
+    error 0.73–9.68 rad and normalized envelope jerk 117–2159 /s, resonance
+    0.09–0.38 rad and -0.3–8 /s.
+
+    Returns ``(phase_rms_error, envelope_jerk)`` or ``None`` when the onset
+    is too close to the audio edges.  Pure numpy (FFT band-select analytic
+    signal) — no scipy, WASM-portable.
+    """
+    a = int((onset_time - 0.30) * sample_rate)
+    b = int((onset_time + 0.15) * sample_rate)
+    if a < 0 or b > len(audio):
+        return None
+    seg = audio[a:b]
+    n = len(seg)
+    spec = np.fft.fft(seg)
+    freqs = np.fft.fftfreq(n, 1.0 / sample_rate)
+    lo = frequency * (1.0 - band_half_ratio)
+    hi = frequency * (1.0 + band_half_ratio)
+    keep = (freqs >= lo) & (freqs <= hi)
+    band = np.zeros_like(spec)
+    band[keep] = spec[keep] * 2.0  # positive band only → analytic signal
+    z = np.fft.ifft(band)
+    phase = np.unwrap(np.angle(z))
+    env = np.abs(z)
+    t = np.arange(n) / sample_rate + (onset_time - 0.30)
+    pre = (t >= onset_time - 0.12) & (t <= onset_time - 0.02)
+    post = (t >= onset_time + 0.02) & (t <= onset_time + 0.08)
+    if pre.sum() < 10 or post.sum() < 10:
+        return None
+    coef = np.polyfit(t[pre], phase[pre], 1)
+    err = phase[post] - np.polyval(coef, t[post])
+    phase_rms = float(np.sqrt(np.mean(err * err)))
+    w = (t >= onset_time - 0.01) & (t <= onset_time + 0.05)
+    denv = np.diff(env[w]) * sample_rate
+    pre_env = float(np.median(env[pre])) + 1e-9
+    jerk = float(np.max(denv) / pre_env) if len(denv) else 0.0
+    return phase_rms, jerk
 
 
 def _has_mute_dip_reattack(
