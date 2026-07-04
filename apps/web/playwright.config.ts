@@ -28,7 +28,17 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        // intake funnel e2e (S3) 用の fake-media 基盤: マイク許可ダイアログを
+        // 自動許可し、getUserMedia にトーン生成のフェイクデバイスを与える
+        launchOptions: {
+          args: [
+            "--use-fake-device-for-media-stream",
+            "--use-fake-ui-for-media-stream",
+          ],
+        },
+      },
     },
   ],
 });
