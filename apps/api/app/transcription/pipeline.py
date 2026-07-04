@@ -54,7 +54,7 @@ from .events import (
     suppress_short_residual_tails,
     suppress_subset_decay_events,
 )
-from .models import NoteCandidate, RawCandidateSlot, RawEvent
+from .models import Note, NoteCandidate, RawCandidateSlot, RawEvent
 from .noise_floor import measure_noise_floor
 from .notation import build_notation_views, format_doremi, format_number, quantize_beat
 from .patterns import apply_repeated_pattern_passes
@@ -62,6 +62,8 @@ from .peaks import (
     analyze_attack_evidence_at_onset,
     analyze_spectrum_at_onset,
     has_kalimba_sustain_profile,
+    measure_narrow_fft_note_scores,
+    onset_energy_gain,
     segment_peaks,
 )
 from .per_note import rescue_gap_mute_dips
@@ -92,6 +94,10 @@ _DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
     # 自分の segment を持てなかった (#197 残存型)。物理基盤は orphan と同等
     # (broadband 検出済み + attack 証拠ゲート通過) なので同じ 0.50。
     "boundary-consumed-onset": 0.50,
+    # #178 S3 (2026-07-05): segment 内 sub-onset の narrow FFT top が最終
+    # event/slot に現れないケース。broadband onset + narrow FFT の 2 証拠だが
+    # gliss 中の残響も拾い得るため低め (placeholder、tulip cR@K で較正予定)。
+    "sub-onset-unselected-candidate": 0.30,
     "residual-decay-no-reattack": 0.15,
     "low_register_sparse_gap_tail": 0.10,
     "primary-score-too-low": 0.05,
@@ -216,12 +222,16 @@ async def transcribe_audio(
         for start_time, end_time in segment_debug.get("multiOnsetGapSegments", [])
     ]
     multi_onset_gap_segment_keys = _segment_keys("multiOnsetGapSegments")
+    # #178 S3: 全 segment の sub-onset を収集し、後段 (merge 後) で
+    # 「最終 event にも slot にも現れない sub-onset」の候補化に使う
+    collected_sub_onsets: list[float] = []
     for segment in segments:
         start_time, end_time = segment
         duration = max(end_time - start_time, 0.08)
         sub_onsets = tuple(
             t for t in all_onset_times if start_time <= t <= end_time
         )
+        collected_sub_onsets.extend(sub_onsets)
         recent_note_names = build_recent_note_names(raw_events)
         ascending_primary_run_ceiling = build_recent_ascending_primary_run_ceiling(raw_events)
         ascending_singleton_suffix_ceiling, ascending_singleton_suffix_note_names = build_recent_ascending_singleton_suffix(raw_events)
@@ -740,6 +750,102 @@ async def transcribe_audio(
             "repeatedPatternPassTrace": repeated_pattern_pass_trace,
             "noiseFloor": noise_floor.to_debug_dict(),
         }
+
+    # #178 S3 (2026-07-05): gliss/密集 segment 内の未カバー sub-onset の候補化。
+    # narrow FFT (#153 Phase A.1 で観測専用だった per-sub-onset 分析) の top note
+    # が最終 event にも既存 slot にも時間近傍で現れない sub-onset を低 confidence
+    # slot として保持する。tulip a9e30986 の hardMiss 46/83 の主因 (gliss 伴奏
+    # C4/E4/G4 の sub-onset が segment 選択に入らず候補ゼロ) への coverage 拡張。
+    # event 化はしない (fixture 影響のため別判断)。
+    _SUB_ONSET_SLOT_MATCH_SEC = 0.15
+    # 倍音イリュージョン除外: 同時刻の covered note (event/slot 済み) の非整数
+    # 部分音比に top が一致する場合は fresh partial であって別打鍵ではない
+    # (a9e30986 の A5 FP = gliss tine の ~2.24× partial、bbd6797f の strum で実測)。
+    # gain によるハードゲートは試行の結果不採用 (tulip の実打鍵 25% が gain<1.3
+    # で coverage を食う) — gain は confidence 信号として NoteCandidate に載せる。
+    _SUB_ONSET_PARTIAL_RATIOS = (1.5, 2.0, 2.25, 2.5, 3.0)
+    _SUB_ONSET_PARTIAL_TOLERANCE = 0.06
+    if collected_sub_onsets:
+        _sub_onset_cache: dict[
+            tuple[int, float], dict[str, tuple[float, float, float]] | None
+        ] = {}
+        _tuning_note_by_name = {}
+        for _tn in tuning.notes:
+            _tuning_note_by_name.setdefault(_tn.note_name, _tn)
+        covered: list[tuple[float, set[str]]] = [
+            (event.start_time, {c.note_name for c in event.notes})
+            for event in merged_events
+        ] + [
+            (
+                slot.start_time,
+                {slot.primary_note.note_name, *(c.note_name for c in slot.candidates)},
+            )
+            for slot in dropped_slots
+        ]
+        for sub_time in sorted(set(round(t, 4) for t in collected_sub_onsets)):
+            note_scores = measure_narrow_fft_note_scores(
+                audio, sample_rate, sub_time, tuning, cache=_sub_onset_cache,
+            )
+            if not note_scores:
+                continue
+            ranked_names = sorted(
+                note_scores.items(), key=lambda kv: kv[1][1], reverse=True,
+            )
+            top_name, (_fe, top_score, _ratio) = ranked_names[0]
+            if top_score <= 0:
+                continue
+            if any(
+                abs(t - sub_time) <= _SUB_ONSET_SLOT_MATCH_SEC and top_name in names
+                for t, names in covered
+            ):
+                continue
+            top_note = _tuning_note_by_name.get(top_name)
+            if top_note is None:
+                continue
+            # per-note gain は confidence 信号 (og>=10 で _build_candidate_slot が
+            # confidence を引き上げる) + provenance として保持
+            sub_gain = onset_energy_gain(
+                audio, sample_rate, sub_time, sub_time + 0.15, top_note.frequency,
+            )
+            # 倍音スクリーン: 同時刻に covered な (=event/slot 済みの) 音の
+            # 部分音位置に一致する top は fresh partial の誤検出とみなす
+            is_partial_illusion = False
+            for t, names in covered:
+                if abs(t - sub_time) > _SUB_ONSET_SLOT_MATCH_SEC:
+                    continue
+                for name in names:
+                    base = _tuning_note_by_name.get(name)
+                    if base is None or base.frequency >= top_note.frequency:
+                        continue
+                    ratio = top_note.frequency / base.frequency
+                    if any(
+                        abs(ratio - r) / r <= _SUB_ONSET_PARTIAL_TOLERANCE
+                        for r in _SUB_ONSET_PARTIAL_RATIOS
+                    ):
+                        is_partial_illusion = True
+                        break
+                if is_partial_illusion:
+                    break
+            if is_partial_illusion:
+                continue
+            runner_ups = [
+                NoteCandidate(key=n.key, note=Note.from_name(n.note_name), score=s[1])
+                for name, s in ranked_names[1:3]
+                if s[1] > 0 and (n := _tuning_note_by_name.get(name)) is not None
+            ]
+            dropped_slots.append(_build_candidate_slot(
+                start_time=sub_time,
+                end_time=sub_time + 0.2,
+                primary=NoteCandidate(
+                    key=top_note.key,
+                    note=Note.from_name(top_note.note_name),
+                    score=top_score,
+                    onset_gain=sub_gain,
+                ),
+                ranked_notes=runner_ups,
+                drop_reason="sub-onset-unselected-candidate",
+            ))
+            covered.append((sub_time, {top_name}))
 
     # #178 Phase 2: convert dropped slots to API model
     candidate_slots_api: list[CandidateSlot] = []
