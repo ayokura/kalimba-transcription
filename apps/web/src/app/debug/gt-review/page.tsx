@@ -54,8 +54,24 @@ export default function DebugGtReviewPage() {
   } | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playheadRef = useRef<HTMLSpanElement | null>(null);
   const pauseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  // 再生位置のミリ秒表示。React state だと 211 行ページが 60fps で再レンダー
+  // されるため、rAF で span を直接更新する
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      const audio = audioRef.current;
+      if (audio && playheadRef.current) {
+        playheadRef.current.textContent = audio.currentTime.toFixed(3);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   useEffect(() => {
     fetchGtDrafts()
@@ -220,6 +236,28 @@ export default function DebugGtReviewPage() {
               src={`/api/transcriptions/${draft.txId}/audio`}
               style={{ width: "100%" }}
             />
+            <div className="row wrap" style={{ gap: 6, alignItems: "center", marginTop: 4 }}>
+              <span style={{ fontFamily: "monospace", fontSize: "1.05rem" }}>
+                再生位置: <span ref={playheadRef}>0.000</span>s
+              </span>
+              {[-0.1, -0.01, 0.01, 0.1].map((delta) => (
+                <button
+                  key={delta}
+                  type="button"
+                  className="review-btn review-btn-small"
+                  title={`再生位置を ${delta > 0 ? "+" : ""}${Math.round(delta * 1000)}ms 動かす`}
+                  onClick={() => {
+                    const audio = audioRef.current;
+                    if (!audio) return;
+                    if (pauseTimer.current) clearTimeout(pauseTimer.current);
+                    audio.pause();
+                    audio.currentTime = Math.max(0, audio.currentTime + delta);
+                  }}
+                >
+                  {delta > 0 ? `+${Math.round(delta * 1000)}` : Math.round(delta * 1000)}ms
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="row wrap" style={{ gap: 8, margin: "8px 0" }}>
