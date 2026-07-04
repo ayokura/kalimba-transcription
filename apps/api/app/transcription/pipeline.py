@@ -67,6 +67,7 @@ from .peaks import (
     segment_peaks,
 )
 from .per_note import rescue_gap_mute_dips
+from .quality_indicators import compute_quality_indicators, peak_dbfs_of
 from .tuning_check import analyze_tuning_mismatch
 from .segments import (
     build_segment_debug_contexts,
@@ -884,6 +885,22 @@ async def transcribe_audio(
             confidence=slot.confidence,
         ))
 
+    # #194 (S6): compute the internal quality/difficulty self-assessment at
+    # transcription time and persist it in the payload, so the review queue
+    # can prioritise recordings without re-reading audio.  Only the
+    # alternate-grouping presence and slot count feed the density signals.
+    quality = compute_quality_indicators(
+        [
+            {"alternateGroupings": event.alternate_groupings or None}
+            for event in events
+        ],
+        [{"confidence": slot.confidence} for slot in candidate_slots_api],
+        tuning_coverage=(
+            mismatch_report.selected_coverage if mismatch_report is not None else None
+        ),
+        peak_dbfs=peak_dbfs_of(audio),
+    )
+
     return TranscriptionResult(
         instrumentTuning=tuning,
         tempo=round(tempo, 2),
@@ -892,5 +909,12 @@ async def transcribe_audio(
         notationViews=build_notation_views(events),
         tuningMismatch=tuning_mismatch,
         warnings=warnings,
+        qualityIndicators={
+            "recordingQuality": quality.recording_quality,
+            "recognizerConfidence": quality.recognizer_confidence,
+            "difficulty": quality.difficulty,
+            "flag": quality.flag,
+            "signals": quality.signals,
+        },
         debug=result_debug,
     )

@@ -53,9 +53,28 @@ def test_poor_tuning_coverage_and_low_gain_flags_red() -> None:
     # peak_dbfs=-25.0 sits well above the web's -35 dBFS warning floor (so the
     # web itself would not warn) but is still well below GAIN_FULL_DBFS,
     # combined with poor coverage + high ambiguity to push difficulty > 0.6.
-    qi = compute_quality_indicators(_events(10, with_alts=8), [{"confidence": 0.1}] * 8, tuning_coverage=0.5, peak_dbfs=-25.0)
+    # 50 events so the small-recording shrinkage (n/(n+10) ≈ 0.83) leaves the
+    # density signal mostly intact — this scenario is a long ambiguous
+    # recording, not a short one.
+    qi = compute_quality_indicators(
+        _events(50, with_alts=40), [{"confidence": 0.1}] * 40,
+        tuning_coverage=0.5, peak_dbfs=-25.0,
+    )
     assert qi.flag == "red"
     assert qi.difficulty > 0.6
+
+
+def test_short_clean_recording_stays_green() -> None:
+    # #194 recalibration (2026-07-05): a 5-event clean capture with a couple
+    # of uncertainty markers must NOT be flagged — v1 read 2/5 flagged events
+    # as density 0.4 and mis-flagged the two short clean corpus recordings
+    # (bbeeaad8, 16b37356).  Shrinkage n/(n+10) discounts densities that have
+    # little evidence behind them.
+    qi = compute_quality_indicators(
+        _events(5, with_alts=2), [{"confidence": 0.1}] * 2,
+        tuning_coverage=0.95, peak_dbfs=-6.0,
+    )
+    assert qi.flag == "green"
 
 
 def test_no_events_is_maximally_uncertain() -> None:

@@ -180,6 +180,13 @@ class TranscriptionResult(BaseModel):
     notation_views: NotationViews = Field(alias="notationViews")
     tuning_mismatch: TuningMismatch | None = Field(default=None, alias="tuningMismatch")
     warnings: list[str] = []
+    # #194 (S6): unsupervised quality/difficulty self-assessment, computed at
+    # transcription time so the review queue can prioritise without
+    # re-analysing audio.  INTERNAL triage signal — clients must not surface
+    # it to testers (see quality_indicators.py).  Absent on older payloads.
+    quality_indicators: dict[str, Any] | None = Field(
+        default=None, alias="qualityIndicators",
+    )
     debug: dict[str, Any] | None = None
 
     model_config = {"populate_by_name": True}

@@ -48,6 +48,14 @@ RECORDING_COVERAGE_WEIGHT = 0.4
 # emits (soft-rejected alternates, dropped-segment slots).
 CONFIDENCE_ALT_WEIGHT = 0.6
 CONFIDENCE_SLOT_WEIGHT = 0.4
+# Small-recording shrinkage (#194 recalibration, 2026-07-05): densities over
+# few events are statistically unreliable — a 5-event recording with 2
+# flagged events reads as density 0.4 from noise alone, which made v1
+# mis-flag the two short clean recordings (bbeeaad8 5 GT → recConf 0.000,
+# 16b37356 12 GT → 0.171) while every long clean recording scored green.
+# Shrink both densities toward 0 by n/(n + prior): a density estimated from
+# n events is trusted in proportion to the evidence behind it.
+CONFIDENCE_DENSITY_SHRINKAGE_EVENTS = 10.0
 
 # --- Composite difficulty -> flag (provisional) ----------------------------
 # Recording quality dominates: environment is the primary driver of hard cases
@@ -125,12 +133,16 @@ def compute_quality_indicators(
         # No events recognised at all: maximally uncertain.
         alt_density = 1.0
         slot_density = 1.0
+        shrink = 1.0
     else:
         events_with_alts = sum(1 for e in events if e.get("alternateGroupings"))
         alt_density = events_with_alts / n_events
         slot_density = min(1.0, len(candidate_slots) / n_events)
+        shrink = n_events / (n_events + CONFIDENCE_DENSITY_SHRINKAGE_EVENTS)
     recognizer_confidence = _clip01(
-        1.0 - (CONFIDENCE_ALT_WEIGHT * alt_density + CONFIDENCE_SLOT_WEIGHT * slot_density)
+        1.0
+        - shrink
+        * (CONFIDENCE_ALT_WEIGHT * alt_density + CONFIDENCE_SLOT_WEIGHT * slot_density)
     )
 
     difficulty = _clip01(

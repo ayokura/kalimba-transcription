@@ -189,6 +189,10 @@ def _summarize_transaction(tx_dir: Path) -> dict | None:
         "hasMemo": bool(memo_text and memo_text.strip()),
         "warningCount": len(response_data.get("warnings") or []),
         "candidateSlotCount": len(response_data.get("candidateSlots") or []),
+        # #194 (S6): internal difficulty signal persisted at transcription
+        # time.  None for payloads stored before qualityIndicators existed.
+        "qualityDifficulty": (response_data.get("qualityIndicators") or {}).get("difficulty"),
+        "qualityFlag": (response_data.get("qualityIndicators") or {}).get("flag"),
     }
 
 

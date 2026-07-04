@@ -134,4 +134,13 @@ describe("sortQueueEntries", () => {
     const sorted = sortQueueEntries([low, high, tieNewer], "priority");
     expect(sorted.map((e) => e.transactionId)).toEqual(["high", "tie-newer", "low"]);
   });
+
+  it("qualityDifficulty が高い録音は slot が少なくても優先される (#194)", () => {
+    // red (difficulty 0.7) ×20 = +14 — slot 10 個の録音より上に来る。
+    const manySlots = entry({ transactionId: "many-slots", reviewStatus: null, warningCount: 0, candidateSlotCount: 10, hasCorrections: false, createdAt: 10 });
+    const hardRecording = entry({ transactionId: "hard", reviewStatus: null, warningCount: 0, candidateSlotCount: 2, hasCorrections: false, createdAt: 5, qualityDifficulty: 0.7 });
+    const legacyPayload = entry({ transactionId: "legacy", reviewStatus: null, warningCount: 0, candidateSlotCount: 2, hasCorrections: false, createdAt: 20 });
+    const sorted = sortQueueEntries([manySlots, hardRecording, legacyPayload], "priority");
+    expect(sorted.map((e) => e.transactionId)).toEqual(["hard", "many-slots", "legacy"]);
+  });
 });

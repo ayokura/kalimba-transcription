@@ -99,6 +99,10 @@ export type ReviewQueueEntry = {
   hasMemo: boolean;
   warningCount: number;
   candidateSlotCount: number;
+  // #194 (S6): recognizer の内部 difficulty 自己評価 (0-1)。表示はせず
+  // queue の優先度ソートにのみ使う。旧 payload では null/undefined。
+  qualityDifficulty?: number | null;
+  qualityFlag?: string | null;
 };
 
 export type NotationViews = {

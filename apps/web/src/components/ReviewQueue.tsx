@@ -29,7 +29,18 @@ const STATUS_PRIORITY_RANK: Record<string, number> = {
 };
 
 export function queuePriorityScore(entry: ReviewQueueEntry): number {
-  return entry.candidateSlotCount + entry.warningCount * 3 + (entry.hasCorrections ? 1 : 0);
+  // #194 (S6): recognizer の内部 difficulty 自己評価 (0-1) を優先度に加算。
+  // 13 録音の較正 (2026-07-05) で difficulty は (1-F1) と相関 0.73、red flag
+  // は F1 最低 2 録音を正しく指した。×20 で red (≈0.7) ≈ slot 14 個相当 —
+  // slot が少なくても「録音品質そのものが悪い」録音が沈まないようにする。
+  // 旧 payload (qualityDifficulty なし) は 0 扱いで従来順位のまま。
+  const difficultyBoost = (entry.qualityDifficulty ?? 0) * 20;
+  return (
+    entry.candidateSlotCount +
+    entry.warningCount * 3 +
+    (entry.hasCorrections ? 1 : 0) +
+    difficultyBoost
+  );
 }
 
 export function sortQueueEntries(
