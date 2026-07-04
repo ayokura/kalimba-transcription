@@ -5,7 +5,7 @@ import os
 import re
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ValidationError
@@ -107,6 +107,7 @@ def list_tunings() -> list[InstrumentTuning]:
 
 @app.post("/api/transcriptions", response_model=TranscriptionResult)
 async def create_transcription(
+    http_request: Request,
     file: UploadFile = File(...),
     tuning: str = Form(...),
     debug: bool = Form(True),
@@ -189,6 +190,11 @@ async def create_transcription(
         request_params["captureIntent"] = captureIntent.strip()
     if sourceProfile and sourceProfile.strip():
         request_params["sourceProfile"] = sourceProfile.strip()
+    # 録音デバイス推定の手がかり (テスター録音の recording-profile 較正用,
+    # 2026-07-04 テスターFB)。tunnel/Next proxy は元の User-Agent を素通しする。
+    user_agent = (http_request.headers.get("user-agent") or "").strip()
+    if user_agent:
+        request_params["client"] = {"userAgent": user_agent[:512]}
     response_dict = result.model_dump(by_alias=True)
     debug_dict = response_dict.get("debug")
 
