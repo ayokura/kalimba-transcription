@@ -58,7 +58,12 @@ from .models import NoteCandidate, RawCandidateSlot, RawEvent
 from .noise_floor import measure_noise_floor
 from .notation import build_notation_views, format_doremi, format_number, quantize_beat
 from .patterns import apply_repeated_pattern_passes
-from .peaks import analyze_spectrum_at_onset, has_kalimba_sustain_profile, segment_peaks
+from .peaks import (
+    analyze_attack_evidence_at_onset,
+    analyze_spectrum_at_onset,
+    has_kalimba_sustain_profile,
+    segment_peaks,
+)
 from .per_note import rescue_gap_mute_dips
 from .tuning_check import analyze_tuning_mismatch
 from .segments import (
@@ -83,6 +88,10 @@ _DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
     # segment constructed because RMS-based active range didn't cover it.
     # Physical attack signal exists; just the segmenter missed it.
     "orphan-onset-no-segment": 0.50,
+    # #178 S3 (2026-07-05): gap-validated onset が前 segment の終端に消費され
+    # 自分の segment を持てなかった (#197 残存型)。物理基盤は orphan と同等
+    # (broadband 検出済み + attack 証拠ゲート通過) なので同じ 0.50。
+    "boundary-consumed-onset": 0.50,
     "residual-decay-no-reattack": 0.15,
     "low_register_sparse_gap_tail": 0.10,
     "primary-score-too-low": 0.05,
@@ -286,6 +295,12 @@ async def transcribe_audio(
                             alternate_groupings=[],
                         )
                     )
+            # (2026-07-05 実測メモ) 「candidates 空 + dropped_primary も無い」形の
+            # 空 segment slot 化も試作したが、対象と考えた masked-note segment は
+            # 実際には全て dropped_primary 経路 (masker が residual-decay slot 化)
+            # で処理されており到達不能だったため撤去した。masked note 本体は
+            # score 上位で cR@3 に既に入っており、残る欠落は選択層 (#111) と
+            # 再打鍵検出 (S5 mute-dip) の問題。
             continue
 
         segment_key = (round(start_time, 4), round(end_time, 4))
@@ -387,18 +402,38 @@ async def transcribe_audio(
         # Stricter "near-segment-boundary" threshold — 100ms catches pre-onset
         # artifacts that create near-duplicate slots next to real events.
         _ORPHAN_BOUNDARY_SKIP_SEC = 0.10
+        # #178 S3: 境界食われ onset の回収。gap-validated onset が segment の
+        # 終端に一致し (境界として消費され)、そこから新しい segment が始まらない
+        # ケース (#197 残存型、FN taxonomy 2026-07-05 で 4 録音中 12+ 件)。
+        # eps=0.05 の較正: 9ce7df83 C5@4.309 (Δ0.3ms) / ea7edd71 D5@3.104 (Δ32ms)。
+        _BOUNDARY_CONSUMED_EPS_SEC = 0.05
         for onset_time in gap_validated_onsets:
             onset_time = float(onset_time)
-            # Skip if within any existing segment
-            if any(s <= onset_time <= e for s, e in segment_ranges):
-                continue
-            # Skip if too close to segment boundary (pre-onset / post-onset artifact)
-            if any(abs(onset_time - s) < _ORPHAN_BOUNDARY_SKIP_SEC or abs(onset_time - e) < _ORPHAN_BOUNDARY_SKIP_SEC
-                   for s, e in segment_ranges):
-                continue
-            orphan_candidates = analyze_spectrum_at_onset(
-                audio, sample_rate, onset_time, tuning,
+            near_any_start = any(
+                abs(onset_time - s) < _ORPHAN_BOUNDARY_SKIP_SEC for s, _ in segment_ranges
             )
+            at_segment_end = any(
+                abs(onset_time - e) < _BOUNDARY_CONSUMED_EPS_SEC for _, e in segment_ranges
+            )
+            # 終端一致 + そこから segment が始まらない → 境界に食われた onset
+            boundary_consumed = at_segment_end and not near_any_start
+            if not boundary_consumed:
+                # Skip if within any existing segment
+                if any(s <= onset_time <= e for s, e in segment_ranges):
+                    continue
+                # Skip if too close to segment boundary (pre-onset / post-onset artifact)
+                if any(abs(onset_time - s) < _ORPHAN_BOUNDARY_SKIP_SEC or abs(onset_time - e) < _ORPHAN_BOUNDARY_SKIP_SEC
+                       for s, e in segment_ranges):
+                    continue
+            if boundary_consumed:
+                # masked note が主対象なので score 順ではなく attack-gain 順で評価
+                orphan_candidates = analyze_attack_evidence_at_onset(
+                    audio, sample_rate, onset_time, tuning,
+                )
+            else:
+                orphan_candidates = analyze_spectrum_at_onset(
+                    audio, sample_rate, onset_time, tuning,
+                )
             if not orphan_candidates:
                 continue
             # Require meaningful attack evidence: the top candidate's onset_gain
@@ -422,7 +457,8 @@ async def transcribe_audio(
             # distribution (see #178 Phase 2.5 follow-up investigation).
             top_score = top.score or 0
             promote = (
-                top_og >= _ORPHAN_PROMOTE_MIN_OG
+                not boundary_consumed  # 境界食われは slot 止まり (event 化は fixture 影響のため別判断)
+                and top_og >= _ORPHAN_PROMOTE_MIN_OG
                 and top_score >= _ORPHAN_PROMOTE_MIN_SCORE
             )
             if promote:
@@ -447,7 +483,10 @@ async def transcribe_audio(
                     end_time=onset_time + 0.2,
                     primary=top,
                     ranked_notes=orphan_candidates[1:],
-                    drop_reason="orphan-onset-no-segment",
+                    drop_reason=(
+                        "boundary-consumed-onset" if boundary_consumed
+                        else "orphan-onset-no-segment"
+                    ),
                 ))
 
     # Orphan events are appended after the time-ordered segment loop,

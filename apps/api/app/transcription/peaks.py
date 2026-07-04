@@ -1710,6 +1710,55 @@ def analyze_spectrum_at_onset(
     ]
 
 
+def analyze_attack_evidence_at_onset(
+    audio: np.ndarray,
+    sample_rate: int,
+    onset_time: float,
+    tuning: InstrumentTuning,
+    window_seconds: float = 0.15,
+    top_k: int = 8,
+) -> list[NoteCandidate]:
+    """静的スペクトルスコアではなく fresh-attack gain 順で候補を返す (#178 S3)。
+
+    masked note (残響下の弱打) では、窓内スペクトルの最大は鳴り続けている
+    masker になるため `analyze_spectrum_at_onset` の score 順 top は attack
+    証拠を持たない。#153 Phase B の教訓 (backward-attack-gain 順の評価) に
+    倣い、score 上位 top_k を per-note onset_energy_gain で再ランクする。
+    実測根拠: 4e1ae5c6 の masked C5@8.197 は自帯域 gain 16× (47→838) だが
+    同時に B4 が 5500 で鳴っており score 順では候補にすら残らない。
+    """
+    start_sample = int(onset_time * sample_rate)
+    end_sample = min(int((onset_time + window_seconds) * sample_rate), len(audio))
+    segment = audio[start_sample:end_sample]
+    if len(segment) < 512:
+        return []
+    min_freq = min(n.frequency for n in tuning.notes)
+    n_fft = _adaptive_n_fft(sample_rate, min_freq, len(segment))
+    window = cached_hanning(len(segment))
+    spectrum = np.abs(np.fft.rfft(segment * window, n=n_fft))
+    frequencies = cached_rfftfreq(n_fft, sample_rate)
+    ranked = rank_tuning_candidates(frequencies, spectrum, tuning)
+    if not ranked or ranked[0].score <= 1e-6:
+        return []
+    scored: list[tuple[float, Any]] = []
+    for hypothesis in ranked[:top_k]:
+        og = onset_energy_gain(
+            audio, sample_rate, onset_time, onset_time + window_seconds,
+            hypothesis.candidate.frequency,
+        )
+        scored.append((og, hypothesis))
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    return [
+        NoteCandidate(
+            key=h.candidate.key,
+            note=h.candidate.note,
+            score=h.score,
+            onset_gain=og,
+        )
+        for og, h in scored[:4]
+    ]
+
+
 def _acquire_spectrum(
     ctx: _SegmentContext,
 ) -> tuple[_SpectralData, _NoteEvidenceCache] | None:

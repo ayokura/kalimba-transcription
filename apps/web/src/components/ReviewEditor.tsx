@@ -52,10 +52,11 @@ const ORIGIN_LABELS: Record<ReviewOrigin, string> = {
   "inserted-manual": "手動追加",
 };
 
-// pipeline.py の _DROP_REASON_BASE_CONFIDENCE と対で維持する (現 6 種)
+// pipeline.py の _DROP_REASON_BASE_CONFIDENCE と対で維持する (現 7 種)
 const DROP_REASON_LABELS: Record<string, string> = {
   "sub-onset-mute-dip-reattack": "ミュート後の再打鍵",
   "orphan-onset-no-segment": "onset のみ検出",
+  "boundary-consumed-onset": "境界に消えた onset",
   "residual-decay-no-reattack": "残響の可能性",
   low_register_sparse_gap_tail: "低域の弱い尾部",
   "primary-score-too-low": "スコア不足で棄却",
