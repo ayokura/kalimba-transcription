@@ -7,7 +7,7 @@
       "truthNotes": 12
     },
     "17ea7626-3c5d-450d-ae74-0116dea6e881": {
-      "minF1": 0.863,
+      "minF1": 0.865,
       "maxHardMisses": 7,
       "truthNotes": 52
     },
@@ -36,6 +36,11 @@
       "maxHardMisses": 1,
       "truthNotes": 8
     },
+    "a9e30986-5300-4401-8b69-152cba821042": {
+      "minF1": 0.503,
+      "maxHardMisses": 46,
+      "truthNotes": 83
+    },
     "bbd6797f-da44-4e89-b2bf-21b803f3f129": {
       "minF1": 1.0,
       "maxHardMisses": 0,
@@ -52,12 +57,12 @@
       "truthNotes": 18
     },
     "ebecf0c6-7e41-430b-bd60-8111a495185e": {
-      "minF1": 0.705,
-      "maxHardMisses": 4,
+      "minF1": 0.742,
+      "maxHardMisses": 3,
       "truthNotes": 18
     }
   },
-  "updatedAt": "2026-07-04T07:05:15+00:00",
-  "recognizerFingerprint": "840eff66d9343ded",
+  "updatedAt": "2026-07-04T10:31:12+00:00",
+  "recognizerFingerprint": "894c64ea14e33c32",
   "kalimbaDspFingerprint": "b5688f4db575441d"
 }
