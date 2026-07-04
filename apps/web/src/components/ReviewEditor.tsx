@@ -31,6 +31,7 @@ import {
   type ReviewEvent,
   type ReviewState,
 } from "@/lib/reviewCorrections";
+import { needsReviewReasons, type NeedsReviewReason } from "@/lib/needsReview";
 import {
   CandidateSlot,
   CorrectionsPayload,
@@ -51,10 +52,14 @@ const ORIGIN_LABELS: Record<ReviewOrigin, string> = {
   "inserted-manual": "手動追加",
 };
 
+// pipeline.py の _DROP_REASON_BASE_CONFIDENCE と対で維持する (現 6 種)
 const DROP_REASON_LABELS: Record<string, string> = {
-  "residual-decay-no-reattack": "残響の可能性",
+  "sub-onset-mute-dip-reattack": "ミュート後の再打鍵",
   "orphan-onset-no-segment": "onset のみ検出",
+  "residual-decay-no-reattack": "残響の可能性",
   low_register_sparse_gap_tail: "低域の弱い尾部",
+  "primary-score-too-low": "スコア不足で棄却",
+  "onset-gate-no-evidence": "attack 証拠なし",
 };
 
 type LoadState =
@@ -308,6 +313,17 @@ function ReviewEditorReady({
     [apply],
   );
 
+  // per-event triage 信号 (S3): recognizer 由来イベントの要確認理由。
+  // ユーザー挿入イベント (sourceEventId なし) は対象外
+  const reviewReasonsByEventId = useMemo(() => {
+    const slots = result.candidateSlots ?? [];
+    return new Map(
+      result.events.map((event) => [event.id, needsReviewReasons(event, slots)]),
+    );
+  }, [result.events, result.candidateSlots]);
+
+  const [showOnlyNeedsReview, setShowOnlyNeedsReview] = useState(false);
+
   const timeline = useMemo<TimelineItem[]>(() => {
     const items: TimelineItem[] = reviewState.events.map((event) => ({
       kind: "event" as const,
@@ -323,6 +339,30 @@ function ReviewEditorReady({
     });
     return items.sort((a, b) => a.timeSec - b.timeSec);
   }, [reviewState, result.candidateSlots]);
+
+  const needsReviewCount = useMemo(
+    () =>
+      timeline.filter(
+        (item) =>
+          item.kind === "slot" ||
+          ((item.event.sourceEventId
+            ? reviewReasonsByEventId.get(item.event.sourceEventId)
+            : null) ?? []).length > 0,
+      ).length,
+    [timeline, reviewReasonsByEventId],
+  );
+
+  // 「要確認のみ」: 棄却候補 slot と、triage 信号のあるイベントに絞る
+  const visibleTimeline = useMemo(() => {
+    if (!showOnlyNeedsReview) return timeline;
+    return timeline.filter(
+      (item) =>
+        item.kind === "slot" ||
+        ((item.event.sourceEventId
+          ? reviewReasonsByEventId.get(item.event.sourceEventId)
+          : null) ?? []).length > 0,
+    );
+  }, [timeline, showOnlyNeedsReview, reviewReasonsByEventId]);
 
   const displayEvents = useMemo(() => toDisplayScoreEvents(reviewState), [reviewState]);
 
@@ -394,12 +434,35 @@ function ReviewEditorReady({
       </section>
 
       <section className="review-timeline" aria-label="イベント一覧">
-        {timeline.map((item) =>
+        <div className="review-triage-bar" role="group" aria-label="要確認でしぼり込む">
+          <button
+            type="button"
+            className="review-mode-btn"
+            aria-pressed={showOnlyNeedsReview}
+            onClick={() => setShowOnlyNeedsReview((prev) => !prev)}
+          >
+            要確認のみ ({needsReviewCount})
+          </button>
+          <span className="muted">
+            {showOnlyNeedsReview
+              ? `要確認 ${needsReviewCount} 件を表示中 (全 ${timeline.length} 件)`
+              : `全 ${timeline.length} 件を表示中`}
+          </span>
+        </div>
+        {showOnlyNeedsReview && visibleTimeline.length === 0 ? (
+          <p className="empty">要確認のイベントはありません。</p>
+        ) : null}
+        {visibleTimeline.map((item) =>
           item.kind === "event" ? (
             <EventCard
               key={item.event.id}
               event={item.event}
               selected={selectedId === item.event.id}
+              reviewReasons={
+                (item.event.sourceEventId
+                  ? reviewReasonsByEventId.get(item.event.sourceEventId)
+                  : null) ?? []
+              }
               suggestions={
                 item.event.sourceEventId
                   ? sourceEventById.get(item.event.sourceEventId)?.alternateGroupings ?? null
@@ -481,6 +544,7 @@ function formatTime(sec: number): string {
 function EventCard({
   event,
   selected,
+  reviewReasons,
   suggestions,
   pickerNotes,
   onSelect,
@@ -493,6 +557,7 @@ function EventCard({
 }: {
   event: ReviewEvent;
   selected: boolean;
+  reviewReasons: NeedsReviewReason[];
   suggestions: TranscriptionResult["events"][number]["alternateGroupings"];
   pickerNotes: ScoreNote[];
   onSelect: () => void;
@@ -556,6 +621,14 @@ function EventCard({
             </span>
           ))}
         </span>
+        {reviewReasons.length > 0 && !event.removed ? (
+          <span
+            className="review-needs-review-badge"
+            title={reviewReasons.map((r) => r.label).join(" / ")}
+          >
+            要確認: {reviewReasons.map((r) => r.label).join(" / ")}
+          </span>
+        ) : null}
         <span className={`review-origin-badge origin-${event.origin}`}>
           {event.removed ? "削除済" : ORIGIN_LABELS[event.origin]}
         </span>

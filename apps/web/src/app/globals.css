@@ -2128,6 +2128,24 @@ button:disabled {
   color: var(--muted);
 }
 
+/* per-event triage 信号 (S3) */
+.review-needs-review-badge {
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: rgba(224, 168, 0, 0.16);
+  color: #8a6100;
+  border: 1px solid rgba(224, 168, 0, 0.45);
+}
+
+.review-triage-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
 .review-origin-badge.origin-edited,
 .review-origin-badge.origin-inserted-slot,
 .review-origin-badge.origin-inserted-manual {

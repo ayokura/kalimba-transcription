@@ -14,6 +14,39 @@ type LoadState =
 
 type StatusFilter = ReviewStatusValue | "all";
 
+type SortMode = "priority" | "newest";
+
+// 暫定優先度 (第 2 期 S3、GT 不要 proxy のみ):
+// 未トリアージ (recorded_only / status なし) を最優先層、確認中を次層に置き、
+// 層内は「認識器の不確かさ」= 棄却候補 slot 数 + 警告数で降順。
+// 修正が既に付いている録音はレビューが進んでいる証拠なので同点時に僅かに繰り上げる。
+const STATUS_PRIORITY_RANK: Record<string, number> = {
+  recorded_only: 0,
+  review_started: 1,
+  uncertain: 2,
+  review_completed: 3,
+  unusable: 4,
+};
+
+export function queuePriorityScore(entry: ReviewQueueEntry): number {
+  return entry.candidateSlotCount + entry.warningCount * 3 + (entry.hasCorrections ? 1 : 0);
+}
+
+export function sortQueueEntries(
+  entries: ReviewQueueEntry[],
+  mode: SortMode,
+): ReviewQueueEntry[] {
+  if (mode === "newest") return entries;
+  return [...entries].sort((a, b) => {
+    const rankA = STATUS_PRIORITY_RANK[a.reviewStatus ?? "recorded_only"] ?? 0;
+    const rankB = STATUS_PRIORITY_RANK[b.reviewStatus ?? "recorded_only"] ?? 0;
+    if (rankA !== rankB) return rankA - rankB;
+    const scoreDiff = queuePriorityScore(b) - queuePriorityScore(a);
+    if (scoreDiff !== 0) return scoreDiff;
+    return b.createdAt - a.createdAt;
+  });
+}
+
 function formatCreatedAt(createdAt: number): string {
   // API returns seconds (st_mtime). Render as a locale date-time.
   const ms = createdAt > 1e12 ? createdAt : createdAt * 1000;
@@ -26,6 +59,7 @@ function formatCreatedAt(createdAt: number): string {
 
 export function ReviewQueue() {
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [sortMode, setSortMode] = useState<SortMode>("priority");
   const [state, setState] = useState<LoadState>({ kind: "loading" });
 
   const load = useCallback(async (status: StatusFilter) => {
@@ -52,6 +86,11 @@ export function ReviewQueue() {
     if (state.kind !== "ready") return null;
     return state.entries.length;
   }, [state]);
+
+  const sortedEntries = useMemo(() => {
+    if (state.kind !== "ready") return [];
+    return sortQueueEntries(state.entries, sortMode);
+  }, [state, sortMode]);
 
   return (
     <main className="review-queue-shell">
@@ -89,6 +128,25 @@ export function ReviewQueue() {
         ))}
       </div>
 
+      <div className="review-queue-filters" role="group" aria-label="並び順">
+        <button
+          type="button"
+          className={`review-queue-filter${sortMode === "priority" ? " active" : ""}`}
+          aria-pressed={sortMode === "priority"}
+          onClick={() => setSortMode("priority")}
+        >
+          優先度順
+        </button>
+        <button
+          type="button"
+          className={`review-queue-filter${sortMode === "newest" ? " active" : ""}`}
+          aria-pressed={sortMode === "newest"}
+          onClick={() => setSortMode("newest")}
+        >
+          新着順
+        </button>
+      </div>
+
       {state.kind === "loading" ? (
         <p className="muted">読み込み中…</p>
       ) : state.kind === "error" ? (
@@ -97,9 +155,12 @@ export function ReviewQueue() {
         <p className="empty">該当する録音はありません。</p>
       ) : (
         <>
-          <p className="muted review-queue-count">{counts} 件</p>
+          <p className="muted review-queue-count">
+            {counts} 件
+            {sortMode === "priority" ? " (未確認 → 不確かさの高い順)" : ""}
+          </p>
           <ul className="review-queue-list">
-            {state.entries.map((entry) => (
+            {sortedEntries.map((entry) => (
               <li key={entry.transactionId} className="review-queue-item">
                 <Link
                   href={`/score/${entry.transactionId}/review`}
