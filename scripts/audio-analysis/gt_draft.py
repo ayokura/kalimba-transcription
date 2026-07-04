@@ -45,6 +45,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 import kalimba_dsp as K  # noqa: E402
 
+from apps.api.app.transcription.audio import condition_input_audio  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = REPO_ROOT / "data" / "transactions"
 OUT_DIR_DEFAULT = REPO_ROOT / "data" / "gt_drafts"
@@ -96,9 +98,9 @@ def resolve_tx(prefix: str) -> Path:
 
 def load_audio(tx_dir: Path) -> tuple[np.ndarray, int]:
     audio, sr = sf.read(tx_dir / "audio.wav", dtype="float32")
-    if audio.ndim > 1:
-        audio = audio[:, 0]  # server parity: read_audio() takes channel 0
-    return np.ascontiguousarray(audio, dtype=np.float32), int(sr)
+    # server parity: 優勢チャンネル選択 + 増幅のみ peak 正規化 (2026-07-05)
+    audio, _conditioning, _peak = condition_input_audio(np.asarray(audio))
+    return audio, int(sr)
 
 
 def detect_raw_onsets(audio: np.ndarray, sr: int) -> list[float]:

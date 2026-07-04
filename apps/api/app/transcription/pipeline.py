@@ -163,7 +163,7 @@ async def transcribe_audio(
     mid_performance_start: bool = False,
     mid_performance_end: bool = False,
 ) -> TranscriptionResult:
-    audio, sample_rate = await read_audio(upload)
+    audio, sample_rate, input_conditioning = await read_audio(upload)
     detection = detect_segments(
         audio, sample_rate,
         mid_performance_start=mid_performance_start,
@@ -684,6 +684,7 @@ async def transcribe_audio(
     if debug:
         result_debug = {
             **segment_debug,
+            "inputConditioning": input_conditioning,
             "gapRescueEvents": rescue_log or [],
             "segmentCandidates": segment_candidates_debug,
             "mergedEvents": [
