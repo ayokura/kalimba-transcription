@@ -1,0 +1,307 @@
+{
+  "version": 1,
+  "toleranceSec": 0.05,
+  "source": {
+    "type": "review-corrections",
+    "transactionId": "d7a82772-f77f-4820-9798-00133ae45f4e",
+    "correctionsUpdatedAt": "2026-07-04T11:56:10+00:00",
+    "originCounts": {
+      "recognizer": 19,
+      "inserted-manual": 3,
+      "edited": 5,
+      "inserted-slot": 8
+    },
+    "reviewStatus": "review_completed",
+    "provenance": "tester_corrected",
+    "timingAccuracy": {
+      "onsetTiming": "approximate",
+      "noteIdentity": "review_corrected",
+      "caveat": "Review UI corrections are reliable primarily for note identity, ordering, and grouping. Onset times are approximate: recognizer event starts can deviate from perceptual/spectral onsets, inserted-slot times use dropped-segment boundaries, and inserted-manual times are hand-placed. Use spectral/human verification before timing-sensitive training or calibration."
+    }
+  },
+  "onsets": [
+    {
+      "timeSec": 1.0507,
+      "notes": [
+        "E5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 1.4507,
+      "notes": [
+        "D5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 2.0593,
+      "notes": [
+        "C4",
+        "C5"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.1,
+      "comment": "origin=inserted-manual"
+    },
+    {
+      "timeSec": 2.3852,
+      "notes": [
+        "E4"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.1,
+      "comment": "origin=inserted-manual"
+    },
+    {
+      "timeSec": 2.7093,
+      "notes": [
+        "G4"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 3.1253,
+      "notes": [
+        "D5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 3.5307,
+      "notes": [
+        "E5"
+      ],
+      "method": "user_corrected",
+      "comment": "origin=edited"
+    },
+    {
+      "timeSec": 3.9147,
+      "notes": [
+        "F5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 4.336,
+      "notes": [
+        "E4",
+        "G5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 4.768,
+      "notes": [
+        "G4"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 5.2,
+      "notes": [
+        "B4"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 6.032,
+      "notes": [
+        "A5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 6.5013,
+      "notes": [
+        "B5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 6.9067,
+      "notes": [
+        "F4",
+        "C6"
+      ],
+      "method": "user_corrected",
+      "comment": "origin=edited"
+    },
+    {
+      "timeSec": 7.3493,
+      "notes": [
+        "A4"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 7.776,
+      "notes": [
+        "B5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 8.5973,
+      "notes": [
+        "A5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 9.4187,
+      "notes": [
+        "C4",
+        "G5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 9.8293,
+      "notes": [
+        "E4"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 10.2667,
+      "notes": [
+        "G4"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 11.0987,
+      "notes": [
+        "A5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 11.504,
+      "notes": [
+        "B5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 11.9147,
+      "notes": [
+        "F4",
+        "C6"
+      ],
+      "method": "user_corrected",
+      "comment": "origin=edited"
+    },
+    {
+      "timeSec": 12.3253,
+      "notes": [
+        "A4"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 12.7307,
+      "notes": [
+        "B5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 13.5213,
+      "notes": [
+        "A5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 14.4756,
+      "notes": [
+        "C4",
+        "G5"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.1,
+      "comment": "origin=inserted-manual"
+    },
+    {
+      "timeSec": 14.784,
+      "notes": [
+        "E4"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 15.1733,
+      "notes": [
+        "A5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 15.9947,
+      "notes": [
+        "B5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 16.8107,
+      "notes": [
+        "F4",
+        "C6"
+      ],
+      "method": "user_corrected",
+      "comment": "origin=edited"
+    },
+    {
+      "timeSec": 17.2213,
+      "notes": [
+        "A4"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 17.68,
+      "notes": [
+        "G5"
+      ],
+      "method": "user_corrected"
+    },
+    {
+      "timeSec": 18.5707,
+      "notes": [
+        "D4",
+        "F5"
+      ],
+      "method": "user_corrected",
+      "toleranceSec": 0.08,
+      "comment": "origin=inserted-slot"
+    },
+    {
+      "timeSec": 20.0267,
+      "notes": [
+        "C4",
+        "E4",
+        "G4",
+        "E5"
+      ],
+      "method": "user_corrected",
+      "comment": "origin=edited"
+    }
+  ]
+}

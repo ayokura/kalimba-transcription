@@ -1,0 +1,501 @@
+{
+  "tuning": {
+    "id": "kalimba-17-c",
+    "name": "17 Key C Major",
+    "keyCount": 17,
+    "notes": [
+      {
+        "key": 1,
+        "noteName": "D6",
+        "frequency": 1174.6590716696303,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 2,
+        "noteName": "B5",
+        "frequency": 987.7666025122483,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 3,
+        "noteName": "G5",
+        "frequency": 783.9908719634985,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 4,
+        "noteName": "E5",
+        "frequency": 659.2551138257398,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 5,
+        "noteName": "C5",
+        "frequency": 523.2511306011972,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.3
+          },
+          {
+            "ratio": 2.247,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 6,
+        "noteName": "A4",
+        "frequency": 440,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 7,
+        "noteName": "F4",
+        "frequency": 349.2282314330039,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 8,
+        "noteName": "D4",
+        "frequency": 293.6647679174076,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 9,
+        "noteName": "C4",
+        "frequency": 261.6255653005986,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 2.908,
+            "weight": 0.3
+          },
+          {
+            "ratio": 3.672,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 10,
+        "noteName": "E4",
+        "frequency": 329.6275569128699,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 11,
+        "noteName": "G4",
+        "frequency": 391.99543598174927,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 12,
+        "noteName": "B4",
+        "frequency": 493.8833012561241,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 13,
+        "noteName": "D5",
+        "frequency": 587.3295358348151,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.55
+          },
+          {
+            "ratio": 2,
+            "weight": 0.35
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 14,
+        "noteName": "F5",
+        "frequency": 698.4564628660078,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.55
+          },
+          {
+            "ratio": 2,
+            "weight": 0.35
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 15,
+        "noteName": "A5",
+        "frequency": 880,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 16,
+        "noteName": "C6",
+        "frequency": 1046.5022612023945,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      },
+      {
+        "key": 17,
+        "noteName": "E6",
+        "frequency": 1318.5102276514797,
+        "layer": 0,
+        "partials": [
+          {
+            "ratio": 1,
+            "weight": 1
+          },
+          {
+            "ratio": 1.5,
+            "weight": 0.35
+          },
+          {
+            "ratio": 2,
+            "weight": 0.55
+          },
+          {
+            "ratio": 3,
+            "weight": 0.3
+          },
+          {
+            "ratio": 4,
+            "weight": 0.15
+          }
+        ]
+      }
+    ],
+    "tonic": "C"
+  },
+  "debug": true,
+  "disabledRepeatedPatternPasses": null,
+  "midPerformanceStart": false,
+  "midPerformanceEnd": false,
+  "audioSha256": "da0126c33a046b83db2b54dda908edfac69033e0fa48ba35cfe0bce311f8b3fd",
+  "commitSha": "205012b28f7b4f2ac39bdeb684e4a2e15b925cd5",
+  "recognizerFingerprint": "840eff66d9343ded",
+  "dspFingerprint": "b5688f4db575441d",
+  "client": {
+    "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1"
+  }
+}

@@ -1,0 +1,262 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-04T11:56:10+00:00",
+  "events": [
+    {
+      "timeSec": 1.0507,
+      "notes": [
+        "E5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 1.4507,
+      "notes": [
+        "D5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 2.0592730000000006,
+      "notes": [
+        "C4",
+        "C5"
+      ],
+      "origin": "inserted-manual"
+    },
+    {
+      "timeSec": 2.385162,
+      "notes": [
+        "E4"
+      ],
+      "origin": "inserted-manual"
+    },
+    {
+      "timeSec": 2.7093,
+      "notes": [
+        "G4"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 3.1253,
+      "notes": [
+        "D5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 3.5307,
+      "notes": [
+        "E5"
+      ],
+      "origin": "edited"
+    },
+    {
+      "timeSec": 3.9147,
+      "notes": [
+        "F5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 4.336,
+      "notes": [
+        "E4",
+        "G5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 4.768,
+      "notes": [
+        "G4"
+      ],
+      "origin": "inserted-slot"
+    },
+    {
+      "timeSec": 5.2,
+      "notes": [
+        "B4"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 6.032,
+      "notes": [
+        "A5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 6.5013,
+      "notes": [
+        "B5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 6.9067,
+      "notes": [
+        "F4",
+        "C6"
+      ],
+      "origin": "edited"
+    },
+    {
+      "timeSec": 7.3493,
+      "notes": [
+        "A4"
+      ],
+      "origin": "inserted-slot"
+    },
+    {
+      "timeSec": 7.776,
+      "notes": [
+        "B5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 8.5973,
+      "notes": [
+        "A5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 9.4187,
+      "notes": [
+        "C4",
+        "G5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 9.8293,
+      "notes": [
+        "E4"
+      ],
+      "origin": "inserted-slot"
+    },
+    {
+      "timeSec": 10.2667,
+      "notes": [
+        "G4"
+      ],
+      "origin": "inserted-slot"
+    },
+    {
+      "timeSec": 11.0987,
+      "notes": [
+        "A5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 11.504,
+      "notes": [
+        "B5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 11.9147,
+      "notes": [
+        "F4",
+        "C6"
+      ],
+      "origin": "edited"
+    },
+    {
+      "timeSec": 12.3253,
+      "notes": [
+        "A4"
+      ],
+      "origin": "inserted-slot"
+    },
+    {
+      "timeSec": 12.7307,
+      "notes": [
+        "B5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 13.5213,
+      "notes": [
+        "A5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 14.475551,
+      "notes": [
+        "C4",
+        "G5"
+      ],
+      "origin": "inserted-manual"
+    },
+    {
+      "timeSec": 14.784,
+      "notes": [
+        "E4"
+      ],
+      "origin": "inserted-slot"
+    },
+    {
+      "timeSec": 15.1733,
+      "notes": [
+        "A5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 15.9947,
+      "notes": [
+        "B5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 16.8107,
+      "notes": [
+        "F4",
+        "C6"
+      ],
+      "origin": "edited"
+    },
+    {
+      "timeSec": 17.2213,
+      "notes": [
+        "A4"
+      ],
+      "origin": "inserted-slot"
+    },
+    {
+      "timeSec": 17.68,
+      "notes": [
+        "G5"
+      ],
+      "origin": "recognizer"
+    },
+    {
+      "timeSec": 18.570699999999984,
+      "notes": [
+        "D4",
+        "F5"
+      ],
+      "origin": "inserted-slot"
+    },
+    {
+      "timeSec": 20.0267,
+      "notes": [
+        "C4",
+        "E4",
+        "G4",
+        "E5"
+      ],
+      "origin": "edited"
+    }
+  ]
+}

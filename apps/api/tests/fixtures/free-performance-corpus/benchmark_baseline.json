@@ -8,7 +8,7 @@
     },
     "17ea7626-3c5d-450d-ae74-0116dea6e881": {
       "minF1": 0.865,
-      "maxHardMisses": 7,
+      "maxHardMisses": 5,
       "truthNotes": 52
     },
     "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d": {
@@ -33,12 +33,12 @@
     },
     "9ce7df83-33a0-455d-bf86-c9392ce6f777": {
       "minF1": 0.769,
-      "maxHardMisses": 1,
+      "maxHardMisses": 0,
       "truthNotes": 8
     },
     "a9e30986-5300-4401-8b69-152cba821042": {
       "minF1": 0.503,
-      "maxHardMisses": 46,
+      "maxHardMisses": 34,
       "truthNotes": 83
     },
     "bbd6797f-da44-4e89-b2bf-21b803f3f129": {
@@ -51,18 +51,23 @@
       "maxHardMisses": 0,
       "truthNotes": 5
     },
+    "d7a82772-f77f-4820-9798-00133ae45f4e": {
+      "minF1": 0.771,
+      "maxHardMisses": 8,
+      "truthNotes": 46
+    },
     "ea7edd71-e815-4638-a248-a47fe21e5061": {
       "minF1": 0.833,
-      "maxHardMisses": 1,
+      "maxHardMisses": 0,
       "truthNotes": 18
     },
     "ebecf0c6-7e41-430b-bd60-8111a495185e": {
       "minF1": 0.742,
-      "maxHardMisses": 3,
+      "maxHardMisses": 1,
       "truthNotes": 18
     }
   },
-  "updatedAt": "2026-07-04T10:31:12+00:00",
-  "recognizerFingerprint": "894c64ea14e33c32",
+  "updatedAt": "2026-07-04T11:59:23+00:00",
+  "recognizerFingerprint": "cd6d52fea9850345",
   "kalimbaDspFingerprint": "b5688f4db575441d"
 }

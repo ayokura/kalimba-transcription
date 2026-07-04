@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "corpusType": "free-performance",
+  "repositoryManaged": true,
+  "transactionId": "d7a82772-f77f-4820-9798-00133ae45f4e",
+  "createdAt": "2026-07-04T09:53:24Z",
+  "promotedAt": "2026-07-04T11:58:51+00:00",
+  "status": "review_completed",
+  "categories": [
+    "tester_capture",
+    "free_performance",
+    "review_corrected",
+    "repo_managed_corpus"
+  ],
+  "recording": {
+    "device": "iPhone (UA: iOS 18.7)",
+    "microphone": "内蔵マイク (推定: 同一テスターの他録音と同傾向の L-only/-25dBFS 帯)",
+    "deviceNotes": null,
+    "sampleRate": 48000,
+    "channels": 2,
+    "durationSec": 22.63,
+    "peakDb": -24.7,
+    "rmsDb": -47.96
+  },
+  "tuning": {
+    "selectedId": "kalimba-17-c",
+    "correctedId": null
+  },
+  "aggregates": {
+    "recognizerEventCount": 30,
+    "correctedEventCount": 35,
+    "candidateSlotCount": 31,
+    "originCounts": {
+      "recognizer": 19,
+      "inserted-manual": 3,
+      "edited": 5,
+      "inserted-slot": 8
+    }
+  },
+  "copyright": {
+    "status": "public_domain",
+    "workTitle": "The First Noel",
+    "publicDomainReason": "伝統的クリスマスキャロル (作者不詳・19世紀以前) で楽曲は PD。演奏はテスター本人。",
+    "repositoryAllowed": true
+  },
+  "timingAccuracy": {
+    "noteIdentity": "reliable",
+    "noteOrderAndCombination": "reliable",
+    "onsetTiming": "approximate",
+    "method": "user_corrected",
+    "reason": "Onset times come from the review UI: recognizer-origin events use the recognizer's detected event start (which itself can deviate slightly from the perceptual/spectral onset), inserted-manual events are hand-placed on the timeline, and inserted-slot events use a dropped-segment boundary.",
+    "safeFor": [
+      "score-level evaluation",
+      "note identity / order / combination evaluation"
+    ],
+    "cautionFor": [
+      "timing-sensitive training",
+      "tempo / rhythm modeling",
+      "onset-time learning",
+      "anything requiring spectral-grade onset accuracy"
+    ],
+    "refinement": "Optional. An agent or human can re-verify onset times with spectral analysis and, if done, raise the per-onset method to spectrogram_verified / aubio_cross_checked. Not required unless a timing-sensitive use needs it."
+  },
+  "rightsReview": {
+    "requiredForRepositoryManagement": true,
+    "status": "approved_for_repository",
+    "reviewedAt": "2026-07-04",
+    "reviewedBy": "ayokura (chat, 2026-07-05)",
+    "decision": "include_audio_and_teacher_data_in_repository",
+    "reason": "ユーザーが 2026-07-05 のチャットで PD と確認 (シンプルな The First Noel)。"
+  },
+  "captureConsent": {
+    "granted": true,
+    "grantedBy": "ayokura (chat, 2026-07-05)",
+    "grantedAt": "2026-07-04"
+  },
+  "sourceFiles": {
+    "audio": "audio.wav",
+    "request": "request.json",
+    "corrections": "corrections.json",
+    "reviewStatus": "review_status.json",
+    "groundTruth": "ground_truth.json"
+  },
+  "notes": "旋律のみのシンプルな演奏。review UI corrections 由来 GT (F1=0.771, 2026-07-05)。inserted-slot 8 件は #178 sub-onset 候補化の初の実運用採用例。"
+}
