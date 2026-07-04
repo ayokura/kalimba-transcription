@@ -21,6 +21,8 @@ Usage in tests::
 
 from __future__ import annotations
 
+import json
+import os
 from contextlib import contextmanager
 from dataclasses import dataclass, fields, replace
 from typing import Any, Iterator
@@ -88,7 +90,35 @@ class RecognizerSettings:
     primary_rejection_max_fundamental_ratio: float = PRIMARY_REJECTION_MAX_FUNDAMENTAL_RATIO
 
 
-_DEFAULTS = RecognizerSettings()
+def _apply_env_overrides(base: RecognizerSettings) -> RecognizerSettings:
+    """KALIMBA_SETTINGS_OVERRIDES (JSON) をプロセス起動時に反映する。
+
+    ablation observatory (第 2 期 S4) が実 pytest スイート / benchmark の
+    サブプロセスへトグルを渡すための唯一の経路。ランタイム中の変更は
+    見ない (import 時に一度だけ読む)。未知キーは無視、disabled_gates は
+    list → frozenset に変換。prod では未設定なので no-op。
+    """
+    raw = os.environ.get("KALIMBA_SETTINGS_OVERRIDES")
+    if not raw:
+        return base
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return base
+    if not isinstance(data, dict):
+        return base
+    valid = {f.name for f in fields(RecognizerSettings)}
+    kwargs: dict[str, Any] = {}
+    for key, value in data.items():
+        if key not in valid:
+            continue
+        if key == "disabled_gates" and isinstance(value, list):
+            value = frozenset(value)
+        kwargs[key] = value
+    return replace(base, **kwargs) if kwargs else base
+
+
+_DEFAULTS = _apply_env_overrides(RecognizerSettings())
 _current: RecognizerSettings = _DEFAULTS
 
 
