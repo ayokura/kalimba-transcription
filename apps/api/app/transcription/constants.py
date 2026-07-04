@@ -389,6 +389,15 @@ NARROW_FFT_SPREAD_CHORD_BG_DOMINANCE_RATIO = 0.25
 # Residual-decay and recent-primary replacement thresholds.
 MIN_RECENT_NOTE_ONSET_GAIN = 2.5
 RESIDUAL_DECAY_MIN_ONSET_GAIN = 1.5
+# S5 agenda 4: un-muted re-stroke rescue in the residual-decay forward-scan.
+# A recent note replucked without finger-muting shows no mute-dip and no
+# band onset gain (still ringing), but its attack-window energy vs 200 ms
+# earlier rises.  Calibrated on ear-verified GT (2026-07-05): the 5 real
+# re-strokes measured backward gain 1.67–8.96 (4e1ae5c6 C5@8.197/16.923,
+# 9ce7df83 C5@12.459/16.811, 17ea7626 C5@11.547); the same recent notes at
+# all 5 true-resonance rejections measured ≤ 0.93 (monotonic decay cannot
+# rise above its own past).  1.3 splits with margin on both sides.
+RESIDUAL_REATTACK_MIN_BACKWARD_GAIN = 1.3
 RECENT_PRIMARY_REPLACEMENT_MIN_SCORE_RATIO = 0.18
 RECENT_PRIMARY_REPLACEMENT_MIN_FUNDAMENTAL_RATIO = 0.6
 RECENT_PRIMARY_REPLACEMENT_RELAXED_FUNDAMENTAL_RATIO = 0.45

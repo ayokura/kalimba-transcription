@@ -2034,12 +2034,25 @@ def _resolve_primary(
         and evidence.is_residual_decay(primary.candidate.frequency)
         and not evidence.has_mute_dip_reattack(primary.candidate.frequency)
     ):
-        # Forward-scan: check all recent notes for genuine re-attack (mute-dip).
+        # Forward-scan: check all recent notes for genuine re-attack.
+        # Two physical signatures (S5 agenda 4):
+        #   1. mute-dip — the player touches the ringing tine before
+        #      replucking (high → finger-mute low → high).
+        #   2. backward-gain rise — the player replucks WITHOUT muting
+        #      (layered re-stroke).  The note's own band cannot show a
+        #      post/pre onset gain (it is still ringing: measured 0.21–0.94
+        #      on ear-verified re-strokes), but the attack-window energy vs
+        #      200 ms earlier rises: measured 1.67–8.96 on the 5 GT
+        #      re-strokes (4e1ae5c6 C5@8.197/16.923, 9ce7df83
+        #      C5@12.459/16.811, 17ea7626 C5@11.547) vs ≤ 0.93 for the same
+        #      recent notes at all 5 true-resonance rejections — a monotonic
+        #      decay can never rise above its own past.
         _ranked_by_name: dict[str, NoteHypothesis] = {}
         for h in ranked:
             if h.candidate.note_name not in _ranked_by_name:
                 _ranked_by_name[h.candidate.note_name] = h
         alternative_primary = None
+        bg_qualified: list[NoteHypothesis] = []
         for note_name in ctx.recent_note_names:
             hyp = _ranked_by_name.get(note_name)
             if hyp is None:
@@ -2047,6 +2060,21 @@ def _resolve_primary(
             if evidence.has_mute_dip_reattack(hyp.candidate.frequency):
                 if alternative_primary is None or hyp.score > alternative_primary.score:
                     alternative_primary = hyp
+            elif (
+                evidence.backward_attack_gain(hyp.candidate.frequency)
+                >= RESIDUAL_REATTACK_MIN_BACKWARD_GAIN
+            ):
+                bg_qualified.append(hyp)
+        if alternative_primary is None and len(bg_qualified) == 1:
+            # Un-muted re-stroke rescue fires only when exactly ONE recent
+            # note shows the backward-gain rise.  In dense alternating
+            # playing several recent notes rise at once (measured: ebecf0c6
+            # D5/F5 both ≥ 1.3 at 3.184/7.936, d7a82772 G4+E5 at 20.027)
+            # and the waveform cannot say which one was struck — rescuing
+            # there regressed both recordings below their baseline floors,
+            # so ambiguity falls through to the rejection path (slot
+            # preservation) instead.
+            alternative_primary = bg_qualified[0]
         if alternative_primary is None:
             # Octave-up rescue: check 1 and 2 octaves above.
             for octave_mult in (2, 4):
