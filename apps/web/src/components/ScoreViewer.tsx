@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { DoReMiScore } from "@/components/DoReMiScore";
+import { ScoreExportButtons } from "@/components/ScoreExportButtons";
 import {
   createTranscriptionWithCapture,
   fetchMemo,
@@ -126,6 +127,7 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
   );
 
   const [labelMode, setLabelMode] = useState<LabelMode>("fixed");
+  const scoreAreaRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -212,7 +214,7 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
         />
       </section>
 
-      <section className="score-viewer-score">
+      <section className="score-viewer-score" ref={scoreAreaRef}>
         <div className="score-viewer-mode-toggle" role="group" aria-label="ドレミ表記">
           <button
             type="button"
@@ -251,6 +253,10 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
           activeEventId={activeEventId}
           onActiveEventIdChange={handleScoreEventTap}
           labelFn={labelFn}
+        />
+        <ScoreExportButtons
+          scoreAreaRef={scoreAreaRef}
+          fileBaseName={`kalimba-score-${transactionId.slice(0, 8)}`}
         />
       </section>
 
