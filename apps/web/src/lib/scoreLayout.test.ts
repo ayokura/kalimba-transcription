@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  eventRhythm,
   isMovableNumberApplicable,
   movableDoLabelFn,
   movableNumberLabelFn,
@@ -202,5 +203,26 @@ describe("noteLabelFromScoreNote (fixed-do)", () => {
     expect(noteLabelFromScoreNote(note("C", 4))).toEqual({ baseName: "ド", octave: 4 });
     expect(noteLabelFromScoreNote(note("F#", 5))).toEqual({ baseName: "ファ#", octave: 5 });
     expect(noteLabelFromScoreNote(note("Bb", 4))).toEqual({ baseName: "シb", octave: 4 });
+  });
+});
+
+describe("eventRhythm (S7 休符・音価)", () => {
+  const ev = (startBeat: number, durationBeat: number) => ({ startBeat, durationBeat });
+
+  it("2 拍の音に「ー」1 個、3 拍で 2 個、1 拍では付けない", () => {
+    expect(eventRhythm(ev(0, 1), null).holdMarks).toBe(0);
+    expect(eventRhythm(ev(0, 2), null).holdMarks).toBe(1);
+    expect(eventRhythm(ev(0, 3), null).holdMarks).toBe(2);
+  });
+
+  it("0.5 拍の gap は休符にしない (量子化ゆらぎ)、0.75 拍以上で休符", () => {
+    expect(eventRhythm(ev(0, 1), ev(1.5, 1)).restBeatsAfter).toBe(0);
+    expect(eventRhythm(ev(0, 1), ev(1.75, 1)).restBeatsAfter).toBe(1);
+    expect(eventRhythm(ev(0, 1), ev(3, 1)).restBeatsAfter).toBe(2);
+  });
+
+  it("長い無音は 4 拍で頭打ち、最終イベントは休符なし", () => {
+    expect(eventRhythm(ev(0, 1), ev(20, 1)).restBeatsAfter).toBe(4);
+    expect(eventRhythm(ev(0, 4), null).restBeatsAfter).toBe(0);
   });
 });

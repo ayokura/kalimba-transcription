@@ -179,6 +179,35 @@ export function DoReMiScore({
                     isMelody
                   />
 
+                  {/* S7: のばし記号「ー」 (durationBeat ≥ 1.5 拍) */}
+                  {evt.rhythm.holdMarks > 0 && (
+                    <text
+                      x={evt.columnWidth / 2
+                        + (Math.max(...evt.topGroup.noteLabels.map((nl) => estimateLabelWidth(nl.baseName))) * L.fontSizeUnit) / 2
+                        + 3}
+                      y={L.noteBaselineY}
+                      fill="currentColor"
+                      opacity={0.65}
+                      fontSize={L.fontSize * 0.9}
+                    >
+                      {"ー".repeat(evt.rhythm.holdMarks)}
+                    </text>
+                  )}
+
+                  {/* S7: 休符「0」 (次イベントまで 0.75 拍以上の空白) */}
+                  {evt.rhythm.restBeatsAfter > 0 && (
+                    <text
+                      x={evt.columnWidth + evt.restWidth / 2}
+                      y={L.noteBaselineY}
+                      textAnchor="middle"
+                      fill="var(--muted, #888)"
+                      fontSize={L.fontSize * 0.85}
+                      style={{ fontVariantNumeric: "tabular-nums" }}
+                    >
+                      {Array.from({ length: evt.rhythm.restBeatsAfter }, () => "0").join(" ")}
+                    </text>
+                  )}
+
                   {/* Vertical connector */}
                   {hasBottom && (
                     <line

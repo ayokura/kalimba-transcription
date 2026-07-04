@@ -240,6 +240,50 @@ export const LAYOUT = {
   octaveLineOffset: 2,
 } as const;
 
+// --- Rhythm display (S7: 休符・音価) ---------------------------------------
+// 自由演奏転写では「原曲を知っている読者」を仮定できないため、のばす音と
+// 休みが譜面から読めることが必須 (docs/research/20260705-kalimba-notation-survey.md)。
+// recognizer の beat 値は 0.25 単位に量子化されているが演奏ゆらぎを含むので、
+// 閾値は保守的に取る: 短い gap (≤0.5 拍) を休符と断定しない。
+
+export const RHYTHM = {
+  /** これ未満の gap は休符表示しない (量子化ゆらぎ対策) */
+  restMinGapBeat: 0.75,
+  /** 休符グリフの表示上限 (長い無音を 0 の羅列にしない) */
+  restMaxBeats: 4,
+  /** これ以上のばす音に「ー」を付ける */
+  holdMinBeats: 1.5,
+  /** これ以上で「ーー」 */
+  holdDoubleBeats: 2.5,
+  restGlyphWidth: 14,
+  restPadding: 8,
+  holdMarkWidth: 11,
+} as const;
+
+export type EventRhythm = {
+  /** のばし記号「ー」の個数 (0-2) */
+  holdMarks: 0 | 1 | 2;
+  /** このイベントの後に表示する休符の拍数 (0 = 表示なし、整数) */
+  restBeatsAfter: number;
+};
+
+export function eventRhythm(
+  event: Pick<ScoreEvent, "startBeat" | "durationBeat">,
+  nextEvent: Pick<ScoreEvent, "startBeat"> | null,
+): EventRhythm {
+  const dur = event.durationBeat;
+  const holdMarks: 0 | 1 | 2 =
+    dur >= RHYTHM.holdDoubleBeats ? 2 : dur >= RHYTHM.holdMinBeats ? 1 : 0;
+  let restBeatsAfter = 0;
+  if (nextEvent) {
+    const gap = nextEvent.startBeat - (event.startBeat + dur);
+    if (gap >= RHYTHM.restMinGapBeat) {
+      restBeatsAfter = Math.min(Math.round(gap), RHYTHM.restMaxBeats);
+    }
+  }
+  return { holdMarks, restBeatsAfter };
+}
+
 // --- Layout data structures ---
 
 export type EventLayout = {
@@ -249,6 +293,9 @@ export type EventLayout = {
   bottomGroup: NoteGroupLayout | null;
   x: number;
   columnWidth: number;
+  rhythm: EventRhythm;
+  /** 休符ゾーンの幅 (columnWidth の右側、クリック領域外) */
+  restWidth: number;
 };
 
 export type LineLayout = {
@@ -375,8 +422,13 @@ export function buildScoreLayout(
     const maxLabelW = allLabels.length > 0
       ? Math.max(...allLabels.map((nl) => estimateLabelWidth(nl.baseName)))
       : 0;
-    const contentWidth = maxLabelW * L.fontSizeUnit;
+    const rhythm = eventRhythm(event, events[idx + 1] ?? null);
+    const contentWidth = maxLabelW * L.fontSizeUnit
+      + rhythm.holdMarks * RHYTHM.holdMarkWidth;
     const columnWidth = Math.max(contentWidth + L.eventPadding * 2, L.eventMinWidth);
+    const restWidth = rhythm.restBeatsAfter > 0
+      ? rhythm.restBeatsAfter * RHYTHM.restGlyphWidth + RHYTHM.restPadding
+      : 0;
 
     return {
       eventId: event.id,
@@ -384,6 +436,8 @@ export function buildScoreLayout(
       topGroup: grouping.topGroup,
       bottomGroup: grouping.bottomGroup,
       columnWidth,
+      rhythm,
+      restWidth,
     };
   });
 
@@ -415,8 +469,10 @@ export function buildScoreLayout(
         bottomGroup: e.bottomGroup,
         x,
         columnWidth: e.columnWidth,
+        rhythm: e.rhythm,
+        restWidth: e.restWidth,
       };
-      x += e.columnWidth;
+      x += e.columnWidth + e.restWidth;
       return layout;
     });
 
