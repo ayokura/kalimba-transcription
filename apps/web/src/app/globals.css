@@ -2435,3 +2435,27 @@ button:disabled {
   font-size: 0.8rem;
   color: var(--danger, #b3261e);
 }
+
+/* --- Score view source (corrected vs recognized, #202) --- */
+
+.score-viewer-source-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.score-source-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.score-source-badge.corrected {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft, rgba(23, 126, 137, 0.1));
+}

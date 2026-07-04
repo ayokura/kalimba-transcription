@@ -13,6 +13,7 @@ import {
   fetchTranscription,
   fetchTranscriptionAudioBlob,
   fetchTunings,
+  fetchCorrections,
   saveMemo,
 } from "@/lib/api";
 import { findEventById, findEventIdAtSec } from "@/lib/eventTiming";
@@ -24,7 +25,8 @@ import {
   noteLabelFromScoreNote,
   tonicReferenceOctave,
 } from "@/lib/scoreLayout";
-import { InstrumentTuning, TranscriptionResult, TuningMismatch } from "@/lib/types";
+import { restoreStateFromCorrections, toDisplayScoreEvents } from "@/lib/reviewCorrections";
+import { InstrumentTuning, ScoreEvent, TranscriptionResult, TuningMismatch } from "@/lib/types";
 
 type LabelMode = "fixed" | "movable" | "movableNumber";
 const LABEL_MODE_STORAGE_KEY = "kalimba:score-label-mode";
@@ -35,7 +37,13 @@ function isLabelMode(value: string | null): value is LabelMode {
 
 type LoadState =
   | { kind: "loading" }
-  | { kind: "ready"; result: TranscriptionResult; audioUrl: string; initialMemo: string }
+  | {
+      kind: "ready";
+      result: TranscriptionResult;
+      audioUrl: string;
+      initialMemo: string;
+      correctedEvents: ScoreEvent[] | null;
+    }
   | { kind: "error"; message: string };
 
 const MEMO_SAVE_DEBOUNCE_MS = 800;
@@ -49,14 +57,27 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
 
     async function load() {
       try {
-        const [result, audioBlob, memo] = await Promise.all([
+        const [result, audioBlob, memo, corrections] = await Promise.all([
           fetchTranscription(transactionId),
           fetchTranscriptionAudioBlob(transactionId),
           fetchMemo(transactionId).catch(() => ""),
+          fetchCorrections(transactionId).catch(() => null),
         ]);
         if (cancelled) return;
         objectUrl = URL.createObjectURL(audioBlob);
-        setState({ kind: "ready", result, audioUrl: objectUrl, initialMemo: memo });
+        // #202: corrections が保存済みなら編集後イベント列を導出して既定表示に
+        // する (表記トグル / export は表示中の列に対して機能する)。
+        let correctedEvents: ScoreEvent[] | null = null;
+        if (corrections && corrections.events.length > 0) {
+          try {
+            correctedEvents = toDisplayScoreEvents(
+              restoreStateFromCorrections(result, corrections),
+            );
+          } catch {
+            correctedEvents = null;
+          }
+        }
+        setState({ kind: "ready", result, audioUrl: objectUrl, initialMemo: memo, correctedEvents });
       } catch (err) {
         if (cancelled) return;
         setState({
@@ -95,6 +116,7 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
       result={state.result}
       audioUrl={state.audioUrl}
       initialMemo={state.initialMemo}
+      correctedEvents={state.correctedEvents}
     />
   );
 }
@@ -104,9 +126,10 @@ type ReadyProps = {
   result: TranscriptionResult;
   audioUrl: string;
   initialMemo: string;
+  correctedEvents: ScoreEvent[] | null;
 };
 
-function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: ReadyProps) {
+function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correctedEvents }: ReadyProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
 
@@ -117,9 +140,15 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
     [result.instrumentTuning, tonic],
   );
 
+  // #202: 修正済み版があれば既定でそれを表示。認識結果へは切替可能。
+  const [viewSource, setViewSource] = useState<"corrected" | "recognized">(
+    correctedEvents ? "corrected" : "recognized",
+  );
+  const events = viewSource === "corrected" && correctedEvents ? correctedEvents : result.events;
+
   const allNotes = useMemo(
-    () => result.events.flatMap((e) => e.notes),
-    [result.events],
+    () => events.flatMap((e) => e.notes),
+    [events],
   );
   const movableNumberAvailable = useMemo(
     () => isMovableNumberApplicable(allNotes, tonic),
@@ -148,7 +177,6 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
     return noteLabelFromScoreNote;
   }, [labelMode, tonic, tonicRefOctave]);
 
-  const events = result.events;
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
     return window.location.href;
@@ -215,6 +243,20 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo }: Read
       </section>
 
       <section className="score-viewer-score" ref={scoreAreaRef}>
+        {correctedEvents ? (
+          <div className="score-viewer-source-row">
+            <span className={`score-source-badge${viewSource === "corrected" ? " corrected" : ""}`}>
+              {viewSource === "corrected" ? "修正済み版を表示中" : "認識結果 (未修正) を表示中"}
+            </span>
+            <button
+              type="button"
+              className="score-export-btn"
+              onClick={() => setViewSource((v) => (v === "corrected" ? "recognized" : "corrected"))}
+            >
+              {viewSource === "corrected" ? "認識結果を表示" : "修正済み版を表示"}
+            </button>
+          </div>
+        ) : null}
         <div className="score-viewer-mode-toggle" role="group" aria-label="ドレミ表記">
           <button
             type="button"
