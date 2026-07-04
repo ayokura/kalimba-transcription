@@ -4,7 +4,7 @@
   "repositoryManaged": true,
   "transactionId": "d7a82772-f77f-4820-9798-00133ae45f4e",
   "createdAt": "2026-07-04T09:53:24Z",
-  "promotedAt": "2026-07-04T11:58:51+00:00",
+  "promotedAt": "2026-07-04T12:01:05+00:00",
   "status": "review_completed",
   "categories": [
     "tester_capture",
@@ -81,5 +81,5 @@
     "reviewStatus": "review_status.json",
     "groundTruth": "ground_truth.json"
   },
-  "notes": "旋律のみのシンプルな演奏。review UI corrections 由来 GT (F1=0.771, 2026-07-05)。inserted-slot 8 件は #178 sub-onset 候補化の初の実運用採用例。"
+  "notes": "旋律 + 伴奏 10 音 (accompanimentOnly タグ付き、role: accompaniment)。review UI corrections 由来 GT (F1=0.771, 2026-07-05)。inserted-slot 8 件は #178 sub-onset 候補化の初の実運用採用例。"
 }
