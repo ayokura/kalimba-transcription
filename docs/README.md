@@ -13,6 +13,7 @@
 | [`research/2026-07-per-tine-kill-criteria.md`](research/2026-07-per-tine-kill-criteria.md) | #141/#149 research line の kill 条件 (S0 固定) |
 | [`research/2026-07-per-tine-partial-table.md`](research/2026-07-per-tine-partial-table.md) | 実測 per-tine partial table (S3、機械可読 JSON 併設) |
 | [`research/2026-07-phase-tracking-roc.md`](research/2026-07-phase-tracking-roc.md) | 位相追跡 onset の ROC 較正結果 (S3、S4 判定材料) |
+| [`research/2026-07-per-tine-tracker-design.md`](research/2026-07-per-tine-tracker-design.md) | per-tine tracker + causal onset 統合設計 (S3 集大成、S4 判定材料) |
 | [`testing.md`](testing.md) | テスト 4 層モデルの詳細・手動テスト手順 |
 | [`task-management.md`](task-management.md) | issue ラベル体系・spike タグ書式 |
 | [`corpus-management.md`](corpus-management.md) | free-performance corpus の管理・権利レビュー |
