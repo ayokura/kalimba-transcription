@@ -1,0 +1,331 @@
+{
+  "method": "fresh-spectrum (body minus pre-onset window) peak clustering on single-note GT events",
+  "generated": "2026-07-05",
+  "params": {
+    "bodyWindowSec": 0.2,
+    "bodyOffsetSec": 0.05,
+    "prevGapMinSec": 0.1,
+    "nextGapMinSec": 0.27,
+    "minPeakRel": 0.02,
+    "minSupport": 0.4,
+    "clusterGap": 0.05,
+    "partialBand": [
+      1.2,
+      4.4
+    ]
+  },
+  "caveats": [
+    "GT timeSec is approximate; timing-sensitive use requires spectral-pinned onsets (guardrail 13)",
+    "relaxedOnly clusters lack strict-isolation corroboration — verify before load-bearing use",
+    "ratios are medians per instrument (tuning x performer); do not pool across instruments (#172)"
+  ],
+  "groups": {
+    "kalimba-17-c|tester": {
+      "recordings": [
+        "17ea7626",
+        "47902d34",
+        "70cc6637",
+        "a9e30986",
+        "d7a82772"
+      ],
+      "notes": {
+        "E4": {
+          "f0": 329.6275569128699,
+          "n": 8,
+          "partials": [
+            {
+              "ratio": 2.415,
+              "medianRelAmp": 0.0517,
+              "support": 0.5,
+              "relaxedOnly": true
+            },
+            {
+              "ratio": 2.913,
+              "medianRelAmp": 0.2915,
+              "support": 1.0
+            }
+          ]
+        },
+        "G4": {
+          "f0": 391.99543598174927,
+          "n": 45,
+          "partials": [
+            {
+              "ratio": 2.883,
+              "medianRelAmp": 0.1426,
+              "support": 0.96
+            }
+          ]
+        },
+        "A4": {
+          "f0": 440.0,
+          "n": 4,
+          "partials": [
+            {
+              "ratio": 3.003,
+              "medianRelAmp": 0.3568,
+              "support": 1.0
+            },
+            {
+              "ratio": 3.233,
+              "medianRelAmp": 0.0236,
+              "support": 0.5
+            }
+          ]
+        },
+        "C5": {
+          "f0": 523.2511306011972,
+          "n": 20,
+          "partials": [
+            {
+              "ratio": 2.857,
+              "medianRelAmp": 0.0638,
+              "support": 0.7
+            },
+            {
+              "ratio": 2.91,
+              "medianRelAmp": 0.1593,
+              "support": 0.95
+            }
+          ]
+        },
+        "D5": {
+          "f0": 587.3295358348151,
+          "n": 15,
+          "partials": [
+            {
+              "ratio": 2.742,
+              "medianRelAmp": 0.0315,
+              "support": 0.4,
+              "relaxedOnly": true
+            }
+          ]
+        },
+        "E5": {
+          "f0": 659.2551138257398,
+          "n": 17,
+          "partials": [
+            {
+              "ratio": 2.821,
+              "medianRelAmp": 0.0668,
+              "support": 0.82
+            }
+          ]
+        },
+        "F5": {
+          "f0": 698.4564628660078,
+          "n": 3,
+          "partials": [
+            {
+              "ratio": 2.805,
+              "medianRelAmp": 0.0466,
+              "support": 0.67,
+              "relaxedOnly": true
+            }
+          ]
+        },
+        "G5": {
+          "f0": 783.9908719634985,
+          "n": 6,
+          "partials": [
+            {
+              "ratio": 1.269,
+              "medianRelAmp": 0.024,
+              "support": 0.67
+            },
+            {
+              "ratio": 2.652,
+              "medianRelAmp": 0.0459,
+              "support": 1.0
+            }
+          ]
+        },
+        "A5": {
+          "f0": 880.0,
+          "n": 7,
+          "partials": [
+            {
+              "ratio": 2.002,
+              "medianRelAmp": 0.0274,
+              "support": 0.43
+            }
+          ]
+        },
+        "B5": {
+          "f0": 987.7666025122483,
+          "n": 5,
+          "partials": [
+            {
+              "ratio": 2.107,
+              "medianRelAmp": 0.0393,
+              "support": 0.4
+            }
+          ]
+        }
+      }
+    },
+    "kalimba-34l-c|author": {
+      "recordings": [
+        "16b37356",
+        "8039a34c"
+      ],
+      "notes": {
+        "G4": {
+          "f0": 391.99543598174927,
+          "n": 3,
+          "partials": [
+            {
+              "ratio": 2.885,
+              "medianRelAmp": 1.6553,
+              "support": 0.67
+            }
+          ]
+        },
+        "B4": {
+          "f0": 493.8833012561241,
+          "n": 9,
+          "partials": []
+        },
+        "C5": {
+          "f0": 523.2511306011972,
+          "n": 15,
+          "partials": [
+            {
+              "ratio": 2.912,
+              "medianRelAmp": 0.0308,
+              "support": 0.93
+            }
+          ]
+        },
+        "D5": {
+          "f0": 587.3295358348151,
+          "n": 21,
+          "partials": []
+        },
+        "E5": {
+          "f0": 659.2551138257398,
+          "n": 19,
+          "partials": []
+        },
+        "F5": {
+          "f0": 698.4564628660078,
+          "n": 10,
+          "partials": []
+        },
+        "G5": {
+          "f0": 783.9908719634985,
+          "n": 18,
+          "partials": []
+        },
+        "A5": {
+          "f0": 880.0,
+          "n": 5,
+          "partials": []
+        },
+        "B5": {
+          "f0": 987.7666025122483,
+          "n": 4,
+          "partials": []
+        },
+        "C6": {
+          "f0": 1046.5022612023945,
+          "n": 5,
+          "partials": []
+        }
+      }
+    },
+    "kalimba-17-g-low|author": {
+      "recordings": [
+        "2bf55c75"
+      ],
+      "notes": {
+        "F#4": {
+          "f0": 369.9944227116344,
+          "n": 9,
+          "partials": []
+        },
+        "G4": {
+          "f0": 391.99543598174927,
+          "n": 14,
+          "partials": []
+        },
+        "A4": {
+          "f0": 440.0,
+          "n": 21,
+          "partials": []
+        },
+        "B4": {
+          "f0": 493.8833012561241,
+          "n": 19,
+          "partials": []
+        },
+        "C5": {
+          "f0": 523.2511306011972,
+          "n": 10,
+          "partials": []
+        },
+        "D5": {
+          "f0": 587.3295358348151,
+          "n": 18,
+          "partials": []
+        },
+        "E5": {
+          "f0": 659.2551138257398,
+          "n": 6,
+          "partials": []
+        },
+        "F#5": {
+          "f0": 739.9888454232688,
+          "n": 4,
+          "partials": []
+        },
+        "G5": {
+          "f0": 783.9908719634985,
+          "n": 5,
+          "partials": []
+        }
+      }
+    },
+    "kalimba-17-c|author": {
+      "recordings": [
+        "4e1ae5c6",
+        "9ce7df83",
+        "bbeeaad8",
+        "ea7edd71",
+        "ebecf0c6"
+      ],
+      "notes": {
+        "C4": {
+          "f0": 261.6255653005986,
+          "n": 5,
+          "partials": []
+        },
+        "B4": {
+          "f0": 493.8833012561241,
+          "n": 8,
+          "partials": []
+        },
+        "C5": {
+          "f0": 523.2511306011972,
+          "n": 8,
+          "partials": []
+        },
+        "D5": {
+          "f0": 587.3295358348151,
+          "n": 12,
+          "partials": []
+        },
+        "F5": {
+          "f0": 698.4564628660078,
+          "n": 15,
+          "partials": []
+        },
+        "E6": {
+          "f0": 1318.5102276514797,
+          "n": 4,
+          "partials": []
+        }
+      }
+    }
+  }
+}
