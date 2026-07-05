@@ -4,6 +4,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
+from io import BytesIO
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,18 +20,22 @@ from .models import (
 )
 from .storage import (
     compute_audio_sha256,
+    create_run,
     find_transaction_by_hash_and_tuning,
     generate_transaction_id,
     get_data_dir,
     get_transaction_audio_sha256,
     get_transaction_timestamps,
+    latest_run_id,
     list_recent_transactions,
     list_review_queue,
+    list_runs,
     list_transactions_by_hash,
     load_audio_path,
     load_corrections,
+    load_latest_response,
     load_memo,
-    load_response,
+    load_request,
     load_review_status,
     quarantine_corrections,
     save_corrections,
@@ -150,7 +155,10 @@ async def create_transcription(
     if not dryRun and not force:
         existing_id = find_transaction_by_hash_and_tuning(audio_sha256, parsed_tuning.id)
         if existing_id is not None:
-            existing = load_response(existing_id)
+            # #204 Phase 1: dedup stays recording-scoped (no new tx), but return
+            # the latest recognition run so a re-recognised recording is not
+            # served its stale upload-time snapshot.
+            existing = load_latest_response(existing_id)
             if existing is not None:
                 return TranscriptionResult.model_validate(existing)
 
@@ -456,7 +464,10 @@ def put_dev_dogfooding(transaction_id: str, payload: DogfoodingRecordPayload) ->
 @app.get("/api/transcriptions/{transaction_id}")
 def get_transcription(transaction_id: str) -> dict:
     _validate_transaction_id(transaction_id)
-    data = load_response(transaction_id)
+    # #204 Phase 1: resolve to the newest recognition run, falling back to the
+    # immutable legacy response.json. Same response shape as before, so existing
+    # clients render the newer recognition without any change.
+    data = load_latest_response(transaction_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Transaction not found.")
     timestamps = get_transaction_timestamps(transaction_id)
@@ -475,6 +486,82 @@ def get_transcription_alternatives(transaction_id: str) -> list[dict]:
     if audio_sha256 is None:
         return []
     return list_transactions_by_hash(audio_sha256)
+
+
+@app.get("/api/transcriptions/{transaction_id}/runs")
+def get_transcription_runs(transaction_id: str) -> dict:
+    """Recognition history for a recording (#204 Phase 1).
+
+    Newest-first list of runs plus a synthetic ``legacy`` entry for the
+    immutable upload-time response. ``latestRunId`` is the run the read
+    endpoints currently resolve to (``"legacy"`` when no re-recognition run
+    exists yet)."""
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    runs = list_runs(transaction_id)
+    resolved = latest_run_id(transaction_id) or ("legacy" if runs else None)
+    return {"runs": runs, "latestRunId": resolved}
+
+
+@app.post("/api/transcriptions/{transaction_id}/runs")
+async def create_transcription_run(transaction_id: str) -> dict:
+    """Re-recognise a stored recording with the current recognizer and append
+    the result as a new run (#204 Phase 1).
+
+    This is the canonical fix for the force=true duplicate problem: it reuses
+    the stored audio + tuning and never mints a new transaction id."""
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+
+    audio_path = load_audio_path(transaction_id)
+    if audio_path is None:
+        raise HTTPException(status_code=404, detail="Recording audio not found.")
+
+    request_data = load_request(transaction_id)
+    if request_data is None:
+        raise HTTPException(status_code=404, detail="Recording request metadata not found.")
+
+    stored_tuning = request_data.get("tuning")
+    if not isinstance(stored_tuning, dict):
+        raise HTTPException(
+            status_code=422,
+            detail="Recording has no stored tuning; cannot re-recognise.",
+        )
+    parsed_tuning = parse_tuning_json(json.dumps(stored_tuning))
+    disabled_passes = parse_disabled_repeated_pattern_passes(
+        request_data.get("disabledRepeatedPatternPasses")
+    )
+
+    audio_bytes = audio_path.read_bytes()
+    upload = UploadFile(file=BytesIO(audio_bytes), filename="audio.wav")
+    result = await transcribe_audio(
+        upload,
+        parsed_tuning,
+        debug=True,
+        disabled_repeated_pattern_passes=disabled_passes,
+        mid_performance_start=bool(request_data.get("midPerformanceStart", False)),
+        mid_performance_end=bool(request_data.get("midPerformanceEnd", False)),
+    )
+    result.transaction_id = transaction_id
+    response_dict = result.model_dump(by_alias=True)
+    debug_dict = response_dict.get("debug")
+
+    meta = create_run(
+        transaction_id,
+        response_dict,
+        debug_dict,
+        commit_sha=git_head_sha(),
+        recognizer_fingerprint=recognizer_fingerprint(),
+        dsp_fingerprint=kalimba_dsp_fingerprint(),
+    )
+    return {
+        "runId": meta["runId"],
+        "transactionId": transaction_id,
+        "meta": meta,
+        "result": response_dict,
+    }
 
 
 @app.get("/api/transcriptions/{transaction_id}/audio")
