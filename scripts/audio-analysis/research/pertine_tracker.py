@@ -53,7 +53,14 @@ PARTIAL_CENTS = 50.0
 PARTIAL_SAFETY = 3.0      # env_k <= relAmp * env_j * SAFETY -> explainable as bleed
 SKIRT_CENTS = 300.0
 SKIRT_ENV_RATIO = 20.0
-EXISTING_TOL = 0.08       # candidate within this of an existing same-note event -> not a rescue
+# A candidate within this of an existing same-note event is a duplicate, not
+# a rescue. 0.08 proved too tight in round 2: recognizer event starts deviate
+# up to ~0.1 s from spectral onsets (corpus-management.md), and the two
+# ebecf0c6 F5 duplicates sat at dt 0.088/0.101 — each displaced the baseline
+# prediction in greedy GT matching (net +1 FP). 0.15 clears that deviation
+# band; genuine same-note re-strikes faster than 150 ms would produce their
+# own broadband onset rather than a carryover rescue.
+EXISTING_TOL = 0.15
 
 # Round-1.5 state conditions (dual-run round 1 showed the calibrated bars
 # alone leak FP 53->1678; the state model has to carry the precision):
@@ -77,6 +84,28 @@ REINJECT_LOOKBACK = 0.5
 #     Amplitude-quantified — not the jerk winner-take-all this replaces.
 COINC_ATTACK_SEC = 0.05
 COINC_BLEED_MAX = 0.4
+# tier-design context capture (round 2): coincident attacks are recorded in
+# a slightly wider window than the reject conditions use, so the tier rule
+# can be swept offline without re-running the tracker.
+ATTACKER_WIN = 0.08
+# Round-2 tier rule (from pertine-tier-analysis.json, 97 labelled rescues):
+# pre-ring >= 1.5 is required on both branches — the tracker's mandate is
+# re-strikes of *clearly* ringing tines, and a ring barely above the gate was
+# the signature of the 9ce7df83 late-phantom pair (preRing 1.29/1.36 vs TP
+# minimum 1.65). Beyond that, an isolated rescue (no coincident attack within
+# ATTACKER_WIN) cannot be attack bleed or mount coupling — the only fake
+# modes left are beating/vibrato, already rejected by the re-injection
+# condition. A rescue with coincident attacks must additionally clear the
+# margins that separated TP from FP/fixture pools (self >= 1.5x strongest
+# attack; re-injection clearly above the FP median ~1.5).
+TIER_MIN_ATTACKER_RATIO = 1.5
+TIER_MIN_PRE_RING = 1.5
+TIER_MIN_REINJECT = 1.5
+# Same-note double-fire dedup: the detector's per-tine NMS (60 ms) lets one
+# physical re-strike fire twice at the window edge (observed pairs 60-61 ms
+# apart on the K2 recordings, one TP + one FP each). Two rescue proposals of
+# the same note within this window are one strike; keep the stronger jerk.
+RESCUE_SAME_NOTE_SEP = 0.12
 # (7) measured per-pair coupling — per instrument group, the fresh energy a
 #     strike of tine j injects at tine k's own fundamental (mount coupling /
 #     skirt / unlabelled partials), measured from fully-labelled GT strikes
@@ -110,6 +139,11 @@ class Rescue:
     phase_err: float
     jerk: float
     env: float
+    # tier-design features (round 2): context needed to decide event vs
+    # low-confidence-candidate tier, captured for every surviving rescue.
+    pre_ring_ratio: float = 0.0    # median pre-window env / abs gate
+    reinject_ratio: float = 0.0    # attack peak / recent ring max
+    attackers: list[dict] | None = None  # coincident attacks within +-ATTACKER_WIN
 
 
 def load_partial_table(group: str) -> dict[str, list[tuple[float, float]]]:
@@ -235,5 +269,57 @@ def track_and_rescue(
                     break
         if coupled:
             continue
-        rescues.append(Rescue(round(t, 4), name, round(err, 3), round(jerk, 1), e_self))
-    return rescues
+        # tier-design context: every coincident attack (candidate or existing
+        # event) within +-ATTACKER_WIN, with cents distance and env ratio.
+        attackers = []
+        for t2, n2, _e2j, _j2, f2, e2 in cands:
+            if n2 != name and abs(t2 - t) <= ATTACKER_WIN:
+                attackers.append({
+                    "note": n2, "dt": round(t2 - t, 4), "kind": "candidate",
+                    "cents": round(1200 * float(np.log2(f2 / freq)), 1),
+                    "envRatio": round(e_self / e2, 3) if e2 > 0 else None,
+                })
+        for t0, n0 in existing:
+            if n0 != name and n0 in tracks and abs(t0 - t) <= ATTACKER_WIN:
+                e0 = env_at(n0, min(t0 + 0.03, t + 0.03))
+                attackers.append({
+                    "note": n0, "dt": round(t0 - t, 4), "kind": "event",
+                    "cents": round(1200 * float(np.log2(freqs[n0] / freq)), 1),
+                    "envRatio": round(e_self / e0, 3) if e0 > 0 else None,
+                })
+        rescues.append(Rescue(
+            round(t, 4), name, round(err, 3), round(jerk, 1), e_self,
+            pre_ring_ratio=round(pre_ring / abs_gate, 2),
+            reinject_ratio=round(attack_peak / max(recent_max, 1e-12), 2),
+            attackers=attackers,
+        ))
+    return dedup_same_note(rescues)
+
+
+def dedup_same_note(rescues: list[Rescue]) -> list[Rescue]:
+    """Collapse same-note double-fires (see RESCUE_SAME_NOTE_SEP)."""
+    kept: list[Rescue] = []
+    for r in sorted(rescues, key=lambda r: -r.jerk):
+        if any(k.note == r.note and abs(k.time - r.time) <= RESCUE_SAME_NOTE_SEP
+               for k in kept):
+            continue
+        kept.append(r)
+    return sorted(kept, key=lambda r: r.time)
+
+
+def tier_of(rescue: Rescue) -> str:
+    """"event" (strong, becomes a note event) or "candidate" (weak, becomes a
+    low-confidence candidate slot). See TIER_* rationale above."""
+    if rescue.pre_ring_ratio < TIER_MIN_PRE_RING:
+        return "candidate"
+    attackers = rescue.attackers or []
+    if not attackers:
+        return "event"
+    ratios = [a["envRatio"] for a in attackers if a["envRatio"] is not None]
+    if not ratios:  # attackers present but unmeasurable -> conservative
+        return "candidate"
+    if min(ratios) < TIER_MIN_ATTACKER_RATIO:
+        return "candidate"
+    if rescue.reinject_ratio < TIER_MIN_REINJECT:
+        return "candidate"
+    return "event"

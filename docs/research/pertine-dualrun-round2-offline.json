@@ -1,0 +1,446 @@
+{
+ "round": "2-offline",
+ "tables": "merged (tuning-only) tables",
+ "tier": {
+  "minAttackerRatio": 1.5,
+  "minPreRing": 1.5,
+  "minReinject": 1.5,
+  "sameNoteSep": 0.12
+ },
+ "s4Baseline": {
+  "microR": 0.726,
+  "pooledFP": 53,
+  "k4Ceiling": 61
+ },
+ "recordings": [
+  {
+   "tx": "17ea7626",
+   "group": "kalimba-17-c|tester",
+   "strong": 1,
+   "weak": 3,
+   "base": {
+    "tp": 42,
+    "precision": 0.933,
+    "recall": 0.808,
+    "f1": 0.866
+   },
+   "aug": {
+    "tp": 43,
+    "precision": 0.935,
+    "recall": 0.827,
+    "f1": 0.878
+   },
+   "fpBase": 3,
+   "fpAug": 3,
+   "strongList": [
+    {
+     "t": 14.81,
+     "note": "G4"
+    }
+   ]
+  },
+  {
+   "tx": "4e1ae5c6",
+   "group": "kalimba-17-c|author",
+   "strong": 3,
+   "weak": 0,
+   "base": {
+    "tp": 5,
+    "precision": 1.0,
+    "recall": 0.625,
+    "f1": 0.769
+   },
+   "aug": {
+    "tp": 8,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "strongList": [
+    {
+     "t": 8.22,
+     "note": "C5"
+    },
+    {
+     "t": 12.93,
+     "note": "C5"
+    },
+    {
+     "t": 16.945,
+     "note": "C5"
+    }
+   ]
+  },
+  {
+   "tx": "9ce7df83",
+   "group": "kalimba-17-c|author",
+   "strong": 1,
+   "weak": 1,
+   "base": {
+    "tp": 5,
+    "precision": 1.0,
+    "recall": 0.625,
+    "f1": 0.769
+   },
+   "aug": {
+    "tp": 6,
+    "precision": 1.0,
+    "recall": 0.75,
+    "f1": 0.857
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "strongList": [
+    {
+     "t": 16.84,
+     "note": "C5"
+    }
+   ]
+  },
+  {
+   "tx": "bbd6797f",
+   "group": "kalimba-17-c|author",
+   "strong": 0,
+   "weak": 0,
+   "base": {
+    "tp": 20,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 20,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "strongList": []
+  },
+  {
+   "tx": "d7a82772",
+   "group": "kalimba-17-c|tester",
+   "strong": 0,
+   "weak": 0,
+   "base": {
+    "tp": 36,
+    "precision": 0.878,
+    "recall": 0.8,
+    "f1": 0.837
+   },
+   "aug": {
+    "tp": 36,
+    "precision": 0.878,
+    "recall": 0.8,
+    "f1": 0.837
+   },
+   "fpBase": 5,
+   "fpAug": 5,
+   "strongList": []
+  },
+  {
+   "tx": "ea7edd71",
+   "group": "kalimba-17-c|author",
+   "strong": 0,
+   "weak": 0,
+   "base": {
+    "tp": 16,
+    "precision": 0.842,
+    "recall": 0.889,
+    "f1": 0.865
+   },
+   "aug": {
+    "tp": 16,
+    "precision": 0.842,
+    "recall": 0.889,
+    "f1": 0.865
+   },
+   "fpBase": 3,
+   "fpAug": 3,
+   "strongList": []
+  },
+  {
+   "tx": "ebecf0c6",
+   "group": "kalimba-17-c|author",
+   "strong": 0,
+   "weak": 0,
+   "base": {
+    "tp": 17,
+    "precision": 0.81,
+    "recall": 0.944,
+    "f1": 0.872
+   },
+   "aug": {
+    "tp": 17,
+    "precision": 0.81,
+    "recall": 0.944,
+    "f1": 0.872
+   },
+   "fpBase": 4,
+   "fpAug": 4,
+   "strongList": []
+  },
+  {
+   "tx": "16b37356",
+   "group": "kalimba-34l-c|author",
+   "strong": 0,
+   "weak": 0,
+   "base": {
+    "tp": 12,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 12,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "strongList": []
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "strong": 0,
+   "weak": 8,
+   "base": {
+    "tp": 238,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 238,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "strongList": []
+  },
+  {
+   "tx": "47902d34",
+   "group": "kalimba-17-c|tester",
+   "strong": 0,
+   "weak": 1,
+   "base": {
+    "tp": 36,
+    "precision": 0.9,
+    "recall": 0.75,
+    "f1": 0.818
+   },
+   "aug": {
+    "tp": 36,
+    "precision": 0.9,
+    "recall": 0.75,
+    "f1": 0.818
+   },
+   "fpBase": 4,
+   "fpAug": 4,
+   "strongList": []
+  },
+  {
+   "tx": "6bf97c7c",
+   "group": "kalimba-17-c|author",
+   "strong": 0,
+   "weak": 0,
+   "base": {
+    "tp": 10,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 10,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "strongList": []
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "strong": 4,
+   "weak": 6,
+   "base": {
+    "tp": 111,
+    "precision": 0.888,
+    "recall": 0.787,
+    "f1": 0.835
+   },
+   "aug": {
+    "tp": 115,
+    "precision": 0.891,
+    "recall": 0.816,
+    "f1": 0.852
+   },
+   "fpBase": 14,
+   "fpAug": 14,
+   "strongList": [
+    {
+     "t": 4.115,
+     "note": "C5"
+    },
+    {
+     "t": 17.06,
+     "note": "G4"
+    },
+    {
+     "t": 17.39,
+     "note": "F4"
+    },
+    {
+     "t": 20.215,
+     "note": "F5"
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "strong": 0,
+   "weak": 17,
+   "base": {
+    "tp": 239,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 239,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "strongList": []
+  },
+  {
+   "tx": "a9e30986",
+   "group": "kalimba-17-c|tester",
+   "strong": 0,
+   "weak": 3,
+   "base": {
+    "tp": 36,
+    "precision": 0.643,
+    "recall": 0.444,
+    "f1": 0.526
+   },
+   "aug": {
+    "tp": 36,
+    "precision": 0.643,
+    "recall": 0.444,
+    "f1": 0.526
+   },
+   "fpBase": 20,
+   "fpAug": 20,
+   "strongList": []
+  },
+  {
+   "tx": "bbeeaad8",
+   "group": "kalimba-17-c|author",
+   "strong": 0,
+   "weak": 0,
+   "base": {
+    "tp": 5,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 5,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "strongList": []
+  }
+ ],
+ "headline": {
+  "base": {
+   "n": 9,
+   "tp": 304,
+   "fp": 53,
+   "P": 0.852,
+   "R": 0.726,
+   "F1": 0.784,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6557,
+     0.8481
+    ]
+   }
+  },
+  "aug": {
+   "n": 9,
+   "tp": 313,
+   "fp": 53,
+   "P": 0.855,
+   "R": 0.747,
+   "F1": 0.797,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6695,
+     0.8671
+    ]
+   }
+  }
+ },
+ "k2": {
+  "base": 0.625,
+  "aug": 0.875,
+  "truth": 16
+ },
+ "fixtureAdditionsEventTier": 0,
+ "fixtureDetail": [
+  {
+   "fixture": "kalimba-17-c-bwv147-sequence-163-01",
+   "strong": [],
+   "weak": 1
+  },
+  {
+   "fixture": "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+   "strong": [],
+   "weak": 1
+  },
+  {
+   "fixture": "kalimba-17-c-e6-to-c4-sequence-17-01",
+   "strong": [],
+   "weak": 1
+  },
+  {
+   "fixture": "kalimba-17-c-e6-to-g4-sequence-06-01",
+   "strong": [],
+   "weak": 1
+  },
+  {
+   "fixture": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "strong": [],
+   "weak": 7
+  },
+  {
+   "fixture": "kalimba-34l-c-bwv147-sequence-163-01",
+   "strong": [],
+   "weak": 17
+  }
+ ]
+}

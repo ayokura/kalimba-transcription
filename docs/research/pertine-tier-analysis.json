@@ -1,0 +1,7460 @@
+{
+ "rows": [
+  {
+   "tx": "17ea7626",
+   "group": "kalimba-17-c|tester",
+   "label": "fp",
+   "t": 3.2,
+   "note": "E5",
+   "phaseErr": 0.834,
+   "jerk": 151.7,
+   "env": 0.013143129331556928,
+   "preRingRatio": 3.04,
+   "reinjectRatio": 1.09,
+   "nAttackers": 8,
+   "strongestEnvRatio": 0.59,
+   "strongestCents": 1200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.966,
+   "attackers": [
+    {
+     "note": "E6",
+     "dt": -0.065,
+     "kind": "candidate",
+     "cents": 1200.0,
+     "envRatio": 245.005
+    },
+    {
+     "note": "A4",
+     "dt": -0.03,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 20.058
+    },
+    {
+     "note": "D5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 7.211
+    },
+    {
+     "note": "E6",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 1200.0,
+     "envRatio": 0.59
+    },
+    {
+     "note": "F5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.966
+    },
+    {
+     "note": "A4",
+     "dt": 0.03,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 0.914
+    },
+    {
+     "note": "A4",
+     "dt": -0.0213,
+     "kind": "event",
+     "cents": -700.0,
+     "envRatio": 2.258
+    },
+    {
+     "note": "F5",
+     "dt": -0.0213,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 0.966
+    }
+   ]
+  },
+  {
+   "tx": "17ea7626",
+   "group": "kalimba-17-c|tester",
+   "label": "fp",
+   "t": 4.945,
+   "note": "F4",
+   "phaseErr": 5.927,
+   "jerk": 175.4,
+   "env": 0.005018413992930305,
+   "preRingRatio": 1.16,
+   "reinjectRatio": 1.3,
+   "nAttackers": 2,
+   "strongestEnvRatio": 0.986,
+   "strongestCents": 1100.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B5",
+     "dt": -0.025,
+     "kind": "candidate",
+     "cents": 1800.0,
+     "envRatio": 2.607
+    },
+    {
+     "note": "E5",
+     "dt": -0.025,
+     "kind": "candidate",
+     "cents": 1100.0,
+     "envRatio": 0.986
+    }
+   ]
+  },
+  {
+   "tx": "17ea7626",
+   "group": "kalimba-17-c|tester",
+   "label": "fp",
+   "t": 12.32,
+   "note": "F4",
+   "phaseErr": 1.513,
+   "jerk": 210.2,
+   "env": 0.00840200689837544,
+   "preRingRatio": 1.05,
+   "reinjectRatio": 1.27,
+   "nAttackers": 8,
+   "strongestEnvRatio": 0.437,
+   "strongestCents": 200.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "D6",
+     "dt": -0.035,
+     "kind": "candidate",
+     "cents": 2100.0,
+     "envRatio": 58.037
+    },
+    {
+     "note": "A5",
+     "dt": -0.03,
+     "kind": "candidate",
+     "cents": 1600.0,
+     "envRatio": 0.846
+    },
+    {
+     "note": "C4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 1.059
+    },
+    {
+     "note": "A4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 2.993
+    },
+    {
+     "note": "G4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.437
+    },
+    {
+     "note": "D6",
+     "dt": 0.025,
+     "kind": "candidate",
+     "cents": 2100.0,
+     "envRatio": 4.008
+    },
+    {
+     "note": "D4",
+     "dt": -0.048,
+     "kind": "event",
+     "cents": -300.0,
+     "envRatio": 0.73
+    },
+    {
+     "note": "G4",
+     "dt": -0.048,
+     "kind": "event",
+     "cents": 200.0,
+     "envRatio": 4.327
+    }
+   ]
+  },
+  {
+   "tx": "17ea7626",
+   "group": "kalimba-17-c|tester",
+   "label": "fp",
+   "t": 13.44,
+   "note": "C5",
+   "phaseErr": 4.606,
+   "jerk": 300.5,
+   "env": 0.021106220419670533,
+   "preRingRatio": 1.88,
+   "reinjectRatio": 1.5,
+   "nAttackers": 14,
+   "strongestEnvRatio": 0.582,
+   "strongestCents": 200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.222,
+   "attackers": [
+    {
+     "note": "E6",
+     "dt": -0.07,
+     "kind": "candidate",
+     "cents": 1600.0,
+     "envRatio": 5.178
+    },
+    {
+     "note": "C4",
+     "dt": -0.06,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 8.673
+    },
+    {
+     "note": "A4",
+     "dt": -0.03,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 11.325
+    },
+    {
+     "note": "E4",
+     "dt": -0.03,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 8.487
+    },
+    {
+     "note": "F4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 16.435
+    },
+    {
+     "note": "B4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 1.222
+    },
+    {
+     "note": "C4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 3.82
+    },
+    {
+     "note": "E5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 19.003
+    },
+    {
+     "note": "E6",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 1600.0,
+     "envRatio": 2.071
+    },
+    {
+     "note": "G5",
+     "dt": 0.045,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 7.287
+    },
+    {
+     "note": "F4",
+     "dt": 0.05,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 3.624
+    },
+    {
+     "note": "F5",
+     "dt": 0.05,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 4.451
+    },
+    {
+     "note": "D5",
+     "dt": 0.055,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.582
+    },
+    {
+     "note": "E5",
+     "dt": 0.075,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 1.6
+    }
+   ]
+  },
+  {
+   "tx": "17ea7626",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 14.81,
+   "note": "G4",
+   "phaseErr": 3.707,
+   "jerk": 370.2,
+   "env": 0.017132221726182954,
+   "preRingRatio": 3.26,
+   "reinjectRatio": 1.77,
+   "nAttackers": 10,
+   "strongestEnvRatio": 1.504,
+   "strongestCents": 500.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "E6",
+     "dt": -0.075,
+     "kind": "candidate",
+     "cents": 2100.0,
+     "envRatio": 3.838
+    },
+    {
+     "note": "B5",
+     "dt": -0.065,
+     "kind": "candidate",
+     "cents": 1600.0,
+     "envRatio": 3.023
+    },
+    {
+     "note": "E4",
+     "dt": -0.065,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 2.736
+    },
+    {
+     "note": "A4",
+     "dt": -0.06,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 9.584
+    },
+    {
+     "note": "F4",
+     "dt": -0.04,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 2.612
+    },
+    {
+     "note": "D6",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 1900.0,
+     "envRatio": 5.571
+    },
+    {
+     "note": "E6",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 2100.0,
+     "envRatio": 2.456
+    },
+    {
+     "note": "C5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 16.722
+    },
+    {
+     "note": "D6",
+     "dt": 0.04,
+     "kind": "candidate",
+     "cents": 1900.0,
+     "envRatio": 5.3
+    },
+    {
+     "note": "C5",
+     "dt": 0.075,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 1.504
+    }
+   ]
+  },
+  {
+   "tx": "4e1ae5c6",
+   "group": "kalimba-17-c|author",
+   "label": "tp",
+   "t": 8.22,
+   "note": "C5",
+   "phaseErr": 2.339,
+   "jerk": 294.3,
+   "env": 0.008277952832357573,
+   "preRingRatio": 1.65,
+   "reinjectRatio": 4.38,
+   "nAttackers": 0,
+   "strongestEnvRatio": null,
+   "strongestCents": null,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": []
+  },
+  {
+   "tx": "4e1ae5c6",
+   "group": "kalimba-17-c|author",
+   "label": "fp",
+   "t": 8.28,
+   "note": "C5",
+   "phaseErr": 10.311,
+   "jerk": 200.4,
+   "env": 0.05029346891004417,
+   "preRingRatio": 1.61,
+   "reinjectRatio": 1.36,
+   "nAttackers": 0,
+   "strongestEnvRatio": null,
+   "strongestCents": null,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": []
+  },
+  {
+   "tx": "4e1ae5c6",
+   "group": "kalimba-17-c|author",
+   "label": "fp",
+   "t": 12.865,
+   "note": "C5",
+   "phaseErr": 2.202,
+   "jerk": 172.0,
+   "env": 0.008363200926690625,
+   "preRingRatio": 1.75,
+   "reinjectRatio": 1.3,
+   "nAttackers": 0,
+   "strongestEnvRatio": null,
+   "strongestCents": null,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": []
+  },
+  {
+   "tx": "4e1ae5c6",
+   "group": "kalimba-17-c|author",
+   "label": "tp",
+   "t": 12.93,
+   "note": "C5",
+   "phaseErr": 10.465,
+   "jerk": 186.5,
+   "env": 0.018410143384161474,
+   "preRingRatio": 1.71,
+   "reinjectRatio": 1.36,
+   "nAttackers": 0,
+   "strongestEnvRatio": null,
+   "strongestCents": null,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": []
+  },
+  {
+   "tx": "4e1ae5c6",
+   "group": "kalimba-17-c|author",
+   "label": "tp",
+   "t": 16.945,
+   "note": "C5",
+   "phaseErr": 6.692,
+   "jerk": 268.9,
+   "env": 0.04542293488171879,
+   "preRingRatio": 2.54,
+   "reinjectRatio": 5.95,
+   "nAttackers": 2,
+   "strongestEnvRatio": 5.76,
+   "strongestCents": 200.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "A4",
+     "dt": -0.025,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 39.699
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 5.76
+    }
+   ]
+  },
+  {
+   "tx": "9ce7df83",
+   "group": "kalimba-17-c|author",
+   "label": "fp",
+   "t": 3.865,
+   "note": "C5",
+   "phaseErr": 2.137,
+   "jerk": 183.3,
+   "env": 0.0076101786149412225,
+   "preRingRatio": 1.36,
+   "reinjectRatio": 1.35,
+   "nAttackers": 0,
+   "strongestEnvRatio": null,
+   "strongestCents": null,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": []
+  },
+  {
+   "tx": "9ce7df83",
+   "group": "kalimba-17-c|author",
+   "label": "fp",
+   "t": 3.925,
+   "note": "C5",
+   "phaseErr": 10.246,
+   "jerk": 193.8,
+   "env": 0.022559955022295016,
+   "preRingRatio": 1.29,
+   "reinjectRatio": 1.75,
+   "nAttackers": 0,
+   "strongestEnvRatio": null,
+   "strongestCents": null,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": []
+  },
+  {
+   "tx": "9ce7df83",
+   "group": "kalimba-17-c|author",
+   "label": "tp",
+   "t": 16.84,
+   "note": "C5",
+   "phaseErr": 7.206,
+   "jerk": 239.0,
+   "env": 0.020493758294889038,
+   "preRingRatio": 2.02,
+   "reinjectRatio": 1.92,
+   "nAttackers": 0,
+   "strongestEnvRatio": null,
+   "strongestCents": null,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": []
+  },
+  {
+   "tx": "ea7edd71",
+   "group": "kalimba-17-c|author",
+   "label": "tp",
+   "t": 4.12,
+   "note": "F5",
+   "phaseErr": 5.559,
+   "jerk": 6384.2,
+   "env": 0.014928490547528287,
+   "preRingRatio": 3.72,
+   "reinjectRatio": 4.65,
+   "nAttackers": 9,
+   "strongestEnvRatio": 1.209,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.209,
+   "attackers": [
+    {
+     "note": "E5",
+     "dt": -0.06,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 26.461
+    },
+    {
+     "note": "C5",
+     "dt": -0.05,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 25.834
+    },
+    {
+     "note": "C6",
+     "dt": -0.05,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 91.355
+    },
+    {
+     "note": "G5",
+     "dt": -0.045,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 297.984
+    },
+    {
+     "note": "C4",
+     "dt": -0.04,
+     "kind": "candidate",
+     "cents": -1700.0,
+     "envRatio": 42.627
+    },
+    {
+     "note": "A5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 17.59
+    },
+    {
+     "note": "E5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 1.209
+    },
+    {
+     "note": "B4",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 3.251
+    },
+    {
+     "note": "G5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.719
+    }
+   ]
+  },
+  {
+   "tx": "ebecf0c6",
+   "group": "kalimba-17-c|author",
+   "label": "tp",
+   "t": 3.285,
+   "note": "F5",
+   "phaseErr": 1.736,
+   "jerk": 359.5,
+   "env": 0.051216692903947904,
+   "preRingRatio": 5.1,
+   "reinjectRatio": 2.48,
+   "nAttackers": 4,
+   "strongestEnvRatio": 2.598,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 2.598,
+   "attackers": [
+    {
+     "note": "G5",
+     "dt": -0.07,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 32.999
+    },
+    {
+     "note": "E5",
+     "dt": -0.065,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 21.703
+    },
+    {
+     "note": "G5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 9.996
+    },
+    {
+     "note": "E5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 2.598
+    }
+   ]
+  },
+  {
+   "tx": "ebecf0c6",
+   "group": "kalimba-17-c|author",
+   "label": "tp",
+   "t": 3.96,
+   "note": "F5",
+   "phaseErr": 1.917,
+   "jerk": 1158.5,
+   "env": 0.05096964504900579,
+   "preRingRatio": 8.67,
+   "reinjectRatio": 2.5,
+   "nAttackers": 6,
+   "strongestEnvRatio": 1.727,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.727,
+   "attackers": [
+    {
+     "note": "G5",
+     "dt": -0.065,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 15.628
+    },
+    {
+     "note": "E5",
+     "dt": -0.06,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 26.127
+    },
+    {
+     "note": "C5",
+     "dt": -0.055,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 47.806
+    },
+    {
+     "note": "A5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 19.783
+    },
+    {
+     "note": "G5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 5.133
+    },
+    {
+     "note": "E5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 1.727
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 21.9401,
+   "note": "F#4",
+   "phaseErr": 5.65,
+   "jerk": 189.5,
+   "env": 0.018768018625440513,
+   "preRingRatio": 1.5,
+   "reinjectRatio": 1.08,
+   "nAttackers": 11,
+   "strongestEnvRatio": 0.511,
+   "strongestCents": 800.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "D5",
+     "dt": -0.0748,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 89.395
+    },
+    {
+     "note": "E4",
+     "dt": -0.0698,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 12.8
+    },
+    {
+     "note": "E5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 560.92
+    },
+    {
+     "note": "C5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 9.399
+    },
+    {
+     "note": "F#5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 1200.0,
+     "envRatio": 3.65
+    },
+    {
+     "note": "G3",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 3.791
+    },
+    {
+     "note": "D5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 0.511
+    },
+    {
+     "note": "E5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 1.196
+    },
+    {
+     "note": "C5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 1.443
+    },
+    {
+     "note": "E4",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 1.719
+    },
+    {
+     "note": "D5",
+     "dt": -0.0437,
+     "kind": "event",
+     "cents": 800.0,
+     "envRatio": 0.511
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 22.444,
+   "note": "B4",
+   "phaseErr": 2.478,
+   "jerk": 458.1,
+   "env": 0.026597220143044626,
+   "preRingRatio": 1.35,
+   "reinjectRatio": 2.29,
+   "nAttackers": 9,
+   "strongestEnvRatio": 0.704,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.704,
+   "attackers": [
+    {
+     "note": "C5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 70.006
+    },
+    {
+     "note": "E5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 34.664
+    },
+    {
+     "note": "B3",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 75.086
+    },
+    {
+     "note": "C4",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 56.389
+    },
+    {
+     "note": "G3",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": -1600.0,
+     "envRatio": 15.611
+    },
+    {
+     "note": "C5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.704
+    },
+    {
+     "note": "E5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 3.023
+    },
+    {
+     "note": "F#4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 3.17
+    },
+    {
+     "note": "C5",
+     "dt": -0.0309,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 1.785
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 34.1374,
+   "note": "G4",
+   "phaseErr": 9.176,
+   "jerk": 751.9,
+   "env": 0.0444394636945691,
+   "preRingRatio": 1.1,
+   "reinjectRatio": 1.91,
+   "nAttackers": 7,
+   "strongestEnvRatio": 1.495,
+   "strongestCents": -500.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "A4",
+     "dt": -0.0499,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 48.908
+    },
+    {
+     "note": "C4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 2.77
+    },
+    {
+     "note": "D4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 15.465
+    },
+    {
+     "note": "B3",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 1.862
+    },
+    {
+     "note": "E4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 10.257
+    },
+    {
+     "note": "A4",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 4.818
+    },
+    {
+     "note": "D4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 1.495
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 34.1574,
+   "note": "D4",
+   "phaseErr": 0.705,
+   "jerk": 603.6,
+   "env": 0.029735242717977253,
+   "preRingRatio": 1.87,
+   "reinjectRatio": 3.55,
+   "nAttackers": 7,
+   "strongestEnvRatio": 0.669,
+   "strongestCents": 500.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "G4",
+     "dt": -0.0798,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 6.362
+    },
+    {
+     "note": "A4",
+     "dt": -0.0698,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 32.726
+    },
+    {
+     "note": "C4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 1.853
+    },
+    {
+     "note": "B3",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 1.246
+    },
+    {
+     "note": "E4",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 6.863
+    },
+    {
+     "note": "G4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 0.669
+    },
+    {
+     "note": "A4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 3.224
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 52.8299,
+   "note": "F#4",
+   "phaseErr": 0.714,
+   "jerk": 205.4,
+   "env": 0.030587086133021947,
+   "preRingRatio": 3.63,
+   "reinjectRatio": 2.04,
+   "nAttackers": 4,
+   "strongestEnvRatio": 1.157,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.157,
+   "attackers": [
+    {
+     "note": "C4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 144.224
+    },
+    {
+     "note": "G3",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 96.356
+    },
+    {
+     "note": "G4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 2.826
+    },
+    {
+     "note": "G4",
+     "dt": -0.0277,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 1.157
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 58.1079,
+   "note": "G4",
+   "phaseErr": 4.549,
+   "jerk": 288.4,
+   "env": 0.019105282296549436,
+   "preRingRatio": 1.32,
+   "reinjectRatio": 1.47,
+   "nAttackers": 11,
+   "strongestEnvRatio": 1.161,
+   "strongestCents": 200.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B3",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 136.676
+    },
+    {
+     "note": "B4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 157.191
+    },
+    {
+     "note": "E4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 10.546
+    },
+    {
+     "note": "C4",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 44.821
+    },
+    {
+     "note": "A3",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 2.943
+    },
+    {
+     "note": "A4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.161
+    },
+    {
+     "note": "C5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 2.087
+    },
+    {
+     "note": "B4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 1.243
+    },
+    {
+     "note": "E4",
+     "dt": 0.0249,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 2.425
+    },
+    {
+     "note": "C4",
+     "dt": 0.0299,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 2.767
+    },
+    {
+     "note": "A4",
+     "dt": -0.0348,
+     "kind": "event",
+     "cents": 200.0,
+     "envRatio": 1.161
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 58.6118,
+   "note": "D4",
+   "phaseErr": 1.503,
+   "jerk": 1967.7,
+   "env": 0.006521110531254646,
+   "preRingRatio": 2.01,
+   "reinjectRatio": 2.52,
+   "nAttackers": 12,
+   "strongestEnvRatio": 0.26,
+   "strongestCents": 400.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B3",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 11.501
+    },
+    {
+     "note": "C4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 8.188
+    },
+    {
+     "note": "B4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 6.514
+    },
+    {
+     "note": "E4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.332
+    },
+    {
+     "note": "G4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 1.44
+    },
+    {
+     "note": "C4",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 3.205
+    },
+    {
+     "note": "D5",
+     "dt": 0.0649,
+     "kind": "candidate",
+     "cents": 1200.0,
+     "envRatio": 2.124
+    },
+    {
+     "note": "G4",
+     "dt": 0.0649,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 0.427
+    },
+    {
+     "note": "B4",
+     "dt": 0.0698,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 1.005
+    },
+    {
+     "note": "F#4",
+     "dt": 0.0698,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 0.26
+    },
+    {
+     "note": "G3",
+     "dt": 0.0698,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 1.44
+    },
+    {
+     "note": "C5",
+     "dt": 0.0748,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 1.528
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 59.2603,
+   "note": "G4",
+   "phaseErr": 4.537,
+   "jerk": 164.8,
+   "env": 0.01236694257389523,
+   "preRingRatio": 1.02,
+   "reinjectRatio": 1.19,
+   "nAttackers": 6,
+   "strongestEnvRatio": 0.75,
+   "strongestCents": 400.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B3",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 12.977
+    },
+    {
+     "note": "C4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 18.515
+    },
+    {
+     "note": "G3",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 66.051
+    },
+    {
+     "note": "E4",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 9.709
+    },
+    {
+     "note": "B4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 0.75
+    },
+    {
+     "note": "B4",
+     "dt": -0.0262,
+     "kind": "event",
+     "cents": 400.0,
+     "envRatio": 0.75
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 76.0222,
+   "note": "F#4",
+   "phaseErr": 5.315,
+   "jerk": 416.7,
+   "env": 0.038323706722344156,
+   "preRingRatio": 1.21,
+   "reinjectRatio": 4.72,
+   "nAttackers": 6,
+   "strongestEnvRatio": 0.466,
+   "strongestCents": -900.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "D4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 3.199
+    },
+    {
+     "note": "B3",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 2.545
+    },
+    {
+     "note": "C4",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 1.943
+    },
+    {
+     "note": "G3",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 1.359
+    },
+    {
+     "note": "A3",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 0.466
+    },
+    {
+     "note": "B3",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 6.528
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 84.054,
+   "note": "B4",
+   "phaseErr": 0.756,
+   "jerk": 514.8,
+   "env": 0.004455145137681161,
+   "preRingRatio": 1.22,
+   "reinjectRatio": 1.35,
+   "nAttackers": 8,
+   "strongestEnvRatio": 0.458,
+   "strongestCents": 500.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 3.198,
+   "attackers": [
+    {
+     "note": "E5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 9.321
+    },
+    {
+     "note": "C4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 4.673
+    },
+    {
+     "note": "C5",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 3.198
+    },
+    {
+     "note": "B3",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 0.723
+    },
+    {
+     "note": "E5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 0.458
+    },
+    {
+     "note": "G5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 0.753
+    },
+    {
+     "note": "F#4",
+     "dt": 0.0649,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 0.604
+    },
+    {
+     "note": "C5",
+     "dt": 0.0197,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 15.384
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 84.1138,
+   "note": "B4",
+   "phaseErr": 3.577,
+   "jerk": 647.2,
+   "env": 0.03596359575867763,
+   "preRingRatio": 1.04,
+   "reinjectRatio": 2.98,
+   "nAttackers": 8,
+   "strongestEnvRatio": 3.693,
+   "strongestCents": 500.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 25.815,
+   "attackers": [
+    {
+     "note": "E5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 75.241
+    },
+    {
+     "note": "C4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 37.719
+    },
+    {
+     "note": "C5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 25.815
+    },
+    {
+     "note": "B3",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 5.833
+    },
+    {
+     "note": "E5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 3.693
+    },
+    {
+     "note": "G5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 6.08
+    },
+    {
+     "note": "F#4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 4.877
+    },
+    {
+     "note": "C5",
+     "dt": -0.0401,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 25.815
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "label": "fp",
+   "t": 93.3129,
+   "note": "B3",
+   "phaseErr": 0.79,
+   "jerk": 238.1,
+   "env": 0.019035051344171633,
+   "preRingRatio": 1.22,
+   "reinjectRatio": 2.79,
+   "nAttackers": 6,
+   "strongestEnvRatio": 1.079,
+   "strongestCents": 300.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "D4",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 15.556
+    },
+    {
+     "note": "G4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 4.486
+    },
+    {
+     "note": "B4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 1200.0,
+     "envRatio": 2.098
+    },
+    {
+     "note": "D4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 1.079
+    },
+    {
+     "note": "D4",
+     "dt": -0.0383,
+     "kind": "event",
+     "cents": 300.0,
+     "envRatio": 2.069
+    },
+    {
+     "note": "B4",
+     "dt": -0.0383,
+     "kind": "event",
+     "cents": 1200.0,
+     "envRatio": 7.754
+    }
+   ]
+  },
+  {
+   "tx": "47902d34",
+   "group": "kalimba-17-c|tester",
+   "label": "fp",
+   "t": 20.94,
+   "note": "F4",
+   "phaseErr": 1.514,
+   "jerk": 284.2,
+   "env": 0.0033416045696310673,
+   "preRingRatio": 1.02,
+   "reinjectRatio": 1.16,
+   "nAttackers": 6,
+   "strongestEnvRatio": 0.232,
+   "strongestCents": 200.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "G4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 7.576
+    },
+    {
+     "note": "D6",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 2100.0,
+     "envRatio": 23.874
+    },
+    {
+     "note": "A4",
+     "dt": 0.05,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 0.694
+    },
+    {
+     "note": "G4",
+     "dt": 0.055,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.232
+    },
+    {
+     "note": "D6",
+     "dt": 0.065,
+     "kind": "candidate",
+     "cents": 2100.0,
+     "envRatio": 0.492
+    },
+    {
+     "note": "G4",
+     "dt": 0.0307,
+     "kind": "event",
+     "cents": 200.0,
+     "envRatio": 37.532
+    }
+   ]
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 4.115,
+   "note": "C5",
+   "phaseErr": 3.176,
+   "jerk": 1341.6,
+   "env": 0.015907787056164524,
+   "preRingRatio": 2.06,
+   "reinjectRatio": 5.18,
+   "nAttackers": 4,
+   "strongestEnvRatio": 2.163,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 2.163,
+   "attackers": [
+    {
+     "note": "B4",
+     "dt": -0.065,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 26.322
+    },
+    {
+     "note": "A4",
+     "dt": -0.035,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 25.311
+    },
+    {
+     "note": "D4",
+     "dt": -0.03,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 7.762
+    },
+    {
+     "note": "B4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 2.163
+    }
+   ]
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 17.06,
+   "note": "G4",
+   "phaseErr": 2.401,
+   "jerk": 162.3,
+   "env": 0.026229623233563537,
+   "preRingRatio": 9.48,
+   "reinjectRatio": 1.35,
+   "nAttackers": 0,
+   "strongestEnvRatio": null,
+   "strongestCents": null,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": []
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 17.39,
+   "note": "F4",
+   "phaseErr": 5.063,
+   "jerk": 294.5,
+   "env": 0.013617704726345109,
+   "preRingRatio": 2.12,
+   "reinjectRatio": 5.16,
+   "nAttackers": 2,
+   "strongestEnvRatio": 28.624,
+   "strongestCents": 1800.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "C6",
+     "dt": -0.03,
+     "kind": "candidate",
+     "cents": 1900.0,
+     "envRatio": 57.629
+    },
+    {
+     "note": "B5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 1800.0,
+     "envRatio": 28.624
+    }
+   ]
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 20.215,
+   "note": "F5",
+   "phaseErr": 3.079,
+   "jerk": 530.9,
+   "env": 0.08028679395861002,
+   "preRingRatio": 10.4,
+   "reinjectRatio": 2.07,
+   "nAttackers": 12,
+   "strongestEnvRatio": 3.361,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 3.361,
+   "attackers": [
+    {
+     "note": "A4",
+     "dt": -0.07,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 189.88
+    },
+    {
+     "note": "B4",
+     "dt": -0.07,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 26.125
+    },
+    {
+     "note": "D5",
+     "dt": -0.07,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 48.53
+    },
+    {
+     "note": "E5",
+     "dt": -0.07,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 82.03
+    },
+    {
+     "note": "G5",
+     "dt": -0.07,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 27.692
+    },
+    {
+     "note": "A5",
+     "dt": -0.025,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 91.913
+    },
+    {
+     "note": "E6",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 1100.0,
+     "envRatio": 8.032
+    },
+    {
+     "note": "A4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 5.57
+    },
+    {
+     "note": "B4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 10.496
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 11.278
+    },
+    {
+     "note": "E5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 3.361
+    },
+    {
+     "note": "G5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 5.5
+    }
+   ]
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 20.57,
+   "note": "C5",
+   "phaseErr": 0.86,
+   "jerk": 216.9,
+   "env": 0.05052941517081952,
+   "preRingRatio": 2.02,
+   "reinjectRatio": 1.45,
+   "nAttackers": 2,
+   "strongestEnvRatio": 9.249,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 9.249,
+   "attackers": [
+    {
+     "note": "B4",
+     "dt": -0.03,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 9.249
+    },
+    {
+     "note": "B4",
+     "dt": 0.03,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 12.183
+    }
+   ]
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "label": "fp",
+   "t": 21.555,
+   "note": "D4",
+   "phaseErr": 0.72,
+   "jerk": 332.2,
+   "env": 0.004091336725776685,
+   "preRingRatio": 1.23,
+   "reinjectRatio": 1.81,
+   "nAttackers": 9,
+   "strongestEnvRatio": 0.499,
+   "strongestCents": 2100.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 2100.0,
+     "envRatio": 32.979
+    },
+    {
+     "note": "A5",
+     "dt": 0.03,
+     "kind": "candidate",
+     "cents": 1900.0,
+     "envRatio": 15.671
+    },
+    {
+     "note": "B4",
+     "dt": 0.03,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 6.515
+    },
+    {
+     "note": "E4",
+     "dt": 0.035,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.826
+    },
+    {
+     "note": "B5",
+     "dt": 0.04,
+     "kind": "candidate",
+     "cents": 2100.0,
+     "envRatio": 0.499
+    },
+    {
+     "note": "E5",
+     "dt": 0.04,
+     "kind": "candidate",
+     "cents": 1400.0,
+     "envRatio": 1.433
+    },
+    {
+     "note": "D5",
+     "dt": 0.065,
+     "kind": "candidate",
+     "cents": 1200.0,
+     "envRatio": 0.895
+    },
+    {
+     "note": "E4",
+     "dt": 0.0237,
+     "kind": "event",
+     "cents": 200.0,
+     "envRatio": 1.087
+    },
+    {
+     "note": "E5",
+     "dt": 0.0237,
+     "kind": "event",
+     "cents": 1400.0,
+     "envRatio": 3.065
+    }
+   ]
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "label": "fp",
+   "t": 24.435,
+   "note": "F4",
+   "phaseErr": 4.693,
+   "jerk": 152.6,
+   "env": 0.01214035292601062,
+   "preRingRatio": 2.43,
+   "reinjectRatio": 1.41,
+   "nAttackers": 8,
+   "strongestEnvRatio": 1.499,
+   "strongestCents": 700.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 1800.0,
+     "envRatio": 30.964
+    },
+    {
+     "note": "A4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 8.145
+    },
+    {
+     "note": "B4",
+     "dt": 0.025,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 1.58
+    },
+    {
+     "note": "B5",
+     "dt": 0.04,
+     "kind": "candidate",
+     "cents": 1800.0,
+     "envRatio": 1.734
+    },
+    {
+     "note": "C5",
+     "dt": 0.045,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 1.499
+    },
+    {
+     "note": "A4",
+     "dt": 0.06,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 2.24
+    },
+    {
+     "note": "B4",
+     "dt": -0.0297,
+     "kind": "event",
+     "cents": 600.0,
+     "envRatio": 1.553
+    },
+    {
+     "note": "C5",
+     "dt": -0.0297,
+     "kind": "event",
+     "cents": 700.0,
+     "envRatio": 1.735
+    }
+   ]
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 27.695,
+   "note": "C5",
+   "phaseErr": 2.566,
+   "jerk": 267.8,
+   "env": 0.017988393113490448,
+   "preRingRatio": 8.95,
+   "reinjectRatio": 1.14,
+   "nAttackers": 3,
+   "strongestEnvRatio": 3.372,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 3.372,
+   "attackers": [
+    {
+     "note": "D5",
+     "dt": -0.03,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 41.801
+    },
+    {
+     "note": "B4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 3.372
+    },
+    {
+     "note": "B4",
+     "dt": 0.05,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 3.888
+    }
+   ]
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 28.78,
+   "note": "E4",
+   "phaseErr": 6.837,
+   "jerk": 471.1,
+   "env": 0.05818091329900631,
+   "preRingRatio": 1.19,
+   "reinjectRatio": 2.04,
+   "nAttackers": 4,
+   "strongestEnvRatio": 4.348,
+   "strongestCents": 1900.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "D4",
+     "dt": -0.075,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 18.831
+    },
+    {
+     "note": "B5",
+     "dt": -0.025,
+     "kind": "candidate",
+     "cents": 1900.0,
+     "envRatio": 4.348
+    },
+    {
+     "note": "D4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 4.794
+    },
+    {
+     "note": "D4",
+     "dt": 0.055,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 24.263
+    }
+   ]
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 33.99,
+   "note": "E4",
+   "phaseErr": 7.396,
+   "jerk": 261.7,
+   "env": 0.02970884813234844,
+   "preRingRatio": 3.8,
+   "reinjectRatio": 1.63,
+   "nAttackers": 13,
+   "strongestEnvRatio": 0.728,
+   "strongestCents": 300.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B5",
+     "dt": -0.08,
+     "kind": "candidate",
+     "cents": 1900.0,
+     "envRatio": 97.699
+    },
+    {
+     "note": "C4",
+     "dt": -0.055,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 2.926
+    },
+    {
+     "note": "E6",
+     "dt": -0.03,
+     "kind": "candidate",
+     "cents": 2400.0,
+     "envRatio": 45.929
+    },
+    {
+     "note": "A4",
+     "dt": -0.025,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 8.655
+    },
+    {
+     "note": "B5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 1900.0,
+     "envRatio": 3.316
+    },
+    {
+     "note": "C6",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": 2000.0,
+     "envRatio": 23.391
+    },
+    {
+     "note": "D6",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 2200.0,
+     "envRatio": 96.07
+    },
+    {
+     "note": "B4",
+     "dt": 0.025,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 11.561
+    },
+    {
+     "note": "A4",
+     "dt": 0.035,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 2.56
+    },
+    {
+     "note": "C5",
+     "dt": 0.035,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 10.637
+    },
+    {
+     "note": "G4",
+     "dt": 0.04,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 0.728
+    },
+    {
+     "note": "D6",
+     "dt": 0.075,
+     "kind": "candidate",
+     "cents": 2200.0,
+     "envRatio": 3.403
+    },
+    {
+     "note": "G4",
+     "dt": 0.0153,
+     "kind": "event",
+     "cents": 300.0,
+     "envRatio": 1.993
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 3.4322,
+   "note": "F#5",
+   "phaseErr": 6.259,
+   "jerk": 731.3,
+   "env": 0.014009991478650747,
+   "preRingRatio": 2.02,
+   "reinjectRatio": 1.32,
+   "nAttackers": 21,
+   "strongestEnvRatio": 0.153,
+   "strongestCents": -900.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.06,
+   "attackers": [
+    {
+     "note": "D#5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 16.596
+    },
+    {
+     "note": "G#5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 6.922
+    },
+    {
+     "note": "G4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 51.881
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 19.332
+    },
+    {
+     "note": "A5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 14.875
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 32.251
+    },
+    {
+     "note": "A4",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 70.938
+    },
+    {
+     "note": "E6",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 110.689
+    },
+    {
+     "note": "D4",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": -1600.0,
+     "envRatio": 6.244
+    },
+    {
+     "note": "B4",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 2.822
+    },
+    {
+     "note": "D5",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 1.234
+    },
+    {
+     "note": "E5",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 0.634
+    },
+    {
+     "note": "G4",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 1.701
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 0.416
+    },
+    {
+     "note": "A5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 1.327
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 0.538
+    },
+    {
+     "note": "G#5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.812
+    },
+    {
+     "note": "D#5",
+     "dt": 0.0698,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 0.788
+    },
+    {
+     "note": "A4",
+     "dt": 0.0748,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 0.153
+    },
+    {
+     "note": "A4",
+     "dt": 0.0276,
+     "kind": "event",
+     "cents": -900.0,
+     "envRatio": 66.405
+    },
+    {
+     "note": "F5",
+     "dt": 0.0276,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 1.06
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 3.4921,
+   "note": "F#5",
+   "phaseErr": 2.739,
+   "jerk": 776.6,
+   "env": 0.0934859788627052,
+   "preRingRatio": 1.79,
+   "reinjectRatio": 1.77,
+   "nAttackers": 21,
+   "strongestEnvRatio": 0.968,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.968,
+   "attackers": [
+    {
+     "note": "D#5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 110.74
+    },
+    {
+     "note": "G#5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 46.187
+    },
+    {
+     "note": "G4",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 346.194
+    },
+    {
+     "note": "A#4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 128.998
+    },
+    {
+     "note": "A5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 99.259
+    },
+    {
+     "note": "G#4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 215.206
+    },
+    {
+     "note": "A4",
+     "dt": -0.0449,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 473.359
+    },
+    {
+     "note": "E6",
+     "dt": -0.0449,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 738.607
+    },
+    {
+     "note": "D4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -1600.0,
+     "envRatio": 41.666
+    },
+    {
+     "note": "B4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 18.833
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 8.235
+    },
+    {
+     "note": "E5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 4.233
+    },
+    {
+     "note": "G4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 11.352
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 2.774
+    },
+    {
+     "note": "A5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 8.857
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 3.587
+    },
+    {
+     "note": "G#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 5.417
+    },
+    {
+     "note": "D#5",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 5.261
+    },
+    {
+     "note": "A4",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 1.021
+    },
+    {
+     "note": "A4",
+     "dt": -0.0323,
+     "kind": "event",
+     "cents": -900.0,
+     "envRatio": 3.234
+    },
+    {
+     "note": "F5",
+     "dt": -0.0323,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 0.968
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 8.2961,
+   "note": "C#5",
+   "phaseErr": 15.014,
+   "jerk": 492.6,
+   "env": 0.035536768260854563,
+   "preRingRatio": 1.14,
+   "reinjectRatio": 1.09,
+   "nAttackers": 6,
+   "strongestEnvRatio": 1.771,
+   "strongestCents": 200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.824,
+   "attackers": [
+    {
+     "note": "F5",
+     "dt": -0.0698,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 3.703
+    },
+    {
+     "note": "D#5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.771
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 1.824
+    },
+    {
+     "note": "F5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 4.214
+    },
+    {
+     "note": "E5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 2.179
+    },
+    {
+     "note": "D5",
+     "dt": -0.053,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 41.69
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 10.2567,
+   "note": "G#5",
+   "phaseErr": 15.87,
+   "jerk": 1058.3,
+   "env": 0.06594953282326815,
+   "preRingRatio": 1.27,
+   "reinjectRatio": 1.15,
+   "nAttackers": 11,
+   "strongestEnvRatio": 0.556,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.556,
+   "attackers": [
+    {
+     "note": "A5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 110.453
+    },
+    {
+     "note": "B5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 72.18
+    },
+    {
+     "note": "C6",
+     "dt": -0.0499,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 377.523
+    },
+    {
+     "note": "C4",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": -2000.0,
+     "envRatio": 40.438
+    },
+    {
+     "note": "A#5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 159.069
+    },
+    {
+     "note": "E5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 16.371
+    },
+    {
+     "note": "A5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.556
+    },
+    {
+     "note": "B5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 4.163
+    },
+    {
+     "note": "F#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 2.954
+    },
+    {
+     "note": "C6",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 8.735
+    },
+    {
+     "note": "A5",
+     "dt": -0.0283,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 0.556
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 17.4653,
+   "note": "D#5",
+   "phaseErr": 16.409,
+   "jerk": 499.6,
+   "env": 0.04297889032445519,
+   "preRingRatio": 1.13,
+   "reinjectRatio": 1.21,
+   "nAttackers": 6,
+   "strongestEnvRatio": 2.546,
+   "strongestCents": 200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 3.46,
+   "attackers": [
+    {
+     "note": "C#5",
+     "dt": -0.0299,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 78.231
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 3.46
+    },
+    {
+     "note": "C5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 5.944
+    },
+    {
+     "note": "F5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 2.546
+    },
+    {
+     "note": "C#5",
+     "dt": 0.0299,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 4.507
+    },
+    {
+     "note": "D5",
+     "dt": -0.0387,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 3.46
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 31.3937,
+   "note": "D#4",
+   "phaseErr": 7.214,
+   "jerk": 235.1,
+   "env": 0.02713421692301275,
+   "preRingRatio": 1.09,
+   "reinjectRatio": 2.34,
+   "nAttackers": 21,
+   "strongestEnvRatio": 0.54,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.54,
+   "attackers": [
+    {
+     "note": "C4",
+     "dt": -0.0748,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 7.836
+    },
+    {
+     "note": "C#4",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 2.038
+    },
+    {
+     "note": "E4",
+     "dt": -0.0499,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 11.679
+    },
+    {
+     "note": "F4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 14.665
+    },
+    {
+     "note": "C#5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 112.181
+    },
+    {
+     "note": "G#4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 10.71
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 1100.0,
+     "envRatio": 12.778
+    },
+    {
+     "note": "F#4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 4.4
+    },
+    {
+     "note": "A4",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 8.093
+    },
+    {
+     "note": "E4",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.622
+    },
+    {
+     "note": "A#4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 2.785
+    },
+    {
+     "note": "F4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.42
+    },
+    {
+     "note": "C5",
+     "dt": 0.0249,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 1.115
+    },
+    {
+     "note": "C#5",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 0.879
+    },
+    {
+     "note": "G4",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 1.63
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 1.377
+    },
+    {
+     "note": "F#4",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 1.24
+    },
+    {
+     "note": "C4",
+     "dt": 0.0113,
+     "kind": "event",
+     "cents": -300.0,
+     "envRatio": 0.751
+    },
+    {
+     "note": "E4",
+     "dt": 0.0113,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 0.54
+    },
+    {
+     "note": "G4",
+     "dt": 0.0113,
+     "kind": "event",
+     "cents": 400.0,
+     "envRatio": 4.832
+    },
+    {
+     "note": "C5",
+     "dt": 0.0113,
+     "kind": "event",
+     "cents": 900.0,
+     "envRatio": 0.736
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 48.1007,
+   "note": "A#4",
+   "phaseErr": 5.698,
+   "jerk": 181.8,
+   "env": 0.02555619313119036,
+   "preRingRatio": 2.28,
+   "reinjectRatio": 1.43,
+   "nAttackers": 8,
+   "strongestEnvRatio": 2.18,
+   "strongestCents": 300.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 3.341,
+   "attackers": [
+    {
+     "note": "C#5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 104.526
+    },
+    {
+     "note": "F#4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 12.921
+    },
+    {
+     "note": "D5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 29.46
+    },
+    {
+     "note": "G#4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 9.656
+    },
+    {
+     "note": "B4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 3.341
+    },
+    {
+     "note": "C5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 3.338
+    },
+    {
+     "note": "C#5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 2.18
+    },
+    {
+     "note": "B4",
+     "dt": -0.0412,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 14.345
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 49.7519,
+   "note": "C#5",
+   "phaseErr": 14.707,
+   "jerk": 631.8,
+   "env": 0.054038557261916566,
+   "preRingRatio": 1.35,
+   "reinjectRatio": 2.99,
+   "nAttackers": 9,
+   "strongestEnvRatio": 1.034,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.034,
+   "attackers": [
+    {
+     "note": "D5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 30.861
+    },
+    {
+     "note": "F5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 626.592
+    },
+    {
+     "note": "D#5",
+     "dt": -0.0299,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 96.958
+    },
+    {
+     "note": "A#4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 9.998
+    },
+    {
+     "note": "E5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 2.796
+    },
+    {
+     "note": "D5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 1.034
+    },
+    {
+     "note": "F5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 3.267
+    },
+    {
+     "note": "D#5",
+     "dt": 0.0299,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 3.111
+    },
+    {
+     "note": "D5",
+     "dt": -0.0322,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 1.034
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 50.8045,
+   "note": "F#5",
+   "phaseErr": 5.533,
+   "jerk": 186.0,
+   "env": 0.03576008920832532,
+   "preRingRatio": 2.22,
+   "reinjectRatio": 1.29,
+   "nAttackers": 8,
+   "strongestEnvRatio": 0.418,
+   "strongestCents": -200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 3.55,
+   "attackers": [
+    {
+     "note": "D#5",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 13.708
+    },
+    {
+     "note": "E5",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 4.022
+    },
+    {
+     "note": "C#5",
+     "dt": -0.0449,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 15.331
+    },
+    {
+     "note": "G5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 3.55
+    },
+    {
+     "note": "D#5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 0.669
+    },
+    {
+     "note": "E5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 0.418
+    },
+    {
+     "note": "C#5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 2.849
+    },
+    {
+     "note": "E5",
+     "dt": -0.0225,
+     "kind": "event",
+     "cents": -200.0,
+     "envRatio": 0.418
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 66.5488,
+   "note": "F#5",
+   "phaseErr": 2.065,
+   "jerk": 908.2,
+   "env": 0.0089823905303341,
+   "preRingRatio": 1.52,
+   "reinjectRatio": 1.15,
+   "nAttackers": 10,
+   "strongestEnvRatio": 0.106,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 7.644,
+   "attackers": [
+    {
+     "note": "A#5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 88.18
+    },
+    {
+     "note": "A5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 11.041
+    },
+    {
+     "note": "G5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 7.644
+    },
+    {
+     "note": "G#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 22.195
+    },
+    {
+     "note": "A5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 0.472
+    },
+    {
+     "note": "G5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.106
+    },
+    {
+     "note": "C#5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 1.019
+    },
+    {
+     "note": "E5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 0.432
+    },
+    {
+     "note": "G#5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.109
+    },
+    {
+     "note": "G5",
+     "dt": 0.0402,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 10.467
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 67.1424,
+   "note": "G#5",
+   "phaseErr": 12.085,
+   "jerk": 859.1,
+   "env": 0.06928239361423662,
+   "preRingRatio": 1.43,
+   "reinjectRatio": 2.23,
+   "nAttackers": 12,
+   "strongestEnvRatio": 0.577,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.577,
+   "attackers": [
+    {
+     "note": "A#5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 193.615
+    },
+    {
+     "note": "A5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 47.076
+    },
+    {
+     "note": "B5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 85.184
+    },
+    {
+     "note": "F5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 24.744
+    },
+    {
+     "note": "C6",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 243.621
+    },
+    {
+     "note": "E4",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": -1600.0,
+     "envRatio": 10.359
+    },
+    {
+     "note": "A#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.987
+    },
+    {
+     "note": "A5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.577
+    },
+    {
+     "note": "B5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 4.126
+    },
+    {
+     "note": "C6",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 7.941
+    },
+    {
+     "note": "F5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 4.381
+    },
+    {
+     "note": "A5",
+     "dt": -0.0251,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 0.577
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 67.6213,
+   "note": "D#4",
+   "phaseErr": 0.703,
+   "jerk": 333.3,
+   "env": 0.008427694495811081,
+   "preRingRatio": 1.23,
+   "reinjectRatio": 1.88,
+   "nAttackers": 11,
+   "strongestEnvRatio": 0.935,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.935,
+   "attackers": [
+    {
+     "note": "C4",
+     "dt": 0.0349,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 7.65
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 12.944
+    },
+    {
+     "note": "E4",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.935
+    },
+    {
+     "note": "G4",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 2.413
+    },
+    {
+     "note": "F#4",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 1.09
+    },
+    {
+     "note": "G5",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": 1600.0,
+     "envRatio": 5.812
+    },
+    {
+     "note": "F5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": 1400.0,
+     "envRatio": 3.941
+    },
+    {
+     "note": "E5",
+     "dt": 0.0698,
+     "kind": "candidate",
+     "cents": 1300.0,
+     "envRatio": 8.399
+    },
+    {
+     "note": "E4",
+     "dt": 0.0185,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 3.126
+    },
+    {
+     "note": "G4",
+     "dt": 0.0185,
+     "kind": "event",
+     "cents": 400.0,
+     "envRatio": 20.016
+    },
+    {
+     "note": "G5",
+     "dt": 0.0185,
+     "kind": "event",
+     "cents": 1600.0,
+     "envRatio": 8.819
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 72.0313,
+   "note": "C#5",
+   "phaseErr": 13.046,
+   "jerk": 580.7,
+   "env": 0.032288449245728164,
+   "preRingRatio": 1.32,
+   "reinjectRatio": 3.34,
+   "nAttackers": 7,
+   "strongestEnvRatio": 2.24,
+   "strongestCents": 200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 7.05,
+   "attackers": [
+    {
+     "note": "F5",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 27.602
+    },
+    {
+     "note": "D#5",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 41.09
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 7.05
+    },
+    {
+     "note": "F#4",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 4.15
+    },
+    {
+     "note": "F5",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 4.239
+    },
+    {
+     "note": "D#5",
+     "dt": 0.0349,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 2.24
+    },
+    {
+     "note": "D5",
+     "dt": -0.0378,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 7.05
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 75.3637,
+   "note": "D#5",
+   "phaseErr": 16.455,
+   "jerk": 473.6,
+   "env": 0.04798496966597547,
+   "preRingRatio": 1.28,
+   "reinjectRatio": 3.14,
+   "nAttackers": 8,
+   "strongestEnvRatio": 2.274,
+   "strongestCents": 200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 4.27,
+   "attackers": [
+    {
+     "note": "F5",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 3.26
+    },
+    {
+     "note": "C#5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 82.503
+    },
+    {
+     "note": "A#4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 42.377
+    },
+    {
+     "note": "C5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 8.656
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 4.27
+    },
+    {
+     "note": "F5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 2.274
+    },
+    {
+     "note": "C#5",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 3.873
+    },
+    {
+     "note": "D5",
+     "dt": -0.0382,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 4.27
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 77.5887,
+   "note": "D#5",
+   "phaseErr": 13.159,
+   "jerk": 527.6,
+   "env": 0.045802152111373014,
+   "preRingRatio": 1.18,
+   "reinjectRatio": 2.07,
+   "nAttackers": 15,
+   "strongestEnvRatio": 0.835,
+   "strongestCents": -300.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 5.795,
+   "attackers": [
+    {
+     "note": "F#5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 117.064
+    },
+    {
+     "note": "A4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 71.972
+    },
+    {
+     "note": "B4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 12.67
+    },
+    {
+     "note": "F#4",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 15.267
+    },
+    {
+     "note": "G5",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 38.931
+    },
+    {
+     "note": "C#5",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 1.824
+    },
+    {
+     "note": "C5",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 1.439
+    },
+    {
+     "note": "E5",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 6.612
+    },
+    {
+     "note": "F5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 10.179
+    },
+    {
+     "note": "A#4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 4.134
+    },
+    {
+     "note": "F#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 2.63
+    },
+    {
+     "note": "B4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 3.337
+    },
+    {
+     "note": "F5",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 2.403
+    },
+    {
+     "note": "C5",
+     "dt": -0.0457,
+     "kind": "event",
+     "cents": -300.0,
+     "envRatio": 0.835
+    },
+    {
+     "note": "E5",
+     "dt": -0.0457,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 5.795
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 79.215,
+   "note": "E4",
+   "phaseErr": 3.032,
+   "jerk": 163.9,
+   "env": 0.02315369256388844,
+   "preRingRatio": 1.23,
+   "reinjectRatio": 3.27,
+   "nAttackers": 22,
+   "strongestEnvRatio": 0.637,
+   "strongestCents": 1300.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.211,
+   "attackers": [
+    {
+     "note": "F#4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 24.743
+    },
+    {
+     "note": "F4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 10.83
+    },
+    {
+     "note": "D#5",
+     "dt": -0.0449,
+     "kind": "candidate",
+     "cents": 1100.0,
+     "envRatio": 32.092
+    },
+    {
+     "note": "D#4",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 9.87
+    },
+    {
+     "note": "G#5",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": 1600.0,
+     "envRatio": 17.206
+    },
+    {
+     "note": "A#4",
+     "dt": -0.0299,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 70.537
+    },
+    {
+     "note": "B4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 7.333
+    },
+    {
+     "note": "D4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 19.099
+    },
+    {
+     "note": "G#4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 12.772
+    },
+    {
+     "note": "A4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 5.351
+    },
+    {
+     "note": "A5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 1700.0,
+     "envRatio": 4.992
+    },
+    {
+     "note": "C#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 3.993
+    },
+    {
+     "note": "F#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.248
+    },
+    {
+     "note": "F#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 1400.0,
+     "envRatio": 3.164
+    },
+    {
+     "note": "F4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 1.211
+    },
+    {
+     "note": "F5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 1300.0,
+     "envRatio": 0.637
+    },
+    {
+     "note": "D#5",
+     "dt": 0.0249,
+     "kind": "candidate",
+     "cents": 1100.0,
+     "envRatio": 1.748
+    },
+    {
+     "note": "G#5",
+     "dt": 0.0249,
+     "kind": "candidate",
+     "cents": 1600.0,
+     "envRatio": 2.937
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0299,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 0.865
+    },
+    {
+     "note": "F4",
+     "dt": -0.0291,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 1.211
+    },
+    {
+     "note": "A4",
+     "dt": -0.0291,
+     "kind": "event",
+     "cents": 500.0,
+     "envRatio": 5.351
+    },
+    {
+     "note": "F5",
+     "dt": -0.0291,
+     "kind": "event",
+     "cents": 1300.0,
+     "envRatio": 1.897
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 88.0948,
+   "note": "D#5",
+   "phaseErr": 2.193,
+   "jerk": 747.7,
+   "env": 0.006823208458373527,
+   "preRingRatio": 1.17,
+   "reinjectRatio": 2.26,
+   "nAttackers": 7,
+   "strongestEnvRatio": 0.201,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 9.561,
+   "attackers": [
+    {
+     "note": "B4",
+     "dt": -0.0798,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 1.239
+    },
+    {
+     "note": "D5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 9.561
+    },
+    {
+     "note": "C#5",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 0.767
+    },
+    {
+     "note": "G5",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 1.121
+    },
+    {
+     "note": "D5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 0.201
+    },
+    {
+     "note": "F#5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 0.627
+    },
+    {
+     "note": "D5",
+     "dt": 0.0307,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 10.024
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "label": "fp",
+   "t": 90.9184,
+   "note": "C#5",
+   "phaseErr": 5.811,
+   "jerk": 199.1,
+   "env": 0.013014315686383027,
+   "preRingRatio": 1.08,
+   "reinjectRatio": 1.35,
+   "nAttackers": 6,
+   "strongestEnvRatio": 1.148,
+   "strongestCents": -400.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "A#4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 9.569
+    },
+    {
+     "note": "B4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 1.227
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 2.904
+    },
+    {
+     "note": "A4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 1.148
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 1.666
+    },
+    {
+     "note": "B4",
+     "dt": -0.0355,
+     "kind": "event",
+     "cents": -200.0,
+     "envRatio": 2.317
+    }
+   ]
+  },
+  {
+   "tx": "a9e30986",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 10.35,
+   "note": "D5",
+   "phaseErr": 4.129,
+   "jerk": 1442.6,
+   "env": 0.021703154677187787,
+   "preRingRatio": 1.93,
+   "reinjectRatio": 6.67,
+   "nAttackers": 5,
+   "strongestEnvRatio": 0.474,
+   "strongestCents": -300.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "D4",
+     "dt": -0.075,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 1.357
+    },
+    {
+     "note": "A4",
+     "dt": -0.06,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 2.548
+    },
+    {
+     "note": "E6",
+     "dt": -0.04,
+     "kind": "candidate",
+     "cents": 1400.0,
+     "envRatio": 2.923
+    },
+    {
+     "note": "B4",
+     "dt": -0.035,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 0.474
+    },
+    {
+     "note": "F5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 39.603
+    }
+   ]
+  },
+  {
+   "tx": "a9e30986",
+   "group": "kalimba-17-c|tester",
+   "label": "fp",
+   "t": 22.47,
+   "note": "D5",
+   "phaseErr": 1.156,
+   "jerk": 1081.2,
+   "env": 0.006365144101319854,
+   "preRingRatio": 1.98,
+   "reinjectRatio": 6.23,
+   "nAttackers": 5,
+   "strongestEnvRatio": 0.785,
+   "strongestCents": -500.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B4",
+     "dt": -0.075,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 2.428
+    },
+    {
+     "note": "F5",
+     "dt": -0.055,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 3.006
+    },
+    {
+     "note": "A4",
+     "dt": -0.05,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 0.785
+    },
+    {
+     "note": "E6",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 1400.0,
+     "envRatio": 1.586
+    },
+    {
+     "note": "F5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 1.876
+    }
+   ]
+  },
+  {
+   "tx": "a9e30986",
+   "group": "kalimba-17-c|tester",
+   "label": "fp",
+   "t": 29.44,
+   "note": "G5",
+   "phaseErr": 1.135,
+   "jerk": 601.8,
+   "env": 0.003666970541733051,
+   "preRingRatio": 1.43,
+   "reinjectRatio": 1.06,
+   "nAttackers": 10,
+   "strongestEnvRatio": 0.601,
+   "strongestCents": 200.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "C6",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 3.442
+    },
+    {
+     "note": "F5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 3.2
+    },
+    {
+     "note": "A5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.605
+    },
+    {
+     "note": "B4",
+     "dt": 0.035,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 2.131
+    },
+    {
+     "note": "B5",
+     "dt": 0.045,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 32.786
+    },
+    {
+     "note": "D5",
+     "dt": 0.055,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 1.98
+    },
+    {
+     "note": "C6",
+     "dt": 0.06,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 0.805
+    },
+    {
+     "note": "E4",
+     "dt": 0.06,
+     "kind": "candidate",
+     "cents": -1500.0,
+     "envRatio": 3.383
+    },
+    {
+     "note": "F5",
+     "dt": 0.06,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 0.795
+    },
+    {
+     "note": "A5",
+     "dt": 0.0373,
+     "kind": "event",
+     "cents": 200.0,
+     "envRatio": 0.601
+    }
+   ]
+  },
+  {
+   "tx": "a9e30986",
+   "group": "kalimba-17-c|tester",
+   "label": "tp",
+   "t": 30.315,
+   "note": "G5",
+   "phaseErr": 3.21,
+   "jerk": 1088.0,
+   "env": 0.04231525307067147,
+   "preRingRatio": 1.12,
+   "reinjectRatio": 14.71,
+   "nAttackers": 12,
+   "strongestEnvRatio": 2.147,
+   "strongestCents": -1200.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B5",
+     "dt": -0.065,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 5.857
+    },
+    {
+     "note": "C6",
+     "dt": -0.065,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 30.877
+    },
+    {
+     "note": "E6",
+     "dt": -0.065,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 18.051
+    },
+    {
+     "note": "A5",
+     "dt": -0.06,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 4.262
+    },
+    {
+     "note": "D6",
+     "dt": -0.06,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 19.544
+    },
+    {
+     "note": "F4",
+     "dt": -0.045,
+     "kind": "candidate",
+     "cents": -1400.0,
+     "envRatio": 10.996
+    },
+    {
+     "note": "F5",
+     "dt": -0.045,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 46.925
+    },
+    {
+     "note": "G4",
+     "dt": -0.025,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 2.147
+    },
+    {
+     "note": "C6",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 10.321
+    },
+    {
+     "note": "D6",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 11.855
+    },
+    {
+     "note": "E6",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 10.173
+    },
+    {
+     "note": "F5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 13.815
+    }
+   ]
+  },
+  {
+   "tx": "a9e30986",
+   "group": "kalimba-17-c|tester",
+   "label": "fp",
+   "t": 32.66,
+   "note": "F5",
+   "phaseErr": 4.215,
+   "jerk": 844.2,
+   "env": 0.0007804738636068103,
+   "preRingRatio": 1.11,
+   "reinjectRatio": 1.58,
+   "nAttackers": 16,
+   "strongestEnvRatio": 0.032,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 2.174,
+   "attackers": [
+    {
+     "note": "D6",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 1.352
+    },
+    {
+     "note": "E5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 5.486
+    },
+    {
+     "note": "E6",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 1100.0,
+     "envRatio": 1.725
+    },
+    {
+     "note": "C5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 0.687
+    },
+    {
+     "note": "D4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -1500.0,
+     "envRatio": 0.409
+    },
+    {
+     "note": "B4",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 0.784
+    },
+    {
+     "note": "G5",
+     "dt": 0.035,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.662
+    },
+    {
+     "note": "A5",
+     "dt": 0.04,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 1.122
+    },
+    {
+     "note": "B5",
+     "dt": 0.05,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 0.611
+    },
+    {
+     "note": "D5",
+     "dt": 0.05,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 1.249
+    },
+    {
+     "note": "D6",
+     "dt": 0.06,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 0.165
+    },
+    {
+     "note": "E5",
+     "dt": 0.06,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 0.032
+    },
+    {
+     "note": "C6",
+     "dt": 0.065,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 0.232
+    },
+    {
+     "note": "E6",
+     "dt": 0.065,
+     "kind": "candidate",
+     "cents": 1100.0,
+     "envRatio": 0.136
+    },
+    {
+     "note": "B4",
+     "dt": 0.07,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 0.24
+    },
+    {
+     "note": "E5",
+     "dt": 0.044,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 2.174
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-c-bwv147-sequence-163-01",
+   "group": "kalimba-17-c|author",
+   "label": "fixture",
+   "t": 44.485,
+   "note": "F5",
+   "phaseErr": 0.705,
+   "jerk": 212.6,
+   "env": 0.042763494307216654,
+   "preRingRatio": 2.77,
+   "reinjectRatio": 1.53,
+   "nAttackers": 3,
+   "strongestEnvRatio": 0.465,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.465,
+   "attackers": [
+    {
+     "note": "E5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 4.957
+    },
+    {
+     "note": "G5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 8.194
+    },
+    {
+     "note": "E5",
+     "dt": -0.0237,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 0.465
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-c-bwv147-sequence-163-01",
+   "group": "kalimba-17-c|author",
+   "label": "fixture",
+   "t": 117.545,
+   "note": "F5",
+   "phaseErr": 2.071,
+   "jerk": 376.5,
+   "env": 0.006632478390327261,
+   "preRingRatio": 1.18,
+   "reinjectRatio": 1.49,
+   "nAttackers": 3,
+   "strongestEnvRatio": 0.827,
+   "strongestCents": 200.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "G5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 6.759
+    },
+    {
+     "note": "B4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 2.517
+    },
+    {
+     "note": "G5",
+     "dt": 0.045,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.827
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+   "group": "kalimba-17-c|author",
+   "label": "fixture",
+   "t": 24.065,
+   "note": "F5",
+   "phaseErr": 13.697,
+   "jerk": 975.5,
+   "env": 0.07203051559106068,
+   "preRingRatio": 1.31,
+   "reinjectRatio": 4.79,
+   "nAttackers": 1,
+   "strongestEnvRatio": 48.622,
+   "strongestCents": 200.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "G5",
+     "dt": -0.045,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 48.622
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-c-e6-to-c4-sequence-17-01",
+   "group": "kalimba-17-c|author",
+   "label": "fixture",
+   "t": 3.825,
+   "note": "C6",
+   "phaseErr": 13.852,
+   "jerk": 599.1,
+   "env": 0.04158726315268482,
+   "preRingRatio": 1.9,
+   "reinjectRatio": 2.5,
+   "nAttackers": 4,
+   "strongestEnvRatio": 0.698,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.698,
+   "attackers": [
+    {
+     "note": "B5",
+     "dt": -0.06,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 106.735
+    },
+    {
+     "note": "B5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 0.698
+    },
+    {
+     "note": "A5",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 7.385
+    },
+    {
+     "note": "B5",
+     "dt": -0.025,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 0.698
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-c-e6-to-g4-sequence-06-01",
+   "group": "kalimba-17-c|author",
+   "label": "fixture",
+   "t": 2.82,
+   "note": "C6",
+   "phaseErr": 5.041,
+   "jerk": 255.1,
+   "env": 0.008368996572490317,
+   "preRingRatio": 1.44,
+   "reinjectRatio": 1.04,
+   "nAttackers": 9,
+   "strongestEnvRatio": 0.474,
+   "strongestCents": -2200.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "D6",
+     "dt": -0.06,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 13.163
+    },
+    {
+     "note": "E4",
+     "dt": -0.05,
+     "kind": "candidate",
+     "cents": -2000.0,
+     "envRatio": 189.787
+    },
+    {
+     "note": "D4",
+     "dt": -0.045,
+     "kind": "candidate",
+     "cents": -2200.0,
+     "envRatio": 125.678
+    },
+    {
+     "note": "F4",
+     "dt": -0.04,
+     "kind": "candidate",
+     "cents": -1900.0,
+     "envRatio": 275.095
+    },
+    {
+     "note": "C4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -2400.0,
+     "envRatio": 42.286
+    },
+    {
+     "note": "E4",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": -2000.0,
+     "envRatio": 2.055
+    },
+    {
+     "note": "D4",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": -2200.0,
+     "envRatio": 0.474
+    },
+    {
+     "note": "F4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": -1900.0,
+     "envRatio": 2.057
+    },
+    {
+     "note": "C4",
+     "dt": -0.0227,
+     "kind": "event",
+     "cents": -2400.0,
+     "envRatio": 0.773
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 21.9401,
+   "note": "F#4",
+   "phaseErr": 5.65,
+   "jerk": 189.5,
+   "env": 0.01876681395832502,
+   "preRingRatio": 1.5,
+   "reinjectRatio": 1.08,
+   "nAttackers": 11,
+   "strongestEnvRatio": 0.511,
+   "strongestCents": 800.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "D5",
+     "dt": -0.0748,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 89.346
+    },
+    {
+     "note": "E4",
+     "dt": -0.0698,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 12.799
+    },
+    {
+     "note": "E5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 561.275
+    },
+    {
+     "note": "C5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 9.399
+    },
+    {
+     "note": "F#5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 1200.0,
+     "envRatio": 3.65
+    },
+    {
+     "note": "G3",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 3.79
+    },
+    {
+     "note": "D5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 0.511
+    },
+    {
+     "note": "E5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 1.196
+    },
+    {
+     "note": "C5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 1.443
+    },
+    {
+     "note": "E4",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 1.719
+    },
+    {
+     "note": "D5",
+     "dt": -0.0437,
+     "kind": "event",
+     "cents": 800.0,
+     "envRatio": 0.511
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 22.444,
+   "note": "B4",
+   "phaseErr": 2.478,
+   "jerk": 458.1,
+   "env": 0.026597213133379035,
+   "preRingRatio": 1.35,
+   "reinjectRatio": 2.29,
+   "nAttackers": 9,
+   "strongestEnvRatio": 0.704,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.704,
+   "attackers": [
+    {
+     "note": "C5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 69.988
+    },
+    {
+     "note": "E5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 34.657
+    },
+    {
+     "note": "B3",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 75.04
+    },
+    {
+     "note": "C4",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 56.372
+    },
+    {
+     "note": "G3",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": -1600.0,
+     "envRatio": 15.616
+    },
+    {
+     "note": "C5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.704
+    },
+    {
+     "note": "E5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 3.023
+    },
+    {
+     "note": "F#4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 3.17
+    },
+    {
+     "note": "C5",
+     "dt": -0.0309,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 1.785
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 34.1374,
+   "note": "G4",
+   "phaseErr": 9.176,
+   "jerk": 751.9,
+   "env": 0.0444399772690439,
+   "preRingRatio": 1.1,
+   "reinjectRatio": 1.91,
+   "nAttackers": 7,
+   "strongestEnvRatio": 1.495,
+   "strongestCents": -500.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "A4",
+     "dt": -0.0499,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 48.907
+    },
+    {
+     "note": "C4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 2.77
+    },
+    {
+     "note": "D4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 15.463
+    },
+    {
+     "note": "B3",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 1.862
+    },
+    {
+     "note": "E4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 10.257
+    },
+    {
+     "note": "A4",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 4.818
+    },
+    {
+     "note": "D4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 1.495
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 34.1574,
+   "note": "D4",
+   "phaseErr": 0.705,
+   "jerk": 603.6,
+   "env": 0.029735402460875852,
+   "preRingRatio": 1.87,
+   "reinjectRatio": 3.55,
+   "nAttackers": 7,
+   "strongestEnvRatio": 0.669,
+   "strongestCents": 500.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "G4",
+     "dt": -0.0798,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 6.361
+    },
+    {
+     "note": "A4",
+     "dt": -0.0698,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 32.724
+    },
+    {
+     "note": "C4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 1.853
+    },
+    {
+     "note": "B3",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 1.246
+    },
+    {
+     "note": "E4",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 6.863
+    },
+    {
+     "note": "G4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 0.669
+    },
+    {
+     "note": "A4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 3.224
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 52.8299,
+   "note": "F#4",
+   "phaseErr": 0.714,
+   "jerk": 205.4,
+   "env": 0.030587943858642285,
+   "preRingRatio": 3.63,
+   "reinjectRatio": 2.04,
+   "nAttackers": 4,
+   "strongestEnvRatio": 1.157,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.157,
+   "attackers": [
+    {
+     "note": "C4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 144.375
+    },
+    {
+     "note": "G3",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 96.319
+    },
+    {
+     "note": "G4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 2.826
+    },
+    {
+     "note": "G4",
+     "dt": -0.0277,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 1.157
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 58.1079,
+   "note": "G4",
+   "phaseErr": 4.549,
+   "jerk": 288.3,
+   "env": 0.019105981820913765,
+   "preRingRatio": 1.32,
+   "reinjectRatio": 1.47,
+   "nAttackers": 11,
+   "strongestEnvRatio": 1.161,
+   "strongestCents": 200.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B3",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 136.673
+    },
+    {
+     "note": "B4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 156.98
+    },
+    {
+     "note": "E4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 10.546
+    },
+    {
+     "note": "C4",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 44.824
+    },
+    {
+     "note": "A3",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 2.943
+    },
+    {
+     "note": "A4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.161
+    },
+    {
+     "note": "C5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 2.087
+    },
+    {
+     "note": "B4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 1.243
+    },
+    {
+     "note": "E4",
+     "dt": 0.0249,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 2.425
+    },
+    {
+     "note": "C4",
+     "dt": 0.0299,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 2.768
+    },
+    {
+     "note": "A4",
+     "dt": -0.0348,
+     "kind": "event",
+     "cents": 200.0,
+     "envRatio": 1.161
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 58.6118,
+   "note": "D4",
+   "phaseErr": 1.503,
+   "jerk": 1967.4,
+   "env": 0.006521156399933476,
+   "preRingRatio": 2.01,
+   "reinjectRatio": 2.52,
+   "nAttackers": 12,
+   "strongestEnvRatio": 0.26,
+   "strongestCents": 400.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B3",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 11.503
+    },
+    {
+     "note": "C4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 8.191
+    },
+    {
+     "note": "B4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 6.514
+    },
+    {
+     "note": "E4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.332
+    },
+    {
+     "note": "G4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 1.44
+    },
+    {
+     "note": "C4",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 3.204
+    },
+    {
+     "note": "D5",
+     "dt": 0.0649,
+     "kind": "candidate",
+     "cents": 1200.0,
+     "envRatio": 2.123
+    },
+    {
+     "note": "G4",
+     "dt": 0.0649,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 0.427
+    },
+    {
+     "note": "B4",
+     "dt": 0.0698,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 1.005
+    },
+    {
+     "note": "F#4",
+     "dt": 0.0698,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 0.26
+    },
+    {
+     "note": "G3",
+     "dt": 0.0698,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 1.44
+    },
+    {
+     "note": "C5",
+     "dt": 0.0748,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 1.528
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 59.2603,
+   "note": "G4",
+   "phaseErr": 4.537,
+   "jerk": 164.8,
+   "env": 0.012367716018857004,
+   "preRingRatio": 1.02,
+   "reinjectRatio": 1.19,
+   "nAttackers": 6,
+   "strongestEnvRatio": 0.75,
+   "strongestCents": 400.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "B3",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 12.981
+    },
+    {
+     "note": "C4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 18.516
+    },
+    {
+     "note": "G3",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 65.983
+    },
+    {
+     "note": "E4",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 9.708
+    },
+    {
+     "note": "B4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 0.75
+    },
+    {
+     "note": "B4",
+     "dt": -0.0262,
+     "kind": "event",
+     "cents": 400.0,
+     "envRatio": 0.75
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 76.0222,
+   "note": "F#4",
+   "phaseErr": 5.315,
+   "jerk": 416.7,
+   "env": 0.038324305879568636,
+   "preRingRatio": 1.21,
+   "reinjectRatio": 4.72,
+   "nAttackers": 6,
+   "strongestEnvRatio": 0.466,
+   "strongestCents": -900.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "D4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 3.199
+    },
+    {
+     "note": "B3",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 2.545
+    },
+    {
+     "note": "C4",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 1.942
+    },
+    {
+     "note": "G3",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 1.359
+    },
+    {
+     "note": "A3",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 0.466
+    },
+    {
+     "note": "B3",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 6.529
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 84.054,
+   "note": "B4",
+   "phaseErr": 0.756,
+   "jerk": 514.8,
+   "env": 0.004455819959792897,
+   "preRingRatio": 1.22,
+   "reinjectRatio": 1.35,
+   "nAttackers": 8,
+   "strongestEnvRatio": 0.458,
+   "strongestCents": 500.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 3.198,
+   "attackers": [
+    {
+     "note": "E5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 9.317
+    },
+    {
+     "note": "C4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 4.673
+    },
+    {
+     "note": "C5",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 3.198
+    },
+    {
+     "note": "B3",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 0.723
+    },
+    {
+     "note": "E5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 0.458
+    },
+    {
+     "note": "G5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 0.753
+    },
+    {
+     "note": "F#4",
+     "dt": 0.0649,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 0.604
+    },
+    {
+     "note": "C5",
+     "dt": 0.0197,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 15.388
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 84.1138,
+   "note": "B4",
+   "phaseErr": 3.577,
+   "jerk": 647.1,
+   "env": 0.03596358723660881,
+   "preRingRatio": 1.04,
+   "reinjectRatio": 2.98,
+   "nAttackers": 8,
+   "strongestEnvRatio": 3.693,
+   "strongestCents": 500.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 25.811,
+   "attackers": [
+    {
+     "note": "E5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 75.199
+    },
+    {
+     "note": "C4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 37.714
+    },
+    {
+     "note": "C5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 25.811
+    },
+    {
+     "note": "B3",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -1200.0,
+     "envRatio": 5.833
+    },
+    {
+     "note": "E5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 3.693
+    },
+    {
+     "note": "G5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 6.08
+    },
+    {
+     "note": "F#4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 4.878
+    },
+    {
+     "note": "C5",
+     "dt": -0.0401,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 25.811
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "group": "kalimba-17-g-low|author",
+   "label": "fixture",
+   "t": 93.3129,
+   "note": "B3",
+   "phaseErr": 0.79,
+   "jerk": 238.1,
+   "env": 0.019035742873684987,
+   "preRingRatio": 1.22,
+   "reinjectRatio": 2.79,
+   "nAttackers": 6,
+   "strongestEnvRatio": 1.079,
+   "strongestCents": 300.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "D4",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 15.555
+    },
+    {
+     "note": "G4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 800.0,
+     "envRatio": 4.486
+    },
+    {
+     "note": "B4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 1200.0,
+     "envRatio": 2.098
+    },
+    {
+     "note": "D4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 1.079
+    },
+    {
+     "note": "D4",
+     "dt": -0.0383,
+     "kind": "event",
+     "cents": 300.0,
+     "envRatio": 2.069
+    },
+    {
+     "note": "B4",
+     "dt": -0.0383,
+     "kind": "event",
+     "cents": 1200.0,
+     "envRatio": 7.752
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 3.4322,
+   "note": "F#5",
+   "phaseErr": 6.259,
+   "jerk": 731.3,
+   "env": 0.014010519187512789,
+   "preRingRatio": 2.02,
+   "reinjectRatio": 1.32,
+   "nAttackers": 21,
+   "strongestEnvRatio": 0.153,
+   "strongestCents": -900.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.06,
+   "attackers": [
+    {
+     "note": "D#5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 16.595
+    },
+    {
+     "note": "G#5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 6.922
+    },
+    {
+     "note": "G4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 51.889
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 19.32
+    },
+    {
+     "note": "A5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 14.87
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 32.251
+    },
+    {
+     "note": "A4",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 70.913
+    },
+    {
+     "note": "E6",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 110.926
+    },
+    {
+     "note": "D4",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": -1600.0,
+     "envRatio": 6.244
+    },
+    {
+     "note": "B4",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 2.822
+    },
+    {
+     "note": "D5",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 1.234
+    },
+    {
+     "note": "E5",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 0.634
+    },
+    {
+     "note": "G4",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 1.701
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 0.416
+    },
+    {
+     "note": "A5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 1.327
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 0.538
+    },
+    {
+     "note": "G#5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.812
+    },
+    {
+     "note": "D#5",
+     "dt": 0.0698,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 0.788
+    },
+    {
+     "note": "A4",
+     "dt": 0.0748,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 0.153
+    },
+    {
+     "note": "A4",
+     "dt": 0.0276,
+     "kind": "event",
+     "cents": -900.0,
+     "envRatio": 66.39
+    },
+    {
+     "note": "F5",
+     "dt": 0.0276,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 1.06
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 3.4921,
+   "note": "F#5",
+   "phaseErr": 2.739,
+   "jerk": 776.6,
+   "env": 0.09348709104453068,
+   "preRingRatio": 1.79,
+   "reinjectRatio": 1.77,
+   "nAttackers": 21,
+   "strongestEnvRatio": 0.968,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.968,
+   "attackers": [
+    {
+     "note": "D#5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 110.735
+    },
+    {
+     "note": "G#5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 46.191
+    },
+    {
+     "note": "G4",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 346.234
+    },
+    {
+     "note": "A#4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 128.914
+    },
+    {
+     "note": "A5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 99.223
+    },
+    {
+     "note": "G#4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 215.2
+    },
+    {
+     "note": "A4",
+     "dt": -0.0449,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 473.179
+    },
+    {
+     "note": "E6",
+     "dt": -0.0449,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 740.166
+    },
+    {
+     "note": "D4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -1600.0,
+     "envRatio": 41.663
+    },
+    {
+     "note": "B4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 18.832
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 8.235
+    },
+    {
+     "note": "E5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 4.233
+    },
+    {
+     "note": "G4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -1100.0,
+     "envRatio": 11.351
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -800.0,
+     "envRatio": 2.774
+    },
+    {
+     "note": "A5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 8.858
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -1000.0,
+     "envRatio": 3.587
+    },
+    {
+     "note": "G#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 5.417
+    },
+    {
+     "note": "D#5",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 5.261
+    },
+    {
+     "note": "A4",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 1.021
+    },
+    {
+     "note": "A4",
+     "dt": -0.0323,
+     "kind": "event",
+     "cents": -900.0,
+     "envRatio": 3.234
+    },
+    {
+     "note": "F5",
+     "dt": -0.0323,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 0.968
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 8.2961,
+   "note": "C#5",
+   "phaseErr": 15.014,
+   "jerk": 492.6,
+   "env": 0.035537424540363065,
+   "preRingRatio": 1.14,
+   "reinjectRatio": 1.09,
+   "nAttackers": 6,
+   "strongestEnvRatio": 1.771,
+   "strongestCents": 200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.824,
+   "attackers": [
+    {
+     "note": "F5",
+     "dt": -0.0698,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 3.702
+    },
+    {
+     "note": "D#5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.771
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 1.824
+    },
+    {
+     "note": "F5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 4.214
+    },
+    {
+     "note": "E5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 2.179
+    },
+    {
+     "note": "D5",
+     "dt": -0.053,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 41.733
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 10.2567,
+   "note": "G#5",
+   "phaseErr": 15.87,
+   "jerk": 1058.3,
+   "env": 0.06595179277578757,
+   "preRingRatio": 1.27,
+   "reinjectRatio": 1.15,
+   "nAttackers": 11,
+   "strongestEnvRatio": 0.556,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.556,
+   "attackers": [
+    {
+     "note": "A5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 110.367
+    },
+    {
+     "note": "B5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 72.153
+    },
+    {
+     "note": "C6",
+     "dt": -0.0499,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 376.879
+    },
+    {
+     "note": "C4",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": -2000.0,
+     "envRatio": 40.438
+    },
+    {
+     "note": "A#5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 158.714
+    },
+    {
+     "note": "E5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 16.373
+    },
+    {
+     "note": "A5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.556
+    },
+    {
+     "note": "B5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 4.163
+    },
+    {
+     "note": "F#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 2.954
+    },
+    {
+     "note": "C6",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 8.734
+    },
+    {
+     "note": "A5",
+     "dt": -0.0283,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 0.556
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 17.4653,
+   "note": "D#5",
+   "phaseErr": 16.409,
+   "jerk": 499.6,
+   "env": 0.042980894343870014,
+   "preRingRatio": 1.13,
+   "reinjectRatio": 1.21,
+   "nAttackers": 6,
+   "strongestEnvRatio": 2.547,
+   "strongestCents": 200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 3.46,
+   "attackers": [
+    {
+     "note": "C#5",
+     "dt": -0.0299,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 78.193
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 3.46
+    },
+    {
+     "note": "C5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 5.944
+    },
+    {
+     "note": "F5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 2.547
+    },
+    {
+     "note": "C#5",
+     "dt": 0.0299,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 4.507
+    },
+    {
+     "note": "D5",
+     "dt": -0.0387,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 3.46
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 31.3937,
+   "note": "D#4",
+   "phaseErr": 7.214,
+   "jerk": 235.1,
+   "env": 0.027135690749616255,
+   "preRingRatio": 1.09,
+   "reinjectRatio": 2.34,
+   "nAttackers": 21,
+   "strongestEnvRatio": 0.54,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.54,
+   "attackers": [
+    {
+     "note": "C4",
+     "dt": -0.0748,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 7.836
+    },
+    {
+     "note": "C#4",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 2.038
+    },
+    {
+     "note": "E4",
+     "dt": -0.0499,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 11.68
+    },
+    {
+     "note": "F4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 14.666
+    },
+    {
+     "note": "C#5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 112.284
+    },
+    {
+     "note": "G#4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 10.709
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 1100.0,
+     "envRatio": 12.778
+    },
+    {
+     "note": "F#4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 4.401
+    },
+    {
+     "note": "A4",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 8.093
+    },
+    {
+     "note": "E4",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.622
+    },
+    {
+     "note": "A#4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 2.785
+    },
+    {
+     "note": "F4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.42
+    },
+    {
+     "note": "C5",
+     "dt": 0.0249,
+     "kind": "candidate",
+     "cents": 900.0,
+     "envRatio": 1.115
+    },
+    {
+     "note": "C#5",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": 1000.0,
+     "envRatio": 0.879
+    },
+    {
+     "note": "G4",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 1.63
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 1.377
+    },
+    {
+     "note": "F#4",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 1.24
+    },
+    {
+     "note": "C4",
+     "dt": 0.0113,
+     "kind": "event",
+     "cents": -300.0,
+     "envRatio": 0.751
+    },
+    {
+     "note": "E4",
+     "dt": 0.0113,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 0.54
+    },
+    {
+     "note": "G4",
+     "dt": 0.0113,
+     "kind": "event",
+     "cents": 400.0,
+     "envRatio": 4.832
+    },
+    {
+     "note": "C5",
+     "dt": 0.0113,
+     "kind": "event",
+     "cents": 900.0,
+     "envRatio": 0.736
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 48.1007,
+   "note": "A#4",
+   "phaseErr": 5.698,
+   "jerk": 181.8,
+   "env": 0.025558023027332528,
+   "preRingRatio": 2.28,
+   "reinjectRatio": 1.43,
+   "nAttackers": 8,
+   "strongestEnvRatio": 2.18,
+   "strongestCents": 300.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 3.341,
+   "attackers": [
+    {
+     "note": "C#5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 104.417
+    },
+    {
+     "note": "F#4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 12.92
+    },
+    {
+     "note": "D5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 29.459
+    },
+    {
+     "note": "G#4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 9.655
+    },
+    {
+     "note": "B4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 3.341
+    },
+    {
+     "note": "C5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 3.338
+    },
+    {
+     "note": "C#5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 2.18
+    },
+    {
+     "note": "B4",
+     "dt": -0.0412,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 14.351
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 49.7519,
+   "note": "C#5",
+   "phaseErr": 14.707,
+   "jerk": 631.8,
+   "env": 0.05403984880609109,
+   "preRingRatio": 1.35,
+   "reinjectRatio": 2.99,
+   "nAttackers": 9,
+   "strongestEnvRatio": 1.034,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.034,
+   "attackers": [
+    {
+     "note": "D5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 30.87
+    },
+    {
+     "note": "F5",
+     "dt": -0.0649,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 625.899
+    },
+    {
+     "note": "D#5",
+     "dt": -0.0299,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 96.986
+    },
+    {
+     "note": "A#4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 9.998
+    },
+    {
+     "note": "E5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 2.797
+    },
+    {
+     "note": "D5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 1.034
+    },
+    {
+     "note": "F5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 3.267
+    },
+    {
+     "note": "D#5",
+     "dt": 0.0299,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 3.111
+    },
+    {
+     "note": "D5",
+     "dt": -0.0322,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 1.034
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 50.8045,
+   "note": "F#5",
+   "phaseErr": 5.533,
+   "jerk": 186.0,
+   "env": 0.03576100962839643,
+   "preRingRatio": 2.22,
+   "reinjectRatio": 1.29,
+   "nAttackers": 8,
+   "strongestEnvRatio": 0.418,
+   "strongestCents": -200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 3.55,
+   "attackers": [
+    {
+     "note": "D#5",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 13.707
+    },
+    {
+     "note": "E5",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 4.021
+    },
+    {
+     "note": "C#5",
+     "dt": -0.0449,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 15.331
+    },
+    {
+     "note": "G5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 3.55
+    },
+    {
+     "note": "D#5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 0.669
+    },
+    {
+     "note": "E5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 0.418
+    },
+    {
+     "note": "C#5",
+     "dt": 0.015,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 2.849
+    },
+    {
+     "note": "E5",
+     "dt": -0.0225,
+     "kind": "event",
+     "cents": -200.0,
+     "envRatio": 0.418
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 66.5488,
+   "note": "F#5",
+   "phaseErr": 2.065,
+   "jerk": 908.1,
+   "env": 0.008982502232127277,
+   "preRingRatio": 1.52,
+   "reinjectRatio": 1.15,
+   "nAttackers": 10,
+   "strongestEnvRatio": 0.106,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 7.644,
+   "attackers": [
+    {
+     "note": "A#5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 88.468
+    },
+    {
+     "note": "A5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 11.04
+    },
+    {
+     "note": "G5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 7.644
+    },
+    {
+     "note": "G#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 22.204
+    },
+    {
+     "note": "A5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 0.472
+    },
+    {
+     "note": "G5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.106
+    },
+    {
+     "note": "C#5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 1.019
+    },
+    {
+     "note": "E5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 0.432
+    },
+    {
+     "note": "G#5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.109
+    },
+    {
+     "note": "G5",
+     "dt": 0.0402,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 10.47
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 67.1424,
+   "note": "G#5",
+   "phaseErr": 12.084,
+   "jerk": 859.0,
+   "env": 0.06928418960529356,
+   "preRingRatio": 1.43,
+   "reinjectRatio": 2.23,
+   "nAttackers": 12,
+   "strongestEnvRatio": 0.577,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.577,
+   "attackers": [
+    {
+     "note": "A#5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 193.582
+    },
+    {
+     "note": "A5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 47.073
+    },
+    {
+     "note": "B5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 85.216
+    },
+    {
+     "note": "F5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 24.744
+    },
+    {
+     "note": "C6",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 243.258
+    },
+    {
+     "note": "E4",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": -1600.0,
+     "envRatio": 10.358
+    },
+    {
+     "note": "A#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 0.987
+    },
+    {
+     "note": "A5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.577
+    },
+    {
+     "note": "B5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 4.126
+    },
+    {
+     "note": "C6",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 7.942
+    },
+    {
+     "note": "F5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 4.382
+    },
+    {
+     "note": "A5",
+     "dt": -0.0251,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 0.577
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 67.6213,
+   "note": "D#4",
+   "phaseErr": 0.703,
+   "jerk": 333.3,
+   "env": 0.008428556316085509,
+   "preRingRatio": 1.23,
+   "reinjectRatio": 1.88,
+   "nAttackers": 11,
+   "strongestEnvRatio": 0.935,
+   "strongestCents": 100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 0.935,
+   "attackers": [
+    {
+     "note": "C4",
+     "dt": 0.0349,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 7.651
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 12.949
+    },
+    {
+     "note": "E4",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 0.935
+    },
+    {
+     "note": "G4",
+     "dt": 0.0449,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 2.413
+    },
+    {
+     "note": "F#4",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 1.09
+    },
+    {
+     "note": "G5",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": 1600.0,
+     "envRatio": 5.812
+    },
+    {
+     "note": "F5",
+     "dt": 0.0599,
+     "kind": "candidate",
+     "cents": 1400.0,
+     "envRatio": 3.941
+    },
+    {
+     "note": "E5",
+     "dt": 0.0698,
+     "kind": "candidate",
+     "cents": 1300.0,
+     "envRatio": 8.395
+    },
+    {
+     "note": "E4",
+     "dt": 0.0185,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 3.126
+    },
+    {
+     "note": "G4",
+     "dt": 0.0185,
+     "kind": "event",
+     "cents": 400.0,
+     "envRatio": 20.02
+    },
+    {
+     "note": "G5",
+     "dt": 0.0185,
+     "kind": "event",
+     "cents": 1600.0,
+     "envRatio": 8.818
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 72.0313,
+   "note": "C#5",
+   "phaseErr": 13.046,
+   "jerk": 580.7,
+   "env": 0.032288050580029364,
+   "preRingRatio": 1.32,
+   "reinjectRatio": 3.34,
+   "nAttackers": 7,
+   "strongestEnvRatio": 2.239,
+   "strongestCents": 200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 7.05,
+   "attackers": [
+    {
+     "note": "F5",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 27.584
+    },
+    {
+     "note": "D#5",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 41.095
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 7.05
+    },
+    {
+     "note": "F#4",
+     "dt": 0.01,
+     "kind": "candidate",
+     "cents": -700.0,
+     "envRatio": 4.15
+    },
+    {
+     "note": "F5",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 4.239
+    },
+    {
+     "note": "D#5",
+     "dt": 0.0349,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 2.239
+    },
+    {
+     "note": "D5",
+     "dt": -0.0378,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 7.05
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 75.3637,
+   "note": "D#5",
+   "phaseErr": 16.455,
+   "jerk": 473.6,
+   "env": 0.047986901754261894,
+   "preRingRatio": 1.28,
+   "reinjectRatio": 3.14,
+   "nAttackers": 8,
+   "strongestEnvRatio": 2.274,
+   "strongestCents": 200.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 4.27,
+   "attackers": [
+    {
+     "note": "F5",
+     "dt": -0.0549,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 3.26
+    },
+    {
+     "note": "C#5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 82.503
+    },
+    {
+     "note": "A#4",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 42.382
+    },
+    {
+     "note": "C5",
+     "dt": -0.015,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 8.656
+    },
+    {
+     "note": "D5",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 4.27
+    },
+    {
+     "note": "F5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 2.274
+    },
+    {
+     "note": "C#5",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 3.873
+    },
+    {
+     "note": "D5",
+     "dt": -0.0382,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 4.27
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 77.5887,
+   "note": "D#5",
+   "phaseErr": 13.159,
+   "jerk": 527.6,
+   "env": 0.04580327160564716,
+   "preRingRatio": 1.18,
+   "reinjectRatio": 2.07,
+   "nAttackers": 15,
+   "strongestEnvRatio": 0.835,
+   "strongestCents": -300.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 5.795,
+   "attackers": [
+    {
+     "note": "F#5",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 117.022
+    },
+    {
+     "note": "A4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": -600.0,
+     "envRatio": 71.979
+    },
+    {
+     "note": "B4",
+     "dt": -0.0399,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 12.67
+    },
+    {
+     "note": "F#4",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": -900.0,
+     "envRatio": 15.268
+    },
+    {
+     "note": "G5",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 38.953
+    },
+    {
+     "note": "C#5",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 1.824
+    },
+    {
+     "note": "C5",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 1.439
+    },
+    {
+     "note": "E5",
+     "dt": -0.0249,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 6.611
+    },
+    {
+     "note": "F5",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 10.179
+    },
+    {
+     "note": "A#4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 4.134
+    },
+    {
+     "note": "F#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 2.63
+    },
+    {
+     "note": "B4",
+     "dt": 0.02,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 3.337
+    },
+    {
+     "note": "F5",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 2.403
+    },
+    {
+     "note": "C5",
+     "dt": -0.0457,
+     "kind": "event",
+     "cents": -300.0,
+     "envRatio": 0.835
+    },
+    {
+     "note": "E5",
+     "dt": -0.0457,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 5.795
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 79.215,
+   "note": "E4",
+   "phaseErr": 3.032,
+   "jerk": 163.9,
+   "env": 0.023154922476444236,
+   "preRingRatio": 1.23,
+   "reinjectRatio": 3.28,
+   "nAttackers": 22,
+   "strongestEnvRatio": 0.637,
+   "strongestCents": 1300.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 1.211,
+   "attackers": [
+    {
+     "note": "F#4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 24.746
+    },
+    {
+     "note": "F4",
+     "dt": -0.0599,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 10.828
+    },
+    {
+     "note": "D#5",
+     "dt": -0.0449,
+     "kind": "candidate",
+     "cents": 1100.0,
+     "envRatio": 32.09
+    },
+    {
+     "note": "D#4",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 9.868
+    },
+    {
+     "note": "G#5",
+     "dt": -0.0349,
+     "kind": "candidate",
+     "cents": 1600.0,
+     "envRatio": 17.206
+    },
+    {
+     "note": "A#4",
+     "dt": -0.0299,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 70.61
+    },
+    {
+     "note": "B4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": 700.0,
+     "envRatio": 7.33
+    },
+    {
+     "note": "D4",
+     "dt": -0.02,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 19.099
+    },
+    {
+     "note": "G#4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 12.775
+    },
+    {
+     "note": "A4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 500.0,
+     "envRatio": 5.351
+    },
+    {
+     "note": "A5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 1700.0,
+     "envRatio": 4.993
+    },
+    {
+     "note": "C#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 3.993
+    },
+    {
+     "note": "F#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 200.0,
+     "envRatio": 1.248
+    },
+    {
+     "note": "F#5",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 1400.0,
+     "envRatio": 3.164
+    },
+    {
+     "note": "F4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": 100.0,
+     "envRatio": 1.211
+    },
+    {
+     "note": "F5",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": 1300.0,
+     "envRatio": 0.637
+    },
+    {
+     "note": "D#5",
+     "dt": 0.0249,
+     "kind": "candidate",
+     "cents": 1100.0,
+     "envRatio": 1.748
+    },
+    {
+     "note": "G#5",
+     "dt": 0.0249,
+     "kind": "candidate",
+     "cents": 1600.0,
+     "envRatio": 2.937
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0299,
+     "kind": "candidate",
+     "cents": 600.0,
+     "envRatio": 0.866
+    },
+    {
+     "note": "F4",
+     "dt": -0.0291,
+     "kind": "event",
+     "cents": 100.0,
+     "envRatio": 1.211
+    },
+    {
+     "note": "A4",
+     "dt": -0.0291,
+     "kind": "event",
+     "cents": 500.0,
+     "envRatio": 5.351
+    },
+    {
+     "note": "F5",
+     "dt": -0.0291,
+     "kind": "event",
+     "cents": 1300.0,
+     "envRatio": 1.897
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 88.0948,
+   "note": "D#5",
+   "phaseErr": 2.193,
+   "jerk": 747.7,
+   "env": 0.006823692962601658,
+   "preRingRatio": 1.17,
+   "reinjectRatio": 2.26,
+   "nAttackers": 8,
+   "strongestEnvRatio": 0.201,
+   "strongestCents": -100.0,
+   "semitoneCoincident": true,
+   "semitoneEnvRatio": 9.557,
+   "attackers": [
+    {
+     "note": "B4",
+     "dt": -0.0798,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 1.239
+    },
+    {
+     "note": "D5",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 9.557
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0399,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 3.212
+    },
+    {
+     "note": "C#5",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 0.767
+    },
+    {
+     "note": "G5",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": 400.0,
+     "envRatio": 1.121
+    },
+    {
+     "note": "D5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": -100.0,
+     "envRatio": 0.201
+    },
+    {
+     "note": "F#5",
+     "dt": 0.0549,
+     "kind": "candidate",
+     "cents": 300.0,
+     "envRatio": 0.627
+    },
+    {
+     "note": "D5",
+     "dt": 0.0307,
+     "kind": "event",
+     "cents": -100.0,
+     "envRatio": 10.02
+    }
+   ]
+  },
+  {
+   "tx": "kalimba-34l-c-bwv147-sequence-163-01",
+   "group": "kalimba-34l-c|author",
+   "label": "fixture",
+   "t": 90.9184,
+   "note": "C#5",
+   "phaseErr": 5.811,
+   "jerk": 199.1,
+   "env": 0.013015470709788556,
+   "preRingRatio": 1.08,
+   "reinjectRatio": 1.35,
+   "nAttackers": 6,
+   "strongestEnvRatio": 1.148,
+   "strongestCents": -400.0,
+   "semitoneCoincident": false,
+   "semitoneEnvRatio": null,
+   "attackers": [
+    {
+     "note": "A#4",
+     "dt": -0.01,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 9.569
+    },
+    {
+     "note": "B4",
+     "dt": -0.005,
+     "kind": "candidate",
+     "cents": -200.0,
+     "envRatio": 1.227
+    },
+    {
+     "note": "G#4",
+     "dt": 0.0,
+     "kind": "candidate",
+     "cents": -500.0,
+     "envRatio": 2.904
+    },
+    {
+     "note": "A4",
+     "dt": 0.005,
+     "kind": "candidate",
+     "cents": -400.0,
+     "envRatio": 1.148
+    },
+    {
+     "note": "A#4",
+     "dt": 0.0499,
+     "kind": "candidate",
+     "cents": -300.0,
+     "envRatio": 1.666
+    },
+    {
+     "note": "B4",
+     "dt": -0.0355,
+     "kind": "event",
+     "cents": -200.0,
+     "envRatio": 2.317
+    }
+   ]
+  }
+ ]
+}
