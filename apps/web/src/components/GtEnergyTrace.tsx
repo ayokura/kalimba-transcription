@@ -18,7 +18,7 @@ const HALF_WINDOW_SEC = 1.0;
 const STEP_SEC = 0.04;
 const POLL_MS = 300;
 const RECOMPUTE_MIN_DELTA_SEC = 0.15;
-const MAX_TRACE_NOTES = 8;
+const MAX_ROW_MODE_NOTES = 8;
 
 // 17-C の周波数昇順テーブル (隣接 tine = このスケール上の隣)。
 const TUNING_BY_FREQ = [...KALIMBA_17C_TUNING].sort((a, b) => a.frequency - b.frequency);
@@ -54,6 +54,9 @@ type DecodedAudio = { samples: Float32Array; sampleRate: number; durationSec: nu
 
 export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
   const [enabled, setEnabled] = useState(false);
+  // "all": 全 17 tine を表示 (伴奏として鳴っている未認識ノーツの探索が主用途)。
+  // "row": 近傍行のノート (+隣接 tine) のみ — 行が多い時の縮約表示。
+  const [mode, setMode] = useState<"all" | "row">("all");
   const [withNeighbors, setWithNeighbors] = useState(false);
   const [status, setStatus] = useState<string>("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -66,30 +69,42 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
   const rowTimes = useMemo(() => rows.map((r) => r.timeSec), [rows]);
 
   const notesForCenter = useCallback(
-    (centerSec: number): string[] => {
-      if (rows.length === 0) return [];
-      let best = 0;
-      let bestDist = Infinity;
-      for (let i = 0; i < rows.length; i++) {
-        const d = Math.abs(rowTimes[i] - centerSec);
-        if (d < bestDist) {
-          bestDist = d;
-          best = i;
+    (centerSec: number): { notes: string[]; highlight: Set<string> } => {
+      // プレイヘッドに最も近い行のノート (verdict fix があればそちら) を
+      // ハイライト対象とする
+      let base: string[] = [];
+      if (rows.length > 0) {
+        let best = 0;
+        let bestDist = Infinity;
+        for (let i = 0; i < rows.length; i++) {
+          const d = Math.abs(rowTimes[i] - centerSec);
+          if (d < bestDist) {
+            bestDist = d;
+            best = i;
+          }
         }
+        const row = rows[best];
+        const rv = verdictRows[String(row.index)];
+        base = rv?.notes && rv.notes.length > 0 ? rv.notes : row.draftNotes;
       }
-      const row = rows[best];
-      const rv = verdictRows[String(row.index)];
-      const base = rv?.notes && rv.notes.length > 0 ? rv.notes : row.draftNotes;
+      const highlight = new Set<string>(base);
+      if (mode === "all") {
+        // 全 tine 表示: 未認識の伴奏ノーツがどこで鳴っているかの探索用。
+        // 1 音 3ms 実測 (48kHz/±1s/40ms step) なので 17 tine でも ~50ms
+        const notes = [...TUNING_BY_FREQ].reverse().map((n) => n.noteName);
+        return { notes, highlight };
+      }
       const set = new Set<string>(base);
       if (withNeighbors) {
         for (const n of base) for (const nb of scaleNeighbors(n)) set.add(nb);
       }
-      return [...set]
+      const notes = [...set]
         .filter((n) => noteFrequency(n) !== null)
         .sort((a, b) => (noteFrequency(b) ?? 0) - (noteFrequency(a) ?? 0))
-        .slice(0, MAX_TRACE_NOTES);
+        .slice(0, MAX_ROW_MODE_NOTES);
+      return { notes, highlight };
     },
-    [rows, rowTimes, verdictRows, withNeighbors],
+    [rows, rowTimes, verdictRows, withNeighbors, mode],
   );
 
   const ensureDecoded = useCallback(async (): Promise<DecodedAudio | null> => {
@@ -136,6 +151,7 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
   const draw = useCallback(
     (
       notes: string[],
+      highlight: Set<string>,
       trace: { startSec: number; stepSec: number; steps: number; values: Float32Array },
       centerSec: number,
     ) => {
@@ -143,7 +159,7 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
       if (!canvas) return;
       const dpr = window.devicePixelRatio || 1;
       const cssWidth = canvas.clientWidth || 600;
-      const rowH = 34;
+      const rowH = notes.length >= 10 ? 24 : 34;
       const cssHeight = Math.max(1, notes.length) * rowH + 18;
       canvas.width = Math.round(cssWidth * dpr);
       canvas.height = Math.round(cssHeight * dpr);
@@ -153,13 +169,13 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
       g.scale(dpr, dpr);
       g.clearRect(0, 0, cssWidth, cssHeight);
 
-      const labelW = 52;
+      const labelW = 76;
       const plotW = cssWidth - labelW - 6;
       const { startSec, stepSec, steps, values } = trace;
       const windowDur = steps * stepSec;
-      let max = 0;
-      for (let i = 0; i < values.length; i++) if (values[i] > max) max = values[i];
-      if (max <= 0) max = 1;
+      let globalMax = 0;
+      for (let i = 0; i < values.length; i++) if (values[i] > globalMax) globalMax = values[i];
+      if (globalMax <= 0) globalMax = 1;
 
       const xForSec = (sec: number) => labelW + ((sec - startSec) / windowDur) * plotW;
 
@@ -188,20 +204,32 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
       for (let n = 0; n < notes.length; n++) {
         const y0 = n * rowH + 4;
         const base = y0 + rowH - 8;
-        g.fillStyle = "#63615d";
+        const isHi = highlight.has(notes[n]);
+        // 行ごと正規化 (波形形状の可視化 — 弱い伴奏でも山が見える)。
+        // 相対強度は % ラベル (行 max / 窓内グローバル max) で補う
+        let rowMax = 0;
+        for (let s = 0; s < steps; s++) {
+          const v = values[n * steps + s];
+          if (v > rowMax) rowMax = v;
+        }
+        const pct = Math.round((rowMax / globalMax) * 100);
+        g.fillStyle = isHi ? "#0f5f67" : "#63615d";
+        if (isHi) g.font = "bold 11px ui-monospace, Menlo, monospace";
         g.fillText(notes[n], 4, y0 + rowH / 2 + 3);
+        if (isHi) g.font = "11px ui-monospace, Menlo, monospace";
+        g.fillStyle = pct >= 20 ? "#177e89" : "#9b9893";
+        g.fillText(`${pct}%`, 34, y0 + rowH / 2 + 3);
         g.strokeStyle = "rgba(30,31,31,0.1)";
         g.beginPath();
         g.moveTo(labelW, base);
         g.lineTo(labelW + plotW, base);
         g.stroke();
-        // sqrt 圧縮で減衰尾を可視化 (窓内グローバル max で正規化 = 行間の
-        // 相対強度が読める)
-        g.strokeStyle = "#177e89";
-        g.lineWidth = 1.4;
+        g.strokeStyle = isHi ? "#0f5f67" : pct >= 20 ? "#177e89" : "#a8a5a0";
+        g.lineWidth = isHi ? 1.8 : 1.2;
         g.beginPath();
+        const denom = rowMax > 0 ? rowMax : 1;
         for (let s = 0; s < steps; s++) {
-          const v = Math.sqrt(values[n * steps + s] / max);
+          const v = Math.sqrt(values[n * steps + s] / denom);
           const x = labelW + (s / Math.max(1, steps - 1)) * plotW;
           const y = base - v * (rowH - 12);
           if (s === 0) g.moveTo(x, y);
@@ -225,8 +253,8 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
       const audioEl = audioRef.current;
       if (!audioEl) return;
       const centerSec = audioEl.currentTime;
-      const notes = notesForCenter(centerSec);
-      const notesKey = notes.join(",");
+      const { notes, highlight } = notesForCenter(centerSec);
+      const notesKey = `${mode}:${notes.join(",")}|${[...highlight].join(",")}`;
       if (
         !force &&
         Math.abs(centerSec - lastCenterRef.current) < RECOMPUTE_MIN_DELTA_SEC &&
@@ -253,13 +281,13 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
         );
         lastCenterRef.current = centerSec;
         lastNotesKeyRef.current = notesKey;
-        draw(notes, trace, centerSec);
+        draw(notes, highlight, trace, centerSec);
         setStatus(`${notes.length} 音 × ${trace.steps} step (${trace.elapsedMs.toFixed(0)}ms)`);
       } finally {
         computingRef.current = false;
       }
     },
-    [enabled, audioRef, notesForCenter, ensureDecoded, draw],
+    [enabled, mode, audioRef, notesForCenter, ensureDecoded, draw],
   );
 
   // 再生位置ポーリング → 閾値超えの移動で再計算
@@ -270,11 +298,11 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
     return () => window.clearInterval(timer);
   }, [enabled, recompute]);
 
-  // tx 切替でキャッシュ・表示をリセット
+  // tx / 表示モード切替でキャッシュ・表示をリセット
   useEffect(() => {
     lastCenterRef.current = -999;
     lastNotesKeyRef.current = "";
-  }, [txId, withNeighbors]);
+  }, [txId, withNeighbors, mode]);
 
   return (
     <div className="gt-energy-trace">
@@ -285,9 +313,20 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
           />{" "}
-          energy trace (再生位置 ±{HALF_WINDOW_SEC}s、近傍行のノート)
+          energy trace (再生位置 ±{HALF_WINDOW_SEC}s)
         </label>
         {enabled ? (
+          <label>
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value === "row" ? "row" : "all")}
+            >
+              <option value="all">全 tine (伴奏探し)</option>
+              <option value="row">近傍行のノートのみ</option>
+            </select>
+          </label>
+        ) : null}
+        {enabled && mode === "row" ? (
           <label>
             <input
               type="checkbox"
