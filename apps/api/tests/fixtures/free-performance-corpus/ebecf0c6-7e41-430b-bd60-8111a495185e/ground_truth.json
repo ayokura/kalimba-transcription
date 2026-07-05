@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "toleranceSec": 0.08,
+  "source": {
+    "type": "gt-review-verdict",
+    "transactionId": "ebecf0c6-7e41-430b-bd60-8111a495185e",
+    "generator": "scripts/audio-analysis/gt_finalize.py",
+    "generatedAt": "2026-07-04T07:03:55+00:00",
+    "verdictSavedAt": "2026-07-04T06:56:19+00:00",
+    "draftGeneratedAt": "2026-07-03T21:05:12+00:00",
+    "expectedSource": "adversarial menu 'dense-cluster' (manual alignment)",
+    "reviewDone": true,
+    "comment": ""
+  },
+  "onsets": [
+    {
+      "timeSec": 2.2027,
+      "notes": [
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 2.6027,
+      "notes": [
+        "F5"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: D5)"
+    },
+    {
+      "timeSec": 2.9493,
+      "notes": [
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 3.2427,
+      "notes": [
+        "F5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 3.632,
+      "notes": [
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 3.9413,
+      "notes": [
+        "F5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 4.3093,
+      "notes": [
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 4.6613,
+      "notes": [
+        "F5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 5.1147,
+      "notes": [
+        "E6"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 7.7813,
+      "notes": [
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 7.9787,
+      "notes": [
+        "F5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 8.2667,
+      "notes": [
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 8.5227,
+      "notes": [
+        "F5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 8.8053,
+      "notes": [
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 9.0347,
+      "notes": [
+        "F5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 9.2853,
+      "notes": [
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 9.4667,
+      "notes": [
+        "F5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 9.968,
+      "notes": [
+        "E6"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    }
+  ]
+}

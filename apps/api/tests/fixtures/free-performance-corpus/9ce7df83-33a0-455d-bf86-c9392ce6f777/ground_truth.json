@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "toleranceSec": 0.08,
+  "source": {
+    "type": "gt-review-verdict",
+    "transactionId": "9ce7df83-33a0-455d-bf86-c9392ce6f777",
+    "generator": "scripts/audio-analysis/gt_finalize.py",
+    "generatedAt": "2026-07-04T07:45:42+00:00",
+    "verdictSavedAt": "2026-07-04T06:52:00+00:00",
+    "draftGeneratedAt": "2026-07-03T21:05:11+00:00",
+    "expectedSource": "adversarial menu 'carryover-mask' (manual alignment)",
+    "reviewDone": true,
+    "comment": ""
+  },
+  "onsets": [
+    {
+      "timeSec": 3.1573,
+      "notes": [
+        "B4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 4.3093,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 5.8773,
+      "notes": [
+        "B4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 6.3733,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 11.9947,
+      "notes": [
+        "B4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 12.4587,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 16.272,
+      "notes": [
+        "B4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 16.8107,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    }
+  ]
+}

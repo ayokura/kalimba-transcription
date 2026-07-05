@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "toleranceSec": 0.08,
+  "source": {
+    "type": "gt-review-verdict",
+    "transactionId": "4e1ae5c6-df9a-4876-917d-b7e47699c8e5",
+    "generator": "scripts/audio-analysis/gt_finalize.py",
+    "generatedAt": "2026-07-04T07:03:55+00:00",
+    "verdictSavedAt": "2026-07-04T06:58:59+00:00",
+    "draftGeneratedAt": "2026-07-03T21:05:11+00:00",
+    "expectedSource": "adversarial menu 'carryover-mask' (manual alignment)",
+    "reviewDone": true,
+    "comment": ""
+  },
+  "onsets": [
+    {
+      "timeSec": 3.2107,
+      "notes": [
+        "B4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 4.1653,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 7.344,
+      "notes": [
+        "B4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 8.1973,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 12.016,
+      "notes": [
+        "B4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 13.134,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "toleranceSec": 0.25,
+      "comment": "user-added via /debug/gt-review (見逃し onset, timing は再生位置由来); 小さいがこのあたりで弾いているのが聴感上確認できる"
+    },
+    {
+      "timeSec": 15.968,
+      "notes": [
+        "B4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 16.9227,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    }
+  ]
+}

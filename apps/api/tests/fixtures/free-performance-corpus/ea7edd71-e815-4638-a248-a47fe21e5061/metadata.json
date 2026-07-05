@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "corpusType": "free-performance",
+  "repositoryManaged": true,
+  "transactionId": "ea7edd71-e815-4638-a248-a47fe21e5061",
+  "createdAt": "2026-07-03T17:22:23+00:00",
+  "promotedAt": "2026-07-05T01:27:58+00:00",
+  "status": "gt_review_completed",
+  "categories": [
+    "author_self_take",
+    "adversarial_menu",
+    "gt_review_verdict",
+    "repo_managed_corpus"
+  ],
+  "recording": {
+    "device": "スマホ内蔵マイク",
+    "microphone": "内蔵マイク",
+    "deviceNotes": "1ch / peak -2.8dBFS 帯。2026-07-05 ユーザー確認",
+    "sampleRate": 48000,
+    "channels": 1,
+    "durationSec": 16.32,
+    "peakDb": -2.84,
+    "rmsDb": -26.66
+  },
+  "tuning": {
+    "selectedId": "kalimba-17-c",
+    "correctedId": null
+  },
+  "aggregates": {
+    "recognizerEventCount": 16,
+    "groundTruthOnsetCount": 18,
+    "groundTruthNoteCount": 18,
+    "accompanimentOnlyOnsetCount": 0
+  },
+  "copyright": {
+    "status": "original_performance",
+    "workTitle": "敵対的セルフテイク (dense-cluster)",
+    "originalPerformanceReason": "作者 (ayokura) 本人の演奏。adversarial menu 'dense-cluster' 由来の自作パターン — 短時間に密集した和音/連打クラスタの敵対的パターン。",
+    "repositoryAllowed": true
+  },
+  "timingAccuracy": {
+    "noteIdentity": "reliable",
+    "noteOrderAndCombination": "reliable",
+    "onsetTiming": "approximate",
+    "method": "ear_verified",
+    "reason": "gt-review verdict 由来 (gt_draft.py の onset backtrack 時刻を人間が耳で裁定)。per-onset toleranceSec は行 0.08s / 手動配置 0.25s。spectral pin は未実施 (第 3 期ガードレール 13: timing-sensitive 評価には spectral pin が必要)。",
+    "safeFor": [
+      "score-level evaluation",
+      "note identity / order / combination evaluation"
+    ],
+    "cautionFor": [
+      "timing-sensitive training",
+      "tempo / rhythm modeling",
+      "onset-time learning",
+      "anything requiring spectral-grade onset accuracy"
+    ],
+    "refinement": "Optional. Spectral 再検証で per-onset method を spectrogram_verified 等へ引き上げ可能 (S3 spectral pin の対象候補)。"
+  },
+  "rightsReview": {
+    "requiredForRepositoryManagement": true,
+    "status": "approved_for_repository",
+    "reviewedAt": "2026-07-05",
+    "reviewedBy": "ayokura (chat, 2026-07-05)",
+    "decision": "include_audio_and_teacher_data_in_repository",
+    "reason": "作者本人の演奏・adversarial menu 自作パターン。2026-07-05 チャットで 4 件一括承認。"
+  },
+  "captureConsent": {
+    "granted": true,
+    "grantedBy": "ayokura (self capture)",
+    "grantedAt": "2026-07-05"
+  },
+  "sourceFiles": {
+    "audio": "audio.wav",
+    "request": "request.json",
+    "groundTruth": "ground_truth.json"
+  },
+  "notes": "第 3 期 S1 昇格 (CI 非飽和ゲート用、CI 網 3→7 録音)。adversarial menu 'dense-cluster' の敵対的セルフテイク。GT は /debug/gt-review verdict 経由の ear_verified (gt_finalize.py)。非飽和録音 (F1<1.0) として headline 指標の対象。"
+}
