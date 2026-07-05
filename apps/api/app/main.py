@@ -311,6 +311,11 @@ def get_dev_gt_drafts() -> dict:
     drafts = []
     for path in rows_files:
         doc = json.loads(path.read_text(encoding="utf-8"))
+        # gt_draft.py 由来でないファイル (例: bp_verify.rows.json は tx8 を
+        # 持たない別スキーマ) が同じ glob に載ると 500 になるためスキップする
+        # (2026-07-05 に実際に発生)
+        if "tx8" not in doc:
+            continue
         verdict_path = drafts_dir / f"{doc['tx8']}.verdict.json"
         doc["verdict"] = (
             json.loads(verdict_path.read_text(encoding="utf-8"))
