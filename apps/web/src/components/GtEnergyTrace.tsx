@@ -227,9 +227,14 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
         g.strokeStyle = isHi ? "#0f5f67" : pct >= 20 ? "#177e89" : "#a8a5a0";
         g.lineWidth = isHi ? 1.8 : 1.2;
         g.beginPath();
+        // dB スケール (行 max 基準、floor -36dB): リンギング中の緩い減衰
+        // スロープや attack の立ち上がりが線形/sqrt より読める
         const denom = rowMax > 0 ? rowMax : 1;
+        const DB_FLOOR = -36;
         for (let s = 0; s < steps; s++) {
-          const v = Math.sqrt(values[n * steps + s] / denom);
+          const raw = values[n * steps + s] / denom;
+          const db = raw > 0 ? 20 * Math.log10(raw) : DB_FLOOR;
+          const v = Math.max(0, 1 - Math.max(db, DB_FLOOR) / DB_FLOOR);
           const x = labelW + (s / Math.max(1, steps - 1)) * plotW;
           const y = base - v * (rowH - 12);
           if (s === 0) g.moveTo(x, y);
