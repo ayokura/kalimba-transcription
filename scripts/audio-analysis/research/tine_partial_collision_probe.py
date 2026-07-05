@@ -80,27 +80,59 @@ def collect_gt() -> dict[str, list[tuple[float, list[str]]]]:
     return out
 
 
-def note_freqs_17c() -> dict[str, float]:
-    # any 17-C request.json carries the tuning table
-    for tx in collect_gt():
-        p = None
-        for base, _ in GT_SOURCES:
-            q = REPO / base / tx / "request.json"
-            if q.is_file():
-                p = q; break
-        if p is None:
-            q = DATA_DIR / tx / "request.json"
-            p = q if q.is_file() else None
-        if p is None:
-            continue
-        req = json.loads(p.read_text())
-        if req["tuning"]["id"].startswith("kalimba-17-c"):
-            return {n["noteName"]: float(n["frequency"]) for n in req["tuning"]["notes"]}
-    raise RuntimeError("no 17-C tuning found")
+def request_for(tx: str) -> dict | None:
+    for base, _ in GT_SOURCES:
+        q = REPO / base / tx / "request.json"
+        if q.is_file():
+            return json.loads(q.read_text())
+    q = DATA_DIR / tx / "request.json"
+    return json.loads(q.read_text()) if q.is_file() else None
 
 
-def body_spectrum(audio: np.ndarray, sr: int, t: float) -> tuple[np.ndarray, np.ndarray] | None:
-    a = int((t + BODY_OFFSET) * sr)
+# Tester-performed recordings confirmed by the user (2026-07-05). Recordings
+# predating f617f8c carry no client metadata, so UA inference alone cannot
+# separate performers — this explicit list is authoritative.
+KNOWN_TESTER = {
+    "17ea7626-3c5d-450d-ae74-0116dea6e881",
+    "47902d34-95f4-4761-a634-6c1ef154531f",
+    "70cc6637-ca99-4848-a0d4-944b53e5c742",
+    "d7a82772-f77f-4820-9798-00133ae45f4e",
+    "a9e30986-5300-4401-8b69-152cba821042",
+    "1955b5bd-ee2e-41b6-a81e-6a1ab1ac22ec",
+    "98019f67-690d-4deb-a882-98ed9878c519",
+}
+
+
+def resolve_source(tx: str) -> tuple[str, str, dict[str, float]] | None:
+    """(tuning_id, group_label, note->freq) for a tx, or None if unresolvable.
+
+    Group = tuning x performer. KNOWN_TESTER is authoritative; for newer
+    recordings the client metadata (micLabel/userAgent, f617f8c) is used:
+    "VBMatrix" mic or Windows UA => author, iPhone/iPad UA => tester.
+    """
+    req = request_for(tx)
+    if req is None:
+        return None
+    tuning = req["tuning"]["id"]
+    freqs = {n["noteName"]: float(n["frequency"]) for n in req["tuning"]["notes"]}
+    client = req.get("client") or {}
+    mic = (client.get("device") or {}).get("micLabel", "")
+    ua = client.get("userAgent", "")
+    if tx in KNOWN_TESTER:
+        who = "tester"
+    elif "VBMatrix" in mic or "Windows" in ua:
+        who = "author"
+    elif "iPhone" in ua or "iPad" in ua:
+        who = "tester"
+    elif not client:
+        who = "author"  # pre-f617f8c captures not in KNOWN_TESTER are the author's
+    else:
+        who = "unknown"
+    return tuning, f"{tuning}|{who}", freqs
+
+
+def window_spectrum(audio: np.ndarray, sr: int, start_sec: float) -> tuple[np.ndarray, np.ndarray] | None:
+    a = int(start_sec * sr)
     b = a + int(BODY_WINDOW * sr)
     if a < 0 or b > len(audio):
         return None
@@ -110,60 +142,65 @@ def body_spectrum(audio: np.ndarray, sr: int, t: float) -> tuple[np.ndarray, np.
     return freqs, spec
 
 
+def body_spectrum(audio: np.ndarray, sr: int, t: float) -> tuple[np.ndarray, np.ndarray] | None:
+    return window_spectrum(audio, sr, t + BODY_OFFSET)
+
+
+def pre_spectrum(audio: np.ndarray, sr: int, t: float) -> tuple[np.ndarray, np.ndarray] | None:
+    """Same-length window ending just before the onset — captures the ring-out
+    of earlier notes so their decay can be subtracted from contamination.
+    (Kalimba tines ring for seconds; ISOLATION_SEC alone cannot exclude them.)"""
+    return window_spectrum(audio, sr, t - 0.01 - BODY_WINDOW)
+
+
 def peak_near(freqs: np.ndarray, spec: np.ndarray, f: float, cents: float = 60.0) -> float:
     lo, hi = f * 2 ** (-cents / 1200), f * 2 ** (cents / 1200)
     m = (freqs >= lo) & (freqs <= hi)
     return float(spec[m].max()) if m.any() else 0.0
 
 
-def main() -> int:
-    freqs_map = note_freqs_17c()
-    gt = collect_gt()
-    # 1-2. isolated single-note events -> partial ratios per tine
+def analyze_group(group: str, freqs_map: dict[str, float],
+                  events: list[tuple[str, np.ndarray, int, float, str]]) -> None:
+    """events: (tx, audio, sr, t, note) isolated single-note strikes."""
     partials: dict[str, list[list[float]]] = {}   # note -> list of ratio lists
     contamination: dict[tuple[str, str], list[float]] = {}  # (striker, victim) -> ratios
-    for tx, onsets in gt.items():
-        ap = audio_for(tx)
-        if ap is None:
+    fresh: dict[tuple[str, str], list[float]] = {}  # ring-out-subtracted contamination
+    for tx, audio, sr, t, note in events:
+        fs = body_spectrum(audio, sr, t)
+        if fs is None:
             continue
-        audio, sr = load_audio(ap)
-        times = [t for t, _ in onsets]
-        for i, (t, notes) in enumerate(onsets):
-            if len(notes) != 1 or notes[0] not in freqs_map:
+        fr, spec = fs
+        ps = pre_spectrum(audio, sr, t)
+        pre = ps[1] if ps is not None else None
+        f0 = freqs_map[note]
+        e0 = peak_near(fr, spec, f0)
+        if e0 <= 0:
+            continue
+        # partial peaks: local maxima in the band above MIN_PEAK_REL
+        lo, hi = f0 * PARTIAL_BAND[0], f0 * PARTIAL_BAND[1]
+        m = (fr >= lo) & (fr <= hi)
+        band_f, band_s = fr[m], spec[m]
+        is_pk = np.zeros(len(band_s), bool)
+        is_pk[1:-1] = (band_s[1:-1] > band_s[:-2]) & (band_s[1:-1] >= band_s[2:])
+        strong = sorted(
+            [(float(bs), float(bf / f0)) for bf, bs in zip(band_f[is_pk], band_s[is_pk]) if bs >= e0 * MIN_PEAK_REL],
+            reverse=True,
+        )[:4]
+        partials.setdefault(note, []).append([r for _, r in strong])
+        # contamination: striker's energy at every other tine fundamental.
+        # raw = body-window energy (includes earlier notes' ring-out);
+        # fresh = raw minus the pre-onset level (attributable to this strike).
+        for other, fo in freqs_map.items():
+            if other == note:
                 continue
-            prev_gap = t - times[i - 1] if i > 0 else 99
-            next_gap = times[i + 1] - t if i + 1 < len(times) else 99
-            if prev_gap < ISOLATION_SEC or next_gap < ISOLATION_SEC:
-                continue
-            fs = body_spectrum(audio, sr, t)
-            if fs is None:
-                continue
-            fr, spec = fs
-            f0 = freqs_map[notes[0]]
-            e0 = peak_near(fr, spec, f0)
-            if e0 <= 0:
-                continue
-            # partial peaks: local maxima in the band above MIN_PEAK_REL
-            lo, hi = f0 * PARTIAL_BAND[0], f0 * PARTIAL_BAND[1]
-            m = (fr >= lo) & (fr <= hi)
-            band_f, band_s = fr[m], spec[m]
-            is_pk = np.zeros(len(band_s), bool)
-            is_pk[1:-1] = (band_s[1:-1] > band_s[:-2]) & (band_s[1:-1] >= band_s[2:])
-            ratios = [float(bf / f0) for bf, bs in zip(band_f[is_pk], band_s[is_pk]) if bs >= e0 * MIN_PEAK_REL]
-            # keep the strongest few distinct ratios
-            strong = sorted(
-                [(float(bs), float(bf / f0)) for bf, bs in zip(band_f[is_pk], band_s[is_pk]) if bs >= e0 * MIN_PEAK_REL],
-                reverse=True,
-            )[:4]
-            partials.setdefault(notes[0], []).append([r for _, r in strong])
-            # 5. contamination: striker's energy at every other tine fundamental
-            for other, fo in freqs_map.items():
-                if other == notes[0]:
-                    continue
-                eo = peak_near(fr, spec, fo)
-                contamination.setdefault((notes[0], other), []).append(eo / e0 if e0 else 0.0)
+            eo = peak_near(fr, spec, fo)
+            contamination.setdefault((note, other), []).append(eo / e0 if e0 else 0.0)
+            if pre is not None:
+                ep = peak_near(fr, pre, fo)
+                fresh.setdefault((note, other), []).append(max(eo - ep, 0.0) / e0 if e0 else 0.0)
 
-    # 3. aggregate per tine
+    n_events = len(events)
+    print(f"\n######## group {group}: isolated events={n_events} ########")
     print("=== measured per-tine partials (median of strongest ratios, n>=%d) ===" % MIN_EVENTS_PER_TINE)
     table: dict[str, list[float]] = {}
     for note in sorted(partials, key=lambda n: freqs_map[n]):
@@ -185,7 +222,6 @@ def main() -> int:
         table[note] = meds
         print(f"  {note:4s} (n={len(samples):2d}): ratios={meds}")
 
-    # 4. collision map
     print("\n=== collision map: measured partial within +-%.0f cents of another tine fundamental ===" % COLLISION_CENTS)
     collisions = []
     for note, meds in table.items():
@@ -199,17 +235,52 @@ def main() -> int:
                 if abs(cents) <= COLLISION_CENTS:
                     cont = contamination.get((note, other), [])
                     med_cont = float(np.median(cont)) if cont else float("nan")
+                    fr_ = fresh.get((note, other), [])
+                    med_fresh = float(np.median(fr_)) if fr_ else float("nan")
                     collisions.append((note, r, other, float(cents), med_cont))
-                    print(f"  {note:4s} partial x{r:.3f} -> {other:4s} ({cents:+.0f}c)  contamination(median E_victim/E_striker)={med_cont:.3f}")
+                    print(f"  {note:4s} partial x{r:.3f} -> {other:4s} ({cents:+.0f}c)  contamination raw={med_cont:.3f} fresh={med_fresh:.3f}")
     if not collisions:
         print("  (none)")
 
-    # summary judgement inputs
-    print("\n=== contamination extremes (top 8 pairs by median ratio, regardless of collision) ===")
+    print("\n=== contamination extremes (top 10 pairs by median raw ratio; fresh = ring-out subtracted) ===")
     rows = [(k, float(np.median(v)), len(v)) for k, v in contamination.items() if len(v) >= MIN_EVENTS_PER_TINE]
     rows.sort(key=lambda x: -x[1])
-    for (a, b), med, n in rows[:8]:
-        print(f"  {a:4s} -> {b:4s}: median {med:.3f} (n={n})")
+    for (a, b), med, n in rows[:10]:
+        fr_ = fresh.get((a, b), [])
+        med_fresh = float(np.median(fr_)) if fr_ else float("nan")
+        print(f"  {a:4s} -> {b:4s}: raw {med:.3f} fresh {med_fresh:.3f} (n={n})")
+
+
+def main() -> int:
+    gt = collect_gt()
+    # bucket isolated single-note events per instrument group (tuning x performer)
+    groups: dict[str, tuple[dict[str, float], list]] = {}
+    skipped: list[str] = []
+    for tx, onsets in gt.items():
+        src = resolve_source(tx)
+        ap = audio_for(tx)
+        if src is None or ap is None:
+            skipped.append(tx)
+            continue
+        _tuning, group, freqs_map = src
+        audio, sr = load_audio(ap)
+        times = [t for t, _ in onsets]
+        bucket = groups.setdefault(group, (freqs_map, []))[1]
+        for i, (t, notes) in enumerate(onsets):
+            if len(notes) != 1 or notes[0] not in freqs_map:
+                continue
+            prev_gap = t - times[i - 1] if i > 0 else 99
+            next_gap = times[i + 1] - t if i + 1 < len(times) else 99
+            if prev_gap < ISOLATION_SEC or next_gap < ISOLATION_SEC:
+                continue
+            bucket.append((tx, audio, sr, t, notes[0]))
+    if skipped:
+        print(f"(skipped, no request.json/audio: {', '.join(s[:8] for s in skipped)})")
+    for group in sorted(groups, key=lambda g: -len(groups[g][1])):
+        freqs_map, events = groups[group]
+        txs = sorted({e[0][:8] for e in events})
+        print(f"\n[group {group}] recordings: {', '.join(txs)}")
+        analyze_group(group, freqs_map, events)
     return 0
 
 
