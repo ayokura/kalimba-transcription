@@ -124,6 +124,19 @@ export default function DebugGtReviewPage() {
   );
   const verdict = draft ? (verdicts[draft.tx8] ?? emptyVerdict()) : emptyVerdict();
 
+  // energy trace 用アンカー: 各行の時刻 + そのノート (verdict fix 優先)
+  const energyAnchors = useMemo(
+    () =>
+      (draft?.rows ?? []).map((row) => {
+        const rv = verdict.rows[String(row.index)];
+        return {
+          timeSec: row.timeSec,
+          notes: rv?.notes && rv.notes.length > 0 ? rv.notes : row.draftNotes,
+        };
+      }),
+    [draft, verdict.rows],
+  );
+
   const scheduleSave = useCallback((tx8: string, next: GtDraftVerdict) => {
     setSaveState((s) => ({ ...s, [tx8]: "saving" }));
     if (saveTimers.current[tx8]) clearTimeout(saveTimers.current[tx8]);
@@ -321,8 +334,7 @@ export default function DebugGtReviewPage() {
             <GtEnergyTrace
               txId={draft.txId}
               audioRef={audioRef}
-              rows={draft.rows}
-              verdictRows={verdict.rows}
+              anchors={energyAnchors}
             />
           </div>
 

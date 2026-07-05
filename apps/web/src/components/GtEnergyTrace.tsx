@@ -10,7 +10,6 @@
 
 import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { GtDraftRow, GtDraftRowVerdict } from "@/lib/api";
 import { traceNoteBandEnergies } from "@/lib/wasm/energy";
 import { KALIMBA_17C_TUNING } from "@/lib/wasm/tuning-17c";
 
@@ -43,16 +42,22 @@ function scaleNeighbors(noteName: string): string[] {
   return out;
 }
 
+/** 時刻アンカー: その時刻で注目すべきノート群 (gt-review 行 / bp-verify 行など)。
+ * 呼び出し側スキーマへの依存を切るための最小インターフェース。 */
+export type EnergyTraceAnchor = {
+  timeSec: number;
+  notes: string[];
+};
+
 type Props = {
   txId: string;
   audioRef: RefObject<HTMLAudioElement | null>;
-  rows: GtDraftRow[];
-  verdictRows: Record<string, GtDraftRowVerdict>;
+  anchors: EnergyTraceAnchor[];
 };
 
 type DecodedAudio = { samples: Float32Array; sampleRate: number; durationSec: number };
 
-export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
+export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
   const [enabled, setEnabled] = useState(false);
   // "all": 全 17 tine を表示 (伴奏として鳴っている未認識ノーツの探索が主用途)。
   // "row": 近傍行のノート (+隣接 tine) のみ — 行が多い時の縮約表示。
@@ -65,27 +70,24 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
   const lastNotesKeyRef = useRef<string>("");
   const computingRef = useRef(false);
 
-  // 行の時刻列 (プレイヘッド近傍行の決定に使用)
-  const rowTimes = useMemo(() => rows.map((r) => r.timeSec), [rows]);
+  // アンカーの時刻列 (プレイヘッド近傍アンカーの決定に使用)
+  const rowTimes = useMemo(() => anchors.map((a) => a.timeSec), [anchors]);
 
   const notesForCenter = useCallback(
     (centerSec: number): { notes: string[]; highlight: Set<string> } => {
-      // プレイヘッドに最も近い行のノート (verdict fix があればそちら) を
-      // ハイライト対象とする
+      // プレイヘッドに最も近いアンカーのノートをハイライト対象とする
       let base: string[] = [];
-      if (rows.length > 0) {
+      if (anchors.length > 0) {
         let best = 0;
         let bestDist = Infinity;
-        for (let i = 0; i < rows.length; i++) {
+        for (let i = 0; i < anchors.length; i++) {
           const d = Math.abs(rowTimes[i] - centerSec);
           if (d < bestDist) {
             bestDist = d;
             best = i;
           }
         }
-        const row = rows[best];
-        const rv = verdictRows[String(row.index)];
-        base = rv?.notes && rv.notes.length > 0 ? rv.notes : row.draftNotes;
+        base = anchors[best].notes;
       }
       const highlight = new Set<string>(base);
       if (mode === "all") {
@@ -104,7 +106,7 @@ export function GtEnergyTrace({ txId, audioRef, rows, verdictRows }: Props) {
         .slice(0, MAX_ROW_MODE_NOTES);
       return { notes, highlight };
     },
-    [rows, rowTimes, verdictRows, withNeighbors, mode],
+    [anchors, rowTimes, withNeighbors, mode],
   );
 
   const ensureDecoded = useCallback(async (): Promise<DecodedAudio | null> => {

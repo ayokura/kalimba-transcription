@@ -19,6 +19,7 @@ import {
   type BpVerifyRowVerdict,
   type BpVerifyVerdict,
 } from "@/lib/api";
+import { GtEnergyTrace } from "@/components/GtEnergyTrace";
 
 const PLAY_LEAD_SEC = 1.0;
 const PLAY_SNIPPET_SEC = 2.5;
@@ -94,8 +95,16 @@ export default function DebugBpVerifyPage() {
   }, [data]);
 
   const tx8List = useMemo(() => [...rowsByTx.keys()], [rowsByTx]);
-  const currentRows = selectedTx8 ? (rowsByTx.get(selectedTx8) ?? []) : [];
+  const currentRows = useMemo(
+    () => (selectedTx8 ? (rowsByTx.get(selectedTx8) ?? []) : []),
+    [rowsByTx, selectedTx8],
+  );
   const currentTxId = currentRows[0]?.txId ?? null;
+  // energy trace 用アンカー: bp-only 行の時刻 + 検証対象 note
+  const energyAnchors = useMemo(
+    () => currentRows.map((row) => ({ timeSec: row.timeSec, notes: [row.note] })),
+    [currentRows],
+  );
 
   const scheduleSave = useCallback((next: BpVerifyVerdict) => {
     setSaveState("saving");
@@ -260,6 +269,11 @@ export default function DebugBpVerifyPage() {
                 </button>
               ))}
             </div>
+            <GtEnergyTrace
+              txId={currentTxId}
+              audioRef={audioRef}
+              anchors={energyAnchors}
+            />
           </div>
 
           <div className="stack" style={{ gap: 6, marginTop: 8 }}>
