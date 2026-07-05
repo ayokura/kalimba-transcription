@@ -283,6 +283,13 @@ human-derived `ground_truth.json` に対する note F1 / hardMisses を
 - CI で守れるのは git-tracked corpus のみ。local-only 録音
   (transaction-captures) は recognizer 変更時に
   `note_f1_benchmark.py --check-baseline` を手動実行して確認する。
+- `benchmark_baseline.json` の `nonSaturatedRepoGate` セクション
+  (`minRecordings` / `minMicroF1` / `txIds`) は、報告語彙ガードレール
+  (第 3 期ガードレール 4) が指す HEADLINE 指標そのもの — 非飽和 repo-corpus
+  subset の pooled micro F1 — を CI で守るネット。per-recording floor と同じ
+  improvement-only 規律で `--write-baseline` が更新する。
+  `test_non_saturated_net_coverage` / `test_non_saturated_micro_floor` が
+  これを検証する。
 
 ### テスト追加ガイドライン
 

@@ -144,10 +144,18 @@ uv run python scripts/audio-analysis/note_f1_benchmark.py --json
 1 行 append する (`append_history()`)。baseline は現在の floor しか持たず上書き
 されるため、fingerprint 別の F1 推移を後から追えるようにする最小の受け皿。
 1 行 = flat JSON (`ts` / `recognizerFingerprint` / `kalimbaDspFingerprint` /
-`recordings` / `microF1` / `microPrecision` / `microRecall` /
-`perRecording: {txId: f1}`)。非飽和 (F1 < 1.0) の GT レビュー済み録音が
-2 件以上揃ってから分析価値が出る計器なので、現時点では記録のみで分析ツールは
+`recordings` / `microF1` / `microPrecision` / `microRecall` / `nonSaturated`
+(headline: `recordings` / `microF1` / `microPrecision` / `microRecall` /
+`microF1CI95`) / `perRecording: {txId: f1}`)。非飽和 (F1 < 1.0) の GT レビュー済み
+録音が2 件以上揃ってから分析価値が出る計器なので、現時点では記録のみで分析ツールは
 未実装。
+
+`benchmark_baseline.json` の `nonSaturatedRepoGate` セクション (`minRecordings` /
+`minMicroF1` / `txIds`) は、repo-managed corpus のうち非飽和な録音の pooled
+micro F1 — 第 3 期ガードレール 4 の HEADLINE 指標そのもの — の floor を CI で
+守るネット (`test_free_performance_corpus.py` の
+`test_non_saturated_net_coverage` / `test_non_saturated_micro_floor`)。
+per-recording floor と同じ improvement-only 規律で更新される。
 
 ### candidate_recall_benchmark.py
 multi-candidate 出力の有効性を測る (#178 Phase 2)。note_f1_benchmark が primary 出力のみを

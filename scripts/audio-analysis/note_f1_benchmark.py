@@ -818,6 +818,15 @@ def discover_tx_ids() -> list[str]:
 # improvement direction only. `--write-baseline` refuses to lower minF1 /
 # raise maxHardMisses unless --allow-baseline-regression is passed, which
 # requires an explicit fixture-policy-style tradeoff decision.
+#
+# `nonSaturatedRepoGate` (third-term guardrail 4/11, S1): a second, corpus-wide
+# section alongside `recordings`, recording the floor for the HEADLINE metric
+# itself — pooled micro F1 over the non-saturated (baseline minF1 < 1.0, or no
+# entry yet) subset of *repo-managed* recordings only (local-only captures are
+# excluded; CI cannot reproduce them). Fields: minRecordings (count floor),
+# minMicroF1 (3-decimal floor of pooled micro F1), txIds (informational list
+# of the recordings the gate was computed over). Same improvement-only update
+# discipline as the per-recording floors above.
 # ---------------------------------------------------------------------------
 
 BASELINE_PATH = FREE_PERFORMANCE_CORPUS_DIR / "benchmark_baseline.json"
@@ -856,9 +865,56 @@ def check_baseline_violations(results: list[dict], baseline: dict) -> list[str]:
     return violations
 
 
+def _repo_corpus_ground_truth_exists(tx_id: str) -> bool:
+    """True if tx_id has a repo-managed (git-tracked) ground_truth.json.
+
+    Local-only transaction-captures are excluded because CI cannot see them
+    (docs/corpus-management.md), so the non-saturated repo gate must only
+    ever be computed over recordings CI can itself reproduce.
+    """
+    return (FREE_PERFORMANCE_CORPUS_DIR / tx_id / "ground_truth.json").is_file()
+
+
+def compute_non_saturated_repo_gate(results: list[dict], baseline: dict) -> dict:
+    """Non-saturated repo-corpus subset gate (third-term guardrail 4/11).
+
+    Mirrors the headline ``nonSaturated`` computation in ``main()`` but
+    restricted to git-tracked recordings only, so the number is exactly what
+    ``test_free_performance_corpus.py`` can reproduce in CI.
+    """
+    entries = baseline.get("recordings", {})
+
+    def is_saturated(tx_id: str) -> bool:
+        entry = entries.get(tx_id)
+        return entry is not None and float(entry.get("minF1", 0.0)) >= 0.9999
+
+    subset = [
+        r
+        for r in results
+        if _repo_corpus_ground_truth_exists(r["txId"]) and not is_saturated(r["txId"])
+    ]
+    tp = sum(r["tp"] for r in subset)
+    truth = sum(r["truthNotes"] for r in subset)
+    predicted = sum(r["predictedNotes"] for r in subset)
+    precision = tp / predicted if predicted else (1.0 if not truth else 0.0)
+    recall = tp / truth if truth else 1.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+    return {
+        "minRecordings": len(subset),
+        "minMicroF1": _baseline_floor_f1(f1),
+        "txIds": sorted(r["txId"] for r in subset),
+    }
+
+
 def write_baseline(results: list[dict], *, allow_regression: bool) -> list[str]:
     baseline = load_baseline()
     entries = baseline.setdefault("recordings", {})
+    # Snapshot pre-write baseline for the non-saturated repo gate so its
+    # saturation classification matches the HEADLINE summary printed for this
+    # same run (main() also classifies against the pre-write baseline).
+    measured_gate = compute_non_saturated_repo_gate(
+        results, {"recordings": dict(entries)}
+    )
     messages: list[str] = []
     for r in results:
         measured_min = _baseline_floor_f1(r["f1"])
@@ -898,6 +954,49 @@ def write_baseline(results: list[dict], *, allow_regression: bool) -> list[str]:
             "maxHardMisses": new_hard,
             "truthNotes": r["truthNotes"],
         }
+    old_gate = baseline.get("nonSaturatedRepoGate")
+    if old_gate is None:
+        baseline["nonSaturatedRepoGate"] = measured_gate
+        messages.append(
+            "ADD  nonSaturatedRepoGate: minRecordings="
+            f"{measured_gate['minRecordings']} minMicroF1={measured_gate['minMicroF1']:.3f}"
+        )
+    else:
+        new_min_recordings = (
+            measured_gate["minRecordings"]
+            if allow_regression
+            else max(int(old_gate["minRecordings"]), measured_gate["minRecordings"])
+        )
+        new_min_f1 = (
+            measured_gate["minMicroF1"]
+            if allow_regression
+            else max(float(old_gate["minMicroF1"]), measured_gate["minMicroF1"])
+        )
+        if not allow_regression and (
+            measured_gate["minRecordings"] < int(old_gate["minRecordings"])
+            or measured_gate["minMicroF1"] < float(old_gate["minMicroF1"])
+        ):
+            messages.append(
+                "HOLD nonSaturatedRepoGate: measured (minRecordings="
+                f"{measured_gate['minRecordings']}, minMicroF1={measured_gate['minMicroF1']:.3f})"
+                f" regresses recorded (minRecordings={old_gate['minRecordings']},"
+                f" minMicroF1={float(old_gate['minMicroF1']):.3f}); kept the stricter"
+                " values — use --allow-baseline-regression only after an explicit"
+                " tradeoff decision"
+            )
+        elif new_min_recordings != int(old_gate["minRecordings"]) or new_min_f1 != float(
+            old_gate["minMicroF1"]
+        ):
+            messages.append(
+                "UP   nonSaturatedRepoGate: minRecordings"
+                f" {old_gate['minRecordings']}->{new_min_recordings}"
+                f" minMicroF1 {float(old_gate['minMicroF1']):.3f}->{new_min_f1:.3f}"
+            )
+        baseline["nonSaturatedRepoGate"] = {
+            "minRecordings": new_min_recordings,
+            "minMicroF1": new_min_f1,
+            "txIds": measured_gate["txIds"],
+        }
     baseline["version"] = 1
     baseline["updatedAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
     baseline["recognizerFingerprint"] = recognizer_fingerprint()
@@ -935,15 +1034,28 @@ def append_history(results: list[dict], summary: dict) -> str:
       kalimbaDspFingerprint: hash of the loaded kalimba_dsp extension binary
       recordings:            number of GT recordings evaluated this run
       microF1 / microPrecision / microRecall: corpus-aggregate one-best metrics
+                             (ALL recordings, diagnostic only — see nonSaturated
+                             below for the reportable headline, third-term
+                             guardrail 4)
+      nonSaturated:          {recordings, microF1, microPrecision, microRecall,
+                             microF1CI95: [lo, hi]} — the HEADLINE metric,
+                             restricted to non-saturated recordings (baseline
+                             minF1 < 1.0, or no baseline entry yet) with a
+                             bootstrap 95% CI. Report this, never the
+                             all-recordings microF1 above.
       perRecording:          {txId: f1} for every evaluated recording
 
     Example line:
       {"kalimbaDspFingerprint": "absent", "microF1": 1.0, "microPrecision": 1.0,
-       "microRecall": 1.0, "perRecording": {"bbd6797f...": 1.0},
+       "microRecall": 1.0, "nonSaturated": {"recordings": 1, "microF1": 1.0,
+       "microPrecision": 1.0, "microRecall": 1.0, "microF1CI95": [1.0, 1.0]},
+       "perRecording": {"bbd6797f...": 1.0},
        "recognizerFingerprint": "a1b2c3d4e5f6a7b8", "recordings": 1,
        "ts": "2026-07-04T12:00:00+00:00"}
     """
     HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    ns = summary["nonSaturated"]
+    ns_boot = ns.get("bootstrap")
     row = {
         "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00"),
         "recognizerFingerprint": summary["recognizerFingerprint"],
@@ -952,6 +1064,13 @@ def append_history(results: list[dict], summary: dict) -> str:
         "microF1": summary["microF1"],
         "microPrecision": summary["microPrecision"],
         "microRecall": summary["microRecall"],
+        "nonSaturated": {
+            "recordings": ns["recordings"],
+            "microF1": ns["microF1"],
+            "microPrecision": ns["microPrecision"],
+            "microRecall": ns["microRecall"],
+            "microF1CI95": ns_boot["microF1CI95"] if ns_boot else None,
+        },
         "perRecording": {r["txId"]: r["f1"] for r in results},
     }
     with HISTORY_PATH.open("a", encoding="utf-8") as fh:

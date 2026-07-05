@@ -67,7 +67,19 @@
       "truthNotes": 18
     }
   },
-  "updatedAt": "2026-07-04T16:10:44+00:00",
-  "recognizerFingerprint": "f52bebb6f91763da",
-  "kalimbaDspFingerprint": "b5688f4db575441d"
+  "updatedAt": "2026-07-05T01:34:51+00:00",
+  "recognizerFingerprint": "29eaaf1daa45ca68",
+  "kalimbaDspFingerprint": "b5688f4db575441d",
+  "nonSaturatedRepoGate": {
+    "minRecordings": 6,
+    "minMicroF1": 0.846,
+    "txIds": [
+      "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "4e1ae5c6-df9a-4876-917d-b7e47699c8e5",
+      "9ce7df83-33a0-455d-bf86-c9392ce6f777",
+      "d7a82772-f77f-4820-9798-00133ae45f4e",
+      "ea7edd71-e815-4638-a248-a47fe21e5061",
+      "ebecf0c6-7e41-430b-bd60-8111a495185e"
+    ]
+  }
 }

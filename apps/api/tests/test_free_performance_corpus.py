@@ -131,3 +131,74 @@ def test_corpus_benchmark_gate(corpus_outcomes: dict[str, dict], tx_id: str) -> 
         f"{tx_id}: hardMisses {hard_misses} exceeds baseline max "
         f"{entry['maxHardMisses']} (notes absent from one-best AND all candidates)"
     )
+
+
+def _is_saturated(tx_id: str) -> bool:
+    """Same rule as note_f1_benchmark.py's headline classification: a
+    baseline minF1 of (effectively) 1.0 means the recording is structurally
+    pinned at F1=1.0 and dilutes the pooled micro metric; a recording with no
+    baseline entry yet is treated as non-saturated (fresh GT)."""
+    entry = BASELINE.get("recordings", {}).get(tx_id)
+    return entry is not None and float(entry.get("minF1", 0.0)) >= 0.9999
+
+
+def test_non_saturated_net_coverage() -> None:
+    """Third-term guardrail 4/11: the repo corpus must keep a working majority
+    of non-saturated (informative) recordings, not just grow recording count
+    via easy/saturated takes."""
+    gate = BASELINE.get("nonSaturatedRepoGate")
+    if gate is None:
+        pytest.fail(
+            "benchmark_baseline.json has no nonSaturatedRepoGate section — run "
+            "`uv run python scripts/audio-analysis/note_f1_benchmark.py --write-baseline` "
+            "and commit the result"
+        )
+    total = len(CORPUS_TX_IDS)
+    assert total >= 7, (
+        f"repo-managed free-performance corpus has only {total} recordings; "
+        "expected >= 7 (third-term S1 promotion, commit 5160fbd)"
+    )
+    non_saturated = [tx_id for tx_id in CORPUS_TX_IDS if not _is_saturated(tx_id)]
+    assert len(non_saturated) >= int(gate["minRecordings"]), (
+        f"non-saturated repo recordings {len(non_saturated)} fell below baseline "
+        f"nonSaturatedRepoGate.minRecordings {gate['minRecordings']}. This is a "
+        "free-performance regression (a recording became saturated, or a "
+        "non-saturated recording was removed from the repo corpus). If this is "
+        "an intentional tradeoff, follow the fixture-policy procedure and update "
+        "the baseline with --write-baseline --allow-baseline-regression; never "
+        "lower the baseline just to make CI pass."
+    )
+    assert len(non_saturated) > total / 2, (
+        f"non-saturated recordings {len(non_saturated)} do not form a majority "
+        f"of the repo corpus ({total} total). Saturated (F1==1.0) recordings "
+        "are regression-net only and must not dominate the corpus (third-term "
+        "guardrail 4)."
+    )
+
+
+def test_non_saturated_micro_floor(corpus_outcomes: dict[str, dict]) -> None:
+    """Third-term guardrail 4: gate the HEADLINE metric itself (pooled micro
+    F1 over the non-saturated repo-corpus subset), not just per-recording
+    floors, so the reportable headline cannot silently regress."""
+    gate = BASELINE.get("nonSaturatedRepoGate")
+    if gate is None:
+        pytest.fail(
+            "benchmark_baseline.json has no nonSaturatedRepoGate section — run "
+            "`uv run python scripts/audio-analysis/note_f1_benchmark.py --write-baseline` "
+            "and commit the result"
+        )
+    non_saturated_ids = [tx_id for tx_id in CORPUS_TX_IDS if not _is_saturated(tx_id)]
+    tp = sum(corpus_outcomes[tx_id]["tp"] for tx_id in non_saturated_ids)
+    truth = sum(corpus_outcomes[tx_id]["truthNotes"] for tx_id in non_saturated_ids)
+    predicted = sum(corpus_outcomes[tx_id]["predictedNotes"] for tx_id in non_saturated_ids)
+    precision = tp / predicted if predicted else (1.0 if not truth else 0.0)
+    recall = tp / truth if truth else 1.0
+    micro_f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+    assert micro_f1 >= float(gate["minMicroF1"]) - 1e-9, (
+        f"non-saturated repo-corpus micro F1 {micro_f1:.3f} fell below baseline "
+        f"nonSaturatedRepoGate.minMicroF1 {gate['minMicroF1']:.3f}. This is a "
+        "free-performance regression in the HEADLINE metric. If it is an "
+        "intentional tradeoff, follow the fixture-policy procedure and update "
+        "the baseline with --write-baseline --allow-baseline-regression; never "
+        "lower the baseline just to make CI pass."
+    )
