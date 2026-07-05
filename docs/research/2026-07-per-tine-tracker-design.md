@@ -73,7 +73,7 @@ bleed_amp は実測 partial table の medianRelAmp (楽器グループ別)。**p
 
 1. **AM メタモルフィック** (ユーザー仮説検証): 実録音への slow AM で位相系 vs 振幅系の安定性比較。警報 v0 の変換群に追加する形で実装可
 2. **C4 partial の実測補完**: table の既知ギャップ。1955b5bd/98019f67 の GT 化後に build_partial_table.py 再実行 (C4×3→G5 混同実例の裏取り)
-3. **ebecf0c6 D5/F5 lowpass 脆弱性** (警報 v0 WARN): root cause を tracker 観測モデルの頑健性要件に反映 (調査は非同期タスクで進行)
+3. **ebecf0c6 D5/F5 lowpass 脆弱性** (警報 v0 WARN): **root cause 解明済み ([#206](https://github.com/ayokura/kalimba-transcription/issues/206))** — lowpass による flux 相対閾値の低下が偽 onset を作り、segment 再分割 → residual-decay 一括棄却 → recent-note memory カスケードの 4 段連鎖。F5 の位相リセットは lowpass/ゲインに不変であり、位相ベース検出ならこの WARN 自体が発生しない (レベル頑健性仮説の実例)。segment 一括棄却 + recent-note memory は explaining-away で置換すべき機構の筆頭
 4. playability 拘束は **GT 側 prior のみ** (FP 信号としては dead — bets 判定 2026-07-05)。tracker には入れない
 
 ## 7. リスクと未解決
