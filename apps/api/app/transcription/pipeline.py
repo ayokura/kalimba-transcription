@@ -67,7 +67,9 @@ from .peaks import (
     segment_peaks,
 )
 from .per_note import rescue_gap_mute_dips
+from .pertine import propose_rescues as propose_pertine_rescues
 from .quality_indicators import compute_quality_indicators, peak_dbfs_of
+from . import settings as recognizer_settings
 from .tuning_check import analyze_tuning_mismatch
 from .segments import (
     build_segment_debug_contexts,
@@ -99,6 +101,11 @@ _DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
     # event/slot に現れないケース。broadband onset + narrow FFT の 2 証拠だが
     # gliss 中の残響も拾い得るため低め (placeholder、tulip cR@K で較正予定)。
     "sub-onset-unselected-candidate": 0.30,
+    # #141 S5 round 2: per-tine tracker rescue that passed the physical
+    # rejections but not the event-tier margins (pertine.tier_of). Same
+    # confidence band as residual-decay: real phase/energy evidence exists
+    # but the single strongest fake mode (attack bleed) is not excluded.
+    "pertine-weak-rescue": 0.15,
     "residual-decay-no-reattack": 0.15,
     "low_register_sparse_gap_tail": 0.10,
     "primary-score-too-low": 0.05,
@@ -619,6 +626,69 @@ async def transcribe_audio(
     if not merged_events:
         raise HTTPException(status_code=422, detail="No musical notes were detected. Try a clearer recording or a different tuning.")
 
+    # #141 S5 round 2: per-tine phase-tracking rescue (research line,
+    # dual-run). Post-stage judge — proposes additions only, never removes
+    # or reorders broadband events. Strong rescues become single-note events
+    # (the carryover-mask re-strike class broadband cannot see); weak
+    # rescues are preserved as low-confidence candidate slots. Detection
+    # logic and calibration live in pertine.py (kill-criteria C2 minimal
+    # coupling: no new constants/passes in constants.py or events.py).
+    pertine_rescue_debug: list[dict[str, Any]] = []
+    if recognizer_settings.get().use_pertine_tracker_rescue:
+        pertine_strong, pertine_weak = propose_pertine_rescues(
+            audio, sample_rate, tuning,
+            existing=[
+                (event.start_time, candidate.note_name)
+                for event in merged_events
+                for candidate in event.notes
+            ],
+        )
+        _pertine_note_by_name: dict[str, Any] = {}
+        for _tn in tuning.notes:
+            _pertine_note_by_name.setdefault(_tn.note_name, _tn)
+        for rescue in pertine_strong:
+            _tn = _pertine_note_by_name.get(rescue.note)
+            if _tn is None:
+                continue
+            merged_events.append(RawEvent(
+                start_time=rescue.time,
+                end_time=rescue.time + 0.25,
+                notes=[NoteCandidate(
+                    key=_tn.key, note=Note.from_name(rescue.note), score=0.0,
+                )],
+                is_gliss_like=False,
+                primary_note_name=rescue.note,
+            ))
+        if pertine_strong:
+            merged_events.sort(key=lambda event: event.start_time)
+        for rescue in pertine_weak:
+            _tn = _pertine_note_by_name.get(rescue.note)
+            if _tn is None:
+                continue
+            dropped_slots.append(_build_candidate_slot(
+                start_time=rescue.time,
+                end_time=rescue.time + 0.2,
+                primary=NoteCandidate(
+                    key=_tn.key, note=Note.from_name(rescue.note), score=0.0,
+                ),
+                ranked_notes=[],
+                drop_reason="pertine-weak-rescue",
+            ))
+        if debug:
+            pertine_rescue_debug = [
+                {
+                    "time": rescue.time, "note": rescue.note, "tier": tier,
+                    "phaseErr": rescue.phase_err, "jerk": rescue.jerk,
+                    "preRingRatio": rescue.pre_ring_ratio,
+                    "reinjectRatio": rescue.reinject_ratio,
+                    "attackers": rescue.attackers or [],
+                }
+                for tier, tier_rescues in (
+                    ("event", pertine_strong), ("candidate", pertine_weak),
+                )
+                for rescue in tier_rescues
+            ]
+
     beat_seconds = 60.0 / tempo
     events: list[ScoreEvent] = []
     warnings: list[str] = []
@@ -769,6 +839,7 @@ async def transcribe_audio(
             "disabledRepeatedPatternPasses": sorted(disabled_repeated_pattern_passes or ()),
             "repeatedPatternPassTrace": repeated_pattern_pass_trace,
             "noiseFloor": noise_floor.to_debug_dict(),
+            "pertineRescues": pertine_rescue_debug,
         }
 
     # #178 S3 (2026-07-05): gliss/密集 segment 内の未カバー sub-onset の候補化。

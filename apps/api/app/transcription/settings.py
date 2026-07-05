@@ -65,6 +65,13 @@ class RecognizerSettings:
     # active in suppress_harmonics (which handles collisions via the
     # fundamental guard) — see 2cd5a7a.
     use_per_tine_partial_scoring: bool = False
+    # #141 S5 round 2: per-tine phase-tracking rescue judge (research line,
+    # dual-run). Post-stage only — proposes carryover re-strike events and
+    # low-confidence candidate slots, never removes broadband events.
+    # Default ON on the research branch so the fixture suite and the corpus
+    # benchmark measure the integrated recognizer (kill criteria C1/K2-K4);
+    # main is the dual-run baseline.
+    use_pertine_tracker_rescue: bool = True
 
     # Ablation switches (True = disable the feature)
     ablate_sparse_gap_tail: bool = False
