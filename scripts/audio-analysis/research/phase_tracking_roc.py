@@ -60,6 +60,9 @@ TOL_PINNED = 0.06
 TOL_UNPINNED = 0.08
 
 RECORDINGS = ["70cc6637", "47902d34"]
+# Reference combo for mode comparison / FN drop trail — matches the combo the
+# Codex audit re-computation used (0.7/150) so numbers are directly comparable.
+REF_COMBO = (0.7, 150.0)
 OUT_PATH = REPO / "docs" / "research" / "phase-tracking-roc.json"
 
 
@@ -117,29 +120,66 @@ def nms(hits, hop_sec):
     return sorted(kept)
 
 
-def cross_tine_guards(events):
-    """events: [(t, note, err, jerk, freq)] sorted by t. Probe's two guards."""
+def _is_dominated(e, events):
+    t, name, _err, jerk, freq = e
+    return any(
+        abs(o[0] - t) <= 0.03 and o[1] != name and (
+            (abs(1200 * np.log2(o[4] / freq)) <= 250 and o[3] > jerk)
+            or (abs(1200 * np.log2(o[4] / freq)) <= DOM_CENTS and o[3] >= jerk * DOM_RATIO)
+        )
+        for o in events
+    )
+
+
+def _has_harmonic_parent(e, events):
+    t, name, _err, _jerk, freq = e
+    return any(
+        abs(o[0] - t) <= 0.03 and o[1] != name and any(
+            abs(1200 * np.log2(freq / (o[4] * m))) <= 50 for m in (2.0, 3.0, 4.0)
+        )
+        for o in events
+    )
+
+
+GUARD_MODES = ["full", "dominance-only", "harmonic-only", "off"]
+
+
+def cross_tine_guards(events, mode="full"):
+    """events: [(t, note, err, jerk, freq)] sorted by t.
+
+    Guard-mode controls (audit 2026-07-05 item 3): the original probe always
+    applied both guards, so the FN attribution between them was unmeasured.
+    """
     kept = []
     for e in events:
-        t, name, err, jerk, freq = e
-        dominated = any(
-            abs(o[0] - t) <= 0.03 and o[1] != name and (
-                (abs(1200 * np.log2(o[4] / freq)) <= 250 and o[3] > jerk)
-                or (abs(1200 * np.log2(o[4] / freq)) <= DOM_CENTS and o[3] >= jerk * DOM_RATIO)
-            )
-            for o in events
-        )
-        if dominated:
+        if mode in ("full", "dominance-only") and _is_dominated(e, events):
             continue
-        harmonic_parent = any(
-            abs(o[0] - t) <= 0.03 and o[1] != name and any(
-                abs(1200 * np.log2(freq / (o[4] * m))) <= 50 for m in (2.0, 3.0, 4.0)
-            )
-            for o in events
-        )
-        if not harmonic_parent:
-            kept.append(e)
+        if mode in ("full", "harmonic-only") and _has_harmonic_parent(e, events):
+            continue
+        kept.append(e)
     return kept
+
+
+def fn_drop_trail(gt_notes, cand, hop_sec, pb, jb, pred_matched_gt):
+    """Classify each unmatched GT note by the stage where it was lost."""
+    trail = {}
+    for gi, (t_gt, note, tol) in enumerate(gt_notes):
+        if gi in pred_matched_gt:
+            continue
+        freq_hits = cand.get(note, (None, []))[1]
+        near = [(i, e, j) for i, e, j in freq_hits if abs(i * hop_sec - t_gt) <= tol]
+        if not near:
+            trail[gi] = "no-candidate(fixed-gates/undetected)"
+            continue
+        if all(j < jb for _i, _e, j in near):
+            trail[gi] = "below-jerk-bar"
+            continue
+        passing = [(i, e, j) for i, e, j in near if j >= jb]
+        if all(e < pb for _i, e, _j in passing):
+            trail[gi] = "below-phase-bar"
+            continue
+        trail[gi] = "post-threshold(nms/guard/match-conflict)"
+    return trail
 
 
 def load_gt_notes(tx_full):
@@ -163,10 +203,12 @@ def load_gt_notes(tx_full):
 
 
 def score(pred, gt_notes):
-    """Greedy 1:1 note-level matching. pred: [(t, note)], gt: [(t, note, tol)]."""
+    """Greedy 1:1 note-level matching. pred: [(t, note)], gt: [(t, note, tol)].
+    Returns (tp, fp, fn, matched_gt_indices)."""
     used = [False] * len(pred)
     tp = 0
-    for t_gt, note, tol in gt_notes:
+    matched = set()
+    for gi, (t_gt, note, tol) in enumerate(gt_notes):
         best, best_dt = -1, 1e9
         for j, (t_p, n_p) in enumerate(pred):
             if used[j] or n_p != note:
@@ -177,9 +219,10 @@ def score(pred, gt_notes):
         if best >= 0:
             used[best] = True
             tp += 1
+            matched.add(gi)
     fp = len(pred) - tp
     fn = len(gt_notes) - tp
-    return tp, fp, fn
+    return tp, fp, fn, matched
 
 
 def main() -> int:
@@ -207,38 +250,81 @@ def main() -> int:
             cand[name] = (freq, candidates_for_track(env, phase, hop_sec, abs_gate, jerk_floor))
         gt_notes = load_gt_notes(tx)
         print(f"\n=== {prefix} GT notes={len(gt_notes)} candidates={sum(len(c[1]) for c in cand.values())} ===")
-        print("PHASE  JERK   pred    P      R      F1")
         rec_out = {}
-        for pb in PHASE_BARS:
-            for jb in JERK_BARS:
-                events = []
-                for name, (freq, hits) in cand.items():
-                    sel = [(i, e, j) for i, e, j in hits if e >= pb and j >= jb]
-                    for i, e, j in nms(sel, hop_sec):
-                        events.append((i * hop_sec, name, e, j, freq))
-                events.sort()
-                kept = cross_tine_guards(events)
-                pred = [(t, n) for t, n, _e, _j, _f in kept]
-                tp, fp, fn = score(pred, gt_notes)
-                p = tp / (tp + fp) if tp + fp else 0.0
-                r = tp / (tp + fn) if tp + fn else 0.0
-                f1 = 2 * p * r / (p + r) if p + r else 0.0
-                key = f"{pb}/{jb}"
-                rec_out[key] = {"pred": len(pred), "tp": tp, "fp": fp, "fn": fn,
-                                "precision": round(p, 3), "recall": round(r, 3), "f1": round(f1, 3)}
-                agg = per_combo_pool.setdefault(key, [0, 0, 0])
-                agg[0] += tp; agg[1] += fp; agg[2] += fn
-                print(f"{pb:5.2f} {jb:6.0f} {len(pred):5d}  {p:.3f}  {r:.3f}  {f1:.3f}")
+        for mode in GUARD_MODES:
+            for pb in PHASE_BARS:
+                for jb in JERK_BARS:
+                    events = []
+                    for name, (freq, hits) in cand.items():
+                        sel = [(i, e, j) for i, e, j in hits if e >= pb and j >= jb]
+                        for i, e, j in nms(sel, hop_sec):
+                            events.append((i * hop_sec, name, e, j, freq))
+                    events.sort()
+                    kept = cross_tine_guards(events, mode)
+                    pred = [(t, n) for t, n, _e, _j, _f in kept]
+                    tp, fp, fn, matched = score(pred, gt_notes)
+                    p = tp / (tp + fp) if tp + fp else 0.0
+                    r = tp / (tp + fn) if tp + fn else 0.0
+                    f1 = 2 * p * r / (p + r) if p + r else 0.0
+                    key = f"{mode}:{pb}/{jb}"
+                    rec_out[key] = {"pred": len(pred), "tp": tp, "fp": fp, "fn": fn,
+                                    "precision": round(p, 3), "recall": round(r, 3), "f1": round(f1, 3)}
+                    agg = per_combo_pool.setdefault(key, [0, 0, 0])
+                    agg[0] += tp; agg[1] += fp; agg[2] += fn
+                    # FN drop trail at the reference combo (audit item 3)
+                    if mode == "full" and (pb, jb) == REF_COMBO:
+                        trail = fn_drop_trail(gt_notes, cand, hop_sec, pb, jb, matched)
+                        detailed = {}
+                        # refine post-threshold cases: nms vs guards vs match-conflict
+                        sel_all = {}
+                        for name, (freq, hits) in cand.items():
+                            sel = [(i, e, j) for i, e, j in hits if e >= pb and j >= jb]
+                            sel_all[name] = (freq, set(i for i, _e, _j in nms(sel, hop_sec)), sel)
+                        for gi, stage in trail.items():
+                            t_gt, note, tol = gt_notes[gi]
+                            if stage.startswith("post-threshold"):
+                                freq, nms_kept, sel = sel_all.get(note, (None, set(), []))
+                                near_nms = [i for i in nms_kept if abs(i * hop_sec - t_gt) <= tol]
+                                if not near_nms:
+                                    stage = "lost-to-nms"
+                                else:
+                                    ev = None
+                                    for i, e_, j_ in sel:
+                                        if i in near_nms:
+                                            ev = (i * hop_sec, note, e_, j_, freq)
+                                            break
+                                    if ev is not None and _is_dominated(ev, events):
+                                        stage = "killed-by-dominance"
+                                    elif ev is not None and _has_harmonic_parent(ev, events):
+                                        stage = "killed-by-harmonic-parent"
+                                    else:
+                                        stage = "match-conflict"
+                            detailed[gi] = {"time": round(gt_notes[gi][0], 3), "note": note, "stage": stage}
+                        rec_out["fnDropTrail"] = detailed
         results["recordings"][prefix] = {"gtNotes": len(gt_notes), "combos": rec_out}
-    print("\n=== pooled (2 recordings) ===")
-    print("PHASE/JERK   P      R      F1")
+        # concise stdout: mode comparison at reference combo + trail histogram
+        print(f"mode comparison @ {REF_COMBO[0]}/{REF_COMBO[1]:.0f}:")
+        for mode in GUARD_MODES:
+            k = f"{mode}:{REF_COMBO[0]}/{REF_COMBO[1]}"
+            c = rec_out[k]
+            print(f"  {mode:15s} P={c['precision']:.3f} R={c['recall']:.3f} F1={c['f1']:.3f} (tp={c['tp']} fp={c['fp']} fn={c['fn']})")
+        from collections import Counter
+        hist = Counter(v["stage"] for v in rec_out.get("fnDropTrail", {}).values())
+        print(f"  FN drop trail (full mode): {dict(hist)}")
+    print("\n=== pooled (2 recordings), reference combo per mode ===")
+    for mode in GUARD_MODES:
+        key = f"{mode}:{REF_COMBO[0]}/{REF_COMBO[1]}"
+        tp, fp, fn = per_combo_pool[key]
+        p = tp / (tp + fp) if tp + fp else 0.0
+        r = tp / (tp + fn) if tp + fn else 0.0
+        f1 = 2 * p * r / (p + r) if p + r else 0.0
+        print(f"{key:22s}  P={p:.3f}  R={r:.3f}  F1={f1:.3f}")
     for key, (tp, fp, fn) in sorted(per_combo_pool.items()):
         p = tp / (tp + fp) if tp + fp else 0.0
         r = tp / (tp + fn) if tp + fn else 0.0
         f1 = 2 * p * r / (p + r) if p + r else 0.0
         results["pooled"][key] = {"tp": tp, "fp": fp, "fn": fn,
                                   "precision": round(p, 3), "recall": round(r, 3), "f1": round(f1, 3)}
-        print(f"{key:10s}  {p:.3f}  {r:.3f}  {f1:.3f}")
     OUT_PATH.write_text(json.dumps(results, indent=1) + "\n")
     print(f"\nwrote {OUT_PATH.relative_to(REPO)}")
     return 0

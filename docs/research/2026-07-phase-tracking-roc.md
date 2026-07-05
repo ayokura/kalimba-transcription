@@ -14,7 +14,22 @@
 
 pooled で loosest (0.3/20) R=0.704 < tightest 側 (0.7/150) R=0.772。緩めるほど spurious イベントが増え、winner-take-all の cross-tine guard (dominance / harmonic-parent) が真イベントを殺すため。**「候補を増やして後段で選ぶ」が単発時点排他では成立しない**ことを示す — 状態ベースの explaining-away に置き換える動機の独立した証拠。
 
-### 3. FN の構造: 倍音一致メロディ音の系統的抑圧 (実測 partial table が修正手段)
+### (2026-07-05 追記) guard mode 対照実験 — 監査指摘 3 への応答と結果 3 の訂正
+
+gpt-5.5 監査の指摘どおり、当初の「FN 主因 = integer 倍音 guard」はトレイル読解のみで対照がなかった。guard-off / dominance-only / harmonic-only / full の 4 モード対照を追加した (reference combo 0.7/150、pooled):
+
+| mode | P | R | F1 |
+|---|---|---|---|
+| full | 0.247 | 0.772 | 0.375 |
+| dominance-only | 0.204 | 0.862 | 0.330 |
+| harmonic-only | 0.192 | 0.884 | 0.315 |
+| **off** | 0.159 | **0.974** | 0.274 |
+
+FN drop trail (full、2 録音計 43 FN): **killed-by-dominance 23 / killed-by-harmonic-parent 15** / below-jerk 2 / below-phase 1 / nms 1 / no-candidate 1。
+
+**訂正**: (1) FN 主因は dominance guard (23) であり、harmonic-parent (15) は第 2 因子。「integer 倍音 guard 主因」は過大だった。(2) **「recall 上限 0.77」は検出器の限界ではなく guard 設計の人工物** — guard off の生 recall は 0.974/0.958 で、検出器はほぼ全打鍵を見ている。(3) 代償として guard off の precision は 0.159 — **explaining-away が回収すべき precision ギャップは当初想定 (0.29 起点) より大きい 0.16 起点**であり、これは GO 反対材料を強める。結論「winner-take-all 排他を状態ベース explaining-away に置換」自体は両 guard に対して成立。
+
+### 3. FN の構造: 倍音一致メロディ音の系統的抑圧 (実測 partial table が修正手段) — ※帰属は上の追記で訂正済み
 
 best combo の FN (70cc6637: 33 / 47902d34: 11) をピン状態とクロス集計すると:
 

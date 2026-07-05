@@ -1,0 +1,88 @@
+{
+ "version": 1,
+ "semantics": "per-note band-energy 10% rise point (v1, #201); maxSlopeSec = anchor (b)",
+ "generator": "scripts/audio-analysis/research/spectral_pin.py",
+ "generatedAt": "2026-07-05T13:39:49+00:00",
+ "group": "kalimba-17-c|author",
+ "params": {
+  "nFft": 2048,
+  "hop": 256,
+  "riseFrac": 0.1,
+  "minRiseDb": 6.0,
+  "searchPadSec": 0.12,
+  "floorWinSec": [
+   -0.35,
+   -0.15
+  ]
+ },
+ "pins": [
+  {
+   "index": 0,
+   "note": "B4",
+   "gtTimeSec": 3.2107,
+   "status": "pinned",
+   "pinSec": 3.216,
+   "maxSlopeSec": 3.1947,
+   "riseDb": 73.7,
+   "deltaMs": 5.3
+  },
+  {
+   "index": 1,
+   "note": "C5",
+   "gtTimeSec": 4.1653,
+   "status": "unpinnable",
+   "riseDb": 5.0
+  },
+  {
+   "index": 2,
+   "note": "B4",
+   "gtTimeSec": 7.344,
+   "status": "pinned",
+   "pinSec": 7.344,
+   "maxSlopeSec": 7.3227,
+   "riseDb": 66.6,
+   "deltaMs": 0.0
+  },
+  {
+   "index": 3,
+   "note": "C5",
+   "gtTimeSec": 8.1973,
+   "status": "unpinnable",
+   "riseDb": 2.1
+  },
+  {
+   "index": 4,
+   "note": "B4",
+   "gtTimeSec": 12.016,
+   "status": "pinned",
+   "pinSec": 12.0213,
+   "maxSlopeSec": 12.0053,
+   "riseDb": 71.0,
+   "deltaMs": 5.3
+  },
+  {
+   "index": 5,
+   "note": "C5",
+   "gtTimeSec": 13.134,
+   "status": "unpinnable",
+   "riseDb": 0.6
+  },
+  {
+   "index": 6,
+   "note": "B4",
+   "gtTimeSec": 15.968,
+   "status": "pinned",
+   "pinSec": 15.968,
+   "maxSlopeSec": 15.952,
+   "riseDb": 69.7,
+   "deltaMs": 0.0
+  },
+  {
+   "index": 7,
+   "note": "C5",
+   "gtTimeSec": 16.9227,
+   "status": "unpinnable",
+   "riseDb": 1.5
+  }
+ ]
+}
