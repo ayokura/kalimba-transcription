@@ -414,6 +414,9 @@ export type GtDraftRowVerdict = {
   comment?: string;
   // この onset に主旋律が含まれない (伴奏のみ) — decision と独立
   accompanimentOnly?: boolean;
+  // gt_verdict_seed.py が review corrections から自動 seed した行。
+  // 人間がボタンを押し直すと外れる (gt_finalize で ear_verified と区別)
+  seeded?: boolean;
 };
 
 export type GtDraftUnplacedVerdict = {

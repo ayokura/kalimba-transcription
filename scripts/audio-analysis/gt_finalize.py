@@ -66,11 +66,17 @@ def finalize(tx8: str, force: bool) -> bool:
             comment_parts.append(f"user corrected (draft: {'+'.join(row['draftNotes'])})")
         if rv.get("comment"):
             comment_parts.append(rv["comment"])
+        # gt_verdict_seed.py 由来の行は耳確認していない (review corrections の
+        # 転記) ため user_corrected に留める — ear_verified と偽らない
+        # (ガードレール 8)。UI で人間が押し直した行は seeded が外れている
+        seeded = bool(rv.get("seeded"))
         onset = {
             "timeSec": row["timeSec"],
             "notes": notes,
-            "method": "ear_verified",
-            "comment": "; ".join(comment_parts) if comment_parts else "gt-review verdict",
+            "method": "user_corrected" if seeded else "ear_verified",
+            "comment": "; ".join(comment_parts) if comment_parts else (
+                "seeded from review corrections" if seeded else "gt-review verdict"
+            ),
         }
         # 主旋律を含まない onset (伴奏のみ)。旋律抽出評価で層別できるよう
         # role として構造化して残す (F1 benchmark は notes/timeSec のみ読む)

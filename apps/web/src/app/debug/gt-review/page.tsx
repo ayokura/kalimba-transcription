@@ -165,6 +165,8 @@ export default function DebugGtReviewPage() {
         const key = String(index);
         const merged = { ...(v.rows[key] ?? {}), ...patch };
         if (patch.decision !== undefined && patch.notes === undefined) delete merged.notes;
+        // 人間が改めて裁定した行は seed 由来ではなくなる (ear_verified に格上げ)
+        if (patch.decision !== undefined) delete merged.seeded;
         if (merged.comment === "") delete merged.comment;
         if (merged.accompanimentOnly === false) delete merged.accompanimentOnly;
         const rows = { ...v.rows };
@@ -625,6 +627,11 @@ export default function DebugGtReviewPage() {
                     ) : null}
                     {rv?.accompanimentOnly ? <span className="pill">伴奏のみ</span> : null}
                     {effective?.decision === "ignore" ? <span className="pill">無視</span> : null}
+                    {rv?.seeded ? (
+                      <span className="pill" title="review corrections から自動 seed。ボタンを押し直すと耳確認扱いに格上げ">
+                        seed
+                      </span>
+                    ) : null}
                   </div>
                   <div className="row wrap" style={{ gap: 6, marginTop: 4 }}>
                     <button
