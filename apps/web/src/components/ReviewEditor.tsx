@@ -384,10 +384,11 @@ function ReviewEditorReady({
   const handleInsertSlot = useCallback(
     (slot: CandidateSlot, note?: ScoreNote) => {
       const chosen = note ?? slot.primaryNote;
-      // 認識器が既に提示した候補 (candidateSlots) の採用は、7 分類のいずれとも
-      // 一致しない (6/7 は「候補に無い onset」限定なのでここには入らない)。
+      // 認識器が提示した候補 (candidateSlots) の採用。7 分類には無いが
+      // 修正操作として candidate-adopt で数える (1 タップ、benchmark cost
+      // model の candidate_adds 相当 — 2026-07-05 検収判断)
       apply((state) => insertEvent(state, slot.startTime, [chosen], "inserted-slot"), {
-        cls: "other",
+        cls: "candidate-adopt",
         meta: { timeSec: slot.startTime, notes: [noteName(chosen)] },
       });
     },

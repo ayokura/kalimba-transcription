@@ -30,6 +30,7 @@ import { CorrectionsPayload, ReviewQueueEntry, TranscriptionResult } from "@/lib
 // この順序で表・レポートに並べる
 const CORRECTION_OP_CLASSES: OpClass[] = [
   "candidate-remove",
+  "candidate-adopt",
   "event-remove",
   "restrike-judgment",
   "chord-note-remove",
@@ -42,6 +43,7 @@ const CONTROL_OP_CLASSES: OpClass[] = ["undo", "redo", "other"];
 
 const OP_CLASS_INFO: Record<OpClass, { no: string; label: string; weightLabel: string }> = {
   "candidate-remove": { no: "1", label: "偽の候補の除去 (1タップ)", weightLabel: "0.5" },
+  "candidate-adopt": { no: "1'", label: "候補の採用 (1タップ、7分類外の修正操作)", weightLabel: "0.5" },
   "event-remove": { no: "2", label: "偽の認識の除去", weightLabel: "1" },
   "restrike-judgment": { no: "3", label: "近接同一音のシングル/弾き直し判定", weightLabel: "1" },
   "chord-note-remove": { no: "4", label: "和音扱いからの一部削除", weightLabel: "1.5" },

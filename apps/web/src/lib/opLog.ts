@@ -22,6 +22,7 @@
  */
 export type OpClass =
   | "candidate-remove"
+  | "candidate-adopt"
   | "event-remove"
   | "restrike-judgment"
   | "chord-note-remove"
@@ -54,6 +55,10 @@ const TOUCHED_NOTE_TIME_BUCKET_SEC = 0.05;
 
 const OP_CLASSES: readonly OpClass[] = [
   "candidate-remove",
+  // 提示された候補の採用 (1 タップ)。ユーザーの 7 分類には無いが修正操作
+  // として数える (benchmark cost model の candidate_adds ×1 に対応する操作。
+  // 2026-07-05 検収時に "other" から昇格)
+  "candidate-adopt",
   "event-remove",
   "restrike-judgment",
   "chord-note-remove",
