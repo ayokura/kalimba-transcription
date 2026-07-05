@@ -41,7 +41,7 @@
 - **レーン 1: 反証系** (最上位) — (a) 録音多様化 (テスター 3 曲受入・きらきら星 verdict・敵対的テイク昇格・ユーザー自身の新録音)、(b) 用途検証 (dogfooding・弾き戻しループ・「粗い転写で足りる」仮説の検証)、(c) GT 除染 (bp-only 23 件の人手 verify → GT 統合)
 - **レーン 2: research line (統合)** — per-tine 確率トラッカー + A1 causal onset + 位相リセット/位相追跡 onset を単一 research line に束ねる (bets #4 格上げの受け皿)。前半は録音非依存分のみ、実装本体は S4 硬ゲート通過後
 - **レーン 3: 計器・CI 配管** — benchmark 正直化 (S0)、CI 非飽和ゲート (S1)、メタモルフィック警報 (S2)、較正系 #172-174 (他者録音到着で重要化)
-- **レーン 4: web・出力** — #202 記譜法 (非同期、ブロッカーにしない)、譜面/レビュー UI 保守。browser/wasm は独立レーンを廃止しこのレーンの従属スライスに (A1 が research line に移管されたため)。上限運用 (1 スプリント最大 1 スライス、コミット比率 25%) は継承
+- **レーン 4: web・出力** — #202 記譜法 (非同期、ブロッカーにしない)、譜面/レビュー UI 保守。browser/wasm は独立レーンを廃止しこのレーンの従属スライスに (A1 が research line に移管されたため)。上限運用 (1 スプリント最大 1 スライス、コミット比率 25%) は継承。(2026-07-05 追記) 新規 2 件を編入: [#205](https://github.com/ayokura/kalimba-transcription/issues/205) gt-review energy trace (wasm) → S2 スライス (GO 待ち非同期着手可)、[#204](https://github.com/ayokura/kalimba-transcription/issues/204) 認識結果 run 分離 → S5 (Phase 1) / S6 (Phase 2-3)
 - **横断 1: 他者録音到着分岐** (維持) — 到着次第、最優先割り込み。テスター 3 曲の到着が既知の発火予定
 - **横断 2: research bets 棚** (維持、合計 ≤1sp/sprint 目安)
 - **横断 3: モデル引き継ぎ運用** (新設) — S0 で重く、S1 で受入確認、以降は運用規約として常駐
@@ -109,6 +109,7 @@ Fable の残り時間で「Fable がやると得な仕事」を使い切る。3 
 | 音楽的曖昧性カタログの運用開始 | B | dogfooding 票の記入欄として副産物方式 |
 | メタモルフィック警報 v0 | B | augmentation 資産流用。既知不変変換での出力一貫性チェックを non-blocking 警報として実装。トリガー 1 (patch 衝突) 自動検出が狙い。回帰 gate 化はしない |
 | テスター 3 曲の GT 化継続 (到着済なら) | C | |
+| (2026-07-05 追記) gt-review energy trace v1 ([#205](https://github.com/ayokura/kalimba-transcription/issues/205)、レーン 4 の S2 スライス) | B | GT 化支援。70cc6637 (147 行) の verdict セッションと bp-only 23 件 verify の**前**に届く順序で最優先。S1 GO 待ち中の非同期着手可 (レビュー対応相当)。scope は v1 限定 (Rust band_energy_trace + 再生位置 ±1s のスパークライン) |
 
 **Exit criteria**: (outcome) bp-only 23 件の verify 判定が全件付与 (統合は S3 持ち越し可) / 用途検証第 1 回の定量結果が記録 / 警報 1 回以上実走。(硬ゲート) ユーザー GO
 
@@ -144,6 +145,7 @@ per-tine 実装の手前まで全部終わらせる。実装本体には入ら�
 - **GO 側**: per-tine 確率トラッカーの実装 (research branch + dual-run)。観測モデルは S3 の partial 実測テーブル + 位相特徴。kill 条件は S0 固定値をそのまま適用 (変更はガードレール 12 手続き)。評価は非飽和 headline + spectral pin 済み録音での timing 検証
 - **NO-GO 側**: 較正系 #172-174 をテスター録音・新環境データで駆動、または #202 決定済なら記譜法実装へ再配分
 - 共通: #202 の決定が出ていれば実装流し込み (拍グリッド本実装・層 2 再量子化)
+- (2026-07-05 追記) 共通: [#204](https://github.com/ayokura/kalimba-transcription/issues/204) Phase 1 (runs/ storage + 再認識 endpoint + 最新 run 解決)。GO 側では dual-run 比較の可視化受け皿、NO-GO 側では出力/UX 再配分の筆頭。発火条件: 認識器の次の実改善 merge までに Phase 1 が入っていること (重複 tx 問題の再発防止)
 
 **Exit criteria**: (outcome, GO 側) dual-run 結果が kill 条件に対して判定済み (改善記録 or kill 発動のどちらでも exit 成立)。(NO-GO 側) 較正系 1 件以上が実データで効果測定済み。(硬ゲート) ユーザー GO
 
@@ -156,6 +158,7 @@ per-tine 実装の手前まで全部終わらせる。実装本体には入ら�
 | PESTO 盲点重複率測定 (bets #3 次段) | B | 隔離実行厳守。重複率が事前固定閾値以上なら PESTO 追加打ち切り |
 | #202 実装流し込み (未消化分) | C | |
 | (gated) 再合成距離 spike | D | partial 実測の成功が起動条件。原理検証のみ |
+| (2026-07-05 追記) [#204](https://github.com/ayokura/kalimba-transcription/issues/204) Phase 2-3 (run 切替 UI・queue stale バッジ・corrections baseRunId・corpus 一括再認識) | C | Phase 1 (S5) の完了が前提。一括再認識の before/after は research line の dual-run 評価と共用 |
 
 **Exit criteria**: (outcome) research line の去就 (merge/継続/kill) が記録 / PESTO 判定が出ている。(硬ゲート) ユーザー GO
 
@@ -294,4 +297,4 @@ per-tine 実装の手前まで全部終わらせる。実装本体には入ら�
 
 - 第 2 期実績: #199 コメント列 (2026-07-02〜05)
 - 敵対的レビュー・新規挑戦提案: 2026-07-05 セッション (要点は decision-log 2026-07-05 エントリに記録)
-- 記譜法: #202 / per-note: #141 / 較正系: #172-174
+- 記譜法: #202 / per-note: #141 / 較正系: #172-174 / 認識結果 run 分離: #204 / gt-review energy trace: #205
