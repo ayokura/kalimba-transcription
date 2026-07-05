@@ -1,0 +1,283 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>カリンバ記譜法 v1 — モック 3 案</title>
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --ink: #232B33;
+    --ink-soft: #5A6672;
+    --line: #D8DDE2;
+    --accent: #2E7D74;
+    --accent-soft: #E7F1EF;
+    --judge: #9A6B2F;
+    --judge-soft: #F6EFE3;
+    --paper: #FBFCFC;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181C;
+      --ink: #E4E9ED;
+      --ink-soft: #9AA5AF;
+      --line: #333B43;
+      --accent: #7FC4BC;
+      --accent-soft: #1D2B29;
+      --judge: #D8B072;
+      --judge-soft: #2A2318;
+      --paper: #191E23;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14181C; --ink: #E4E9ED; --ink-soft: #9AA5AF; --line: #333B43;
+    --accent: #7FC4BC; --accent-soft: #1D2B29; --judge: #D8B072;
+    --judge-soft: #2A2318; --paper: #191E23;
+  }
+  :root[data-theme="light"] {
+    --bg: #FFFFFF; --ink: #232B33; --ink-soft: #5A6672; --line: #D8DDE2;
+    --accent: #2E7D74; --accent-soft: #E7F1EF; --judge: #9A6B2F;
+    --judge-soft: #F6EFE3; --paper: #FBFCFC;
+  }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    line-height: 1.75; margin: 0; padding: 2.5rem 1.25rem 4rem;
+  }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.45rem; letter-spacing: .01em; margin: 0 0 .25rem; text-wrap: balance; }
+  .sub { color: var(--ink-soft); font-size: .92rem; margin: 0 0 2rem; }
+  h2 { font-size: 1.08rem; margin: 0; }
+  .case { border: 1px solid var(--line); border-radius: 10px; background: var(--paper);
+          padding: 1.4rem 1.5rem 1.5rem; margin: 0 0 1.75rem; }
+  .case-head { display: flex; align-items: baseline; gap: .75rem; margin-bottom: .35rem; }
+  .tag { font-size: .72rem; font-weight: 700; letter-spacing: .09em; color: var(--accent);
+         border: 1px solid var(--accent); border-radius: 999px; padding: .05rem .6rem;
+         white-space: nowrap; }
+  .desc { color: var(--ink-soft); font-size: .9rem; margin: 0 0 1.1rem; }
+  .score-wrap { overflow-x: auto; padding: .5rem 0 .25rem; }
+  .judge-box { background: var(--judge-soft); border-radius: 8px; padding: .7rem 1rem;
+               font-size: .88rem; margin-top: 1.1rem; }
+  .judge-box b { color: var(--judge); }
+  .guide { background: var(--accent-soft); border-radius: 10px; padding: 1rem 1.25rem;
+           font-size: .92rem; margin-bottom: 2rem; }
+  .guide b { color: var(--accent); }
+  /* 案 A': 拍グリッド (手書き規約準拠) */
+  .beatgrid { display: flex; align-items: stretch; font-size: 1.35rem;
+              font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .beatgrid .beat { width: 2.6rem; text-align: center; position: relative;
+                    padding: .9rem 0 .35rem; }
+  .beatgrid .beat.wrap { font-size: .78em; letter-spacing: -0.06em; }
+  .beatgrid .barline { width: 2px; background: var(--ink); opacity: .55;
+                       margin: .35rem .15rem; }
+  .beatgrid .beat .dot::before { content: "•"; position: absolute; top: .15rem;
+                    left: 0; right: 0; font-size: .5em; text-align: center; }
+  .beatgrid .beat.empty::after { content: ""; }
+  /* 案 A: 数字譜 */
+  .numtab { font-variant-numeric: tabular-nums; font-size: 1.5rem; letter-spacing: .05em;
+            line-height: 2.3; white-space: nowrap; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; }
+  .numtab .bar { color: var(--line); padding: 0 .55rem; }
+  .numtab .n { display: inline-block; position: relative; min-width: 1.15em; text-align: center; }
+  .numtab .dot::before { content: "•"; position: absolute; top: -0.95em; left: 0; right: 0;
+                          font-size: .55em; color: var(--ink); text-align: center; }
+  .numtab .half { border-bottom: none; }
+  .numtab .hold { color: var(--ink-soft); }
+  .numtab .rest { color: var(--ink-soft); }
+  .legend { font-size: .82rem; color: var(--ink-soft); margin-top: .4rem; }
+  svg text { fill: var(--ink); }
+  svg .soft { fill: var(--ink-soft); }
+  svg .lineflat { stroke: var(--ink); }
+  svg .gridline { stroke: var(--line); }
+  svg .accentfill { fill: var(--accent); }
+  table.axes { border-collapse: collapse; font-size: .88rem; width: 100%; }
+  table.axes th, table.axes td { border: 1px solid var(--line); padding: .4rem .6rem; text-align: left; }
+  table.axes th { background: var(--paper); font-weight: 600; }
+  footer { color: var(--ink-soft); font-size: .82rem; margin-top: 2.5rem; }
+  code { background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
+         padding: 0 .3em; font-size: .9em; }
+</style>
+<main>
+<h1>カリンバ記譜法 v1 — モックレンダリング 3 案</h1>
+<p class="sub">S7 決定支援 (2026-07-05) · 代表フレーズ: きらきら星 冒頭 2 小節 (4/4、C 調、17-key)</p>
+
+<div class="guide">
+  <b>判定のしかた</b> — 各案を「<b>この楽譜だけを見て、録音を聴かずに弾き戻せるか</b>」で見てください。
+  音の高さ (どの tine か) とリズム (どれだけ伸ばすか・休むか) の両方が読み取れることが合格ラインです。
+  フレーズはどの案も同一: <code>ドドソソララソー / ファファミミレレドー</code>
+</div>
+
+<!-- ============ 案 A ============ -->
+<section class="case">
+  <div class="case-head"><span class="tag">案 A</span><h2>数字譜 + リズム拡張</h2></div>
+  <p class="desc">コミュニティ主流の数字タブに、音価 (ダッシュ = 前の音を 1 拍延長) と休符 (0) の規約を明示的に足した形。現行 <code>labelNumber</code> 出力の直接拡張。</p>
+  <div class="score-wrap">
+    <div class="numtab">
+      <span class="n">1</span><span class="n">1</span><span class="n">5</span><span class="n">5</span><span class="n">6</span><span class="n">6</span><span class="n">5</span><span class="n hold">–</span><span class="bar">|</span><span class="n">4</span><span class="n">4</span><span class="n">3</span><span class="n">3</span><span class="n">2</span><span class="n">2</span><span class="n">1</span><span class="n hold">–</span><span class="bar">|</span>
+    </div>
+  </div>
+  <p class="legend">読み方: 数字 = 移動ド (1=ド)。上の点 = 1 オクターブ上。<b>–</b> = 前の音を 1 拍のばす。<b>0</b> = 1 拍休み。1 文字 = 1 拍 (8 分音符は下線で 2 個組)。</p>
+  <div class="judge-box"><b>判定ポイント</b> — 数字がそのまま tine 刻印と一致 (17-key)。リズムはダッシュ規約を覚える必要がある。和音・グリッサンドは括弧で併記する拡張が別途必要。</div>
+</section>
+
+<!-- ============ 案 A' ============ -->
+<section class="case">
+  <div class="case-head"><span class="tag">案 A′</span><h2>拍グリッド (手書き規約準拠)</h2></div>
+  <p class="desc">作者の手書き譜規約 (#202 一次情報) をレンダリング化した案。紙面を基本音長の等間隔グリッドにし、<b>伸ばし・休符は空白カラム</b>、<b>小節線</b>で拍を集計。基本より短い音は例外としてカラム内に<b>ラップ</b>して詰める。横方向の距離が時間に比例する。</p>
+  <div class="score-wrap">
+    <div class="beatgrid">
+      <div class="barline"></div>
+      <div class="beat">ド</div><div class="beat">ド</div><div class="beat">ソ</div><div class="beat">ソ</div>
+      <div class="barline"></div>
+      <div class="beat">ラ</div><div class="beat">ラ</div><div class="beat">ソ</div><div class="beat empty"></div>
+      <div class="barline"></div>
+      <div class="beat"><span>ファ</span></div><div class="beat"><span>ファ</span></div><div class="beat">ミ</div><div class="beat">ミ</div>
+      <div class="barline"></div>
+      <div class="beat">レ</div><div class="beat">レ</div><div class="beat">ド</div><div class="beat empty"></div>
+      <div class="barline"></div>
+    </div>
+    <p class="legend" style="margin-top:.8rem">ラップの例 (8 分アルペジオ伴奏を 1 拍 1 カラムに 2 音詰める):</p>
+    <div class="beatgrid">
+      <div class="barline"></div>
+      <div class="beat wrap">ドミ</div><div class="beat wrap">ソミ</div><div class="beat wrap">ドミ</div><div class="beat wrap">ソミ</div>
+      <div class="barline"></div>
+    </div>
+  </div>
+  <p class="legend">読み方: 1 カラム = 基本音長 1 個。文字が無いカラム = 前の音をのばす (または休み)。縦線 = 小節線。詰め文字 = 基本の半分の長さ×2。</p>
+  <div class="judge-box"><b>判定ポイント</b> — 記号の読解規則が不要 (空白と距離がそのままリズム)。小節線と空白は相互依存 (小節線が無いと空白を数えられない)。実装は現行イベント列表示からの転換になるが、beat 量子化は実装済みなので土台はある。伸ばしと休符の区別が空白だけでは付かない点は要議論 (前の音が鳴り続けているか止まっているか)。</div>
+</section>
+
+<!-- ============ 案 B ============ -->
+<section class="case">
+  <div class="case-head"><span class="tag">案 B</span><h2>縦型タブ (KTabS 風)</h2></div>
+  <p class="desc">tine の物理配置を模した格子。列 = tine (楽器を正面から見た並び)、<b>下から上</b>へ時間が進む。行間隔 = 音価。</p>
+  <div class="score-wrap">
+    <svg width="560" height="470" viewBox="0 0 560 470" role="img" aria-label="縦型タブ: きらきら星冒頭">
+      <!-- 17 tines, physical order -->
+      <!-- physical layout: D6 B5 G5 E5 C5 A4 F4 D4 C4 E4 G4 B4 D5 F5 A5 C6 E6 -->
+      <!-- columns x = 40 + i*30 -->
+      <g font-size="11" text-anchor="middle">
+        <text x="40"  y="462" class="soft">D6</text><text x="70"  y="462" class="soft">B5</text><text x="100" y="462">G5</text><text x="130" y="462" class="soft">E5</text><text x="160" y="462">C5</text><text x="190" y="462" class="soft">A4</text><text x="220" y="462" class="soft">F4</text><text x="250" y="462" class="soft">D4</text><text x="280" y="462" class="soft">C4</text><text x="310" y="462" class="soft">E4</text><text x="340" y="462" class="soft">G4</text><text x="370" y="462" class="soft">B4</text><text x="400" y="462">D5</text><text x="430" y="462">F5</text><text x="460" y="462">A5</text><text x="490" y="462" class="soft">C6</text><text x="520" y="462" class="soft">E6</text>
+      </g>
+      <!-- vertical tine lines -->
+      <g class="gridline" stroke-width="1">
+        <line x1="40" y1="20" x2="40" y2="448"/><line x1="70" y1="20" x2="70" y2="448"/><line x1="100" y1="20" x2="100" y2="448"/><line x1="130" y1="20" x2="130" y2="448"/><line x1="160" y1="20" x2="160" y2="448"/><line x1="190" y1="20" x2="190" y2="448"/><line x1="220" y1="20" x2="220" y2="448"/><line x1="250" y1="20" x2="250" y2="448"/><line x1="280" y1="20" x2="280" y2="448"/><line x1="310" y1="20" x2="310" y2="448"/><line x1="340" y1="20" x2="340" y2="448"/><line x1="370" y1="20" x2="370" y2="448"/><line x1="400" y1="20" x2="400" y2="448"/><line x1="430" y1="20" x2="430" y2="448"/><line x1="460" y1="20" x2="460" y2="448"/><line x1="490" y1="20" x2="490" y2="448"/><line x1="520" y1="20" x2="520" y2="448"/>
+      </g>
+      <!-- bar separators (time axis, bottom -> top). 1 beat = 28px. m1: y 420..308, held note to 280; bar line at 266; m2: 252..140, held to 112; top bar 98 -->
+      <g class="gridline" stroke-width="1.5" stroke-dasharray="4 4">
+        <line x1="28" y1="266" x2="532" y2="266"/>
+        <line x1="28" y1="98"  x2="532" y2="98"/>
+      </g>
+      <g font-size="10" text-anchor="start">
+        <text x="536" y="424" class="soft">1</text>
+        <text x="536" y="270" class="soft">2</text>
+      </g>
+      <!-- notes: C5 C5 G5 G5 A5 A5 G5(2 beats) -->
+      <g class="accentfill">
+        <circle cx="160" cy="420" r="7"/>
+        <circle cx="160" cy="392" r="7"/>
+        <circle cx="100" cy="364" r="7"/>
+        <circle cx="100" cy="336" r="7"/>
+        <circle cx="460" cy="308" r="7"/>
+        <circle cx="460" cy="280" r="7"/>
+      </g>
+      <!-- held G5: note + duration stem upward -->
+      <g>
+        <circle cx="100" cy="252" r="7" class="accentfill"/>
+        <line x1="100" y1="252" x2="100" y2="224" stroke-width="3" class="lineflat" stroke-linecap="round" opacity="0.45"/>
+      </g>
+      <!-- m2: F5 F5 E5 E5 D5 D5 C5(2 beats) -->
+      <g class="accentfill">
+        <circle cx="430" cy="196" r="7"/>
+        <circle cx="430" cy="168" r="7"/>
+        <circle cx="130" cy="140" r="7"/>
+        <circle cx="130" cy="112" r="7"/>
+        <circle cx="400" cy="84"  r="7"/>
+        <circle cx="400" cy="56"  r="7"/>
+      </g>
+      <g>
+        <circle cx="160" cy="28" r="7" class="accentfill"/>
+        <line x1="160" y1="28" x2="160" y2="14" stroke-width="3" class="lineflat" stroke-linecap="round" opacity="0.45"/>
+      </g>
+    </svg>
+  </div>
+  <p class="legend">読み方: <b>下から上</b>に読む。● がある列の tine を弾く。●から伸びる縦線 = のばす長さ。破線 = 小節の区切り。</p>
+  <div class="judge-box"><b>判定ポイント</b> — どの tine を弾くかは迷いようがない (楽器と同じ並び)。左右の手の交互も見える。一方、紙面が縦に長く、フレーズの反復構造は読み取りにくい。tuning (17/21/34-key) ごとに紙面の幅が変わる。</div>
+</section>
+
+<!-- ============ 案 C ============ -->
+<section class="case">
+  <div class="case-head"><span class="tag">案 C</span><h2>ハイブリッド (五線 + 数字併記)</h2></div>
+  <p class="desc">市販カリンバ楽譜集の主流形式。リズム・休符は五線から、どの tine かは数字から読む。</p>
+  <div class="score-wrap">
+    <svg width="620" height="150" viewBox="0 0 620 150" role="img" aria-label="ハイブリッド譜: きらきら星冒頭">
+      <!-- staff lines: E4? use treble staff lines y: F5=40 D5=48 B4=56 G4=64 E4=72 -->
+      <g class="lineflat" stroke-width="1" opacity="0.75">
+        <line x1="20" y1="40" x2="600" y2="40"/>
+        <line x1="20" y1="48" x2="600" y2="48"/>
+        <line x1="20" y1="56" x2="600" y2="56"/>
+        <line x1="20" y1="64" x2="600" y2="64"/>
+        <line x1="20" y1="72" x2="600" y2="72"/>
+        <!-- barlines -->
+        <line x1="320" y1="40" x2="320" y2="72" stroke-width="1.5"/>
+        <line x1="598" y1="40" x2="598" y2="72" stroke-width="1.5"/>
+        <line x1="594" y1="40" x2="594" y2="72" stroke-width="3"/>
+      </g>
+      <text x="26" y="68" font-size="34" style="font-family: serif">𝄞</text>
+      <text x="58" y="52" font-size="15" font-weight="700" style="font-family: serif">4</text>
+      <text x="58" y="70" font-size="15" font-weight="700" style="font-family: serif">4</text>
+      <!-- notes m1: C5(60) C5 G5(44) G5 A5(40,ledger) A5 G5 half -->
+      <!-- quarter note: filled ellipse + stem up (x+5, len 26) -->
+      <g>
+        <ellipse cx="90"  cy="60" rx="5.5" ry="4" class="accentfill"/><line x1="95.5" y1="60" x2="95.5" y2="34" stroke-width="1.4" class="lineflat"/>
+        <ellipse cx="122" cy="60" rx="5.5" ry="4" class="accentfill"/><line x1="127.5" y1="60" x2="127.5" y2="34" stroke-width="1.4" class="lineflat"/>
+        <ellipse cx="154" cy="44" rx="5.5" ry="4" class="accentfill"/><line x1="159.5" y1="44" x2="159.5" y2="18" stroke-width="1.4" class="lineflat"/>
+        <ellipse cx="186" cy="44" rx="5.5" ry="4" class="accentfill"/><line x1="191.5" y1="44" x2="191.5" y2="18" stroke-width="1.4" class="lineflat"/>
+        <!-- A5 with ledger visual: A5 sits in space above top line (y=36); no ledger needed for space -->
+        <ellipse cx="218" cy="36" rx="5.5" ry="4" class="accentfill"/><line x1="223.5" y1="36" x2="223.5" y2="10" stroke-width="1.4" class="lineflat"/>
+        <ellipse cx="250" cy="36" rx="5.5" ry="4" class="accentfill"/><line x1="255.5" y1="36" x2="255.5" y2="10" stroke-width="1.4" class="lineflat"/>
+        <!-- half note G5 -->
+        <ellipse cx="288" cy="44" rx="5.5" ry="4" fill="none" stroke-width="1.6" class="lineflat"/><line x1="293.5" y1="44" x2="293.5" y2="18" stroke-width="1.4" class="lineflat"/>
+      </g>
+      <!-- notes m2: F5(40) F5 E5(44)? E5 sits on top line? E5 = top space below F5 line: F5 line y=40, E5 = space y=44? no: E5 is 4th space (44). D5 line 48, C5 space 52? C5 = 3rd space (52)... adjust: staff F5=40,E5=44,D5=48,C5=52,B4=56,A4=60,G4=64 -->
+      <g>
+        <ellipse cx="350" cy="40" rx="5.5" ry="4" class="accentfill"/><line x1="355.5" y1="40" x2="355.5" y2="14" stroke-width="1.4" class="lineflat"/>
+        <ellipse cx="382" cy="40" rx="5.5" ry="4" class="accentfill"/><line x1="387.5" y1="40" x2="387.5" y2="14" stroke-width="1.4" class="lineflat"/>
+        <ellipse cx="414" cy="44" rx="5.5" ry="4" class="accentfill"/><line x1="419.5" y1="44" x2="419.5" y2="18" stroke-width="1.4" class="lineflat"/>
+        <ellipse cx="446" cy="44" rx="5.5" ry="4" class="accentfill"/><line x1="451.5" y1="44" x2="451.5" y2="18" stroke-width="1.4" class="lineflat"/>
+        <ellipse cx="478" cy="48" rx="5.5" ry="4" class="accentfill"/><line x1="483.5" y1="48" x2="483.5" y2="22" stroke-width="1.4" class="lineflat"/>
+        <ellipse cx="510" cy="48" rx="5.5" ry="4" class="accentfill"/><line x1="515.5" y1="48" x2="515.5" y2="22" stroke-width="1.4" class="lineflat"/>
+        <ellipse cx="548" cy="52" rx="5.5" ry="4" fill="none" stroke-width="1.6" class="lineflat"/><line x1="553.5" y1="52" x2="553.5" y2="26" stroke-width="1.4" class="lineflat"/>
+      </g>
+      <!-- numbers under staff -->
+      <g font-size="14" text-anchor="middle" font-weight="600" style="font-variant-numeric: tabular-nums">
+        <text x="90"  y="100">1</text><text x="122" y="100">1</text>
+        <text x="154" y="100">5</text><text x="186" y="100">5</text>
+        <text x="218" y="100">6</text><text x="250" y="100">6</text>
+        <text x="288" y="100">5</text>
+        <text x="350" y="100">4</text><text x="382" y="100">4</text>
+        <text x="414" y="100">3</text><text x="446" y="100">3</text>
+        <text x="478" y="100">2</text><text x="510" y="100">2</text>
+        <text x="548" y="100">1</text>
+      </g>
+      <text x="20" y="132" font-size="12" class="soft">数字 = tine 刻印 (1 = ド)。音価・休符は五線どおり。</text>
+    </svg>
+  </div>
+  <div class="judge-box"><b>判定ポイント</b> — リズム・休符の表現力は最強で読者層も選ばないが、レンダリング実装 (五線 + 数字の 2 層同期) と修正 UI との接続コストは 3 案で最大。五線が読めなくても数字 + 音符の玉の間隔でおおよそ弾ける。</div>
+</section>
+
+<h2 style="margin-bottom:.6rem">評価軸の整理 (調査サマリより)</h2>
+<div class="score-wrap">
+<table class="axes">
+  <tr><th>軸</th><th>案 A 数字譜+リズム</th><th>案 B 縦型タブ</th><th>案 C ハイブリッド</th></tr>
+  <tr><td>弾き戻せるか</td><td>○ (規約を覚えれば)</td><td>◎ 物理配置直結</td><td>◎</td></tr>
+  <tr><td>奏者の読解慣習</td><td>◎ 主流</td><td>○ KTabS 知名度</td><td>○ 楽譜集の主流</td></tr>
+  <tr><td>修正 UI との相性</td><td>◎ イベント列と 1:1</td><td>○ 時間軸が縦</td><td>△ 2 層同期</td></tr>
+  <tr><td>印刷 / export</td><td>◎</td><td>△ 縦長</td><td>○</td></tr>
+  <tr><td>実装コスト</td><td>小</td><td>中</td><td>大</td></tr>
+  <tr><td>tuning 汎用性</td><td>◎ 移動ド</td><td>△ 幅が配置依存</td><td>○</td></tr>
+</table>
+</div>
+
+<footer>
+  調査本文: <code>docs/research/20260705-kalimba-notation-survey.md</code> ·
+  奏法記号 (グリッサンド / トレモロ / ミュート) の v1 範囲は方式決定後にユーザーが指定 ·
+  決定後は <code>docs/notation-v1.md</code> に規約として文書化 (S7 本体)
+</footer>
+</main>

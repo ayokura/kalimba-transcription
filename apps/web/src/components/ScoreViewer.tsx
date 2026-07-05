@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
+import { BeatGridScore } from "@/components/BeatGridScore";
 import { DoReMiScore } from "@/components/DoReMiScore";
 import { ScoreExportButtons } from "@/components/ScoreExportButtons";
 import {
@@ -157,6 +158,13 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correc
 
   const [labelMode, setLabelMode] = useState<LabelMode>("fixed");
   const scoreAreaRef = useRef<HTMLElement | null>(null);
+  // #202 案 A' プロトタイプの dev フラグ (?notation=beatgrid)。判定材料用で
+  // UI には切替を出さない。
+  const [useBeatGrid, setUseBeatGrid] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setUseBeatGrid(new URLSearchParams(window.location.search).get("notation") === "beatgrid");
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -290,12 +298,21 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correc
             数字{tonic ? ` (${tonic}=1)` : ""}
           </button>
         </div>
-        <DoReMiScore
-          events={events}
-          activeEventId={activeEventId}
-          onActiveEventIdChange={handleScoreEventTap}
-          labelFn={labelFn}
-        />
+        {useBeatGrid ? (
+          <BeatGridScore
+            events={events}
+            activeEventId={activeEventId}
+            onActiveEventIdChange={handleScoreEventTap}
+            labelFn={labelFn}
+          />
+        ) : (
+          <DoReMiScore
+            events={events}
+            activeEventId={activeEventId}
+            onActiveEventIdChange={handleScoreEventTap}
+            labelFn={labelFn}
+          />
+        )}
         <ScoreExportButtons
           scoreAreaRef={scoreAreaRef}
           fileBaseName={`kalimba-score-${transactionId.slice(0, 8)}`}
