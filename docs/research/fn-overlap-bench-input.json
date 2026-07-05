@@ -1,0 +1,1190 @@
+{
+ "summary": {
+  "recognizerFingerprint": "29eaaf1daa45ca68",
+  "kalimbaDspFingerprint": "b5688f4db575441d",
+  "recordings": 15,
+  "nonSaturated": {
+   "recordings": 9,
+   "txIds": [
+    "17ea7626-3c5d-450d-ae74-0116dea6e881",
+    "47902d34-95f4-4761-a634-6c1ef154531f",
+    "4e1ae5c6-df9a-4876-917d-b7e47699c8e5",
+    "70cc6637-ca99-4848-a0d4-944b53e5c742",
+    "9ce7df83-33a0-455d-bf86-c9392ce6f777",
+    "a9e30986-5300-4401-8b69-152cba821042",
+    "d7a82772-f77f-4820-9798-00133ae45f4e",
+    "ea7edd71-e815-4638-a248-a47fe21e5061",
+    "ebecf0c6-7e41-430b-bd60-8111a495185e"
+   ],
+   "microPrecision": 0.8515406162464986,
+   "microRecall": 0.7255369928400954,
+   "microF1": 0.7835051546391751,
+   "bootstrap": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6657,
+     0.8492
+    ]
+   }
+  },
+  "microPrecision": 0.9398410896708286,
+  "microRecall": 0.8780487804878049,
+  "microF1": 0.9078947368421053,
+  "oneBest": {
+   "onsetPrecision": 0.9398410896708286,
+   "onsetRecall": 0.8780487804878049,
+   "onsetF1": 0.9078947368421053,
+   "mirEvalCompat": {
+    "toleranceSec": 0.05,
+    "onsetPrecision": 0.9284903518728718,
+    "onsetRecall": 0.8674443266171792,
+    "onsetF1": 0.8969298245614035
+   }
+  },
+  "bootstrap": {
+   "iterations": 1000,
+   "seed": 42,
+   "recordings": 15,
+   "microF1CI95": [
+    0.7732,
+    0.9749
+   ]
+  },
+  "candidates": {
+   "recallAt1": 0.8780487804878049,
+   "recallAt3": 0.9141039236479321,
+   "recallAt5": 0.9257688229056203,
+   "candidateSlotsPerEvent": 3.128925619834711,
+   "hardMissRate": 0.07423117709437964,
+   "surfaceCandidateNotes": 1893,
+   "hardMisses": 70
+  },
+  "correction": {
+   "estimatedCost": 308,
+   "costPerTruthNote": 0.3266171792152704,
+   "candidateAssistedFixRate": 0.391304347826087,
+   "candidateEnabled": 45,
+   "manualInserts": 70,
+   "noteRemoves": 53,
+   "allFixes": 168
+  },
+  "confidence": {
+   "flaggedEventPrecision": 0.05,
+   "missedErrorRate": 0.8805970149253731,
+   "highConfidenceWrongRate": 0.13258426966292136,
+   "lowConfidenceCorrectRate": 0.95,
+   "candidateExpectedCalibrationError": 0.186027469624934,
+   "candidateHighConfidenceWrongRate": 1.0,
+   "candidateLowConfidenceCorrectRate": 0.10163551401869159,
+   "candidateCalibrationBins": [
+    {
+     "range": [
+      0.0,
+      0.2
+     ],
+     "count": 210,
+     "avgConfidence": 0.11952380952380952,
+     "accuracy": 0.08571428571428572
+    },
+    {
+     "range": [
+      0.2,
+      0.4
+     ],
+     "count": 1627,
+     "avgConfidence": 0.2983712354025815,
+     "accuracy": 0.10264290104486785
+    },
+    {
+     "range": [
+      0.4,
+      0.6
+     ],
+     "count": 48,
+     "avgConfidence": 0.5,
+     "accuracy": 0.0625
+    },
+    {
+     "range": [
+      0.6,
+      0.8
+     ],
+     "count": 8,
+     "avgConfidence": 0.7,
+     "accuracy": 0.0
+    },
+    {
+     "range": [
+      0.8,
+      1.0
+     ],
+     "count": 0
+    }
+   ]
+  }
+ },
+ "note": "trimmed note_f1_benchmark.py --json output (FN/FP lists only) \u2014 input to fn_overlap_artifact.py; regenerate: uv run python scripts/audio-analysis/note_f1_benchmark.py --json",
+ "results": [
+  {
+   "txId": "16b37356-1cdf-46f6-a0e9-989097d59850",
+   "truthNotes": 12,
+   "tp": 12,
+   "falsePositives": [],
+   "falseNegatives": [],
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  {
+   "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+   "truthNotes": 52,
+   "tp": 42,
+   "falsePositives": [
+    {
+     "time": 1.248,
+     "note": "C4",
+     "eventIndex": 0,
+     "eventId": "evt-1"
+    },
+    {
+     "time": 6.6347,
+     "note": "A4",
+     "eventIndex": 12,
+     "eventId": "evt-13"
+    },
+    {
+     "time": 13.3227,
+     "note": "E6",
+     "eventIndex": 28,
+     "eventId": "evt-29"
+    }
+   ],
+   "falseNegatives": [
+    {
+     "time": 0.4107,
+     "note": "C4",
+     "tol": 0.08
+    },
+    {
+     "time": 3.756,
+     "note": "G5",
+     "tol": 0.1
+    },
+    {
+     "time": 5.351,
+     "note": "B5",
+     "tol": 0.1
+    },
+    {
+     "time": 9.198,
+     "note": "G5",
+     "tol": 0.1
+    },
+    {
+     "time": 11.5467,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 13.3227,
+     "note": "D5",
+     "tol": 0.05
+    },
+    {
+     "time": 13.3227,
+     "note": "F5",
+     "tol": 0.05
+    },
+    {
+     "time": 14.784,
+     "note": "E4",
+     "tol": 0.08
+    },
+    {
+     "time": 14.784,
+     "note": "G4",
+     "tol": 0.08
+    },
+    {
+     "time": 14.784,
+     "note": "C5",
+     "tol": 0.08
+    }
+   ],
+   "precision": 0.9333333333333333,
+   "recall": 0.8076923076923077,
+   "f1": 0.8659793814432989
+  },
+  {
+   "txId": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "truthNotes": 238,
+   "tp": 238,
+   "falsePositives": [],
+   "falseNegatives": [],
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  {
+   "txId": "47902d34-95f4-4761-a634-6c1ef154531f",
+   "truthNotes": 48,
+   "tp": 36,
+   "falsePositives": [
+    {
+     "time": 6.7253,
+     "note": "G4",
+     "eventIndex": 7,
+     "eventId": "evt-8"
+    },
+    {
+     "time": 7.4827,
+     "note": "F4",
+     "eventIndex": 8,
+     "eventId": "evt-9"
+    },
+    {
+     "time": 14.1291,
+     "note": "F5",
+     "eventIndex": 16,
+     "eventId": "evt-17"
+    },
+    {
+     "time": 25.7013,
+     "note": "E5",
+     "eventIndex": 30,
+     "eventId": "evt-31"
+    }
+   ],
+   "falseNegatives": [
+    {
+     "time": 1.2213,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 4.3307,
+     "note": "G5",
+     "tol": 0.08
+    },
+    {
+     "time": 6.944,
+     "note": "G4",
+     "tol": 0.08
+    },
+    {
+     "time": 7.4827,
+     "note": "F5",
+     "tol": 0.08
+    },
+    {
+     "time": 9.936,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 10.7253,
+     "note": "G5",
+     "tol": 0.08
+    },
+    {
+     "time": 13.8987,
+     "note": "F5",
+     "tol": 0.08
+    },
+    {
+     "time": 16.2507,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 18.5493,
+     "note": "E5",
+     "tol": 0.08
+    },
+    {
+     "time": 23.4027,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 25.424,
+     "note": "E5",
+     "tol": 0.08
+    },
+    {
+     "time": 25.5467,
+     "note": "G4",
+     "tol": 0.08
+    }
+   ],
+   "precision": 0.9,
+   "recall": 0.75,
+   "f1": 0.8181818181818182
+  },
+  {
+   "txId": "4e1ae5c6-df9a-4876-917d-b7e47699c8e5",
+   "truthNotes": 8,
+   "tp": 5,
+   "falsePositives": [],
+   "falseNegatives": [
+    {
+     "time": 8.1973,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 13.134,
+     "note": "C5",
+     "tol": 0.25
+    },
+    {
+     "time": 16.9227,
+     "note": "C5",
+     "tol": 0.08
+    }
+   ],
+   "precision": 1.0,
+   "recall": 0.625,
+   "f1": 0.7692307692307693
+  },
+  {
+   "txId": "6bf97c7c-6e69-43f5-ab12-2069903be735",
+   "truthNotes": 10,
+   "tp": 10,
+   "falsePositives": [],
+   "falseNegatives": [],
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  {
+   "txId": "70cc6637-ca99-4848-a0d4-944b53e5c742",
+   "truthNotes": 141,
+   "tp": 111,
+   "falsePositives": [
+    {
+     "time": 3.7013,
+     "note": "F4",
+     "eventIndex": 7,
+     "eventId": "evt-8"
+    },
+    {
+     "time": 6.6293,
+     "note": "F4",
+     "eventIndex": 14,
+     "eventId": "evt-15"
+    },
+    {
+     "time": 7.0187,
+     "note": "C4",
+     "eventIndex": 15,
+     "eventId": "evt-16"
+    },
+    {
+     "time": 7.7493,
+     "note": "F5",
+     "eventIndex": 17,
+     "eventId": "evt-18"
+    },
+    {
+     "time": 10.6347,
+     "note": "F4",
+     "eventIndex": 24,
+     "eventId": "evt-25"
+    },
+    {
+     "time": 12.3787,
+     "note": "C4",
+     "eventIndex": 28,
+     "eventId": "evt-29"
+    },
+    {
+     "time": 17.7067,
+     "note": "E4",
+     "eventIndex": 41,
+     "eventId": "evt-42"
+    },
+    {
+     "time": 22.672,
+     "note": "G4",
+     "eventIndex": 52,
+     "eventId": "evt-53"
+    },
+    {
+     "time": 24.4053,
+     "note": "B4",
+     "eventIndex": 57,
+     "eventId": "evt-58"
+    },
+    {
+     "time": 26.9653,
+     "note": "F4",
+     "eventIndex": 64,
+     "eventId": "evt-65"
+    },
+    {
+     "time": 27.9947,
+     "note": "G4",
+     "eventIndex": 66,
+     "eventId": "evt-67"
+    },
+    {
+     "time": 29.76,
+     "note": "C4",
+     "eventIndex": 70,
+     "eventId": "evt-71"
+    },
+    {
+     "time": 34.816,
+     "note": "E4",
+     "eventIndex": 82,
+     "eventId": "evt-83"
+    },
+    {
+     "time": 34.816,
+     "note": "C5",
+     "eventIndex": 82,
+     "eventId": "evt-83"
+    }
+   ],
+   "falseNegatives": [
+    {
+     "time": 2.208,
+     "note": "G5",
+     "tol": 0.08
+    },
+    {
+     "time": 2.5653,
+     "note": "G4",
+     "tol": 0.08
+    },
+    {
+     "time": 3.7013,
+     "note": "A4",
+     "tol": 0.08
+    },
+    {
+     "time": 4.0907,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 5.1893,
+     "note": "G5",
+     "tol": 0.08
+    },
+    {
+     "time": 8.7947,
+     "note": "E5",
+     "tol": 0.08
+    },
+    {
+     "time": 10.2613,
+     "note": "D5",
+     "tol": 0.08
+    },
+    {
+     "time": 10.2613,
+     "note": "F4",
+     "tol": 0.08
+    },
+    {
+     "time": 12.0853,
+     "note": "E4",
+     "tol": 0.08
+    },
+    {
+     "time": 12.4587,
+     "note": "C4",
+     "tol": 0.08
+    },
+    {
+     "time": 14.944,
+     "note": "A4",
+     "tol": 0.08
+    },
+    {
+     "time": 16.9973,
+     "note": "G4",
+     "tol": 0.08
+    },
+    {
+     "time": 17.3653,
+     "note": "F4",
+     "tol": 0.08
+    },
+    {
+     "time": 18.0693,
+     "note": "G5",
+     "tol": 0.08
+    },
+    {
+     "time": 19.8347,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 20.1867,
+     "note": "F5",
+     "tol": 0.08
+    },
+    {
+     "time": 20.1867,
+     "note": "A4",
+     "tol": 0.08
+    },
+    {
+     "time": 20.5173,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 24.4373,
+     "note": "E4",
+     "tol": 0.08
+    },
+    {
+     "time": 25.1253,
+     "note": "G5",
+     "tol": 0.08
+    },
+    {
+     "time": 27.664,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 27.9947,
+     "note": "G5",
+     "tol": 0.08
+    },
+    {
+     "time": 28.736,
+     "note": "E4",
+     "tol": 0.08
+    },
+    {
+     "time": 34.0053,
+     "note": "C4",
+     "tol": 0.08
+    },
+    {
+     "time": 34.0053,
+     "note": "E4",
+     "tol": 0.08
+    },
+    {
+     "time": 34.0053,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 34.912,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 34.912,
+     "note": "E5",
+     "tol": 0.08
+    },
+    {
+     "time": 34.912,
+     "note": "G5",
+     "tol": 0.08
+    },
+    {
+     "time": 34.912,
+     "note": "C6",
+     "tol": 0.08
+    }
+   ],
+   "precision": 0.888,
+   "recall": 0.7872340425531915,
+   "f1": 0.8345864661654135
+  },
+  {
+   "txId": "8039a34c-afd0-4515-8949-80089117cf62",
+   "truthNotes": 239,
+   "tp": 239,
+   "falsePositives": [],
+   "falseNegatives": [],
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  {
+   "txId": "9ce7df83-33a0-455d-bf86-c9392ce6f777",
+   "truthNotes": 8,
+   "tp": 5,
+   "falsePositives": [],
+   "falseNegatives": [
+    {
+     "time": 4.3093,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 12.4587,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 16.8107,
+     "note": "C5",
+     "tol": 0.08
+    }
+   ],
+   "precision": 1.0,
+   "recall": 0.625,
+   "f1": 0.7692307692307693
+  },
+  {
+   "txId": "a9e30986-5300-4401-8b69-152cba821042",
+   "truthNotes": 81,
+   "tp": 36,
+   "falsePositives": [
+    {
+     "time": 1.104,
+     "note": "C4",
+     "eventIndex": 0,
+     "eventId": "evt-1"
+    },
+    {
+     "time": 1.104,
+     "note": "G4",
+     "eventIndex": 0,
+     "eventId": "evt-1"
+    },
+    {
+     "time": 1.9307,
+     "note": "D5",
+     "eventIndex": 1,
+     "eventId": "evt-2"
+    },
+    {
+     "time": 4.9973,
+     "note": "D5",
+     "eventIndex": 3,
+     "eventId": "evt-4"
+    },
+    {
+     "time": 5.7493,
+     "note": "E5",
+     "eventIndex": 4,
+     "eventId": "evt-5"
+    },
+    {
+     "time": 7.3333,
+     "note": "G4",
+     "eventIndex": 5,
+     "eventId": "evt-6"
+    },
+    {
+     "time": 7.3333,
+     "note": "G5",
+     "eventIndex": 5,
+     "eventId": "evt-6"
+    },
+    {
+     "time": 8.08,
+     "note": "E5",
+     "eventIndex": 6,
+     "eventId": "evt-7"
+    },
+    {
+     "time": 8.8213,
+     "note": "D5",
+     "eventIndex": 7,
+     "eventId": "evt-8"
+    },
+    {
+     "time": 9.5413,
+     "note": "C5",
+     "eventIndex": 8,
+     "eventId": "evt-9"
+    },
+    {
+     "time": 10.2667,
+     "note": "G4",
+     "eventIndex": 9,
+     "eventId": "evt-10"
+    },
+    {
+     "time": 10.2667,
+     "note": "B4",
+     "eventIndex": 9,
+     "eventId": "evt-10"
+    },
+    {
+     "time": 10.2667,
+     "note": "D5",
+     "eventIndex": 9,
+     "eventId": "evt-10"
+    },
+    {
+     "time": 10.2667,
+     "note": "A5",
+     "eventIndex": 9,
+     "eventId": "evt-10"
+    },
+    {
+     "time": 11.7333,
+     "note": "D5",
+     "eventIndex": 11,
+     "eventId": "evt-12"
+    },
+    {
+     "time": 22.384,
+     "note": "A5",
+     "eventIndex": 21,
+     "eventId": "evt-22"
+    },
+    {
+     "time": 25.6053,
+     "note": "C4",
+     "eventIndex": 24,
+     "eventId": "evt-25"
+    },
+    {
+     "time": 33.5627,
+     "note": "A5",
+     "eventIndex": 32,
+     "eventId": "evt-33"
+    },
+    {
+     "time": 34.2933,
+     "note": "D4",
+     "eventIndex": 33,
+     "eventId": "evt-34"
+    },
+    {
+     "time": 35.9093,
+     "note": "G4",
+     "eventIndex": 35,
+     "eventId": "evt-36"
+    }
+   ],
+   "falseNegatives": [
+    {
+     "time": 1.3492,
+     "note": "C4",
+     "tol": 0.1
+    },
+    {
+     "time": 1.3492,
+     "note": "E4",
+     "tol": 0.1
+    },
+    {
+     "time": 1.3492,
+     "note": "G4",
+     "tol": 0.1
+    },
+    {
+     "time": 1.3492,
+     "note": "C5",
+     "tol": 0.1
+    },
+    {
+     "time": 2.272,
+     "note": "D5",
+     "tol": 0.08
+    },
+    {
+     "time": 4.1813,
+     "note": "C4",
+     "tol": 0.08
+    },
+    {
+     "time": 4.1813,
+     "note": "E4",
+     "tol": 0.08
+    },
+    {
+     "time": 4.1813,
+     "note": "G4",
+     "tol": 0.08
+    },
+    {
+     "time": 4.1813,
+     "note": "C5",
+     "tol": 0.08
+    },
+    {
+     "time": 5.193,
+     "note": "D5",
+     "tol": 0.1
+    },
+    {
+     "time": 6.1098,
+     "note": "E5",
+     "tol": 0.1
+    },
+    {
+     "time": 7.5612,
+     "note": "C4",
+     "tol": 0.1
+    },
+    {
+     "time": 7.5612,
+     "note": "E4",
+     "tol": 0.1
+    },
+    {
+     "time": 7.5612,
+     "note": "G4",
+     "tol": 0.1
+    },
+    {
+     "time": 7.5612,
+     "note": "G5",
+     "tol": 0.1
+    },
+    {
+     "time": 8.2019,
+     "note": "E5",
+     "tol": 0.1
+    },
+    {
+     "time": 9.1047,
+     "note": "D5",
+     "tol": 0.1
+    },
+    {
+     "time": 9.8656,
+     "note": "C5",
+     "tol": 0.1
+    },
+    {
+     "time": 10.3784,
+     "note": "D4",
+     "tol": 0.1
+    },
+    {
+     "time": 10.3784,
+     "note": "G4",
+     "tol": 0.1
+    },
+    {
+     "time": 10.3784,
+     "note": "B4",
+     "tol": 0.1
+    },
+    {
+     "time": 10.3784,
+     "note": "D5",
+     "tol": 0.1
+    },
+    {
+     "time": 12.0419,
+     "note": "D5",
+     "tol": 0.1
+    },
+    {
+     "time": 13.4887,
+     "note": "C4",
+     "tol": 0.1
+    },
+    {
+     "time": 13.4887,
+     "note": "E4",
+     "tol": 0.1
+    },
+    {
+     "time": 13.4887,
+     "note": "G4",
+     "tol": 0.1
+    },
+    {
+     "time": 13.4887,
+     "note": "C5",
+     "tol": 0.1
+    },
+    {
+     "time": 16.3573,
+     "note": "C4",
+     "tol": 0.05
+    },
+    {
+     "time": 16.3573,
+     "note": "E4",
+     "tol": 0.05
+    },
+    {
+     "time": 19.44,
+     "note": "E4",
+     "tol": 0.05
+    },
+    {
+     "time": 22.384,
+     "note": "D4",
+     "tol": 0.05
+    },
+    {
+     "time": 23.904,
+     "note": "C4",
+     "tol": 0.05
+    },
+    {
+     "time": 23.904,
+     "note": "E4",
+     "tol": 0.05
+    },
+    {
+     "time": 25.5317,
+     "note": "G4",
+     "tol": 0.1
+    },
+    {
+     "time": 28.7413,
+     "note": "F4",
+     "tol": 0.05
+    },
+    {
+     "time": 30.4053,
+     "note": "C4",
+     "tol": 0.1
+    },
+    {
+     "time": 30.4053,
+     "note": "E4",
+     "tol": 0.1
+    },
+    {
+     "time": 30.4053,
+     "note": "G4",
+     "tol": 0.1
+    },
+    {
+     "time": 30.4053,
+     "note": "G5",
+     "tol": 0.1
+    },
+    {
+     "time": 31.8507,
+     "note": "C4",
+     "tol": 0.05
+    },
+    {
+     "time": 31.8507,
+     "note": "E4",
+     "tol": 0.05
+    },
+    {
+     "time": 31.8507,
+     "note": "G4",
+     "tol": 0.05
+    },
+    {
+     "time": 33.5627,
+     "note": "D4",
+     "tol": 0.05
+    },
+    {
+     "time": 35.12,
+     "note": "E4",
+     "tol": 0.05
+    },
+    {
+     "time": 35.12,
+     "note": "G4",
+     "tol": 0.05
+    }
+   ],
+   "precision": 0.6428571428571429,
+   "recall": 0.4444444444444444,
+   "f1": 0.5255474452554744
+  },
+  {
+   "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+   "truthNotes": 20,
+   "tp": 20,
+   "falsePositives": [],
+   "falseNegatives": [],
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  {
+   "txId": "bbeeaad8-26b2-4bff-a683-75ffe92c0626",
+   "truthNotes": 5,
+   "tp": 5,
+   "falsePositives": [],
+   "falseNegatives": [],
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  {
+   "txId": "d7a82772-f77f-4820-9798-00133ae45f4e",
+   "truthNotes": 45,
+   "tp": 36,
+   "falsePositives": [
+    {
+     "time": 3.5307,
+     "note": "E4",
+     "eventIndex": 4,
+     "eventId": "evt-5"
+    },
+    {
+     "time": 14.784,
+     "note": "G5",
+     "eventIndex": 24,
+     "eventId": "evt-25"
+    },
+    {
+     "time": 19.8613,
+     "note": "C4",
+     "eventIndex": 30,
+     "eventId": "evt-31"
+    },
+    {
+     "time": 19.8613,
+     "note": "E4",
+     "eventIndex": 30,
+     "eventId": "evt-31"
+    },
+    {
+     "time": 19.8613,
+     "note": "G4",
+     "eventIndex": 30,
+     "eventId": "evt-31"
+    }
+   ],
+   "falseNegatives": [
+    {
+     "time": 2.0593,
+     "note": "C4",
+     "tol": 0.1
+    },
+    {
+     "time": 2.0593,
+     "note": "C5",
+     "tol": 0.1
+    },
+    {
+     "time": 14.4756,
+     "note": "C4",
+     "tol": 0.1
+    },
+    {
+     "time": 14.4756,
+     "note": "G5",
+     "tol": 0.1
+    },
+    {
+     "time": 17.2213,
+     "note": "A4",
+     "tol": 0.08
+    },
+    {
+     "time": 20.0267,
+     "note": "C4",
+     "tol": 0.05
+    },
+    {
+     "time": 20.0267,
+     "note": "E4",
+     "tol": 0.05
+    },
+    {
+     "time": 20.0267,
+     "note": "G4",
+     "tol": 0.05
+    },
+    {
+     "time": 20.0267,
+     "note": "E5",
+     "tol": 0.05
+    }
+   ],
+   "precision": 0.8780487804878049,
+   "recall": 0.8,
+   "f1": 0.8372093023255814
+  },
+  {
+   "txId": "ea7edd71-e815-4638-a248-a47fe21e5061",
+   "truthNotes": 18,
+   "tp": 16,
+   "falsePositives": [
+    {
+     "time": 3.9947,
+     "note": "E5",
+     "eventIndex": 4,
+     "eventId": "evt-5"
+    },
+    {
+     "time": 3.9947,
+     "note": "F5",
+     "eventIndex": 4,
+     "eventId": "evt-5"
+    },
+    {
+     "time": 10.7787,
+     "note": "F5",
+     "eventIndex": 14,
+     "eventId": "evt-15"
+    }
+   ],
+   "falseNegatives": [
+    {
+     "time": 3.3973,
+     "note": "F5",
+     "tol": 0.08
+    },
+    {
+     "time": 4.1067,
+     "note": "F5",
+     "tol": 0.08
+    }
+   ],
+   "precision": 0.8421052631578947,
+   "recall": 0.8888888888888888,
+   "f1": 0.8648648648648649
+  },
+  {
+   "txId": "ebecf0c6-7e41-430b-bd60-8111a495185e",
+   "truthNotes": 18,
+   "tp": 17,
+   "falsePositives": [
+    {
+     "time": 3.184,
+     "note": "D5",
+     "eventIndex": 3,
+     "eventId": "evt-4"
+    },
+    {
+     "time": 3.872,
+     "note": "D5",
+     "eventIndex": 5,
+     "eventId": "evt-6"
+    },
+    {
+     "time": 8.48,
+     "note": "D5",
+     "eventIndex": 12,
+     "eventId": "evt-13"
+    },
+    {
+     "time": 8.992,
+     "note": "D5",
+     "eventIndex": 14,
+     "eventId": "evt-15"
+    }
+   ],
+   "falseNegatives": [
+    {
+     "time": 9.4667,
+     "note": "F5",
+     "tol": 0.08
+    }
+   ],
+   "precision": 0.8095238095238095,
+   "recall": 0.9444444444444444,
+   "f1": 0.8717948717948718
+  }
+ ]
+}

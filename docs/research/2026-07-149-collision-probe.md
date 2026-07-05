@@ -57,7 +57,8 @@ S0 実行の 2 つの方法論的欠陥を修正して再実行した (同スク
   - **E4 ×2.913 → B5 (-49c): fresh=0.205** (17-C tester、S0 の 0.182 を fresh 基準で確認)
   - **A4 ×3.003 → E6 (+4c): fresh=0.352** (17-C tester、n=4 — 新発見。テスター楽器の A4 は +20.3c 個体で partial も高め)
 - A4 ×2.372 → C6 は raw 0.700 だが fresh 0.000 — **partial 抽出リスト自体にも ring-out ghost が乗りうる**ことを示す。partial table 本実施では fresh 基準 (pre-onset 減算) で partial を抽出すべき (S3 設計入力)。
-- (同日追記) fresh 基準の table 本実施 ([`2026-07-per-tine-partial-table.md`](2026-07-per-tine-partial-table.md)) により、S0 テーブルの **×1.26-1.47 クラスタは大部分が「上方長 3 度 tine の残響」のゴースト**と判明。本文書 S0 節の「2nd partial が ×1.26-1.47」という解釈は取り下げ (実在の第 2 モードは ×2.8-2.9)。
+- (同日追記) fresh 基準の table 本実施 ([`2026-07-per-tine-partial-table.md`](2026-07-per-tine-partial-table.md)) により、S0 テーブルの **×1.26-1.47 クラスタは大部分が「上方長 3 度 tine の残響」のゴースト**と判明。本文書 S0 節の「2nd partial が ×1.26-1.47」という解釈は取り下げ。
+- (fugu-ultra 監査後の再訂正 2026-07-05) 安定成分 ×2.8-2.9 への「梁理論と整合」ラベルも誤りだった (理想梁の f2/f1=6.267)。梁第 1 overtone の実体は ×5.6-6.6 に別途実在する (high-partial-probe.json)。S0 節の Chapman 整合の記述は物理ラベルとしては無効で、非整数性の観察のみが有効。
 
 ### 解釈
 

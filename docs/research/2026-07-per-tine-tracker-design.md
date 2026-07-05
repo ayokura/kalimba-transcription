@@ -36,7 +36,7 @@ tine ごとに連続状態を保持する (attack/body/late_decay の離散 3 �
 | envelope 形状相関 (S2 判別器) | 同時打鍵 vs bleed (形が同じなら bleed) | ✓ | 高 (形状は振幅スケール不変) | S2 で個別実証 | 採用 (第 2 層) |
 | sustain チェック (100-250ms 保持) | フィルタ過渡 vs 実打鍵 | 250ms 遅延 | 高 | プローブで有効 | 採用 (streaming では確定遅延として許容) |
 | 位相コヒーレンス声部分離 | 同時和音の分離 | ✓ | 高 | 未実測 | 保留 (位相 RMS と同一物理量、冗長なら削る) |
-| integer 倍音 harmonic-parent guard | (現行) partial bleed 抑圧 | ✓ | — | **ROC で系統的 FN の主因と判明** | **不採用 (実測 partial に置換)** |
+| integer 倍音 harmonic-parent guard | (現行) partial bleed 抑圧 | ✓ | — | **ROC 対照で FN 第 2 因子 (15 件)。最大因子は dominance (23 件)** | **不採用 (実測 partial に置換。C4 系の置換効果は未検証)** |
 | winner-take-all dominance 排他 | (現行) skirt bleed 抑圧 | ✓ | — | ROC 非単調性の主因 | **不採用 (状態ベース説明に置換)** |
 
 \* ユーザー仮説 (2026-07-05): マイク距離揺らぎの音量変動は振幅系を騙すが位相系は頑健なはず。物理評価: 距離変化 δd の位相影響は 2πf·δd/c (440Hz で 0.08 rad/cm) で bar に対し余裕大。振幅は 1/r 直撃。**検証**: augmentation 資産で slow AM (0.5-2Hz、±3-6dB) を適用し jerk 系 vs 位相系の検出安定性を比較するメタモルフィックテスト (§6)。

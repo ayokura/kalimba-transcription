@@ -35,7 +35,7 @@ best combo の FN (70cc6637: 33 / 47902d34: 11) をピン状態とクロス集�
 
 - **FN の大半は pinned (綺麗な band rise がある音)**: 25/33、10/11
 - 内訳は C5×12・G5×9・F5×7 など**メロディ上音に集中**。きらきら星は C4+C5 オクターブ重ねと G4 伴奏が常時鳴る構造のため、integer 倍音 (m=2,3,4 ±50c) 前提の harmonic-parent guard が「C4 の 2 倍音 = C5」「C4 の 3 倍音 ≈ G5」として真のメロディ打鍵を捨てている
-- しかし実測 partial table (2075529) によれば **カリンバの第 2 モードは ×2.8-3.0 であり ×2.0 の partial はそもそも存在しない**。さらに実測 bleed 振幅は C4→G5 で median 0.002 と微小。integer 倍音 guard は前提が物理的に誤っており、**実測 partial 比 + 期待 bleed 振幅による定量 explaining-away に置換すべき** — tracker 観測モデルの設計入力として最重要
+- 実測 partial table (2075529) では該当帯域の安定成分は ×2.65-3.00 で、×2.0 丁度の強い成分は主要 tine に見られない (A5 ×2.002 / B5 ×2.107 は存在するが弱い)。実測 bleed 振幅は C4→G5 で median 0.002 と微小。integer 倍音 guard の「m=2,3,4 ±50c で無条件棄却」は実測分布と合っておらず、**実測 partial 比 + 期待 bleed 振幅による定量 explaining-away への置換が設計入力になる**。**ただし C4 の partial は母数不足で未確定のため、C4×2=C5 / C4×3≈G5 の具体的な置換効果は仮説・未検証** (fugu-ultra 監査による限定)
 
 ### 4. carryover-mask 型は既に回収できている (K2 最低獲物の到達可能性)
 
@@ -44,5 +44,5 @@ spectral pin で unpinnable (帯域 rise が 6dB 未満 = 鳴り残り中の再�
 ## S4 判定材料への含意
 
 - GO 側の観測モデル設計は「位相 RMS + jerk (検出)」×「実測 partial 比 + 減衰状態 (explaining-away)」の 2 層が明確になった。integer 倍音 guard と winner-take-all 排他は tracker では使わない
-- 較正済み動作点 (単発時点での上限): pooled F1 0.375 @ PHASE=0.7/JERK=150。tracker はこの上限を precision 側で大きく超える必要がある (recall は 0.77 が単発上限)
+- 較正済み動作点 (単発時点での上限): pooled F1 0.375 @ PHASE=0.7/JERK=150。tracker はこの上限を precision 側で大きく超える必要がある。**recall 0.77 は full-guard 限定の値** — guard off の生 recall は 0.974/0.958 (P=0.159)。tracker の課題は「P 0.16 起点からの precision 回収」(guard mode 追記参照)
 - ユーザー仮説 (2026-07-05): マイク距離揺らぎによる音量変動への頑健性は位相系の期待利点 (440Hz で 1cm ≈ 0.08 rad、PHASE_BAR 0.7 に対し余裕大)。slow AM メタモルフィックテストで振幅系と比較検証する (統合設計文書に記載)
