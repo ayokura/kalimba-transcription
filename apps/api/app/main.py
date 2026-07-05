@@ -337,6 +337,50 @@ def put_dev_gt_draft_verdict(tx8: str, payload: GtDraftVerdictPayload) -> dict:
     return {"verdict": document}
 
 
+# Dev-only (第 3 期 S2 の GT 除染フロー): bp_verify_prep.py が出力した bp-only 行
+# (GT に記載があるが recognizer が検出せず、Basic Pitch は検出した note — GT 汚染
+# の要検証ポイント) を /debug/bp-verify ページへ供給し、聞こえる/聞こえない/不明瞭
+# の裁定を保存する。gt-drafts と同じ dev-only temporary パターン。
+# temporary — GT 除染の運用が落ち着いたら /debug/bp-verify と一緒に撤去する。
+class BpVerifyVerdictPayload(BaseModel):
+    # 行キー "<txId>:<timeSec>:<note>" -> {decision?: real|absent|unclear, comment?}
+    rows: dict[str, dict]
+    done: bool = False
+
+
+@app.get("/api/dev/bp-verify")
+def get_dev_bp_verify() -> dict:
+    drafts_dir = get_data_dir() / "gt_drafts"
+    rows_path = drafts_dir / "bp_verify.rows.json"
+    if not rows_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "bp_verify.rows.json not found. Run "
+                "`uv run python scripts/audio-analysis/research/bp_verify_prep.py` first."
+            ),
+        )
+    doc = json.loads(rows_path.read_text(encoding="utf-8"))
+    verdict_path = drafts_dir / "bp_verify.verdict.json"
+    doc["verdict"] = (
+        json.loads(verdict_path.read_text(encoding="utf-8")) if verdict_path.is_file() else None
+    )
+    return doc
+
+
+@app.put("/api/dev/bp-verify/verdict")
+def put_dev_bp_verify_verdict(payload: BpVerifyVerdictPayload) -> dict:
+    drafts_dir = get_data_dir() / "gt_drafts"
+    if not (drafts_dir / "bp_verify.rows.json").is_file():
+        raise HTTPException(status_code=404, detail="bp-only rows not found.")
+    document = payload.model_dump()
+    document["savedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    (drafts_dir / "bp_verify.verdict.json").write_text(
+        json.dumps(document, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
+    )
+    return {"verdict": document}
+
+
 @app.get("/api/transcriptions/{transaction_id}")
 def get_transcription(transaction_id: str) -> dict:
     _validate_transaction_id(transaction_id)

@@ -114,6 +114,66 @@ def recognizer_notes(client: TestClient, tx_dir: Path) -> list[tuple[float, str]
     return out
 
 
+def classify_recording(tx_id: str, client: TestClient) -> dict:
+    """Run the both/recognizer-only/bp-only/both-miss classification for one
+    GT recording. Shared by `main()` (print report) and
+    `bp_verify_prep.py` (bp-only row extraction for the #S2 verify UI).
+
+    Returns
+        {
+            "tx_id": str, "n_gt": int, "counts": {...},
+            "bp_only": [{"timeSec": float, "note": str}, ...],
+            "bp_extra": int,
+        }
+    """
+    tx_dir = tx_dir_for(tx_id)
+    gt = json.loads(gt_path_for(tx_id).read_text())
+    tol = float(gt.get("toleranceSec", 0.08))
+    bp = run_basic_pitch(tx_id, tx_dir / "audio.wav")
+    rec = recognizer_notes(client, tx_dir)
+    rec_used = [False] * len(rec)
+    bp_used = [False] * len(bp)
+    counts = {"both": 0, "recognizer_only": 0, "bp_only": 0, "both_miss": 0}
+    bp_only_rows: list[dict] = []
+    for onset in gt["onsets"]:
+        t = float(onset["timeSec"])
+        names = onset.get("notes") or [onset.get("note")]
+        for name in names:
+            midi = name_to_midi(name)
+            rec_hit = None
+            for i, (rt, rn) in enumerate(rec):
+                if not rec_used[i] and rn == name and abs(rt - t) <= tol:
+                    rec_hit = i
+                    break
+            bp_hit = None
+            for i, row in enumerate(bp):
+                if not bp_used[i] and row["midi"] == midi and abs(row["start"] - t) <= BP_MATCH_TOLERANCE_SEC:
+                    bp_hit = i
+                    break
+            if rec_hit is not None:
+                rec_used[rec_hit] = True
+            if bp_hit is not None:
+                bp_used[bp_hit] = True
+            if rec_hit is not None and bp_hit is not None:
+                counts["both"] += 1
+            elif rec_hit is not None:
+                counts["recognizer_only"] += 1
+            elif bp_hit is not None:
+                counts["bp_only"] += 1
+                bp_only_rows.append({"timeSec": t, "note": name})
+            else:
+                counts["both_miss"] += 1
+    bp_extra = sum(1 for u in bp_used if not u)
+    n_gt = sum(len(o.get("notes") or [1]) for o in gt["onsets"])
+    return {
+        "tx_id": tx_id,
+        "n_gt": n_gt,
+        "counts": counts,
+        "bp_only": bp_only_rows,
+        "bp_extra": bp_extra,
+    }
+
+
 def main() -> int:
     client = TestClient(app)
     totals = {"both": 0, "recognizer_only": 0, "bp_only": 0, "both_miss": 0}
@@ -122,47 +182,16 @@ def main() -> int:
     print(f"{'tx':10s} {'GT':>3s} {'both':>5s} {'recOnly':>7s} {'bpOnly':>6s} {'miss':>4s} {'bpExtra':>7s}")
     blind_spots: list[str] = []
     for tx_id in TX_IDS:
-        tx_dir = tx_dir_for(tx_id)
-        gt = json.loads(gt_path_for(tx_id).read_text())
-        tol = float(gt.get("toleranceSec", 0.08))
-        bp = run_basic_pitch(tx_id, tx_dir / "audio.wav")
-        rec = recognizer_notes(client, tx_dir)
-        rec_used = [False] * len(rec)
-        bp_used = [False] * len(bp)
-        counts = {"both": 0, "recognizer_only": 0, "bp_only": 0, "both_miss": 0}
-        for onset in gt["onsets"]:
-            t = float(onset["timeSec"])
-            names = onset.get("notes") or [onset.get("note")]
-            for name in names:
-                gt_total += 1
-                midi = name_to_midi(name)
-                rec_hit = None
-                for i, (rt, rn) in enumerate(rec):
-                    if not rec_used[i] and rn == name and abs(rt - t) <= tol:
-                        rec_hit = i
-                        break
-                bp_hit = None
-                for i, row in enumerate(bp):
-                    if not bp_used[i] and row["midi"] == midi and abs(row["start"] - t) <= BP_MATCH_TOLERANCE_SEC:
-                        bp_hit = i
-                        break
-                if rec_hit is not None:
-                    rec_used[rec_hit] = True
-                if bp_hit is not None:
-                    bp_used[bp_hit] = True
-                if rec_hit is not None and bp_hit is not None:
-                    counts["both"] += 1
-                elif rec_hit is not None:
-                    counts["recognizer_only"] += 1
-                elif bp_hit is not None:
-                    counts["bp_only"] += 1
-                    blind_spots.append(f"{tx_id[:8]} {t:8.3f}s {name}")
-                else:
-                    counts["both_miss"] += 1
-        bp_extra = sum(1 for u in bp_used if not u)
-        bp_extra_total += bp_extra
-        n_gt = sum(len(o.get("notes") or [1]) for o in gt["onsets"])
-        print(f"{tx_id[:8]:10s} {n_gt:3d} {counts['both']:5d} {counts['recognizer_only']:7d} {counts['bp_only']:6d} {counts['both_miss']:4d} {bp_extra:7d}")
+        result = classify_recording(tx_id, client)
+        counts = result["counts"]
+        for row in result["bp_only"]:
+            blind_spots.append(f"{tx_id[:8]} {row['timeSec']:8.3f}s {row['note']}")
+        gt_total += result["n_gt"]
+        bp_extra_total += result["bp_extra"]
+        print(
+            f"{tx_id[:8]:10s} {result['n_gt']:3d} {counts['both']:5d} {counts['recognizer_only']:7d} "
+            f"{counts['bp_only']:6d} {counts['both_miss']:4d} {result['bp_extra']:7d}"
+        )
         for k in totals:
             totals[k] += counts[k]
     print(f"{'TOTAL':10s} {gt_total:3d} {totals['both']:5d} {totals['recognizer_only']:7d} {totals['bp_only']:6d} {totals['both_miss']:4d} {bp_extra_total:7d}")

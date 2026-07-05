@@ -475,6 +475,63 @@ export async function saveGtDraftVerdict(tx8: string, verdict: GtDraftVerdict): 
   if (!response.ok) throw new Error("Failed to save GT draft verdict.");
 }
 
+// --- Dev-only (temporary): /debug/bp-verify が使う (#S2 GT 除染)。
+// bp-only = GT にあるが recognizer が検出せず、Basic Pitch は検出した note。
+// ページと一緒に撤去する ---
+
+export type BpVerifyRow = {
+  txId: string;
+  tx8: string;
+  timeSec: number;
+  note: string;
+  bandEnergy: number;
+  noiseFloor: number;
+  energyRatio: number;
+  /** 事前仕分けのヒント (即断候補かどうか)。裁定そのものではない */
+  likelyAudible: boolean;
+};
+
+export type BpVerifyDecision = "real" | "absent" | "unclear";
+
+export type BpVerifyRowVerdict = {
+  decision?: BpVerifyDecision;
+  comment?: string;
+};
+
+export type BpVerifyVerdict = {
+  rows: Record<string, BpVerifyRowVerdict>;
+  done: boolean;
+  savedAt?: string;
+};
+
+export type BpVerifyData = {
+  generatedAt: string;
+  rows: BpVerifyRow[];
+  verdict: BpVerifyVerdict | null;
+};
+
+export function bpVerifyRowKey(row: Pick<BpVerifyRow, "txId" | "timeSec" | "note">): string {
+  return `${row.txId}:${row.timeSec}:${row.note}`;
+}
+
+export async function fetchBpVerify(): Promise<BpVerifyData> {
+  const response = await fetch(`${API_BASE_URL}/api/dev/bp-verify`, { cache: "no-store" });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    throw new Error(detail?.detail ?? "Failed to load bp-verify rows.");
+  }
+  return (await response.json()) as BpVerifyData;
+}
+
+export async function saveBpVerifyVerdict(verdict: BpVerifyVerdict): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/dev/bp-verify/verdict`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(verdict),
+  });
+  if (!response.ok) throw new Error("Failed to save bp-verify verdict.");
+}
+
 export async function fetchReviewQueue(
   options: { limit?: number; status?: ReviewStatusValue | null } = {},
 ): Promise<ReviewQueueEntry[]> {
