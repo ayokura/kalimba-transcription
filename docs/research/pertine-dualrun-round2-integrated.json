@@ -1,0 +1,285 @@
+{
+ "round": 2,
+ "form": "integrated pipeline dual-run (settings-flag toggle)",
+ "s4Baseline": {
+  "microR": 0.726,
+  "pooledFP": 53,
+  "k4Ceiling": 61
+ },
+ "recordings": [
+  {
+   "tx": "17ea7626",
+   "base": {
+    "tp": 42,
+    "fp": 3,
+    "f1": 0.866
+   },
+   "aug": {
+    "tp": 43,
+    "fp": 3,
+    "f1": 0.878
+   },
+   "pertineWeakSlots": 3
+  },
+  {
+   "tx": "4e1ae5c6",
+   "base": {
+    "tp": 5,
+    "fp": 0,
+    "f1": 0.769
+   },
+   "aug": {
+    "tp": 8,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "pertineWeakSlots": 0
+  },
+  {
+   "tx": "9ce7df83",
+   "base": {
+    "tp": 5,
+    "fp": 0,
+    "f1": 0.769
+   },
+   "aug": {
+    "tp": 6,
+    "fp": 0,
+    "f1": 0.857
+   },
+   "pertineWeakSlots": 1
+  },
+  {
+   "tx": "bbd6797f",
+   "base": {
+    "tp": 20,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 20,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "pertineWeakSlots": 0
+  },
+  {
+   "tx": "d7a82772",
+   "base": {
+    "tp": 36,
+    "fp": 5,
+    "f1": 0.837
+   },
+   "aug": {
+    "tp": 36,
+    "fp": 5,
+    "f1": 0.837
+   },
+   "pertineWeakSlots": 0
+  },
+  {
+   "tx": "ea7edd71",
+   "base": {
+    "tp": 16,
+    "fp": 3,
+    "f1": 0.865
+   },
+   "aug": {
+    "tp": 16,
+    "fp": 3,
+    "f1": 0.865
+   },
+   "pertineWeakSlots": 0
+  },
+  {
+   "tx": "ebecf0c6",
+   "base": {
+    "tp": 17,
+    "fp": 4,
+    "f1": 0.872
+   },
+   "aug": {
+    "tp": 17,
+    "fp": 4,
+    "f1": 0.872
+   },
+   "pertineWeakSlots": 0
+  },
+  {
+   "tx": "16b37356",
+   "base": {
+    "tp": 12,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 12,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "pertineWeakSlots": 0
+  },
+  {
+   "tx": "2bf55c75",
+   "base": {
+    "tp": 238,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 238,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "pertineWeakSlots": 10
+  },
+  {
+   "tx": "47902d34",
+   "base": {
+    "tp": 36,
+    "fp": 4,
+    "f1": 0.818
+   },
+   "aug": {
+    "tp": 36,
+    "fp": 4,
+    "f1": 0.818
+   },
+   "pertineWeakSlots": 1
+  },
+  {
+   "tx": "6bf97c7c",
+   "base": {
+    "tp": 10,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 10,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "pertineWeakSlots": 0
+  },
+  {
+   "tx": "70cc6637",
+   "base": {
+    "tp": 111,
+    "fp": 14,
+    "f1": 0.835
+   },
+   "aug": {
+    "tp": 115,
+    "fp": 14,
+    "f1": 0.852
+   },
+   "pertineWeakSlots": 6
+  },
+  {
+   "tx": "8039a34c",
+   "base": {
+    "tp": 239,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 239,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "pertineWeakSlots": 12
+  },
+  {
+   "tx": "a9e30986",
+   "base": {
+    "tp": 36,
+    "fp": 20,
+    "f1": 0.526
+   },
+   "aug": {
+    "tp": 36,
+    "fp": 20,
+    "f1": 0.526
+   },
+   "pertineWeakSlots": 3
+  },
+  {
+   "tx": "bbeeaad8",
+   "base": {
+    "tp": 5,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 5,
+    "fp": 0,
+    "f1": 1.0
+   },
+   "pertineWeakSlots": 0
+  }
+ ],
+ "headline": {
+  "base": {
+   "n": 9,
+   "tp": 304,
+   "fp": 53,
+   "truth": 419,
+   "pred": 357,
+   "P": 0.852,
+   "R": 0.726,
+   "F1": 0.784,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6557,
+     0.8481
+    ]
+   }
+  },
+  "aug": {
+   "n": 9,
+   "tp": 313,
+   "fp": 53,
+   "truth": 419,
+   "pred": 366,
+   "P": 0.855,
+   "R": 0.747,
+   "F1": 0.797,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6695,
+     0.8671
+    ]
+   }
+  }
+ },
+ "k2": {
+  "base": 0.625,
+  "aug": 0.875,
+  "truth": 16,
+  "verdict": "PASS"
+ },
+ "k3": {
+  "deltaR": 0.021,
+  "pairedBootstrap": {
+   "iterations": 2000,
+   "seed": 42,
+   "deltaRCI95": [
+    0.0048,
+    0.0502
+   ]
+  },
+  "verdict": "PASS"
+ },
+ "k4": {
+  "fpBase": 53,
+  "fpAug": 53,
+  "ceiling": 61,
+  "verdict": "PASS"
+ }
+}
