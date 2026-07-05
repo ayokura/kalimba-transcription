@@ -1,0 +1,914 @@
+{
+ "round": 1,
+ "form": "offline post-processing (pre-integration)",
+ "params": {
+  "phaseBar": 0.7,
+  "jerkBar": 150.0
+ },
+ "s4Baseline": {
+  "microR": 0.726,
+  "pooledFP": 53,
+  "k4Ceiling": 61
+ },
+ "recordings": [
+  {
+   "tx": "17ea7626",
+   "group": "kalimba-17-c|tester",
+   "rescues": 5,
+   "base": {
+    "tp": 42,
+    "precision": 0.9333333333333333,
+    "recall": 0.8076923076923077,
+    "f1": 0.8659793814432989
+   },
+   "aug": {
+    "tp": 43,
+    "precision": 0.86,
+    "recall": 0.8269230769230769,
+    "f1": 0.8431372549019608
+   },
+   "fpBase": 3,
+   "fpAug": 7,
+   "rescueList": [
+    {
+     "t": 3.2,
+     "note": "E5",
+     "err": 0.834,
+     "jerk": 151.7
+    },
+    {
+     "t": 4.945,
+     "note": "F4",
+     "err": 5.927,
+     "jerk": 175.4
+    },
+    {
+     "t": 12.32,
+     "note": "F4",
+     "err": 1.513,
+     "jerk": 210.2
+    },
+    {
+     "t": 13.44,
+     "note": "C5",
+     "err": 4.606,
+     "jerk": 300.5
+    },
+    {
+     "t": 14.81,
+     "note": "G4",
+     "err": 3.707,
+     "jerk": 370.2
+    }
+   ]
+  },
+  {
+   "tx": "4e1ae5c6",
+   "group": "kalimba-17-c|author",
+   "rescues": 5,
+   "base": {
+    "tp": 5,
+    "precision": 1.0,
+    "recall": 0.625,
+    "f1": 0.7692307692307693
+   },
+   "aug": {
+    "tp": 8,
+    "precision": 0.8,
+    "recall": 1.0,
+    "f1": 0.888888888888889
+   },
+   "fpBase": 0,
+   "fpAug": 2,
+   "rescueList": [
+    {
+     "t": 8.22,
+     "note": "C5",
+     "err": 2.339,
+     "jerk": 294.3
+    },
+    {
+     "t": 8.28,
+     "note": "C5",
+     "err": 10.311,
+     "jerk": 200.4
+    },
+    {
+     "t": 12.865,
+     "note": "C5",
+     "err": 2.202,
+     "jerk": 172.0
+    },
+    {
+     "t": 12.93,
+     "note": "C5",
+     "err": 10.465,
+     "jerk": 186.5
+    },
+    {
+     "t": 16.945,
+     "note": "C5",
+     "err": 6.692,
+     "jerk": 268.9
+    }
+   ]
+  },
+  {
+   "tx": "9ce7df83",
+   "group": "kalimba-17-c|author",
+   "rescues": 3,
+   "base": {
+    "tp": 5,
+    "precision": 1.0,
+    "recall": 0.625,
+    "f1": 0.7692307692307693
+   },
+   "aug": {
+    "tp": 6,
+    "precision": 0.75,
+    "recall": 0.75,
+    "f1": 0.75
+   },
+   "fpBase": 0,
+   "fpAug": 2,
+   "rescueList": [
+    {
+     "t": 3.865,
+     "note": "C5",
+     "err": 2.137,
+     "jerk": 183.3
+    },
+    {
+     "t": 3.925,
+     "note": "C5",
+     "err": 10.246,
+     "jerk": 193.8
+    },
+    {
+     "t": 16.84,
+     "note": "C5",
+     "err": 7.206,
+     "jerk": 239.0
+    }
+   ]
+  },
+  {
+   "tx": "bbd6797f",
+   "group": "kalimba-17-c|author",
+   "rescues": 0,
+   "base": {
+    "tp": 20,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 20,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "rescueList": []
+  },
+  {
+   "tx": "d7a82772",
+   "group": "kalimba-17-c|tester",
+   "rescues": 0,
+   "base": {
+    "tp": 36,
+    "precision": 0.8780487804878049,
+    "recall": 0.8,
+    "f1": 0.8372093023255814
+   },
+   "aug": {
+    "tp": 36,
+    "precision": 0.8780487804878049,
+    "recall": 0.8,
+    "f1": 0.8372093023255814
+   },
+   "fpBase": 5,
+   "fpAug": 5,
+   "rescueList": []
+  },
+  {
+   "tx": "ea7edd71",
+   "group": "kalimba-17-c|author",
+   "rescues": 1,
+   "base": {
+    "tp": 16,
+    "precision": 0.8421052631578947,
+    "recall": 0.8888888888888888,
+    "f1": 0.8648648648648649
+   },
+   "aug": {
+    "tp": 17,
+    "precision": 0.85,
+    "recall": 0.9444444444444444,
+    "f1": 0.8947368421052632
+   },
+   "fpBase": 3,
+   "fpAug": 3,
+   "rescueList": [
+    {
+     "t": 4.12,
+     "note": "F5",
+     "err": 5.559,
+     "jerk": 6384.2
+    }
+   ]
+  },
+  {
+   "tx": "ebecf0c6",
+   "group": "kalimba-17-c|author",
+   "rescues": 2,
+   "base": {
+    "tp": 17,
+    "precision": 0.8095238095238095,
+    "recall": 0.9444444444444444,
+    "f1": 0.8717948717948718
+   },
+   "aug": {
+    "tp": 17,
+    "precision": 0.7391304347826086,
+    "recall": 0.9444444444444444,
+    "f1": 0.8292682926829269
+   },
+   "fpBase": 4,
+   "fpAug": 6,
+   "rescueList": [
+    {
+     "t": 3.285,
+     "note": "F5",
+     "err": 1.736,
+     "jerk": 359.5
+    },
+    {
+     "t": 3.96,
+     "note": "F5",
+     "err": 1.917,
+     "jerk": 1158.5
+    }
+   ]
+  },
+  {
+   "tx": "16b37356",
+   "group": "kalimba-34l-c|author",
+   "rescues": 0,
+   "base": {
+    "tp": 12,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 12,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "rescueList": []
+  },
+  {
+   "tx": "2bf55c75",
+   "group": "kalimba-17-g-low|author",
+   "rescues": 12,
+   "base": {
+    "tp": 238,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 238,
+    "precision": 0.952,
+    "recall": 1.0,
+    "f1": 0.9754098360655737
+   },
+   "fpBase": 0,
+   "fpAug": 12,
+   "rescueList": [
+    {
+     "t": 21.9401,
+     "note": "F#4",
+     "err": 5.65,
+     "jerk": 189.5
+    },
+    {
+     "t": 22.444,
+     "note": "B4",
+     "err": 2.478,
+     "jerk": 458.1
+    },
+    {
+     "t": 34.1374,
+     "note": "G4",
+     "err": 9.176,
+     "jerk": 751.9
+    },
+    {
+     "t": 34.1574,
+     "note": "D4",
+     "err": 0.705,
+     "jerk": 603.6
+    },
+    {
+     "t": 52.8299,
+     "note": "F#4",
+     "err": 0.714,
+     "jerk": 205.4
+    },
+    {
+     "t": 58.1079,
+     "note": "G4",
+     "err": 4.549,
+     "jerk": 288.4
+    },
+    {
+     "t": 58.6118,
+     "note": "D4",
+     "err": 1.503,
+     "jerk": 1967.7
+    },
+    {
+     "t": 59.2603,
+     "note": "G4",
+     "err": 4.537,
+     "jerk": 164.8
+    },
+    {
+     "t": 76.0222,
+     "note": "F#4",
+     "err": 5.315,
+     "jerk": 416.7
+    },
+    {
+     "t": 84.054,
+     "note": "B4",
+     "err": 0.756,
+     "jerk": 514.8
+    },
+    {
+     "t": 84.1138,
+     "note": "B4",
+     "err": 3.577,
+     "jerk": 647.2
+    },
+    {
+     "t": 93.3129,
+     "note": "B3",
+     "err": 0.79,
+     "jerk": 238.1
+    }
+   ]
+  },
+  {
+   "tx": "47902d34",
+   "group": "kalimba-17-c|tester",
+   "rescues": 1,
+   "base": {
+    "tp": 36,
+    "precision": 0.9,
+    "recall": 0.75,
+    "f1": 0.8181818181818182
+   },
+   "aug": {
+    "tp": 36,
+    "precision": 0.8780487804878049,
+    "recall": 0.75,
+    "f1": 0.8089887640449439
+   },
+   "fpBase": 4,
+   "fpAug": 5,
+   "rescueList": [
+    {
+     "t": 20.94,
+     "note": "F4",
+     "err": 1.514,
+     "jerk": 284.2
+    }
+   ]
+  },
+  {
+   "tx": "6bf97c7c",
+   "group": "kalimba-17-c|author",
+   "rescues": 0,
+   "base": {
+    "tp": 10,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 10,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "rescueList": []
+  },
+  {
+   "tx": "70cc6637",
+   "group": "kalimba-17-c|tester",
+   "rescues": 10,
+   "base": {
+    "tp": 111,
+    "precision": 0.888,
+    "recall": 0.7872340425531915,
+    "f1": 0.8345864661654135
+   },
+   "aug": {
+    "tp": 119,
+    "precision": 0.8814814814814815,
+    "recall": 0.8439716312056738,
+    "f1": 0.8623188405797101
+   },
+   "fpBase": 14,
+   "fpAug": 16,
+   "rescueList": [
+    {
+     "t": 4.115,
+     "note": "C5",
+     "err": 3.176,
+     "jerk": 1341.6
+    },
+    {
+     "t": 17.06,
+     "note": "G4",
+     "err": 2.401,
+     "jerk": 162.3
+    },
+    {
+     "t": 17.39,
+     "note": "F4",
+     "err": 5.063,
+     "jerk": 294.5
+    },
+    {
+     "t": 20.215,
+     "note": "F5",
+     "err": 3.079,
+     "jerk": 530.9
+    },
+    {
+     "t": 20.57,
+     "note": "C5",
+     "err": 0.86,
+     "jerk": 216.9
+    },
+    {
+     "t": 21.555,
+     "note": "D4",
+     "err": 0.72,
+     "jerk": 332.2
+    },
+    {
+     "t": 24.435,
+     "note": "F4",
+     "err": 4.693,
+     "jerk": 152.6
+    },
+    {
+     "t": 27.695,
+     "note": "C5",
+     "err": 2.566,
+     "jerk": 267.8
+    },
+    {
+     "t": 28.78,
+     "note": "E4",
+     "err": 6.837,
+     "jerk": 471.1
+    },
+    {
+     "t": 33.99,
+     "note": "E4",
+     "err": 7.396,
+     "jerk": 261.7
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "group": "kalimba-34l-c|author",
+   "rescues": 18,
+   "base": {
+    "tp": 239,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 239,
+    "precision": 0.9299610894941635,
+    "recall": 1.0,
+    "f1": 0.9637096774193549
+   },
+   "fpBase": 0,
+   "fpAug": 18,
+   "rescueList": [
+    {
+     "t": 3.4322,
+     "note": "F#5",
+     "err": 6.259,
+     "jerk": 731.3
+    },
+    {
+     "t": 3.4921,
+     "note": "F#5",
+     "err": 2.739,
+     "jerk": 776.6
+    },
+    {
+     "t": 8.2961,
+     "note": "C#5",
+     "err": 15.014,
+     "jerk": 492.6
+    },
+    {
+     "t": 10.2567,
+     "note": "G#5",
+     "err": 15.87,
+     "jerk": 1058.3
+    },
+    {
+     "t": 17.4653,
+     "note": "D#5",
+     "err": 16.409,
+     "jerk": 499.6
+    },
+    {
+     "t": 31.3937,
+     "note": "D#4",
+     "err": 7.214,
+     "jerk": 235.1
+    },
+    {
+     "t": 48.1007,
+     "note": "A#4",
+     "err": 5.698,
+     "jerk": 181.8
+    },
+    {
+     "t": 49.7519,
+     "note": "C#5",
+     "err": 14.707,
+     "jerk": 631.8
+    },
+    {
+     "t": 50.8045,
+     "note": "F#5",
+     "err": 5.533,
+     "jerk": 186.0
+    },
+    {
+     "t": 66.5488,
+     "note": "F#5",
+     "err": 2.065,
+     "jerk": 908.2
+    },
+    {
+     "t": 67.1424,
+     "note": "G#5",
+     "err": 12.085,
+     "jerk": 859.1
+    },
+    {
+     "t": 67.6213,
+     "note": "D#4",
+     "err": 0.703,
+     "jerk": 333.3
+    },
+    {
+     "t": 72.0313,
+     "note": "C#5",
+     "err": 13.046,
+     "jerk": 580.7
+    },
+    {
+     "t": 75.3637,
+     "note": "D#5",
+     "err": 16.455,
+     "jerk": 473.6
+    },
+    {
+     "t": 77.5887,
+     "note": "D#5",
+     "err": 13.159,
+     "jerk": 527.6
+    },
+    {
+     "t": 79.215,
+     "note": "E4",
+     "err": 3.032,
+     "jerk": 163.9
+    },
+    {
+     "t": 88.0948,
+     "note": "D#5",
+     "err": 2.193,
+     "jerk": 747.7
+    },
+    {
+     "t": 90.9184,
+     "note": "C#5",
+     "err": 5.811,
+     "jerk": 199.1
+    }
+   ]
+  },
+  {
+   "tx": "a9e30986",
+   "group": "kalimba-17-c|tester",
+   "rescues": 5,
+   "base": {
+    "tp": 36,
+    "precision": 0.6428571428571429,
+    "recall": 0.4444444444444444,
+    "f1": 0.5255474452554744
+   },
+   "aug": {
+    "tp": 38,
+    "precision": 0.6229508196721312,
+    "recall": 0.4691358024691358,
+    "f1": 0.5352112676056338
+   },
+   "fpBase": 20,
+   "fpAug": 23,
+   "rescueList": [
+    {
+     "t": 10.35,
+     "note": "D5",
+     "err": 4.129,
+     "jerk": 1442.6
+    },
+    {
+     "t": 22.47,
+     "note": "D5",
+     "err": 1.156,
+     "jerk": 1081.2
+    },
+    {
+     "t": 29.44,
+     "note": "G5",
+     "err": 1.135,
+     "jerk": 601.8
+    },
+    {
+     "t": 30.315,
+     "note": "G5",
+     "err": 3.21,
+     "jerk": 1088.0
+    },
+    {
+     "t": 32.66,
+     "note": "F5",
+     "err": 4.215,
+     "jerk": 844.2
+    }
+   ]
+  },
+  {
+   "tx": "bbeeaad8",
+   "group": "kalimba-17-c|author",
+   "rescues": 0,
+   "base": {
+    "tp": 5,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "aug": {
+    "tp": 5,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   },
+   "fpBase": 0,
+   "fpAug": 0,
+   "rescueList": []
+  }
+ ],
+ "headline": {
+  "base": {
+   "n": 9,
+   "tp": 304,
+   "fp": 53,
+   "P": 0.852,
+   "R": 0.726,
+   "F1": 0.784,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6557,
+     0.8481
+    ]
+   }
+  },
+  "aug": {
+   "n": 9,
+   "tp": 320,
+   "fp": 69,
+   "P": 0.823,
+   "R": 0.764,
+   "F1": 0.792,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6631,
+     0.8571
+    ]
+   }
+  }
+ },
+ "k2": {
+  "base": 0.625,
+  "aug": 0.875,
+  "truth": 16
+ },
+ "fixtureRisk": {
+  "fixturesWithAdditions": 6,
+  "totalAdditions": 35
+ },
+ "fixtureRiskDetail": [
+  {
+   "fixture": "kalimba-17-c-bwv147-sequence-163-01",
+   "rescues": [
+    {
+     "t": 44.485,
+     "note": "F5"
+    },
+    {
+     "t": 117.545,
+     "note": "F5"
+    }
+   ]
+  },
+  {
+   "fixture": "kalimba-17-c-c4-to-e6-sequence-17-repeat-03-01",
+   "rescues": [
+    {
+     "t": 24.065,
+     "note": "F5"
+    }
+   ]
+  },
+  {
+   "fixture": "kalimba-17-c-e6-to-c4-sequence-17-01",
+   "rescues": [
+    {
+     "t": 3.825,
+     "note": "C6"
+    }
+   ]
+  },
+  {
+   "fixture": "kalimba-17-c-e6-to-g4-sequence-06-01",
+   "rescues": [
+    {
+     "t": 2.82,
+     "note": "C6"
+    }
+   ]
+  },
+  {
+   "fixture": "kalimba-17-g-low-bwv147-sequence-163-01",
+   "rescues": [
+    {
+     "t": 21.9401,
+     "note": "F#4"
+    },
+    {
+     "t": 22.444,
+     "note": "B4"
+    },
+    {
+     "t": 34.1374,
+     "note": "G4"
+    },
+    {
+     "t": 34.1574,
+     "note": "D4"
+    },
+    {
+     "t": 52.8299,
+     "note": "F#4"
+    },
+    {
+     "t": 58.1079,
+     "note": "G4"
+    },
+    {
+     "t": 58.6118,
+     "note": "D4"
+    },
+    {
+     "t": 59.2603,
+     "note": "G4"
+    },
+    {
+     "t": 76.0222,
+     "note": "F#4"
+    },
+    {
+     "t": 84.054,
+     "note": "B4"
+    },
+    {
+     "t": 84.1138,
+     "note": "B4"
+    },
+    {
+     "t": 93.3129,
+     "note": "B3"
+    }
+   ]
+  },
+  {
+   "fixture": "kalimba-34l-c-bwv147-sequence-163-01",
+   "rescues": [
+    {
+     "t": 3.4322,
+     "note": "F#5"
+    },
+    {
+     "t": 3.4921,
+     "note": "F#5"
+    },
+    {
+     "t": 8.2961,
+     "note": "C#5"
+    },
+    {
+     "t": 10.2567,
+     "note": "G#5"
+    },
+    {
+     "t": 17.4653,
+     "note": "D#5"
+    },
+    {
+     "t": 31.3937,
+     "note": "D#4"
+    },
+    {
+     "t": 48.1007,
+     "note": "A#4"
+    },
+    {
+     "t": 49.7519,
+     "note": "C#5"
+    },
+    {
+     "t": 50.8045,
+     "note": "F#5"
+    },
+    {
+     "t": 66.5488,
+     "note": "F#5"
+    },
+    {
+     "t": 67.1424,
+     "note": "G#5"
+    },
+    {
+     "t": 67.6213,
+     "note": "D#4"
+    },
+    {
+     "t": 72.0313,
+     "note": "C#5"
+    },
+    {
+     "t": 75.3637,
+     "note": "D#5"
+    },
+    {
+     "t": 77.5887,
+     "note": "D#5"
+    },
+    {
+     "t": 79.215,
+     "note": "E4"
+    },
+    {
+     "t": 88.0948,
+     "note": "D#5"
+    },
+    {
+     "t": 90.9184,
+     "note": "C#5"
+    }
+   ]
+  }
+ ]
+}
