@@ -14,6 +14,14 @@
    "matched": 23,
    "matchRate": 0.767,
    "chanceExpectedMatches": 2.92,
+   "timeShuffleNull": {
+    "iters": 2000,
+    "seed": 20260705,
+    "mean": 2.99,
+    "p95": 6,
+    "max": 9,
+    "pValueGEreal": "<0.0005"
+   },
    "perFn": [
     {
      "time": 2.208,
@@ -2128,15 +2136,7 @@
      35.005,
      "G5"
     ]
-   ],
-   "timeShuffleNull": {
-    "iters": 2000,
-    "seed": 20260705,
-    "mean": 2.99,
-    "p95": 6,
-    "max": 9,
-    "pValueGEreal": "<0.0005"
-   }
+   ]
   },
   "47902d34": {
    "durationSec": 28.7,
@@ -2145,6 +2145,14 @@
    "matched": 6,
    "matchRate": 0.5,
    "chanceExpectedMatches": 0.54,
+   "timeShuffleNull": {
+    "iters": 2000,
+    "seed": 20260705,
+    "mean": 0.53,
+    "p95": 2,
+    "max": 4,
+    "pValueGEreal": "<0.0005"
+   },
    "perFn": [
     {
      "time": 1.2213,
@@ -2757,15 +2765,7 @@
      25.73,
      "B4"
     ]
-   ],
-   "timeShuffleNull": {
-    "iters": 2000,
-    "seed": 20260705,
-    "mean": 0.54,
-    "p95": 2,
-    "max": 3,
-    "pValueGEreal": "<0.0005"
-   }
+   ]
   }
  }
 }

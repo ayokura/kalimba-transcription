@@ -1,7 +1,7 @@
 # S4 実装ゲート判定資料 — 反証 3 系統の統合 (第 3 期)
 
 - 作成: 2026-07-05 (S4)。判定対象: **per-tine tracker 実装本体 (S5) の GO/NO-GO** (ユーザー判断、ガードレール 11)
-- kill/GO 条件: [`2026-07-per-tine-kill-criteria.md`](2026-07-per-tine-kill-criteria.md) の **S0 固定値のまま変更なし**
+- kill/GO 条件: [`2026-07-per-tine-kill-criteria.md`](2026-07-per-tine-kill-criteria.md)。**条件の種類・閾値は S0 固定のまま、判定分母は同文書の S4 基準値追記 (n=9、29eaaf1daa45ca68) が正** — K2 = 10/16→14/16、K3 = R≥0.741 + CI 条件、K4 = FP≤61
 - 本資料は GO 支持材料と反対材料 (counter-evidence) を併記する (確証バイアス防止、第 3 期転換 4)。別系モデルの敵対的監査を経てからユーザーが判定する
 - 測定条件: recognizer 29eaaf1daa45ca68 / 596 tests green / GT レビュー済み録音 15 本 (非飽和 9)
 
@@ -52,8 +52,8 @@ G1-G4 **全充足** (詳細は #203 の S3 exit コメント):
 
 ## GO を支持する材料
 
-1. G1-G4 全充足 + kill 条件 (K2-K4/K6, C1-C2) は S0 固定値のまま適用可能
-2. 現行 FN の 50-67% を位相追跡が既に検出 (recall 側の獲物は実在する)
+1. G1-G4 全充足 + kill 条件 (K2-K4/K6, C1-C2) は S4 基準値追記により判定式が一意 (種類・閾値は S0 固定のまま)
+2. 現行 FN の 77% (70cc6637: 23/30) / 50% (47902d34: 6/12) を位相追跡が既に検出 — 偶然一致は null で棄却済み (recall 側の獲物は実在する)
 3. unpinnable (carryover-mask) 38 音中 30 回収 — K2 最低獲物 (0.875) の到達可能性を支持
 4. guard mode 対照実験 (監査対応) により、**検出器の生 recall は 0.97 で「上限 0.77」は guard 設計の人工物**と判明 — 獲物の総量は当初想定より大きい。FN 主因は dominance guard (23 件) と harmonic-parent guard (15 件) で、両方とも winner-take-all 排他 = tracker が置換する対象そのもの。harmonic-parent 側の修正候補として実測 partial table が存在 (**ただし C4 未確定・弱クラスタ不安定のため「検証済みの置換手段」とまでは言えない** — 監査指摘 2)
 5. #206 のカスケード脆弱性 (segment 一括棄却 + recent-note memory) は tracker の状態ベース explaining-away が構造的に解消する型
@@ -64,7 +64,7 @@ G1-G4 **全充足** (詳細は #203 の S3 exit コメント):
 1. **precision は未解決のまま、しかもギャップは当初想定より大きい**: guard 排除後の生 precision は 0.16 (recall 0.97 の代償)。explaining-away 層は机上設計であり、P 0.16 → 実用域への回収は最大の実装リスク。guard を残せば P 0.25-0.29 だが recall 0.77 に戻る — このトレードオフの解消が tracker の存在理由であり、失敗すれば kill
 2. **partial table の脆弱性**: 収音チェーン依存が強く magnetic pickup 環境では bleed 項がほぼ消える。C4 未確定・A4 は n=4。「実測+検証済み」の検証は現状 1 楽器 (テスター 17-C) に偏る
 3. **共鳴の原理的難所**: 機械結合の impulse 伝達は位相でも区別困難 — tracker でも残る FN/FP 領域がある
-4. **recall 上限の不確実性**: 単発時点上限 0.77。tracker がそれをどこまで超えるかは未知
+4. **recall と precision のトレードオフ解消は未実証**: full-guard 動作点では R=0.77、guard off では R=0.974 だが P=0.159。tracker が「R≈0.97 側の獲物を保ったまま precision を実用域へ回収できる」ことはまだどこにも実証されていない
 5. **機会費用**: dual-run 評価は S5-S7 の 3 スプリント枠 (K6)。NO-GO 分岐 (較正系 #172-174) もテスター録音の環境メタデータが揃いつつあり価値が上がっている
 6. a9e30986 (R=0.444、最難録音) の FN 45 は多声+速いパッセージ由来が多く、carryover/倍音抑圧の 2 型だけでは説明できない可能性 (tracker の獲物範囲外の FN が相当数残るリスク)
 
@@ -86,4 +86,4 @@ NO-GO 時は較正系 #172-174 を前倒しする。M1 (汎化) の実装本体�
 
 1. 別系モデル (Codex 推奨) による敵対的監査 — 監査パッケージは別途用意
 2. ユーザーの GO/NO-GO 判断 → #203 に記録
-3. GO 時: S5 = tracker 実装 (research branch + dual-run、kill 条件 S0 固定値)。NO-GO 時: 較正系 #172-174 前倒し or 出力/UX 再配分
+3. GO 時: S5 = tracker 実装 (research branch + dual-run、kill 判定は kill-criteria doc の S4 基準値で行う)。NO-GO 時: 較正系 #172-174 前倒し or 出力/UX 再配分

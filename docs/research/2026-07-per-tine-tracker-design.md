@@ -1,7 +1,7 @@
 # per-tine 確率トラッカー + causal onset 統合設計 (第 3 期 S3)
 
 - 作成: 2026-07-05 (S3)。**S4 実装ゲートの判定材料** — 実装本体は S4 の人間 GO 後にのみ着手する (ガードレール 11)
-- research line: #141 (umbrella)、kill/GO 条件は [`2026-07-per-tine-kill-criteria.md`](2026-07-per-tine-kill-criteria.md) (S0 固定値)
+- research line: #141 (umbrella)、kill/GO 条件は [`2026-07-per-tine-kill-criteria.md`](2026-07-per-tine-kill-criteria.md) (種類・閾値は S0 固定。**判定分母は同文書の S4 基準値追記で読む**)
 - 入力: #149 プローブ + 追試 ([`2026-07-149-collision-probe.md`](2026-07-149-collision-probe.md))、実測 partial table ([`2026-07-per-tine-partial-table.md`](2026-07-per-tine-partial-table.md))、位相追跡 ROC ([`2026-07-phase-tracking-roc.md`](2026-07-phase-tracking-roc.md))、spectral pin (#201 v1)、S5 spike 群 (branch claude/s5-agenda4-bg-reattack-rescue)、S2 用途検証・dogfooding の設計入力
 - 旧 [`../per-note-onset-detection-design.md`](../per-note-onset-detection-design.md) (mute-dip/pass 構成) は概念的前身。本書は「連続状態推定」へ再構成したもので、mute-dip は観測モデルの 1 特徴に降格する
 

@@ -83,6 +83,25 @@ def main() -> int:
                             "phaseHits": hit, "matched": bool(hit),
                             "chanceP": round(p_chance, 4)})
         n_matched = sum(1 for m in matches if m["matched"])
+        # time-shuffle null (acceptance-review cleanup: the artifact must be
+        # fully regenerable by this script): re-place the same per-note
+        # prediction counts uniformly, count FN matches, repeat.
+        import random
+        import statistics
+        rng = random.Random(20260705)
+        counts = []
+        for _ in range(2000):
+            placed = {n: [rng.uniform(0, duration) for _ in range(k)]
+                      for n, k in ((n, len(v)) for n, v in per_note_pred.items())}
+            c = sum(1 for x in fn_list
+                    if any(abs(t - x["time"]) <= TOL for t in placed.get(x["note"], [])))
+            counts.append(c)
+        counts.sort()
+        p_ge = sum(1 for c in counts if c >= n_matched) / len(counts)
+        time_shuffle = {"iters": 2000, "seed": 20260705,
+                        "mean": round(statistics.mean(counts), 2),
+                        "p95": counts[int(0.95 * len(counts))], "max": counts[-1],
+                        "pValueGEreal": p_ge if p_ge > 0 else "<0.0005"}
         out["recordings"][prefix] = {
             "durationSec": round(duration, 1),
             "recognizerFN": len(fn_list),
@@ -90,6 +109,7 @@ def main() -> int:
             "matched": n_matched,
             "matchRate": round(n_matched / max(1, len(fn_list)), 3),
             "chanceExpectedMatches": round(chance_sum, 2),
+            "timeShuffleNull": time_shuffle,
             "perFn": matches,
             "phasePredictions": pred,
         }
