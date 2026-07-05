@@ -16,6 +16,31 @@ export function adaptive_n_fft(sample_rate, frequency, chunk_len, min_bins, harm
 }
 
 /**
+ * Per-note band-energy time trace for the gt-review energy panel (#205).
+ * Frequency-major flat array; steps = max(1, round(duration/step)), so
+ * JS recovers the grid via `out.length / frequencies.length`.
+ * @param {Float32Array} audio
+ * @param {bigint} sample_rate
+ * @param {Float64Array} frequencies
+ * @param {number} start_sec
+ * @param {number} duration_sec
+ * @param {number} step_sec
+ * @param {number} window_seconds
+ * @param {number} harmonic_band_cents
+ * @returns {Float32Array}
+ */
+export function band_energy_trace(audio, sample_rate, frequencies, start_sec, duration_sec, step_sec, window_seconds, harmonic_band_cents) {
+    const ptr0 = passArrayF32ToWasm0(audio, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayF64ToWasm0(frequencies, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.band_energy_trace(ptr0, len0, sample_rate, ptr1, len1, start_sec, duration_sec, step_sec, window_seconds, harmonic_band_cents);
+    var v3 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v3;
+}
+
+/**
  * Batched `peak_energy_near` over many center frequencies.
  * @param {Float64Array} frequencies
  * @param {Float64Array} spectrum
@@ -88,6 +113,21 @@ export function mel_filterbank(sample_rate, n_fft, n_mels) {
     var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
     return v1;
+}
+
+/**
+ * Merge time-ordered flat `[start, end]` pairs within `gap_tolerance` seconds.
+ * @param {Float64Array} flat_ranges
+ * @param {number} gap_tolerance
+ * @returns {Float64Array}
+ */
+export function merge_time_ranges(flat_ranges, gap_tolerance) {
+    const ptr0 = passArrayF64ToWasm0(flat_ranges, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.merge_time_ranges(ptr0, len0, gap_tolerance);
+    var v2 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v2;
 }
 
 /**
@@ -222,6 +262,23 @@ export function rank_tuning_candidates(frequencies, spectrum, note_freqs, band_c
 }
 
 /**
+ * Raw active ranges as flat `[start0, end0, ...]` seconds (Float64Array).
+ * @param {Float32Array} rms
+ * @param {bigint} sample_rate
+ * @param {number} hop_length
+ * @param {number} duration_sec
+ * @returns {Float64Array}
+ */
+export function raw_active_ranges(rms, sample_rate, hop_length, duration_sec) {
+    const ptr0 = passArrayF32ToWasm0(rms, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.raw_active_ranges(ptr0, len0, sample_rate, hop_length, duration_sec);
+    var v2 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    return v2;
+}
+
+/**
  * Frame-wise RMS energy (center=True, constant pad).
  * @param {Float32Array} audio
  * @param {number} frame_length
@@ -235,6 +292,18 @@ export function rms(audio, frame_length, hop_length) {
     var v2 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
     return v2;
+}
+
+/**
+ * Active-range RMS threshold (detect_segments head, B1 slice).
+ * @param {Float32Array} rms
+ * @returns {number}
+ */
+export function rms_threshold(rms) {
+    const ptr0 = passArrayF32ToWasm0(rms, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.rms_threshold(ptr0, len0);
+    return ret;
 }
 
 /**

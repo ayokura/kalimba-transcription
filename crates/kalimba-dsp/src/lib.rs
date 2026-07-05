@@ -228,6 +228,50 @@ fn note_band_energy_oneshot(
     )
 }
 
+/// Per-note band-energy time trace (#205, gt-review energy trace v1):
+/// `note_band_energy` sampled on a uniform time grid for a set of note
+/// frequencies. Returns a frequency-major flat array of length
+/// `frequencies.len() * steps`, where `steps = max(1, round(duration/step))`;
+/// callers recover the grid as `out[f * steps + s]`.
+///
+/// Semantics are the recognizer's (±`harmonic_band_cents` band, peak
+/// magnitude) — deliberately NOT scripts/audio-analysis/energy_trace.py's
+/// ±Hz band-power sum, so the review UI shows the same quantity the
+/// recognizer scores. One FFT scratch buffer is shared across all
+/// (frequency, step) evaluations.
+fn band_energy_trace_core(
+    audio: &[f32],
+    sample_rate: i64,
+    frequencies: &[f64],
+    start_sec: f64,
+    duration_sec: f64,
+    step_sec: f64,
+    window_seconds: f64,
+    harmonic_band_cents: f64,
+) -> Vec<f32> {
+    if frequencies.is_empty() || !(step_sec > 0.0) || !(duration_sec > 0.0) {
+        return Vec::new();
+    }
+    let steps = ((duration_sec / step_sec).round() as usize).max(1);
+    let mut out = Vec::with_capacity(frequencies.len() * steps);
+    let mut fft_buffer: Vec<Complex32> = Vec::new();
+    for &frequency in frequencies {
+        for s in 0..steps {
+            let t = start_sec + s as f64 * step_sec;
+            out.push(note_band_energy(
+                audio,
+                sample_rate,
+                t,
+                frequency,
+                window_seconds,
+                &mut fft_buffer,
+                harmonic_band_cents,
+            ));
+        }
+    }
+    out
+}
+
 /// Peak magnitude of a precomputed (f64) spectrum within `±band_cents` of
 /// `center_freq`. Mirror of `peaks.peak_energy_near`: positive-freq bins only,
 /// cents distance `|1200 * log2(f / center)|`. Operates on the recognizer's
@@ -924,10 +968,36 @@ mod python_binding {
 #[cfg(feature = "wasm")]
 mod wasm_binding {
     use super::{
-        detect_gap_rise_attack_inner, note_band_energy_oneshot,
+        band_energy_trace_core, detect_gap_rise_attack_inner, note_band_energy_oneshot,
         scan_gap_for_mute_dip_with_window_inner,
     };
     use wasm_bindgen::prelude::*;
+
+    /// Per-note band-energy time trace for the gt-review energy panel (#205).
+    /// Frequency-major flat array; steps = max(1, round(duration/step)), so
+    /// JS recovers the grid via `out.length / frequencies.length`.
+    #[wasm_bindgen]
+    pub fn band_energy_trace(
+        audio: &[f32],
+        sample_rate: i64,
+        frequencies: &[f64],
+        start_sec: f64,
+        duration_sec: f64,
+        step_sec: f64,
+        window_seconds: f64,
+        harmonic_band_cents: f64,
+    ) -> Vec<f32> {
+        band_energy_trace_core(
+            audio,
+            sample_rate,
+            frequencies,
+            start_sec,
+            duration_sec,
+            step_sec,
+            window_seconds,
+            harmonic_band_cents,
+        )
+    }
 
     /// Peak FFT magnitude in `frequency`'s ±`harmonic_band_cents` band within a
     /// window centered on `center_time`. Shared core with the pyo3 binding; the
@@ -1182,5 +1252,39 @@ mod wasm_binding {
             min_pre_energy,
             harmonic_band_cents,
         )
+    }
+}
+
+#[cfg(test)]
+mod band_energy_trace_tests {
+    use super::band_energy_trace_core;
+
+    /// 0.5s silence + 0.5s 440Hz sine @48kHz: the 440Hz trace must light up
+    /// after onset and stay near zero before it; an off-band frequency (620Hz,
+    /// ~594 cents away) must stay far below the in-band energy throughout.
+    #[test]
+    fn trace_separates_tone_from_silence_and_off_band() {
+        let sr = 48_000i64;
+        let mut audio = vec![0.0f32; 24_000];
+        audio.extend((0..24_000).map(|i| {
+            (2.0 * std::f32::consts::PI * 440.0 * i as f32 / 48_000.0).sin() * 0.5
+        }));
+        let freqs = [440.0f64, 620.0f64];
+        let out = band_energy_trace_core(&audio, sr, &freqs, 0.0, 1.0, 0.1, 0.05, 40.0);
+        let steps = out.len() / freqs.len();
+        assert_eq!(out.len(), 2 * 10);
+        let t440 = &out[..steps];
+        let t620 = &out[steps..];
+        // Silence region (t=0.0..0.4; keep margin from the 0.5s edge window).
+        assert!(t440[2] < 1e-3, "440Hz energy in silence: {}", t440[2]);
+        // Tone region: in-band strongly present, off-band well below.
+        assert!(t440[7] > 10.0 * t620[7].max(1e-6), "440={} 620={}", t440[7], t620[7]);
+        assert!(t440[7] > 1.0, "expected clear in-band energy, got {}", t440[7]);
+    }
+
+    #[test]
+    fn empty_inputs_return_empty() {
+        assert!(band_energy_trace_core(&[0.0; 1024], 48_000, &[], 0.0, 1.0, 0.1, 0.05, 40.0).is_empty());
+        assert!(band_energy_trace_core(&[0.0; 1024], 48_000, &[440.0], 0.0, 0.0, 0.1, 0.05, 40.0).is_empty());
     }
 }

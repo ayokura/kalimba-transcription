@@ -2533,3 +2533,25 @@ button:disabled {
   color: var(--accent, #177e89);
   border-color: var(--accent, #177e89);
 }
+
+/* gt-review energy trace パネル (#205 v1) */
+.gt-energy-trace {
+  margin-top: 4px;
+}
+
+.gt-energy-trace-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.gt-energy-trace-canvas {
+  width: 100%;
+  display: block;
+  margin-top: 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}

@@ -9,6 +9,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { GtEnergyTrace } from "@/components/GtEnergyTrace";
+
 import {
   type AudioBoostChain,
   boostDbForPeak,
@@ -286,6 +288,12 @@ export default function DebugGtReviewPage() {
                 </button>
               ))}
             </div>
+            <GtEnergyTrace
+              txId={draft.txId}
+              audioRef={audioRef}
+              rows={draft.rows}
+              verdictRows={verdict.rows}
+            />
           </div>
 
           <div className="row wrap" style={{ gap: 8, margin: "8px 0" }}>

@@ -8,6 +8,13 @@
 export function adaptive_n_fft(sample_rate: bigint, frequency: number, chunk_len: number, min_bins: number, harmonic_band_cents: number): number;
 
 /**
+ * Per-note band-energy time trace for the gt-review energy panel (#205).
+ * Frequency-major flat array; steps = max(1, round(duration/step)), so
+ * JS recovers the grid via `out.length / frequencies.length`.
+ */
+export function band_energy_trace(audio: Float32Array, sample_rate: bigint, frequencies: Float64Array, start_sec: number, duration_sec: number, step_sec: number, window_seconds: number, harmonic_band_cents: number): Float32Array;
+
+/**
  * Batched `peak_energy_near` over many center frequencies.
  */
 export function batch_peak_energies(frequencies: Float64Array, spectrum: Float64Array, center_freqs: Float64Array, band_cents: number): Float64Array;
@@ -25,6 +32,11 @@ export function detect_gap_rise_attack(audio: Float32Array, sample_rate: bigint,
  * Slaney mel filterbank, row-major `n_mels * (n_fft/2+1)` Float32Array.
  */
 export function mel_filterbank(sample_rate: bigint, n_fft: number, n_mels: number): Float32Array;
+
+/**
+ * Merge time-ordered flat `[start, end]` pairs within `gap_tolerance` seconds.
+ */
+export function merge_time_ranges(flat_ranges: Float64Array, gap_tolerance: number): Float64Array;
 
 /**
  * Peak FFT magnitude in `frequency`'s ±`harmonic_band_cents` band within a
@@ -66,9 +78,19 @@ export function peak_pick(x: Float32Array, pre_max: number, post_max: number, pr
 export function rank_tuning_candidates(frequencies: Float64Array, spectrum: Float64Array, note_freqs: Float64Array, band_cents: number): Float64Array;
 
 /**
+ * Raw active ranges as flat `[start0, end0, ...]` seconds (Float64Array).
+ */
+export function raw_active_ranges(rms: Float32Array, sample_rate: bigint, hop_length: number, duration_sec: number): Float64Array;
+
+/**
  * Frame-wise RMS energy (center=True, constant pad).
  */
 export function rms(audio: Float32Array, frame_length: number, hop_length: number): Float32Array;
+
+/**
+ * Active-range RMS threshold (detect_segments head, B1 slice).
+ */
+export function rms_threshold(rms: Float32Array): number;
 
 export function scan_gap_for_mute_dip_with_window(audio: Float32Array, sample_rate: bigint, gap_start: number, gap_end: number, frequency: number, window_seconds: number, mute_dip_energy_window: number, max_dip_window: number, max_recovery_window: number, coarse_step: number, fine_step: number, min_pre_energy: number, max_dip_ratio: number, min_post_energy: number, min_recovery_ratio: number, harmonic_band_cents: number): number | undefined;
 
@@ -77,10 +99,12 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly adaptive_n_fft: (a: bigint, b: number, c: number, d: number, e: number) => number;
+    readonly band_energy_trace: (a: number, b: number, c: bigint, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => [number, number];
     readonly batch_peak_energies: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly chunk_spectrum: (a: number, b: number, c: bigint, d: number) => [number, number];
     readonly detect_gap_rise_attack: (a: number, b: number, c: bigint, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number) => [number, number];
     readonly mel_filterbank: (a: bigint, b: number, c: number) => [number, number];
+    readonly merge_time_ranges: (a: number, b: number, c: number) => [number, number];
     readonly note_band_energy: (a: number, b: number, c: bigint, d: number, e: number, f: number, g: number) => number;
     readonly onset_backtrack: (a: number, b: number, c: number, d: number) => [number, number];
     readonly onset_detect: (a: number, b: number, c: bigint, d: number, e: number) => [number, number];
@@ -88,7 +112,9 @@ export interface InitOutput {
     readonly peak_energy_near: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly peak_pick: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
     readonly rank_tuning_candidates: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly raw_active_ranges: (a: number, b: number, c: bigint, d: number, e: number) => [number, number];
     readonly rms: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly rms_threshold: (a: number, b: number) => number;
     readonly scan_gap_for_mute_dip_with_window: (a: number, b: number, c: bigint, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number, m: number, n: number, o: number, p: number, q: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
