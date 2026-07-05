@@ -17,8 +17,8 @@
       "truthNotes": 238
     },
     "47902d34-95f4-4761-a634-6c1ef154531f": {
-      "minF1": 0.772,
-      "maxHardMisses": 7,
+      "minF1": 0.818,
+      "maxHardMisses": 5,
       "truthNotes": 48
     },
     "4e1ae5c6-df9a-4876-917d-b7e47699c8e5": {
@@ -72,7 +72,7 @@
       "truthNotes": 18
     }
   },
-  "updatedAt": "2026-07-05T04:32:28+00:00",
+  "updatedAt": "2026-07-05T04:36:12+00:00",
   "recognizerFingerprint": "29eaaf1daa45ca68",
   "kalimbaDspFingerprint": "b5688f4db575441d",
   "nonSaturatedRepoGate": {
