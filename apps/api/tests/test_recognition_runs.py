@@ -63,8 +63,36 @@ def test_post_run_appends_without_new_transaction():
     run_dir = _tx_root() / tid / "runs" / body["runId"]
     assert (run_dir / "response.json").exists()
     assert (run_dir / "meta.json").exists()
-    # debug.json is written iff the run response carries a debug payload.
-    assert (run_dir / "debug.json").exists() == (body["result"].get("debug") is not None)
+    # Runs always execute with debug=True internally; the payload goes to
+    # debug.json only (see test_run_debug_is_stored_separately_and_kept_out_of_reads).
+    assert (run_dir / "debug.json").exists()
+
+
+def test_run_debug_is_stored_separately_and_kept_out_of_reads():
+    """Debug lives only in runs/<runId>/debug.json (no double storage).
+
+    Pins the fix for the review finding: the run executes with debug=True, so
+    without popping ``debug`` the run's response.json would embed the full
+    debug payload a second time, and every read resolved through
+    load_latest_response (GET /api/transcriptions/{id}, dedup) would return the
+    inflated document after a re-recognition."""
+    tid = _create_transaction()
+    body = client.post(f"/api/transcriptions/{tid}/runs").json()
+
+    # The endpoint's own result mirrors the stored (lean) response.
+    assert "debug" not in body["result"]
+
+    run_dir = _tx_root() / tid / "runs" / body["runId"]
+    stored_response = json.loads((run_dir / "response.json").read_text(encoding="utf-8"))
+    assert "debug" not in stored_response
+    # The payload itself is preserved, in debug.json only.
+    debug_doc = json.loads((run_dir / "debug.json").read_text(encoding="utf-8"))
+    assert isinstance(debug_doc, dict) and debug_doc
+
+    # Latest-run resolution serves the lean response too.
+    resolved = client.get(f"/api/transcriptions/{tid}").json()
+    assert "debug" not in resolved
+    assert resolved["events"] == body["result"]["events"]
 
 
 def test_post_run_unknown_transaction_404():
