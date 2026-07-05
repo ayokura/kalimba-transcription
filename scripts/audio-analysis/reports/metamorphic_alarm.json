@@ -1,0 +1,461 @@
+{
+  "summary": {
+    "generatedAt": "2026-07-05T06:08:34+00:00",
+    "recognizerFingerprint": "29eaaf1daa45ca68",
+    "kalimbaDspFingerprint": "b5688f4db575441d",
+    "txIds": [
+      "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "4e1ae5c6-df9a-4876-917d-b7e47699c8e5",
+      "9ce7df83-33a0-455d-bf86-c9392ce6f777",
+      "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "d7a82772-f77f-4820-9798-00133ae45f4e",
+      "ea7edd71-e815-4638-a248-a47fe21e5061",
+      "ebecf0c6-7e41-430b-bd60-8111a495185e"
+    ],
+    "toleranceSec": 0.05,
+    "minAbsNotes": 2,
+    "minPct": 0.05,
+    "reportOnly": true,
+    "nonBlocking": true,
+    "anyWarn": true,
+    "note": "non-blocking metamorphic alarm v0 (docs/sprint-plan-2026-07c.md S2 / AGENTS.md guardrail 7): not a regression gate, no CI wiring, no baseline file."
+  },
+  "results": [
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "identity",
+      "level": "control",
+      "params": {},
+      "baselineNotes": 45,
+      "transformedNotes": 45,
+      "tp": 45,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2.25,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "gain",
+      "level": "+6dB",
+      "params": {
+        "gainDb": 6.0,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 45,
+      "transformedNotes": 45,
+      "tp": 45,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2.25,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "family": "lowpass",
+      "level": "8000hz",
+      "params": {
+        "cutoffHz": 8000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 45,
+      "transformedNotes": 46,
+      "tp": 45,
+      "addedCount": 1,
+      "droppedCount": 0,
+      "diff": 1,
+      "threshold": 2.25,
+      "warn": false,
+      "added": [
+        {
+          "time": 3.909,
+          "note": "G5"
+        }
+      ],
+      "dropped": []
+    },
+    {
+      "txId": "4e1ae5c6-df9a-4876-917d-b7e47699c8e5",
+      "family": "identity",
+      "level": "control",
+      "params": {},
+      "baselineNotes": 5,
+      "transformedNotes": 5,
+      "tp": 5,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "4e1ae5c6-df9a-4876-917d-b7e47699c8e5",
+      "family": "gain",
+      "level": "+6dB",
+      "params": {
+        "gainDb": 6.0,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 5,
+      "transformedNotes": 5,
+      "tp": 5,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "4e1ae5c6-df9a-4876-917d-b7e47699c8e5",
+      "family": "lowpass",
+      "level": "8000hz",
+      "params": {
+        "cutoffHz": 8000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 5,
+      "transformedNotes": 5,
+      "tp": 5,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "9ce7df83-33a0-455d-bf86-c9392ce6f777",
+      "family": "identity",
+      "level": "control",
+      "params": {},
+      "baselineNotes": 5,
+      "transformedNotes": 5,
+      "tp": 5,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "9ce7df83-33a0-455d-bf86-c9392ce6f777",
+      "family": "gain",
+      "level": "+6dB",
+      "params": {
+        "gainDb": 6.0,
+        "clippedFraction": 0.00025499131944444446
+      },
+      "baselineNotes": 5,
+      "transformedNotes": 5,
+      "tp": 5,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "9ce7df83-33a0-455d-bf86-c9392ce6f777",
+      "family": "lowpass",
+      "level": "8000hz",
+      "params": {
+        "cutoffHz": 8000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 5,
+      "transformedNotes": 5,
+      "tp": 4,
+      "addedCount": 1,
+      "droppedCount": 1,
+      "diff": 2,
+      "threshold": 2,
+      "warn": false,
+      "added": [
+        {
+          "time": 3.867,
+          "note": "C5"
+        }
+      ],
+      "dropped": [
+        {
+          "time": 6.373,
+          "note": "C5"
+        }
+      ]
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "identity",
+      "level": "control",
+      "params": {},
+      "baselineNotes": 20,
+      "transformedNotes": 20,
+      "tp": 20,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "gain",
+      "level": "+6dB",
+      "params": {
+        "gainDb": 6.0,
+        "clippedFraction": 3.5286811201445346e-06
+      },
+      "baselineNotes": 20,
+      "transformedNotes": 20,
+      "tp": 20,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+      "family": "lowpass",
+      "level": "8000hz",
+      "params": {
+        "cutoffHz": 8000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 20,
+      "transformedNotes": 20,
+      "tp": 20,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "d7a82772-f77f-4820-9798-00133ae45f4e",
+      "family": "identity",
+      "level": "control",
+      "params": {},
+      "baselineNotes": 41,
+      "transformedNotes": 41,
+      "tp": 41,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2.0500000000000003,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "d7a82772-f77f-4820-9798-00133ae45f4e",
+      "family": "gain",
+      "level": "+6dB",
+      "params": {
+        "gainDb": 6.0,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 41,
+      "transformedNotes": 41,
+      "tp": 41,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2.0500000000000003,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "d7a82772-f77f-4820-9798-00133ae45f4e",
+      "family": "lowpass",
+      "level": "8000hz",
+      "params": {
+        "cutoffHz": 8000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 41,
+      "transformedNotes": 41,
+      "tp": 41,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2.0500000000000003,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "ea7edd71-e815-4638-a248-a47fe21e5061",
+      "family": "identity",
+      "level": "control",
+      "params": {},
+      "baselineNotes": 19,
+      "transformedNotes": 19,
+      "tp": 19,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "ea7edd71-e815-4638-a248-a47fe21e5061",
+      "family": "gain",
+      "level": "+6dB",
+      "params": {
+        "gainDb": 6.0,
+        "clippedFraction": 2.5531045751633985e-06
+      },
+      "baselineNotes": 19,
+      "transformedNotes": 19,
+      "tp": 19,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "ea7edd71-e815-4638-a248-a47fe21e5061",
+      "family": "lowpass",
+      "level": "8000hz",
+      "params": {
+        "cutoffHz": 8000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 19,
+      "transformedNotes": 19,
+      "tp": 18,
+      "addedCount": 1,
+      "droppedCount": 1,
+      "diff": 2,
+      "threshold": 2,
+      "warn": false,
+      "added": [
+        {
+          "time": 9.419,
+          "note": "D5"
+        }
+      ],
+      "dropped": [
+        {
+          "time": 9.504,
+          "note": "D5"
+        }
+      ]
+    },
+    {
+      "txId": "ebecf0c6-7e41-430b-bd60-8111a495185e",
+      "family": "identity",
+      "level": "control",
+      "params": {},
+      "baselineNotes": 21,
+      "transformedNotes": 21,
+      "tp": 21,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "ebecf0c6-7e41-430b-bd60-8111a495185e",
+      "family": "gain",
+      "level": "+6dB",
+      "params": {
+        "gainDb": 6.0,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 21,
+      "transformedNotes": 21,
+      "tp": 21,
+      "addedCount": 0,
+      "droppedCount": 0,
+      "diff": 0,
+      "threshold": 2,
+      "warn": false,
+      "added": [],
+      "dropped": []
+    },
+    {
+      "txId": "ebecf0c6-7e41-430b-bd60-8111a495185e",
+      "family": "lowpass",
+      "level": "8000hz",
+      "params": {
+        "cutoffHz": 8000.0,
+        "order": 4,
+        "clippedFraction": 0.0
+      },
+      "baselineNotes": 21,
+      "transformedNotes": 17,
+      "tp": 16,
+      "addedCount": 1,
+      "droppedCount": 5,
+      "diff": 6,
+      "threshold": 2,
+      "warn": true,
+      "added": [
+        {
+          "time": 8.747,
+          "note": "D5"
+        }
+      ],
+      "dropped": [
+        {
+          "time": 2.603,
+          "note": "F5"
+        },
+        {
+          "time": 3.184,
+          "note": "D5"
+        },
+        {
+          "time": 3.184,
+          "note": "F5"
+        },
+        {
+          "time": 8.48,
+          "note": "D5"
+        },
+        {
+          "time": 8.805,
+          "note": "D5"
+        }
+      ]
+    }
+  ]
+}
