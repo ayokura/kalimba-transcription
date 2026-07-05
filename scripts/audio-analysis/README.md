@@ -251,6 +251,22 @@ uv run python scripts/audio-analysis/augmentation_robustness.py
 uv run python scripts/audio-analysis/augmentation_robustness.py --tx <tx-id> --json --no-write
 ```
 
+### metamorphic_alarm.py
+
+メタモルフィック警報 v0 (S2、**report-only / non-blocking**)。GT フリー: repo 管理 corpus
+の各録音を、既知の onset/pitch 保存変換 (identity 制御 / gain +6dB / lowpass 8000hz —
+augmentation_robustness.py のレポートで F1 が実質変化しなかった強度のみを選定) にかけ、
+変換前後の**出力同士**を note_f1_benchmark の `match_pairs` で対称差分 (added/dropped) 比較する。
+対称差分が `max(2 notes, baseline notes の 5%)` を超えたら WARN。AGENTS.md guardrail 7 に従い
+回帰 gate にも CI にも組み込まない (`--strict` 指定時のみ non-zero exit)。変換関数・matching
+ロジックは augmentation_robustness.py / note_f1_benchmark.py から import して再利用 (再実装しない)。
+
+```bash
+uv run python scripts/audio-analysis/metamorphic_alarm.py
+uv run python scripts/audio-analysis/metamorphic_alarm.py --tx <tx-id> --json --no-write
+uv run python scripts/audio-analysis/metamorphic_alarm.py --strict
+```
+
 ## 判定基準
 
 ### ノイズ vs 楽音の判定
