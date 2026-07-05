@@ -1,0 +1,603 @@
+{
+ "round": 3,
+ "form": "2x2 fscan x autopsy + base (settings-flag arms)",
+ "s4Baseline": {
+  "microR": 0.726,
+  "pooledFP": 53,
+  "k4Ceiling": 61
+ },
+ "arms": {
+  "base": [
+   [
+    "use_pertine_tracker_rescue",
+    false
+   ]
+  ],
+  "A_fscan_on_autopsy_off": [
+   [
+    "use_pertine_residual_autopsy",
+    false
+   ]
+  ],
+  "B_fscan_off_autopsy_on": [
+   [
+    "ablate_residual_forward_scan",
+    true
+   ]
+  ],
+  "C_fscan_on_autopsy_on": [],
+  "D_fscan_off_autopsy_off": [
+   [
+    "ablate_residual_forward_scan",
+    true
+   ],
+   [
+    "use_pertine_residual_autopsy",
+    false
+   ]
+  ]
+ },
+ "nonSaturatedTxs": [
+  "17ea7626",
+  "4e1ae5c6",
+  "9ce7df83",
+  "d7a82772",
+  "ea7edd71",
+  "ebecf0c6",
+  "47902d34",
+  "70cc6637",
+  "a9e30986"
+ ],
+ "headline": {
+  "base": {
+   "n": 9,
+   "tp": 304,
+   "fp": 53,
+   "truth": 420,
+   "pred": 357,
+   "P": 0.852,
+   "R": 0.724,
+   "F1": 0.782,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6557,
+     0.8462
+    ]
+   }
+  },
+  "A_fscan_on_autopsy_off": {
+   "n": 9,
+   "tp": 313,
+   "fp": 53,
+   "truth": 420,
+   "pred": 366,
+   "P": 0.855,
+   "R": 0.745,
+   "F1": 0.796,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6695,
+     0.8663
+    ]
+   }
+  },
+  "B_fscan_off_autopsy_on": {
+   "n": 9,
+   "tp": 312,
+   "fp": 54,
+   "truth": 420,
+   "pred": 366,
+   "P": 0.852,
+   "R": 0.743,
+   "F1": 0.794,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6695,
+     0.8643
+    ]
+   }
+  },
+  "C_fscan_on_autopsy_on": {
+   "n": 9,
+   "tp": 313,
+   "fp": 54,
+   "truth": 420,
+   "pred": 367,
+   "P": 0.853,
+   "R": 0.745,
+   "F1": 0.795,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6695,
+     0.8657
+    ]
+   }
+  },
+  "D_fscan_off_autopsy_off": {
+   "n": 9,
+   "tp": 312,
+   "fp": 53,
+   "truth": 420,
+   "pred": 365,
+   "P": 0.855,
+   "R": 0.743,
+   "F1": 0.795,
+   "ci": {
+    "iterations": 1000,
+    "seed": 42,
+    "recordings": 9,
+    "microF1CI95": [
+     0.6695,
+     0.8655
+    ]
+   }
+  }
+ },
+ "k2": {
+  "base": {
+   "tp": 10,
+   "truth": 16
+  },
+  "A_fscan_on_autopsy_off": {
+   "tp": 14,
+   "truth": 16
+  },
+  "B_fscan_off_autopsy_on": {
+   "tp": 14,
+   "truth": 16
+  },
+  "C_fscan_on_autopsy_on": {
+   "tp": 14,
+   "truth": 16
+  },
+  "D_fscan_off_autopsy_off": {
+   "tp": 14,
+   "truth": 16
+  }
+ },
+ "replacementClaim": {
+  "verdict": "FAILS",
+  "indicators": {
+   "R": false,
+   "P": false,
+   "F1": false,
+   "FP": false,
+   "K2": true,
+   "noPerRecordingF1Regression": false
+  },
+  "perRecordingRegressions": [
+   {
+    "tx": "70cc6637",
+    "A": 0.852,
+    "B": 0.844
+   },
+   {
+    "tx": "8039a34c",
+    "A": 1.0,
+    "B": 0.998
+   }
+  ]
+ },
+ "killContinuationArmC": {
+  "k2": {
+   "rate": 0.875,
+   "verdict": "PASS"
+  },
+  "k3": {
+   "deltaR": 0.021,
+   "pairedBootstrap": {
+    "iterations": 2000,
+    "seed": 42,
+    "deltaRCI95": [
+     0.0048,
+     0.0502
+    ]
+   },
+   "verdict": "PASS"
+  },
+  "k4": {
+   "fp": 54,
+   "ceiling": 61,
+   "verdict": "PASS"
+  }
+ },
+ "perRecording": {
+  "base": {
+   "17ea7626": {
+    "f1": 0.866,
+    "tp": 42,
+    "fp": 3
+   },
+   "4e1ae5c6": {
+    "f1": 0.769,
+    "tp": 5,
+    "fp": 0
+   },
+   "9ce7df83": {
+    "f1": 0.769,
+    "tp": 5,
+    "fp": 0
+   },
+   "bbd6797f": {
+    "f1": 1.0,
+    "tp": 20,
+    "fp": 0
+   },
+   "d7a82772": {
+    "f1": 0.828,
+    "tp": 36,
+    "fp": 5
+   },
+   "ea7edd71": {
+    "f1": 0.865,
+    "tp": 16,
+    "fp": 3
+   },
+   "ebecf0c6": {
+    "f1": 0.872,
+    "tp": 17,
+    "fp": 4
+   },
+   "16b37356": {
+    "f1": 1.0,
+    "tp": 12,
+    "fp": 0
+   },
+   "2bf55c75": {
+    "f1": 1.0,
+    "tp": 238,
+    "fp": 0
+   },
+   "47902d34": {
+    "f1": 0.818,
+    "tp": 36,
+    "fp": 4
+   },
+   "6bf97c7c": {
+    "f1": 1.0,
+    "tp": 10,
+    "fp": 0
+   },
+   "70cc6637": {
+    "f1": 0.835,
+    "tp": 111,
+    "fp": 14
+   },
+   "8039a34c": {
+    "f1": 1.0,
+    "tp": 239,
+    "fp": 0
+   },
+   "a9e30986": {
+    "f1": 0.526,
+    "tp": 36,
+    "fp": 20
+   },
+   "bbeeaad8": {
+    "f1": 1.0,
+    "tp": 5,
+    "fp": 0
+   }
+  },
+  "A_fscan_on_autopsy_off": {
+   "17ea7626": {
+    "f1": 0.878,
+    "tp": 43,
+    "fp": 3
+   },
+   "4e1ae5c6": {
+    "f1": 1.0,
+    "tp": 8,
+    "fp": 0
+   },
+   "9ce7df83": {
+    "f1": 0.857,
+    "tp": 6,
+    "fp": 0
+   },
+   "bbd6797f": {
+    "f1": 1.0,
+    "tp": 20,
+    "fp": 0
+   },
+   "d7a82772": {
+    "f1": 0.828,
+    "tp": 36,
+    "fp": 5
+   },
+   "ea7edd71": {
+    "f1": 0.865,
+    "tp": 16,
+    "fp": 3
+   },
+   "ebecf0c6": {
+    "f1": 0.872,
+    "tp": 17,
+    "fp": 4
+   },
+   "16b37356": {
+    "f1": 1.0,
+    "tp": 12,
+    "fp": 0
+   },
+   "2bf55c75": {
+    "f1": 1.0,
+    "tp": 238,
+    "fp": 0
+   },
+   "47902d34": {
+    "f1": 0.818,
+    "tp": 36,
+    "fp": 4
+   },
+   "6bf97c7c": {
+    "f1": 1.0,
+    "tp": 10,
+    "fp": 0
+   },
+   "70cc6637": {
+    "f1": 0.852,
+    "tp": 115,
+    "fp": 14
+   },
+   "8039a34c": {
+    "f1": 1.0,
+    "tp": 239,
+    "fp": 0
+   },
+   "a9e30986": {
+    "f1": 0.526,
+    "tp": 36,
+    "fp": 20
+   },
+   "bbeeaad8": {
+    "f1": 1.0,
+    "tp": 5,
+    "fp": 0
+   }
+  },
+  "B_fscan_off_autopsy_on": {
+   "17ea7626": {
+    "f1": 0.878,
+    "tp": 43,
+    "fp": 3
+   },
+   "4e1ae5c6": {
+    "f1": 1.0,
+    "tp": 8,
+    "fp": 0
+   },
+   "9ce7df83": {
+    "f1": 0.857,
+    "tp": 6,
+    "fp": 0
+   },
+   "bbd6797f": {
+    "f1": 1.0,
+    "tp": 20,
+    "fp": 0
+   },
+   "d7a82772": {
+    "f1": 0.828,
+    "tp": 36,
+    "fp": 5
+   },
+   "ea7edd71": {
+    "f1": 0.865,
+    "tp": 16,
+    "fp": 3
+   },
+   "ebecf0c6": {
+    "f1": 0.872,
+    "tp": 17,
+    "fp": 4
+   },
+   "16b37356": {
+    "f1": 1.0,
+    "tp": 12,
+    "fp": 0
+   },
+   "2bf55c75": {
+    "f1": 1.0,
+    "tp": 238,
+    "fp": 0
+   },
+   "47902d34": {
+    "f1": 0.818,
+    "tp": 36,
+    "fp": 4
+   },
+   "6bf97c7c": {
+    "f1": 1.0,
+    "tp": 10,
+    "fp": 0
+   },
+   "70cc6637": {
+    "f1": 0.844,
+    "tp": 114,
+    "fp": 15
+   },
+   "8039a34c": {
+    "f1": 0.998,
+    "tp": 238,
+    "fp": 0
+   },
+   "a9e30986": {
+    "f1": 0.526,
+    "tp": 36,
+    "fp": 20
+   },
+   "bbeeaad8": {
+    "f1": 1.0,
+    "tp": 5,
+    "fp": 0
+   }
+  },
+  "C_fscan_on_autopsy_on": {
+   "17ea7626": {
+    "f1": 0.878,
+    "tp": 43,
+    "fp": 3
+   },
+   "4e1ae5c6": {
+    "f1": 1.0,
+    "tp": 8,
+    "fp": 0
+   },
+   "9ce7df83": {
+    "f1": 0.857,
+    "tp": 6,
+    "fp": 0
+   },
+   "bbd6797f": {
+    "f1": 1.0,
+    "tp": 20,
+    "fp": 0
+   },
+   "d7a82772": {
+    "f1": 0.828,
+    "tp": 36,
+    "fp": 5
+   },
+   "ea7edd71": {
+    "f1": 0.865,
+    "tp": 16,
+    "fp": 3
+   },
+   "ebecf0c6": {
+    "f1": 0.872,
+    "tp": 17,
+    "fp": 4
+   },
+   "16b37356": {
+    "f1": 1.0,
+    "tp": 12,
+    "fp": 0
+   },
+   "2bf55c75": {
+    "f1": 1.0,
+    "tp": 238,
+    "fp": 0
+   },
+   "47902d34": {
+    "f1": 0.818,
+    "tp": 36,
+    "fp": 4
+   },
+   "6bf97c7c": {
+    "f1": 1.0,
+    "tp": 10,
+    "fp": 0
+   },
+   "70cc6637": {
+    "f1": 0.849,
+    "tp": 115,
+    "fp": 15
+   },
+   "8039a34c": {
+    "f1": 1.0,
+    "tp": 239,
+    "fp": 0
+   },
+   "a9e30986": {
+    "f1": 0.526,
+    "tp": 36,
+    "fp": 20
+   },
+   "bbeeaad8": {
+    "f1": 1.0,
+    "tp": 5,
+    "fp": 0
+   }
+  },
+  "D_fscan_off_autopsy_off": {
+   "17ea7626": {
+    "f1": 0.878,
+    "tp": 43,
+    "fp": 3
+   },
+   "4e1ae5c6": {
+    "f1": 1.0,
+    "tp": 8,
+    "fp": 0
+   },
+   "9ce7df83": {
+    "f1": 0.857,
+    "tp": 6,
+    "fp": 0
+   },
+   "bbd6797f": {
+    "f1": 1.0,
+    "tp": 20,
+    "fp": 0
+   },
+   "d7a82772": {
+    "f1": 0.828,
+    "tp": 36,
+    "fp": 5
+   },
+   "ea7edd71": {
+    "f1": 0.865,
+    "tp": 16,
+    "fp": 3
+   },
+   "ebecf0c6": {
+    "f1": 0.872,
+    "tp": 17,
+    "fp": 4
+   },
+   "16b37356": {
+    "f1": 1.0,
+    "tp": 12,
+    "fp": 0
+   },
+   "2bf55c75": {
+    "f1": 1.0,
+    "tp": 238,
+    "fp": 0
+   },
+   "47902d34": {
+    "f1": 0.818,
+    "tp": 36,
+    "fp": 4
+   },
+   "6bf97c7c": {
+    "f1": 1.0,
+    "tp": 10,
+    "fp": 0
+   },
+   "70cc6637": {
+    "f1": 0.848,
+    "tp": 114,
+    "fp": 14
+   },
+   "8039a34c": {
+    "f1": 0.998,
+    "tp": 238,
+    "fp": 0
+   },
+   "a9e30986": {
+    "f1": 0.526,
+    "tp": 36,
+    "fp": 20
+   },
+   "bbeeaad8": {
+    "f1": 1.0,
+    "tp": 5,
+    "fp": 0
+   }
+  }
+ }
+}
