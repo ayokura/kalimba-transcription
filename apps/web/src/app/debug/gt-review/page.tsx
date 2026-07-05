@@ -165,8 +165,11 @@ export default function DebugGtReviewPage() {
         const key = String(index);
         const merged = { ...(v.rows[key] ?? {}), ...patch };
         if (patch.decision !== undefined && patch.notes === undefined) delete merged.notes;
-        // 人間が改めて裁定した行は seed 由来ではなくなる (ear_verified に格上げ)
-        if (patch.decision !== undefined) delete merged.seeded;
+        // 人間が改めて裁定した行は seed/agent 由来ではなくなる (ear_verified に格上げ)
+        if (patch.decision !== undefined) {
+          delete merged.seeded;
+          delete merged.agentVerified;
+        }
         if (merged.comment === "") delete merged.comment;
         if (merged.accompanimentOnly === false) delete merged.accompanimentOnly;
         const rows = { ...v.rows };
@@ -596,6 +599,20 @@ export default function DebugGtReviewPage() {
                     <button
                       type="button"
                       className="review-btn review-btn-small"
+                      title={`${row.timeSec.toFixed(2)}s へ移動 (再生しない — energy trace 参照用)`}
+                      onClick={() => {
+                        const audio = audioRef.current;
+                        if (!audio) return;
+                        if (pauseTimer.current) clearTimeout(pauseTimer.current);
+                        audio.pause();
+                        audio.currentTime = row.timeSec;
+                      }}
+                    >
+                      ⇥
+                    </button>
+                    <button
+                      type="button"
+                      className="review-btn review-btn-small"
                       onClick={() => playAt(row.timeSec)}
                       title={`${row.timeSec.toFixed(2)}s から再生`}
                     >
@@ -630,6 +647,11 @@ export default function DebugGtReviewPage() {
                     {rv?.seeded ? (
                       <span className="pill" title="review corrections から自動 seed。ボタンを押し直すと耳確認扱いに格上げ">
                         seed
+                      </span>
+                    ) : null}
+                    {rv?.agentVerified ? (
+                      <span className="pill" title="agent のスペクトル自動裁定 (spectrogram_verified)。ボタンを押し直すと耳確認扱いに格上げ">
+                        agent
                       </span>
                     ) : null}
                   </div>

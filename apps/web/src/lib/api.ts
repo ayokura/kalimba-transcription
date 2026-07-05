@@ -417,6 +417,9 @@ export type GtDraftRowVerdict = {
   // gt_verdict_seed.py が review corrections から自動 seed した行。
   // 人間がボタンを押し直すと外れる (gt_finalize で ear_verified と区別)
   seeded?: boolean;
+  // agent のスペクトル自動裁定 (gt_finalize で spectrogram_verified 扱い)。
+  // 人間がボタンを押し直すと外れる
+  agentVerified?: boolean;
 };
 
 export type GtDraftUnplacedVerdict = {

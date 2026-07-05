@@ -66,14 +66,21 @@ def finalize(tx8: str, force: bool) -> bool:
             comment_parts.append(f"user corrected (draft: {'+'.join(row['draftNotes'])})")
         if rv.get("comment"):
             comment_parts.append(rv["comment"])
-        # gt_verdict_seed.py 由来の行は耳確認していない (review corrections の
-        # 転記) ため user_corrected に留める — ear_verified と偽らない
-        # (ガードレール 8)。UI で人間が押し直した行は seeded が外れている
+        # provenance の区別 (ガードレール 8: 耳確認と偽らない):
+        # - seeded: review corrections の転記 → user_corrected
+        # - agentVerified: agent のスペクトル自動裁定 → spectrogram_verified
+        # - それ以外 (人間が UI で裁定) → ear_verified
         seeded = bool(rv.get("seeded"))
+        agent_verified = bool(rv.get("agentVerified"))
+        method = (
+            "user_corrected" if seeded
+            else "spectrogram_verified" if agent_verified
+            else "ear_verified"
+        )
         onset = {
             "timeSec": row["timeSec"],
             "notes": notes,
-            "method": "user_corrected" if seeded else "ear_verified",
+            "method": method,
             "comment": "; ".join(comment_parts) if comment_parts else (
                 "seeded from review corrections" if seeded else "gt-review verdict"
             ),
