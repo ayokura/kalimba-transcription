@@ -103,19 +103,7 @@
 
 ## How To Record Spike History
 
-- Put the detailed rationale in the commit body.
-- For primary-agent spike archives, add a short issue comment as an index, not as the full writeup, when the spike is important enough to keep discoverable.
-- Use the following tags in the issue comment so spike history can be filtered:
-  - `[spike-archive]`
-  - `[fixture: <fixture-id>]`
-  - `[regressed: <fixture-id-or-none>]`
-  - `[branch: <branch-name>]`
-  - `[commit: <sha>]`
-- The issue comment should say only:
-  - what improved
-  - what regressed
-  - why it was not merged
-  - that the detailed explanation is in the commit body
+- Put the detailed rationale in the commit body; the issue comment is only an index. Tag set and comment format: [`docs/task-management.md`](/docs/task-management.md) の「Spike History Tags」。
 - Subagents should not create separate spike-archive branches of their own for this purpose. Because subagents already work on isolated branches/worktrees, they should preserve undoable experiment history with normal commits plus explicit revert commits when needed.
 
 ## Common Agent Workflow
@@ -141,14 +129,13 @@
 
 ## Issue Labeling
 
-- GitHub Issues use a three-layer label taxonomy:
-  - `area:*` for broad product surface
-  - `type:*` for the nature of the work
-  - optional `component:*` for a concrete code or ownership slice
-- New issues should normally get one `area:*` label and one `type:*` label.
-- Add `component:*` only when the implementation target is already clear enough to be useful for routing or filtering.
-- When package-boundary or cross-module work does not fit a narrower component cleanly, prefer a broader component label rather than forcing a misleading one.
-- See [`docs/task-management.md`](/docs/task-management.md) for the current label set and examples.
+- New issues normally get one `area:*` and one `type:*` label; add `component:*` only when the implementation target is already clear enough to be useful for routing.
+- Current label set, selection rules, and examples: [`docs/task-management.md`](/docs/task-management.md).
+
+## GitHub Conventions
+
+- GitHub に投稿する content (issue / PR comment・body, commit message 等、GitHub UI に表示されるすべて) では **commit SHA をバッククォートで囲わない** — inline code 扱いになり自動 commit リンクが無効になる。ローカルファイル (docs / memory 等) はリンク化対象外なので囲ってよい。
+- Issue/PR への画像添付は `scripts/gh-attach-image.sh <local-path> <remote-path>` を使う (gh CLI/API には添付機能がない)。merge しない `assets` ブランチに画像を積み、出力される raw URL スニペットを body に貼る。
 
 ## Test Architecture
 
@@ -161,6 +148,7 @@
 - Mechanism test は構築入力または marshal した中間データを使い、フルパイプライン実行に依存しない。
 - `ground_truth.json` は人間確認済み onset 時刻を絶対秒で記録する optional timing assertion。
 - Fixture 調査で full audio を見るのはよいが、最終 validation は必ず regression test と同じ eval_scope で行う。
+- **rejection 閾値・フィルタ変更の fixture 影響評価は必ず実テストスイート (pytest / `scripts/audio-analysis/fixture_rejection_sweep.py`) で行う。** ad-hoc な event count 比較は evaluation window / ignoredRanges / expectedEventNoteSetsOrdered を無視して偽の回帰を報告する (#66/#74 で 2 週間を失った教訓)。
 
 ## Recognizer Strategy Notes
 
@@ -177,18 +165,9 @@
 
 ### Broadband patch vs per-note onset detection
 
-現在の recognizer は broadband onset detection（pure-numpy 化された spectral flux ベース。librosa からの移植コードだが、recognizer 自体は #187 / #193 で librosa-free）をベースに、個別の rescue/gate patch を積み上げて精度を上げている。一方 [#141](https://github.com/ayokura/kalimba-transcription/issues/141) では per-note onset detection という根本的な architecture 変更が提案されている。
-
-**既定方針 (2026-07-04 改訂)**: broadband ベースは維持するが、**events.py への新規 suppression pass の追加は禁止** — トリガー 4 (下記) が限界域に達したため (pass 32 / gate reason ~40 vs fixture 35、2026-07-04 監査)。新規 pass に相当する変更は #141 research spike (research branch + dual-run) 経由でのみ試す。**非 pass 形の改修 (候補保持 / 降格 / provenance / 既存 pass の除去・簡素化) は従来どおり可**。per-note への全面移行は以下のトリガーのいずれかが発生した時点で判断する (トリガーの数値判定は ablation observatory — 第 2 期 S4 — で自動化予定):
-
-1. **Patch が衝突する** — ある patch が別の patch の前提を壊し、全体として整合的な物理モデルにならなくなったとき
-2. **broadband で物理的に検出不能な音が出る** — weak attack で spectral flux が閾値に届かないケース。broadband detection が通っているケース (今日の 10.939s D5 など) は patch で拾える
-3. **リアルタイム要求 (streaming transcription)** — batch 前提の broadband 解析では間に合わなくなったとき。per-note state machine (`OFF → ATTACK → BODY → LATE_DECAY`) への移行が必要
-4. **Patch 数が fixture 数に近づく** — 一般化できないローカル解決が蓄積したとき
-
-**streaming / WASM 適合性は直交**: broadband patch も per-note も FFT / band energy ベースで WASM 化できる。recognizer は既に librosa-free (#187 / #193 で pure-numpy 化済み) なので、ライブラリ独立は per-note を選ぶ理由にはならない。
-
-**並行路線を推奨**: main line は patch で完成度を上げ、research line (別 branch) で per-note を実験的に検証する。patch で解けないケースを per-note 側で解く、が明確になった時点で merge を判断する。
+- **既定方針 (2026-07-04 改訂)**: broadband ベース (librosa-free、#187/#193) は維持。ただし **events.py への新規 suppression pass の追加は禁止** — pass 数が fixture 数に接近したため (2026-07-04 監査)。新規 pass 相当の変更は [#141](https://github.com/ayokura/kalimba-transcription/issues/141) research spike (research branch + dual-run) 経由でのみ試す。**非 pass 形の改修 (候補保持 / 降格 / provenance / 既存 pass の除去・簡素化) は従来どおり可**。
+- per-note onset detection への全面移行は 4 トリガー (patch 衝突 / broadband で物理的に検出不能な音 / streaming 要求 / patch 数 ≈ fixture 数) のいずれかが発生した時点で判断。並行路線 (main=patch 完成度、research branch=per-note 実験) を推奨。
+- 経緯・各トリガーの詳細・streaming/WASM 適合性の分析: [`docs/broadband-vs-per-note-policy.md`](/docs/broadband-vs-per-note-policy.md)。
 
 ## Claude Code-Specific Notes
 

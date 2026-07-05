@@ -114,10 +114,17 @@ This is where recording intent, rerecord guidance, fixture status, and audit not
 - If a capture is only evidence for an existing problem, keep it local and link it from the issue if needed
 - Do not create GitHub Issues for every ad-hoc recording
 
+## Spike History Tags
+
+spike-archive を issue コメントで索引化する際のタグセット (規範は AGENTS.md「Spike / Rollback Policy」、ここは書式詳細):
+
+- `[spike-archive]` / `[fixture: <fixture-id>]` / `[regressed: <fixture-id-or-none>]` / `[branch: <branch-name>]` / `[commit: <sha>]`
+- コメント本文には「何が改善したか / 何が回帰したか / なぜマージしなかったか / 詳細は commit body 参照」のみを書く。詳細な根拠は commit body に置き、issue コメントは索引に徹する。
+
 ## Current Medium-Term Themes
 
-中期の作業計画は [sprint-plan-2026-07.md](sprint-plan-2026-07.md) を参照
-(8スプリント構成、確度評価 A-D 付き、exit criteria 駆動)。
+中期の作業計画は [sprint-plan-2026-07c.md](sprint-plan-2026-07c.md) (第 3 期、現行) を参照。
+旧 [sprint-plan-2026-07.md](sprint-plan-2026-07.md) (第 1 期、8スプリント構成・確度評価 A-D) は superseded。
 
 計画の 3 レーン:
 
