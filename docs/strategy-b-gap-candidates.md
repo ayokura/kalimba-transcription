@@ -1,5 +1,7 @@
 # Strategy B: Gap Candidates And Promotion
 
+> 📌 **2026-03-27 時点の調査/設計記録 (凍結)**。以後更新しない。現行の計画・運用は [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md) と AGENTS.md を参照。
+
 ## Findings
 
 - `collect_multi_onset_gap_segments()` rejects `kalimba-17-c-bwv147-lower-context-roll-01` because its long gap does not satisfy the collector's `0.18s-0.42s` short-interval gate. The gap has onset intervals `0.048, 1.5093, 0.6187, 0.6213, 1.2454, 1.4, 0.12`, so `short_interval_count` is `0` and the collector returns no segments.

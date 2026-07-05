@@ -1,5 +1,9 @@
 # カリンバ自動採譜向けアルゴリズム調査メモ
 
+> ## ⚠️ バイアス警告 (2026-07-05 追記)
+>
+> 本ドキュメントは **LLM 調査レポートを一次ソースとした一次未検証資料** (citation トークン未検証) であり、AGENTS.md / [`index.md`](index.md) で deprecated 指定されている。設計判断の根拠には [`20260626-unbiased-amt-reassessment.md`](20260626-unbiased-amt-reassessment.md) を使うこと。
+
 更新日: 2026-04-06
 
 ## 結論（先に要点）

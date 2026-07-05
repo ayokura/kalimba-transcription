@@ -1,5 +1,7 @@
 # Issue #43: Leading Gap Noise Analysis
 
+> 📌 **2026-03-28 時点の調査/設計記録 (凍結)**。以後更新しない。現行の計画・運用は [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md) と AGENTS.md を参照。
+
 ## 概要
 
 `USE_ATTACK_VALIDATED_GAP_COLLECTOR=True` で7つのfixtureがregressionを起こす原因を調査した記録。

@@ -1,5 +1,7 @@
 # Arpeggio Minimal Design
 
+> 📌 **2026-03-24 時点の調査/設計記録 (凍結)**。以後更新しない。現行の計画・運用は [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md) と AGENTS.md を参照。
+
 ## Goal
 
 Introduce `arpeggio` without breaking the current note-set based transcription flow.

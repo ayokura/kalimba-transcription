@@ -1,5 +1,7 @@
 # Per-Note Onset Detection: Design Notes
 
+> **⚠️ 前提の陳腐化注記 (2026-07-05)**: 本文中の「librosa の broadband spectral flux に全面依存」等の記述は執筆時点 (2026-04) の歴史的記述。recognizer は #187 / #193 で librosa-free (pure-numpy) 化済み。現行方針は AGENTS.md「Broadband patch vs per-note onset detection」+ [`broadband-vs-per-note-policy.md`](broadband-vs-per-note-policy.md) を参照。 本設計は #141 research line の入力として現役。
+
 ## 背景
 
 現在の onset 検出は librosa の broadband spectral flux に全面依存している。これは大半の onset を正しく検出するが、以下の構造的限界がある:

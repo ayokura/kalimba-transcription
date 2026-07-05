@@ -1,5 +1,9 @@
 # カリンバ自動採譜に有用なアルゴリズムの横断的サーベイ
 
+> ## ⚠️ バイアス警告 (2026-07-05 追記)
+>
+> 本ドキュメントは **LLM 調査レポートを一次ソースとした一次未検証資料** (citation トークン未検証) であり、AGENTS.md / [`index.md`](index.md) で deprecated 指定されている。設計判断の根拠には [`20260626-unbiased-amt-reassessment.md`](20260626-unbiased-amt-reassessment.md) を使うこと。
+
 ## 研究目的と問題設定
 
 録音データから「何の音が、いつ鳴ったか（音高・オンセット・持続・同時発音）」を推定して記譜（MIDI/楽譜相当）へ落とす問題は、一般に **Automatic Music Transcription（AMT）** と呼ばれ、(multi-)pitch 推定、オンセット/オフセット検出、音源（楽器）識別、拍や小節などの構造推定まで複数サブタスクの組み合わせとして整理されます。citeturn15search0

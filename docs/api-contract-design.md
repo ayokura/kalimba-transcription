@@ -1,5 +1,7 @@
 # API Contract Design — Phase α
 
+> 📌 **2026-04-17 時点の調査/設計記録 (凍結)**。以後更新しない。現行の計画・運用は [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md) と AGENTS.md を参照。実装済みの API 実態はコード (apps/api) が正。
+
 ## 目的
 
 Web UI リビルドに向けて、API の契約（入出力仕様）を整理・設計する。

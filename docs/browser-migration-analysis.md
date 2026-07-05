@@ -1,5 +1,7 @@
 # Browser Migration Analysis
 
+> **⚠️ 前提の陳腐化注記 (2026-07-05)**: 本文中の「librosa の broadband spectral flux に全面依存」等の記述は執筆時点 (2026-04) の歴史的記述。recognizer は #187 / #193 で librosa-free (pure-numpy) 化済み。現行方針は AGENTS.md「Broadband patch vs per-note onset detection」+ [`broadband-vs-per-note-policy.md`](broadband-vs-per-note-policy.md) を参照。 現行のブラウザ設計は [`browser-two-phase-design.md`](browser-two-phase-design.md) が正。
+
 Analysis of migrating the server-side transcription pipeline to WebAudio API / browser-side implementation, covering both batch and real-time scenarios.
 
 ## Current Pipeline Overview

@@ -2,16 +2,16 @@
 
 ## Verified in this workspace
 
+現在の主環境は WSL/Linux + uv (旧 PowerShell 前提の記述は 2026-07-05 に更新)。
+
 ### Web
 
-```powershell
+```bash
 npm install
 npm run lint:web
 npm run build:web
 npm run dev:web
 ```
-
-`lint:web` and `build:web` completed successfully in this environment.
 
 ### API dependencies
 
@@ -19,22 +19,32 @@ npm run dev:web
 uv sync
 ```
 
-`uv` manages the Python 3.14 toolchain from `pyproject.toml` / `uv.lock` and is
-the cross-platform source of truth (the same command works on Windows).
+`uv` manages the Python toolchain from `pyproject.toml` / `uv.lock` and is
+the cross-platform source of truth.
+
+### API tests
+
+```bash
+uv run pytest apps/api/tests -q
+```
 
 ## Recommended local run
 
 ### API
 
+prod が 127.0.0.1:8000 を占有しているホストでは port 8001 を使う (kalimba CLAUDE.md「Dev server startup」参照):
+
 ```bash
-uv run uvicorn app.main:app --reload --app-dir apps/api
+uv run uvicorn app.main:app --app-dir apps/api --reload --host 0.0.0.0 --port 8001
 ```
 
 ### Web
 
 ```bash
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev:web
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8001 npm run dev:web
 ```
+
+(API dev インスタンスを 8001 で立てた場合。prod 併存ホストの詳細は kalimba CLAUDE.md 参照)
 
 ## Minimum manual test cases
 
