@@ -42,6 +42,7 @@ import {
   type ReviewState,
 } from "@/lib/reviewCorrections";
 import { needsReviewReasons, type NeedsReviewReason } from "@/lib/needsReview";
+import { logOp, type OpClass, type OpLogMeta } from "@/lib/opLog";
 import {
   CandidateSlot,
   CorrectionsPayload,
@@ -241,14 +242,43 @@ function ReviewEditorReady({
     [result.events],
   );
 
-  const apply = useCallback((next: (state: ReviewState) => ReviewState) => {
-    setEditHistory((current) => {
-      const updated = next(current.present);
-      if (updated === current.present) return current;
-      // 新しい編集で redo 先は無効になる (通常の undo/redo 意味論)
-      return { past: [...current.past, current.present], present: updated, future: [] };
-    });
-  }, []);
+  // dogfooding 計測 (docs/usage-validation-criteria.md の 7 分類カウント自動化)。
+  // ログはここ (apply 本体) で行い、setEditHistory の updater 内では呼ばない —
+  // StrictMode は updater 関数を開発時に二重呼び出しするため、updater 内で
+  // ログすると操作が二重計上されうる。updater は「新しい state を計算する
+  // 純粋関数」に保ち、副作用 (ログ) は apply 呼び出し 1 回につき正確に 1 回だけ
+  // ここで実行する。計測失敗が編集操作を壊さないよう try/catch で握りつぶす
+  // (logOp 自体も内部で握りつぶすが、呼び出し側でも二重に守る)。
+  const logOps = useCallback(
+    (op?: { cls: OpClass; meta?: OpLogMeta } | { cls: OpClass; meta?: OpLogMeta }[]) => {
+      if (!op) return;
+      const ops = Array.isArray(op) ? op : [op];
+      for (const o of ops) {
+        try {
+          logOp(transactionId, o.cls, o.meta);
+        } catch {
+          // 計測は副作用。失敗しても編集は継続する。
+        }
+      }
+    },
+    [transactionId],
+  );
+
+  const apply = useCallback(
+    (
+      next: (state: ReviewState) => ReviewState,
+      op?: { cls: OpClass; meta?: OpLogMeta } | { cls: OpClass; meta?: OpLogMeta }[],
+    ) => {
+      setEditHistory((current) => {
+        const updated = next(current.present);
+        if (updated === current.present) return current;
+        // 新しい編集で redo 先は無効になる (通常の undo/redo 意味論)
+        return { past: [...current.past, current.present], present: updated, future: [] };
+      });
+      logOps(op);
+    },
+    [logOps],
+  );
 
   const undo = useCallback(() => {
     setEditHistory((current) => {
@@ -259,7 +289,8 @@ function ReviewEditorReady({
         future: [...current.future, current.present],
       };
     });
-  }, []);
+    logOps({ cls: "undo" });
+  }, [logOps]);
 
   const redo = useCallback(() => {
     setEditHistory((current) => {
@@ -270,10 +301,12 @@ function ReviewEditorReady({
         future: current.future.slice(0, -1),
       };
     });
-  }, []);
+    logOps({ cls: "redo" });
+  }, [logOps]);
 
   const resetAll = useCallback(() => {
-    apply(() => buildInitialState(result));
+    // 全編集の破棄は 7 分類のどれにも当たらないが、操作履歴としては残す
+    apply(() => buildInitialState(result), { cls: "other" });
   }, [apply, result]);
 
   const payload = useMemo(() => toCorrectionsPayload(reviewState), [reviewState]);
@@ -351,7 +384,12 @@ function ReviewEditorReady({
   const handleInsertSlot = useCallback(
     (slot: CandidateSlot, note?: ScoreNote) => {
       const chosen = note ?? slot.primaryNote;
-      apply((state) => insertEvent(state, slot.startTime, [chosen], "inserted-slot"));
+      // 認識器が既に提示した候補 (candidateSlots) の採用は、7 分類のいずれとも
+      // 一致しない (6/7 は「候補に無い onset」限定なのでここには入らない)。
+      apply((state) => insertEvent(state, slot.startTime, [chosen], "inserted-slot"), {
+        cls: "other",
+        meta: { timeSec: slot.startTime, notes: [noteName(chosen)] },
+      });
     },
     [apply],
   );
@@ -360,7 +398,14 @@ function ReviewEditorReady({
     (note: ScoreNote) => {
       const audio = audioRef.current;
       const timeSec = audio ? audio.currentTime : 0;
-      apply((state) => insertEvent(state, timeSec, [note], "inserted-manual"));
+      // 候補に無い onset の手動追加 (単音)。この API は 1 タップ = 1 音の
+      // 新規イベント挿入のみをサポートする。複数音の同時挿入は、この操作で
+      // 新規イベントを作った後にそのイベントへ chord-note-add を重ねる形に
+      // 分解される (onset-insert-multi 用の専用 1 アクションは現状 UI に無い)。
+      apply((state) => insertEvent(state, timeSec, [note], "inserted-manual"), {
+        cls: "onset-insert-single",
+        meta: { timeSec, notes: [noteName(note)] },
+      });
     },
     [apply],
   );
@@ -561,17 +606,74 @@ function ReviewEditorReady({
               pickerNotes={pickerNotes}
               onSelect={() => handleSelect(item.event.id)}
               onAudition={() => auditionEvent(item.event)}
-              onRemoveNote={(name) => apply((s) => removeNote(s, item.event.id, name))}
-              onAddNote={(note) => apply((s) => addNote(s, item.event.id, note))}
+              onRemoveNote={(name) =>
+                // 和音扱いからの一部削除 (removeNote は notes.length<=1 では no-op)
+                apply((s) => removeNote(s, item.event.id, name), {
+                  cls: "chord-note-remove",
+                  meta: { timeSec: item.event.timeSec, notes: [name] },
+                })
+              }
+              onAddNote={(note) =>
+                // 和音扱いへの一部追加
+                apply((s) => addNote(s, item.event.id, note), {
+                  cls: "chord-note-add",
+                  meta: { timeSec: item.event.timeSec, notes: [noteName(note)] },
+                })
+              }
               onReplaceNote={(name, note) =>
-                apply((s) => replaceNote(s, item.event.id, name, note))
+                // 単音イベントの音高間違い修正は「偽の認識の除去」(class 2) に対応する
+                // (event.notes が 1 件のときが最頻: EventCard の pickMode 既定が
+                // それを裏付ける)。和音内の 1 音差し替えは「一部削除+一部追加」の
+                // 複合操作なので、その場合は 2 件ログする (class 4 + class 5)
+                apply(
+                  (s) => replaceNote(s, item.event.id, name, note),
+                  item.event.notes.length === 1
+                    ? {
+                        cls: "event-remove",
+                        meta: { timeSec: item.event.timeSec, notes: [name, noteName(note)] },
+                      }
+                    : [
+                        {
+                          cls: "chord-note-remove",
+                          meta: { timeSec: item.event.timeSec, notes: [name] },
+                        },
+                        {
+                          cls: "chord-note-add",
+                          meta: { timeSec: item.event.timeSec, notes: [noteName(note)] },
+                        },
+                      ],
+                )
               }
               onNudgeTime={(deltaSec) =>
-                apply((s) => setEventTime(s, item.event.id, item.event.timeSec + deltaSec))
+                // タイミングのみの微調整は 7 分類に無い
+                apply(
+                  (s) => setEventTime(s, item.event.id, item.event.timeSec + deltaSec),
+                  { cls: "other", meta: { timeSec: item.event.timeSec } },
+                )
               }
-              onToggleRemoved={() => apply((s) => toggleRemoved(s, item.event.id))}
+              onToggleRemoved={() =>
+                apply(
+                  (s) => toggleRemoved(s, item.event.id),
+                  item.event.removed
+                    ? // 復元 (削除の取り消し) は修正操作としてカウントしない
+                      { cls: "other", meta: { timeSec: item.event.timeSec } }
+                    : // origin=inserted-slot: 一度採用した候補の取り消し ≈「偽の候補の除去」
+                      // それ以外 (recognizer/edited/inserted-manual): 確立した認識の除去
+                      {
+                        cls: item.event.origin === "inserted-slot" ? "candidate-remove" : "event-remove",
+                        meta: {
+                          timeSec: item.event.timeSec,
+                          notes: item.event.notes.map(noteName),
+                        },
+                      },
+                )
+              }
               onToggleAccompaniment={() =>
-                apply((s) => toggleAccompanimentOnly(s, item.event.id))
+                // ラベリングのみで音の同定を変えない (7 分類に無い)
+                apply((s) => toggleAccompanimentOnly(s, item.event.id), {
+                  cls: "other",
+                  meta: { timeSec: item.event.timeSec },
+                })
               }
               onApplySplit={(groups) => {
                 const source = item.event.sourceEventId
@@ -582,10 +684,20 @@ function ReviewEditorReady({
                 const times = groups.map((_, i) =>
                   item.event.timeSec + (i * dur) / groups.length,
                 );
-                apply((s) => splitEvent(s, item.event.id, groups, times));
+                // 1 打として認識されたイベントを複数打に分割する = 「近接同一音の
+                // シングル/弾き直し判定」(class 3) の一般化 (同時 vs 連打のあいまい
+                // さの解消。同音の連打だけでなく異音の分割も同じ機構で扱う)
+                apply((s) => splitEvent(s, item.event.id, groups, times), {
+                  cls: "restrike-judgment",
+                  meta: { timeSec: item.event.timeSec, notes: groups.flat().map(noteName) },
+                });
               }}
               onApplyMerge={(combinedNotes, withIds) =>
-                apply((s) => applyMergeSuggestion(s, item.event.id, combinedNotes, withIds))
+                // 逆に、別々に検出された 2 打を 1 打として統合する判定も同じ class 3
+                apply((s) => applyMergeSuggestion(s, item.event.id, combinedNotes, withIds), {
+                  cls: "restrike-judgment",
+                  meta: { timeSec: item.event.timeSec, notes: combinedNotes.map(noteName) },
+                })
               }
             />
           ) : (

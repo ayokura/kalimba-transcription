@@ -538,6 +538,96 @@ export async function saveBpVerifyVerdict(verdict: BpVerifyVerdict): Promise<voi
   if (!response.ok) throw new Error("Failed to save bp-verify verdict.");
 }
 
+// --- Dev-only (temporary): /debug/dogfooding が使う (第 3 期 S2 の用途検証計測)。
+// docs/usage-validation-criteria.md / docs/dogfooding-protocol.md 参照。
+// 自動計測 (opLog 集計) はクライアント側のみで完結し、ここでは手動記入
+// (諦め箇所・主観負荷・曖昧性カタログ・弾き戻し) と完了フラグだけをやり取りする。
+// ページと一緒に撤去する ---
+
+export type DogfoodingListEntry = {
+  txId: string;
+  updatedAt: string | null;
+  done: boolean;
+};
+
+export type DogfoodingAmbiguityRow = {
+  timeSec: string;
+  judgment: string;
+  resolution: string;
+};
+
+export type DogfoodingPlayback = {
+  phraseCount: number | null;
+  reproducedPhraseCount: number | null;
+  stumblePitch: number;
+  stumbleRhythm: number;
+  stumbleNotation: number;
+};
+
+export type DogfoodingManual = {
+  /** 記入票の「基本情報」欄相当。判定には使わず、コピー用レポートの体裁のみに使う */
+  sessionDate: string;
+  pieceInfo: string;
+  giveUpCount: number;
+  giveUpNotes: string;
+  subjectiveLoad: number | null;
+  ambiguityLog: DogfoodingAmbiguityRow[];
+  playback: DogfoodingPlayback;
+};
+
+export type DogfoodingRecord = {
+  txId?: string;
+  updatedAt?: string | null;
+  manual: DogfoodingManual;
+  done: boolean;
+};
+
+export function emptyDogfoodingManual(): DogfoodingManual {
+  return {
+    sessionDate: "",
+    pieceInfo: "",
+    giveUpCount: 0,
+    giveUpNotes: "",
+    subjectiveLoad: null,
+    ambiguityLog: [],
+    playback: {
+      phraseCount: null,
+      reproducedPhraseCount: null,
+      stumblePitch: 0,
+      stumbleRhythm: 0,
+      stumbleNotation: 0,
+    },
+  };
+}
+
+export async function fetchDogfoodingList(): Promise<DogfoodingListEntry[]> {
+  const response = await fetch(`${API_BASE_URL}/api/dev/dogfooding`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Failed to load dogfooding list.");
+  const data = (await response.json()) as { records: DogfoodingListEntry[] };
+  return data.records;
+}
+
+export async function fetchDogfoodingRecord(txId: string): Promise<DogfoodingRecord | null> {
+  const response = await fetch(`${API_BASE_URL}/api/dev/dogfooding/${txId}`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Failed to load dogfooding record.");
+  const data = (await response.json()) as { record: DogfoodingRecord | null };
+  return data.record;
+}
+
+export async function saveDogfoodingRecord(
+  txId: string,
+  record: { manual: DogfoodingManual; done: boolean },
+): Promise<DogfoodingRecord> {
+  const response = await fetch(`${API_BASE_URL}/api/dev/dogfooding/${txId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(record),
+  });
+  if (!response.ok) throw new Error("Failed to save dogfooding record.");
+  const data = (await response.json()) as { record: DogfoodingRecord };
+  return data.record;
+}
+
 export async function fetchReviewQueue(
   options: { limit?: number; status?: ReviewStatusValue | null } = {},
 ): Promise<ReviewQueueEntry[]> {
