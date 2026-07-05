@@ -14,6 +14,8 @@
 | [`research/2026-07-per-tine-partial-table.md`](research/2026-07-per-tine-partial-table.md) | 実測 per-tine partial table (S3、機械可読 JSON 併設) |
 | [`research/2026-07-phase-tracking-roc.md`](research/2026-07-phase-tracking-roc.md) | 位相追跡 onset の ROC 較正結果 (S3、S4 判定材料) |
 | [`research/2026-07-per-tine-tracker-design.md`](research/2026-07-per-tine-tracker-design.md) | per-tine tracker + causal onset 統合設計 (S3 集大成、S4 判定材料) |
+| [`research/2026-07-s4-gate-materials.md`](research/2026-07-s4-gate-materials.md) | S4 実装ゲート判定資料 (反証 3 系統統合、GO/counter 併記) |
+| [`research/2026-07-s4-adversarial-audit-request.md`](research/2026-07-s4-adversarial-audit-request.md) | S4 敵対的監査の依頼パッケージ (別系モデル用) |
 | [`testing.md`](testing.md) | テスト 4 層モデルの詳細・手動テスト手順 |
 | [`task-management.md`](task-management.md) | issue ラベル体系・spike タグ書式 |
 | [`corpus-management.md`](corpus-management.md) | free-performance corpus の管理・権利レビュー |
