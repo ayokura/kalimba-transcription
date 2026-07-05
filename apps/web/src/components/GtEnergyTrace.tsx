@@ -229,12 +229,13 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
         g.strokeStyle = isHi ? "#0f5f67" : pct >= 20 ? "#177e89" : "#a8a5a0";
         g.lineWidth = isHi ? 1.8 : 1.2;
         g.beginPath();
-        // dB スケール (行 max 基準、floor -36dB): リンギング中の緩い減衰
-        // スロープや attack の立ち上がりが線形/sqrt より読める
-        const denom = rowMax > 0 ? rowMax : 1;
-        const DB_FLOOR = -36;
+        // 共通 dB スケール (窓内グローバル max 基準、floor -48dB):
+        // 全行の最大値が同じ物差しに載り、行間の相対強度が形で読める
+        // (2026-07-05 フィードバック — 行別正規化は 1% の音が 100% と同じ
+        // 高さに見えて誤読を招いた。弱音の形は dB が担保する)
+        const DB_FLOOR = -48;
         for (let s = 0; s < steps; s++) {
-          const raw = values[n * steps + s] / denom;
+          const raw = values[n * steps + s] / globalMax;
           const db = raw > 0 ? 20 * Math.log10(raw) : DB_FLOOR;
           const v = Math.max(0, 1 - Math.max(db, DB_FLOOR) / DB_FLOOR);
           const x = labelW + (s / Math.max(1, steps - 1)) * plotW;
