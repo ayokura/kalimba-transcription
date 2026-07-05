@@ -547,12 +547,14 @@ async def create_transcription_run(transaction_id: str) -> dict:
     result.transaction_id = transaction_id
     response_dict = result.model_dump(by_alias=True)
     # Debug is persisted only as runs/<runId>/debug.json. Pop (not get) keeps
-    # the run's response.json lean; otherwise every read resolved through
-    # load_latest_response (e.g. GET /api/transcriptions/{id}) would return a
-    # debug-inflated payload after re-recognition (legacy responses are
-    # typically lean because uploads run with debug=false). The returned
-    # ``result`` mirrors the stored response (also lean) for consistency;
-    # callers needing the debug payload read runs/<runId>/debug.json.
+    # the run's response.json lean, so every read resolved through
+    # load_latest_response (e.g. GET /api/transcriptions/{id}) serves a lean
+    # payload after re-recognition. Note the legacy upload path is different:
+    # uploads default to debug=Form(True) and store via .get, so legacy
+    # response.json typically DOES carry the debug payload - runs are the
+    # leaner of the two. The returned ``result`` mirrors the stored response
+    # (lean) for consistency; callers needing the debug payload read
+    # runs/<runId>/debug.json.
     debug_dict = response_dict.pop("debug", None)
 
     meta = create_run(
