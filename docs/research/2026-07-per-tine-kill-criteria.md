@@ -9,7 +9,7 @@
 - **非飽和 headline (n=7)**: tp=158 / truth=233 / pred=192 → **micro P=0.823 / R=0.678 / F1=0.744**
 - 非飽和 7 件: 17ea7626 (0.866) / 4e1ae5c6 (0.769) / 9ce7df83 (0.769) / a9e30986 (0.532) / d7a82772 (0.828) / ea7edd71 (0.865) / ebecf0c6 (0.872)
 - fixture suite: 574 tests green / corpus gate 13 録音 baseline
-- 注: S1 の corpus 昇格・S2 の GT 除染・きらきら星 GT 追加で基準値は移動する。**その場合は S4 (実装ゲート) 時点の再測定値を「基準値」として本文書に追記する (数値の置換ではなく追記)**。kill 判定は常に「実装開始時点の基準値」との比較で行う
+- 注: S1 の corpus 昇格・S2 の GT 除染・きらきら星 GT 追加で基準値は移動する。**その場合は S4 (実装ゲート) 時点の再測定値を「基準値」として本文書に追記する (数値の置換ではなく追記)**。kill/consult 判定は常に「実装開始時点の基準値」との比較で行う
 
 ## 実測済みの参照点 (期待値の根拠)
 
@@ -21,24 +21,29 @@
 ## GO 条件 (S4 実装ゲート — すべて満たしたら実装開始可)
 
 | # | 条件 | 判定材料 |
-|---|---|---|
+| --- | --- | --- |
 | G1 | #149 衝突プローブが「per-tine partial table が隣接 tine 汚染で自壊する」ことを**示さない** | S0-S3 のプローブ結果 (`2026-07-149-collision-probe.md`) |
 | G2 | 用途検証が「精度が律速」を支持する (「粗い転写で足りる」が支持された場合はガードレール 14 により自動再審査) | S2 用途検証の定量結果 (事前定義の判定様式) |
 | G3 | GT 除染 (bp-only 統合) 後も、under-detection (FN) が非飽和 headline の主要因子である (FN > FP) | S2 除染後の headline 内訳 |
 | G4 | spectral pin 済み録音 ≥2 (きらきら星 2 本想定) — timing-sensitive 評価の土台 (ガードレール 13) | S3 pin 済みリスト |
 
-## kill 条件 (実装後 — いずれか成立で research line を kill し、NMF 対抗馬の起動判断へ)
+## kill 条件 (実装後)
 
 dual-run (main の recognizer vs per-tine 統合版) を評価単位とする。「巡」= dual-run 1 回とその改修サイクル。
 
-| # | 条件 | 数値 | 根拠 |
-|---|---|---|---|
-| K1 | fixture 回帰が解消できない | full fixture suite の回帰 ≥1 件が **2 巡連続**で残る | spike 実測 (2〜5 本回帰) を tracker が超えられないなら同じ壁。1 巡は改修猶予 |
-| K2 | 最低獲物の未回収 | carryover-mask 2 録音の合計 recall が dual-run で 0.875 (= 14/16 GT) に届かない状態が **2 巡連続** | spike 実測 0.933 が到達可能性の証明。tracker がこれ未満なら single-instant 比の優位なし |
-| K3 | headline 改善なし | 非飽和 micro R の改善が **+0.015 未満** (かつ bootstrap 95% CI が 0 改善を含む) が **2 巡連続** | 最低獲物換算 +0.017 を下回る = 獲物を取れていない |
-| K4 | precision の悪化 | 非飽和 pooled FP が main 比 **+15% 超**の悪化を 2 巡連続で解消できない | 現 pred=192 / tp=158 → FP=34。+15% ≈ +5 FP。位相追跡の過剰検出をtracker が制御できない兆候 |
-| K5 | 本線への漏出 | recognizer 本線 (`constants.py` / events.py) への新規定数・pass の追加が必要になる | research branch 内で閉じられない設計は patch 積み増しの再演 (ガードレール 1) |
-| K6 | 期間 | S5-S7 の 3 スプリントで merge 判断材料 (K1-K4 の判定) が揃わない | 無期限 research 化の防止 |
+条件は 2 種類ある (2026-07-05 ユーザーレビューで K1/K5 を consult 化):
+
+- **hard-kill (K2/K3/K4/K6)**: いずれか成立で research line を kill し、NMF 対抗馬の起動判断へ
+- **consult (C1/C2)**: 成立しても自動 kill しない。**ユーザーとの相談トリガー**であり、trade-off の内容を添えて判断を仰ぐ
+
+| # | 種別 | 条件 | 数値/定義 | 根拠 |
+| --- | --- | --- | --- | --- |
+| C1 | consult | fixture 回帰が解消できない | full fixture suite の回帰 ≥1 件が **2 巡連続**で残る → 相談 | 得る価値の方が大きい場合がある: TOP-1 で見ている fixture の回帰でも、候補に残る等で編集対応が容易なら受容を検討しうる (2026-07-05 ユーザー判断)。相談時は「回帰 fixture の一覧 + 各回帰の候補残存状況 (cR@3) + 編集コスト見積り」を添える |
+| K2 | hard-kill | 最低獲物の未回収 | carryover-mask 2 録音の合計 recall が dual-run で 0.875 (= 14/16 GT) に届かない状態が **2 巡連続** | spike 実測 0.933 が到達可能性の証明。tracker がこれ未満なら single-instant 比の優位なし |
+| K3 | hard-kill | headline 改善なし | 非飽和 micro R の改善が **+0.015 未満** (かつ bootstrap 95% CI が 0 改善を含む) が **2 巡連続** | 最低獲物換算 +0.017 を下回る = 獲物を取れていない |
+| K4 | hard-kill | precision の悪化 | 非飽和 pooled FP が main 比 **+15% 超**の悪化を 2 巡連続で解消できない | 現 pred=192 / tp=158 → FP=34。+15% ≈ +5 FP。位相追跡の過剰検出を tracker が制御できない兆候 |
+| C2 | consult | 本線への漏出 | recognizer 本線 (`constants.py` / events.py) への新規定数・pass の追加が必要になる → 相談 | 既存本線の構造は 3 回見直しているとはいえ推測混じりであり、成果次第では構造改革もあり得る。そうでなくても次回の構造変更時の考慮事項になる (2026-07-05 ユーザー判断)。相談時は「必要になった変更の内容 + それが置き換える/追加する既存機構」を添える |
+| K6 | hard-kill | 期間 | S5-S7 の 3 スプリントで merge 判断材料 (K2-K4 の判定) が揃わない | 無期限 research 化の防止 |
 
 ## merge 条件 (kill を生き延びた後、本線投入の判断)
 
@@ -47,4 +52,5 @@ reassessment §3.3 NEXT exit (= #141 の 3 条件) を継承する: **(1) fixtur
 ## 判定の運用
 
 - 判定は dual-run の機械出力 (fixture 結果 + 非飽和 headline + CI) を第 3 期 tracking issue に貼った上で行う。agent の散文解釈のみでの判定は不可
+- consult (C1/C2) の成立は tracking issue に相談事項として記録し、ユーザー判断を待つ (agent が受容/kill を仮判断しない)。
 - kill 発動も「失敗」ではなく exit 成立として記録する (第 3 期 S5 exit criteria)。kill 時の資産 (partial 実測テーブル・位相特徴・プローブ群) は NMF 対抗馬と較正系 #172-174 に引き継ぐ
