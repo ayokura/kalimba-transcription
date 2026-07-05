@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -57,6 +58,19 @@ def get_transaction_audio_sha256(transaction_id: str) -> str | None:
     except (OSError, json.JSONDecodeError):
         return None
     return data.get("audioSha256")
+
+
+def load_request(transaction_id: str) -> dict | None:
+    """The persisted request.json (recording-level, immutable). Used by the
+    re-recognition endpoint to reconstruct the tuning + recognition options
+    from the stored recording (#204 Phase 1)."""
+    request_path = get_transaction_dir(transaction_id) / "request.json"
+    if not request_path.exists():
+        return None
+    try:
+        return json.loads(request_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def list_transactions_by_hash(audio_sha256: str) -> list[dict]:
@@ -165,6 +179,14 @@ def _summarize_transaction(tx_dir: Path) -> dict | None:
         response_data = json.loads(response_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+    # #204 Phase 1: listings reflect the latest recognition run when one exists,
+    # falling back to the immutable legacy response.json.  Existence of the
+    # legacy response is still the gate above (a directory without it is not a
+    # transaction), so listing behaviour is unchanged for tx that never had a
+    # re-recognition run added.
+    latest = _load_latest_response_for_dir(tx_dir)
+    if latest is not None:
+        response_data = latest
     tuning = request_data.get("tuning") or {}
     audio_path = tx_dir / "audio.wav"
     review_status = _read_review_status(tx_dir)
@@ -222,10 +244,190 @@ def save_transaction(
 
 
 def load_response(transaction_id: str) -> dict | None:
+    """The legacy (upload-time) response.json. Immutable; never overwritten by
+    re-recognition. Prefer ``load_latest_response`` for display resolution."""
     response_path = get_transaction_dir(transaction_id) / "response.json"
     if not response_path.exists():
         return None
     return json.loads(response_path.read_text(encoding="utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# Recognition runs (#204 Phase 1)
+#
+# A recording (audio.wav + request.json) is immutable and can be recognised
+# many times as the recognizer improves.  Each re-recognition is appended as a
+# new run under ``runs/<runId>/`` without ever touching the legacy
+# response.json / debug.json, so pre-#204 clients keep working unchanged while
+# reads resolve to the newest run when one exists.
+#
+#   runId = <UTC ts>-<recognizerFingerprint first 8 chars>
+#
+# The timestamp is formatted with microsecond precision at fixed width so that
+# plain lexicographic sorting of run directory names is chronological (the
+# newest run is simply the last one).  ``ranAt`` in meta.json mirrors the same
+# instant in ISO-8601.
+# ---------------------------------------------------------------------------
+
+
+def get_runs_dir(transaction_id: str) -> Path:
+    return get_transaction_dir(transaction_id) / "runs"
+
+
+def _format_run_id(ran_at: datetime, recognizer_fingerprint: str | None) -> str:
+    stamp = ran_at.strftime("%Y%m%dT%H%M%S.%f") + "Z"
+    fingerprint = (recognizer_fingerprint or "unknown")[:8]
+    return f"{stamp}-{fingerprint}"
+
+
+def create_run(
+    transaction_id: str,
+    response_dict: dict,
+    debug_dict: dict | None,
+    *,
+    commit_sha: str | None,
+    recognizer_fingerprint: str | None,
+    dsp_fingerprint: str | None,
+) -> dict:
+    """Append a recognition run and return its meta dict.
+
+    The runId / ranAt are allocated here so the timestamp embedded in the id is
+    exactly the recorded ``ranAt``. A uniqueness guard bumps the instant in the
+    (practically impossible) event two runs would map to the same id."""
+    runs_dir = get_runs_dir(transaction_id)
+    ran_at = datetime.now(timezone.utc)
+    run_id = _format_run_id(ran_at, recognizer_fingerprint)
+    run_dir = runs_dir / run_id
+    while run_dir.exists():
+        ran_at = datetime.now(timezone.utc)
+        run_id = _format_run_id(ran_at, recognizer_fingerprint)
+        run_dir = runs_dir / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    meta = {
+        "runId": run_id,
+        "commitSha": commit_sha,
+        "recognizerFingerprint": recognizer_fingerprint,
+        "dspFingerprint": dsp_fingerprint,
+        "ranAt": ran_at.isoformat(timespec="microseconds").replace("+00:00", "Z"),
+    }
+    (run_dir / "response.json").write_text(
+        json.dumps(response_dict, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    if debug_dict is not None:
+        (run_dir / "debug.json").write_text(
+            json.dumps(debug_dict, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    (run_dir / "meta.json").write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    return meta
+
+
+def list_run_ids(transaction_id: str) -> list[str]:
+    """Run ids (ascending / oldest-first) that have a readable response.json.
+
+    Runs missing response.json (e.g. an interrupted write) are skipped so
+    resolution never resolves to a half-written run."""
+    runs_dir = get_runs_dir(transaction_id)
+    if not runs_dir.is_dir():
+        return []
+    ids = [
+        entry.name
+        for entry in runs_dir.iterdir()
+        if entry.is_dir() and (entry / "response.json").exists()
+    ]
+    ids.sort()
+    return ids
+
+
+def latest_run_id(transaction_id: str) -> str | None:
+    ids = list_run_ids(transaction_id)
+    return ids[-1] if ids else None
+
+
+def load_run_response(transaction_id: str, run_id: str) -> dict | None:
+    response_path = get_runs_dir(transaction_id) / run_id / "response.json"
+    if not response_path.exists():
+        return None
+    try:
+        return json.loads(response_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def load_run_meta(transaction_id: str, run_id: str) -> dict | None:
+    meta_path = get_runs_dir(transaction_id) / run_id / "meta.json"
+    if not meta_path.exists():
+        return None
+    try:
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _load_latest_response_for_dir(tx_dir: Path) -> dict | None:
+    """Newest readable run response for a tx dir, else None. Legacy fallback is
+    the caller's responsibility."""
+    runs_dir = tx_dir / "runs"
+    if not runs_dir.is_dir():
+        return None
+    run_ids = sorted(
+        entry.name
+        for entry in runs_dir.iterdir()
+        if entry.is_dir() and (entry / "response.json").exists()
+    )
+    for run_id in reversed(run_ids):
+        path = runs_dir / run_id / "response.json"
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+    return None
+
+
+def load_latest_response(transaction_id: str) -> dict | None:
+    """Display-resolution read: newest recognition run, else legacy response.
+
+    This is what pre-#204 clients see through the existing read endpoints, so a
+    re-recognised recording shows the newer result without any client change."""
+    latest = _load_latest_response_for_dir(get_transaction_dir(transaction_id))
+    if latest is not None:
+        return latest
+    return load_response(transaction_id)
+
+
+def list_runs(transaction_id: str) -> list[dict]:
+    """All recognition runs for a recording, newest-first, each with its meta
+    plus a derived ``eventCount``. The immutable legacy response is appended as
+    a synthetic ``legacy`` entry (its version info lives in request.json) so the
+    full recognition history is visible from one call."""
+    runs: list[dict] = []
+    for run_id in list_run_ids(transaction_id):
+        meta = load_run_meta(transaction_id, run_id) or {}
+        response = load_run_response(transaction_id, run_id) or {}
+        entry = dict(meta)
+        entry["runId"] = run_id
+        entry["eventCount"] = len(response.get("events") or [])
+        entry["isLegacy"] = False
+        runs.append(entry)
+    runs.reverse()  # newest first
+
+    legacy_response = load_response(transaction_id)
+    if legacy_response is not None:
+        request = load_request(transaction_id) or {}
+        runs.append(
+            {
+                "runId": "legacy",
+                "commitSha": request.get("commitSha"),
+                "recognizerFingerprint": request.get("recognizerFingerprint"),
+                "dspFingerprint": request.get("dspFingerprint"),
+                "ranAt": None,
+                "eventCount": len(legacy_response.get("events") or []),
+                "isLegacy": True,
+            }
+        )
+    return runs
 
 
 def load_audio_path(transaction_id: str) -> Path | None:
