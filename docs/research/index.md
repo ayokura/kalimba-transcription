@@ -85,7 +85,7 @@ per-tine partial / note-state / resonance handling の spike 前に参照する�
 
 **(2026-07-02 更新)** 当初推奨していた `note_f1_benchmark.py` への skeleton 追加 (Candidate Recall@K / Correction Burden / HardMissRate / ConfidenceCalibration) は **ab2cca3 で実装済み** (`test_note_f1_benchmark_metrics.py` が検証)。
 
-次の作業は [`docs/sprint-plan-2026-07.md`](../sprint-plan-2026-07.md) の Sprint 1 に従う: free-performance corpus の CI regression gate 化 (per-recording baseline)、#18 corpus 拡張の録音依頼、#178 candidate output の本出力接続。
+**(2026-07-05 更新)** 次の作業は現行計画 [`docs/sprint-plan-2026-07c.md`](../sprint-plan-2026-07c.md) (第 3 期) と [#203](https://github.com/ayokura/kalimba-transcription/issues/203) の最新コメントに従う。旧 `sprint-plan-2026-07.md` (第 1 期) は superseded であり、この索引から作業を拾わないこと。
 
 ## 履歴
 
