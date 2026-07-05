@@ -1,0 +1,127 @@
+{
+ "cap": 20,
+ "instruction": "human verify: is each a real played note? primary verdict = drop PESTO if verified-real < 5",
+ "candidates": [
+  {
+   "tx": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+   "t": 2.75,
+   "note": "E3",
+   "confidence": 1.0
+  },
+  {
+   "tx": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+   "t": 8.46,
+   "note": "B4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+   "t": 13.43,
+   "note": "D5",
+   "confidence": 1.0
+  },
+  {
+   "tx": "ea7edd71-e815-4638-a248-a47fe21e5061",
+   "t": 4.73,
+   "note": "D5",
+   "confidence": 1.0
+  },
+  {
+   "tx": "ea7edd71-e815-4638-a248-a47fe21e5061",
+   "t": 9.96,
+   "note": "F5",
+   "confidence": 1.0
+  },
+  {
+   "tx": "16b37356-1cdf-46f6-a0e9-989097d59850",
+   "t": 11.95,
+   "note": "G4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 2.12,
+   "note": "A4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 2.2,
+   "note": "A4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 3.53,
+   "note": "C#5",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 3.65,
+   "note": "C#5",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 4.15,
+   "note": "E4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 4.25,
+   "note": "E4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 5.99,
+   "note": "C4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 7.25,
+   "note": "E4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 7.76,
+   "note": "E4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 8.27,
+   "note": "B3",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 8.44,
+   "note": "B3",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 8.84,
+   "note": "G4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 10.04,
+   "note": "B4",
+   "confidence": 1.0
+  },
+  {
+   "tx": "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+   "t": 10.65,
+   "note": "A3",
+   "confidence": 1.0
+  }
+ ],
+ "remainingBeyondCap": 260
+}

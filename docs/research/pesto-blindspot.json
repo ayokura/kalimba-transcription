@@ -1,0 +1,172 @@
+{
+ "rulesFixed": "#203 2026-07-06 (pre-measurement)",
+ "frozenTxIds": [
+  "17ea7626-3c5d-450d-ae74-0116dea6e881",
+  "4e1ae5c6-df9a-4876-917d-b7e47699c8e5",
+  "9ce7df83-33a0-455d-bf86-c9392ce6f777",
+  "bbd6797f-da44-4e89-b2bf-21b803f3f129",
+  "d7a82772-f77f-4820-9798-00133ae45f4e",
+  "ea7edd71-e815-4638-a248-a47fe21e5061",
+  "ebecf0c6-7e41-430b-bd60-8111a495185e",
+  "16b37356-1cdf-46f6-a0e9-989097d59850",
+  "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d",
+  "47902d34-95f4-4761-a634-6c1ef154531f",
+  "6bf97c7c-6e69-43f5-ab12-2069903be735",
+  "70cc6637-ca99-4848-a0d4-944b53e5c742",
+  "8039a34c-afd0-4515-8949-80089117cf62",
+  "a9e30986-5300-4401-8b69-152cba821042",
+  "bbeeaad8-26b2-4bff-a683-75ffe92c0626"
+ ],
+ "totals": {
+  "fn": 107,
+  "pestoSpots": 1,
+  "bpSpots": 38,
+  "overlap": 1,
+  "hardMiss": 77,
+  "overlapRate": 1.0
+ },
+ "secondaryVerdict": "redundant-leaning (>=0.80)",
+ "recordings": [
+  {
+   "tx": "17ea7626",
+   "fn": 9,
+   "pestoSpots": 0,
+   "bpSpots": 0,
+   "overlap": 0,
+   "hardMiss": 5,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "4e1ae5c6",
+   "fn": 0,
+   "pestoSpots": 0,
+   "bpSpots": 0,
+   "overlap": 0,
+   "hardMiss": 0,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "9ce7df83",
+   "fn": 2,
+   "pestoSpots": 0,
+   "bpSpots": 0,
+   "overlap": 0,
+   "hardMiss": 0,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "bbd6797f",
+   "fn": 0,
+   "pestoSpots": 0,
+   "bpSpots": 0,
+   "overlap": 0,
+   "hardMiss": 0,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "d7a82772",
+   "fn": 10,
+   "pestoSpots": 0,
+   "bpSpots": 6,
+   "overlap": 0,
+   "hardMiss": 5,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "ea7edd71",
+   "fn": 2,
+   "pestoSpots": 1,
+   "bpSpots": 2,
+   "overlap": 1,
+   "hardMiss": 1,
+   "pestoSpotList": [
+    {
+     "t": 4.107,
+     "note": "F5"
+    }
+   ]
+  },
+  {
+   "tx": "ebecf0c6",
+   "fn": 1,
+   "pestoSpots": 0,
+   "bpSpots": 0,
+   "overlap": 0,
+   "hardMiss": 0,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "16b37356",
+   "fn": 0,
+   "pestoSpots": 0,
+   "bpSpots": 0,
+   "overlap": 0,
+   "hardMiss": 0,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "2bf55c75",
+   "fn": 0,
+   "pestoSpots": 0,
+   "bpSpots": 0,
+   "overlap": 0,
+   "hardMiss": 0,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "47902d34",
+   "fn": 12,
+   "pestoSpots": 0,
+   "bpSpots": 5,
+   "overlap": 0,
+   "hardMiss": 9,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "6bf97c7c",
+   "fn": 0,
+   "pestoSpots": 0,
+   "bpSpots": 0,
+   "overlap": 0,
+   "hardMiss": 0,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "70cc6637",
+   "fn": 26,
+   "pestoSpots": 0,
+   "bpSpots": 19,
+   "overlap": 0,
+   "hardMiss": 21,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "8039a34c",
+   "fn": 0,
+   "pestoSpots": 0,
+   "bpSpots": 0,
+   "overlap": 0,
+   "hardMiss": 0,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "a9e30986",
+   "fn": 45,
+   "pestoSpots": 0,
+   "bpSpots": 6,
+   "overlap": 0,
+   "hardMiss": 36,
+   "pestoSpotList": []
+  },
+  {
+   "tx": "bbeeaad8",
+   "fn": 0,
+   "pestoSpots": 0,
+   "bpSpots": 0,
+   "overlap": 0,
+   "hardMiss": 0,
+   "pestoSpotList": []
+  }
+ ],
+ "uniqueCandidateCount": 280
+}

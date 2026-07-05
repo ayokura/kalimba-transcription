@@ -2,9 +2,10 @@
 note events as JSON (stdout).
 
 Runs in an ISOLATED Python 3.11 environment (torch dependency; external AMT
-is a dev instrument only — guardrail 3, never prod/distribution).  Invoke:
+is a dev instrument only — guardrail 3, never prod/distribution).  Audio is
+loaded with soundfile (torchaudio.load now requires torchcodec).  Invoke:
 
-    uv run --python 3.11 --no-project --with pesto-pitch --with torchaudio \
+    uv run --python 3.11 --no-project --with pesto-pitch --with soundfile \
         python scripts/audio-analysis/research/pesto_infer.py <audio.wav>
 
 Part of the S6 bets #3 blind-spot overlap measurement (#203 rules fixed
@@ -32,13 +33,11 @@ def main() -> int:
         print("usage: pesto_infer.py <audio.wav>", file=sys.stderr)
         return 2
     import numpy as np
+    import soundfile as sf
     import torch
-    import torchaudio
 
-    x, sr = torchaudio.load(sys.argv[1])
-    if x.shape[0] > 1:
-        x = x.mean(dim=0, keepdim=True)
-    x = x.squeeze(0)
+    data, sr = sf.read(sys.argv[1], dtype="float32", always_2d=True)
+    x = torch.from_numpy(data.mean(axis=1))
     with torch.inference_mode():
         timesteps, pitch_hz, confidence, _act = __import__("pesto").predict(
             x, int(sr), step_size=STEP_MS)

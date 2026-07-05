@@ -58,7 +58,7 @@ def run_pesto(tx_id: str, audio_path: Path) -> list[dict]:
     result = subprocess.run(
         [
             "uv", "run", "--python", "3.11", "--no-project",
-            "--with", "pesto-pitch", "--with", "torchaudio",
+            "--with", "pesto-pitch", "--with", "soundfile",
             "python", str(REPO / "scripts/audio-analysis/research/pesto_infer.py"),
             str(audio_path),
         ],
