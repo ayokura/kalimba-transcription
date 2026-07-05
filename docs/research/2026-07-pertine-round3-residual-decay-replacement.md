@@ -77,6 +77,16 @@ ebecf0c6 baseline vs lowpass 8kHz (metamorphic alarm と同変換、zero-phase):
 - held-out: 1955b5bd / 98019f67 の GT 化後に全数値を再測 (第 2 巡 caveat 1 の解消と同時)
 - 誤 veto 較正: §3 の選択肢から 1 つを選び、2bf55c75 floor 1.000 の維持を C1 で確認
 
+## 6.5 実装巡の測定結果と判定 (2026-07-06 追記 — 本設計の帰結)
+
+実装 (755274d、較正 4 段) 後の実測で、本置換設計は**両命題とも不成立**と判定した:
+
+1. **置換命題「fscan off + autopsy on ≥ fscan on + autopsy off」: 不成立** (`pertine-round3-ablation.json`)。B は A 比 R −0.002 / FP +1、per-recording 回帰 2 件 (70cc6637 0.852→0.844、8039a34c 1.000→0.998)。arm 差分の同定により、autopsy の統合後の正味 GT 効果は **70cc6637 の FP +1 のみ** — probe A/B が見込んだ FN 回収は、fixture 較正で必要になった 4 guard に抑止されるか、round-2 rescue / forward-scan が既に回収していた (probe は tracker OFF 側で FN を数えており、統合系での限界寄与を過大評価していた — §2 の headroom ~+0.05 は成立しない)
+2. **頑健性命題「metamorphic WARN 解消 (dropped 5→0)」: 不成立**。autopsy ON でも WARN 継続 (dropped 4 + added 2、diff 6 > thr 2)。F5 は lowpass 下で autopsy が救うが hit 時刻が +0.1s ずれ ±50ms 照合を外れる。D5 系は純減のまま
+3. **副産物 (正の結果)**: kill 継続判定 (第 2 カウント巡、arm C vs base) は K2 14/16 PASS / K3 ΔR+0.021 CI[0.0048, 0.0502] PASS / K4 FP54≤61 PASS。また arm D (fscan+autopsy 両 off) も K2 14/16 であり、**carryover-mask の獲物は round-2 rescue 単独で回収できている**。fscan の残存寄与は +0.002 R (70cc6637/8039a34c) に縮小 — forward-scan は「除去を正当化できないが、依存も既に小さい」状態と実測された
+
+**処置**: `use_pertine_residual_autopsy` を既定 OFF に戻し (event 昇格の撤退)、コード・mechanism テスト・2×2 スクリプト・本測定を負の結果の資産として research branch に保存。forward-scan 除去の C2 相談は行わない (証拠が支持しない)。merge 条件 (3) は本ルートでは達成されず、#206 の WARN は未解決のまま残る (真の原因は「lowpass による偽 onset → segment 再分割」の上流であり、post-stage 裁定では時刻ずれとして残ることが判明 — 対処するなら segment 形成段が対象)。
+
 ## 7. リスク・未解決
 
 - 同 note 軟再打鍵 (mute-dip class) は本置換の範囲外 — mute-dip rescue は残す (置換対象は forward-scan のみ)

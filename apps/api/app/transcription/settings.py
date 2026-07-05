@@ -75,10 +75,15 @@ class RecognizerSettings:
     # #206 / #141 S6 round 3: per-tine veto over the residual-decay bulk
     # rejection — dropped residual-decay-no-reattack slots are adjudicated by
     # the tracker's detection core (strict slot-window semantics) and firing
-    # tines are promoted to events. Nested inside use_pertine_tracker_rescue
-    # (dual-run OFF side disables both). Default ON on the research branch,
-    # same rationale as the tracker rescue flag above.
-    use_pertine_residual_autopsy: bool = True
+    # tines are promoted to events. Nested inside use_pertine_tracker_rescue.
+    # DEFAULT OFF — round-3 measurement (2026-07-06) returned a clean
+    # negative: the 2x2 ablation isolated the integrated net effect to +1 GT
+    # FP on 70cc6637 with zero recall gain (probe-projected recoveries are
+    # suppressed by the calibration guards or already covered by the round-2
+    # rescue / forward-scan), and the #206 metamorphic WARN did not resolve
+    # (dropped 5 -> 4+2 time-shifted, criterion was ->0). Kept as a measured
+    # negative-result asset (docs/research/pertine-round3-ablation.json).
+    use_pertine_residual_autopsy: bool = False
 
     # Ablation switches (True = disable the feature)
     ablate_sparse_gap_tail: bool = False
