@@ -386,6 +386,70 @@ def put_dev_bp_verify_verdict(payload: BpVerifyVerdictPayload) -> dict:
     return {"verdict": document}
 
 
+# Dev-only (第 3 期 S2 の dogfooding 計測): docs/usage-validation-criteria.md /
+# docs/dogfooding-protocol.md の記入・判定を /debug/dogfooding ページへ供給する。
+# 自動計測 (opLog 集計) はクライアント側 localStorage で行い、ここでは手動記入
+# (諦め箇所・主観負荷・曖昧性カタログ・弾き戻し検証結果) と完了フラグだけを
+# data/dogfooding/<txId>.json に永続化する。gt-drafts/bp-verify と同じ
+# dev-only temporary パターン。
+# temporary — 用途検証の運用が落ち着いたら /debug/dogfooding と一緒に撤去する。
+class DogfoodingRecordPayload(BaseModel):
+    # 手動記入欄。形は web 側 (DogfoodingManual 型) が定義し、API 側は
+    # 意図的に緩く保つ (bp-verify/gt-drafts の rows: dict と同じ方針)。
+    manual: dict = {}
+    done: bool = False
+
+
+def _dogfooding_dir():
+    return get_data_dir() / "dogfooding"
+
+
+@app.get("/api/dev/dogfooding")
+def list_dev_dogfooding() -> dict:
+    dir_path = _dogfooding_dir()
+    records: list[dict] = []
+    if dir_path.is_dir():
+        for path in sorted(dir_path.glob("*.json")):
+            try:
+                doc = json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                continue
+            records.append(
+                {
+                    "txId": doc.get("txId", path.stem),
+                    "updatedAt": doc.get("updatedAt"),
+                    "done": bool(doc.get("done", False)),
+                }
+            )
+    records.sort(key=lambda r: r.get("updatedAt") or "", reverse=True)
+    return {"records": records}
+
+
+@app.get("/api/dev/dogfooding/{transaction_id}")
+def get_dev_dogfooding(transaction_id: str) -> dict:
+    _validate_transaction_id(transaction_id)
+    path = _dogfooding_dir() / f"{transaction_id}.json"
+    if not path.is_file():
+        return {"record": None}
+    return {"record": json.loads(path.read_text(encoding="utf-8"))}
+
+
+@app.put("/api/dev/dogfooding/{transaction_id}")
+def put_dev_dogfooding(transaction_id: str, payload: DogfoodingRecordPayload) -> dict:
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    dir_path = _dogfooding_dir()
+    dir_path.mkdir(parents=True, exist_ok=True)
+    document = payload.model_dump()
+    document["txId"] = transaction_id
+    document["updatedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    (dir_path / f"{transaction_id}.json").write_text(
+        json.dumps(document, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
+    )
+    return {"record": document}
+
+
 @app.get("/api/transcriptions/{transaction_id}")
 def get_transcription(transaction_id: str) -> dict:
     _validate_transaction_id(transaction_id)
