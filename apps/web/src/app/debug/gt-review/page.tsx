@@ -64,6 +64,8 @@ export default function DebugGtReviewPage() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playheadRef = useRef<HTMLSpanElement | null>(null);
+  // 再生速度 (pitch 保持のスロー再生 — 音高裁定用)。src 切替後も維持する
+  const [playbackRate, setPlaybackRate] = useState(1);
   const pauseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   // 静かな録音 (iPhone 内蔵マイク -26〜-33dBFS) の裁定試聴用ブースト +
@@ -84,6 +86,20 @@ export default function DebugGtReviewPage() {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, []);
+
+  // 再生速度の適用。preservesPitch を明示 (スロー時も音高が変わらない —
+  // 音高裁定に必須)。src 切替 (tx 選択) でブラウザが rate をリセットする
+  // 場合があるため onLoadedMetadata でも再適用する
+  const applyPlaybackRate = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.preservesPitch = true;
+    audio.playbackRate = playbackRate;
+  }, [playbackRate]);
+
+  useEffect(() => {
+    applyPlaybackRate();
+  }, [applyPlaybackRate, selected]);
 
   useEffect(() => {
     fetchGtDrafts()
@@ -259,6 +275,7 @@ export default function DebugGtReviewPage() {
               src={`/api/transcriptions/${draft.txId}/audio`}
               style={{ width: "100%" }}
               onPlay={ensurePreviewBoost}
+              onLoadedMetadata={applyPlaybackRate}
             />
             <div className="row wrap" style={{ gap: 6, alignItems: "center", marginTop: 4 }}>
               <span style={{ fontFamily: "monospace", fontSize: "1.05rem" }}>
@@ -285,6 +302,19 @@ export default function DebugGtReviewPage() {
                   }}
                 >
                   {delta > 0 ? `+${Math.round(delta * 1000)}` : Math.round(delta * 1000)}ms
+                </button>
+              ))}
+              <span className="muted" style={{ marginLeft: 8 }}>速度:</span>
+              {[0.25, 0.5, 0.75, 1].map((rate) => (
+                <button
+                  key={rate}
+                  type="button"
+                  className={`review-btn review-btn-small${playbackRate === rate ? " active" : ""}`}
+                  title={`再生速度 ${rate}x (音高は保持)`}
+                  onClick={() => setPlaybackRate(rate)}
+                  style={playbackRate === rate ? { fontWeight: 700, borderColor: "var(--accent)" } : undefined}
+                >
+                  {rate}x
                 </button>
               ))}
             </div>
