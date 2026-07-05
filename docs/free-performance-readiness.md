@@ -4,9 +4,11 @@
 
 各 recognizer コンポーネントについて、Free Performance（楽譜知識なし・Expected Performance なしの自由演奏転写）への適合度を評価する。チケット処理のたびに関連コンポーネントを再評価し、このドキュメントを更新する。
 
-**最終更新: 2026-06-27 (librosa-free 化 #193 を本文に反映 + F1 held-out caveat 追記。詳細 stage 評価の本体は 2026-04-16 時点)**
+**最終更新: 2026-07-05 (第 3 期 S0: headline 注記 4 を追加。詳細 stage 評価の本体は 2026-04-16 時点、第 3 期 S7 で再評価予定)**
 
-> **2026-06-27 重要注記 (先に読む):**
+> **2026-06-27 / 2026-07-05 重要注記 (先に読む):**
+>
+> 0. **(2026-07-05) 進捗の headline は「非飽和限定 micro F1 + bootstrap 95% CI」のみ** (第 3 期ガードレール 4)。2026-07-05 時点の実力: **non-saturated (n=7) micro P=0.823 / R=0.678 / F1=0.744、CI95=[0.610, 0.860]**。同日の全録音 pooled micro は 0.926 だが、これは truth notes の 69% を占める飽和録音による希釈であり headline に使ってはならない。非飽和 7 件は全て単一奏者系 (他者演奏はきらきら星 2 本のみ)。計画: [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md)、tracking: #203。
 >
 > 1. **recognizer は完全に librosa-free (#193, 14584e2)。** 本文中で「`librosa.onset.onset_strength`」「librosa 依存」「broadband onset detector (librosa)」等と記述している箇所は **2026-04-16 (#187) 時点の歴史的記述**であり現在は誤り。`onset_strength` / `rms` / `onset_detect` / `peak_pick` / `backtrack` / `mel` は `segments.py` で pure-numpy 移植済 (librosa 0.11 と数値等価検証済)、production はさらに Rust 共有コア (`kalimba_dsp`) に委譲している。**HPSS path は #193 で drop 済**。librosa は分析スクリプト / skill でのみ使用 (`apps/api/app/transcription/` に import ゼロ)。
 > 2. **onset DSP は Rust/WASM 移植済で `/wasm-demo` で in-browser 稼働。** Stage 2 の Browser 評価が ⚠️ だった主因は「librosa 依存」だったが、その blocker は解消済。残るのは segment 化ロジック (active range / collector / gap rescue) の WASM 移植。
