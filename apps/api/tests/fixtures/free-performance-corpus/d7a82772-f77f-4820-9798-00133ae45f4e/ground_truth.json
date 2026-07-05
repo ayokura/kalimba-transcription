@@ -17,7 +17,14 @@
       "onsetTiming": "approximate",
       "noteIdentity": "review_corrected",
       "caveat": "Review UI corrections are reliable primarily for note identity, ordering, and grouping. Onset times are approximate: recognizer event starts can deviate from perceptual/spectral onsets, inserted-slot times use dropped-segment boundaries, and inserted-manual times are hand-placed. Use spectral/human verification before timing-sensitive training or calibration."
-    }
+    },
+    "postEdits": [
+      {
+        "tag": "bp-verify 2026-07-05",
+        "tool": "bp-verify UI (data/gt_drafts/bp_verify.verdict.json)",
+        "summary": "bp-only 23 件の人手 verify を統合 (real=comment 追記 / absent=note 除去)"
+      }
+    ]
   },
   "onsets": [
     {
@@ -43,16 +50,6 @@
       "method": "user_corrected",
       "toleranceSec": 0.1,
       "comment": "origin=inserted-manual"
-    },
-    {
-      "timeSec": 2.3852,
-      "notes": [
-        "E4"
-      ],
-      "method": "user_corrected",
-      "toleranceSec": 0.1,
-      "comment": "origin=inserted-manual",
-      "role": "accompaniment"
     },
     {
       "timeSec": 2.7093,
@@ -240,7 +237,7 @@
       ],
       "method": "user_corrected",
       "toleranceSec": 0.1,
-      "comment": "origin=inserted-manual"
+      "comment": "origin=inserted-manual; bp-verify 2026-07-05: C4 実在確認 (ear、recognizer FN 確定)"
     },
     {
       "timeSec": 14.784,
@@ -282,7 +279,7 @@
       ],
       "method": "user_corrected",
       "toleranceSec": 0.08,
-      "comment": "origin=inserted-slot",
+      "comment": "origin=inserted-slot; bp-verify 2026-07-05: A4 実在確認 (ear、recognizer FN 確定) — 厳密には直後に立ち上がってるのでほんの少し後ろの時間軸",
       "role": "accompaniment"
     },
     {
@@ -311,7 +308,7 @@
         "E5"
       ],
       "method": "user_corrected",
-      "comment": "origin=edited"
+      "comment": "origin=edited; bp-verify 2026-07-05: C4 実在確認 (ear、recognizer FN 確定); bp-verify 2026-07-05: E4 実在確認 (ear、recognizer FN 確定); bp-verify 2026-07-05: G4 実在確認 (ear、recognizer FN 確定)"
     }
   ]
 }

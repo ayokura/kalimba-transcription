@@ -10,7 +10,14 @@
     "draftGeneratedAt": "2026-07-03T21:05:12+00:00",
     "expectedSource": "adversarial menu 'dense-cluster' (manual alignment)",
     "reviewDone": true,
-    "comment": ""
+    "comment": "",
+    "postEdits": [
+      {
+        "tag": "bp-verify 2026-07-05",
+        "tool": "bp-verify UI (data/gt_drafts/bp_verify.verdict.json)",
+        "summary": "bp-only 23 件の人手 verify を統合 (real=comment 追記 / absent=note 除去)"
+      }
+    ]
   },
   "onsets": [
     {
@@ -43,7 +50,7 @@
         "F5"
       ],
       "method": "ear_verified",
-      "comment": "gt-review verdict"
+      "comment": "gt-review verdict; bp-verify 2026-07-05: F5 実在確認 (ear、recognizer FN 確定) — 現在の時間はちょうど立ち上げるタイミングなのでもうほんの少し後ろかも"
     },
     {
       "timeSec": 3.7867,
@@ -59,7 +66,7 @@
         "F5"
       ],
       "method": "ear_verified",
-      "comment": "gt-review verdict"
+      "comment": "gt-review verdict; bp-verify 2026-07-05: F5 実在確認 (ear、recognizer FN 確定) — 現在の時間はちょうど立ち上げるタイミングなのでもうほんの少し後ろかも"
     },
     {
       "timeSec": 4.448,
