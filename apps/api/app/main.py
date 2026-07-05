@@ -398,6 +398,9 @@ class DogfoodingRecordPayload(BaseModel):
     # 意図的に緩く保つ (bp-verify/gt-drafts の rows: dict と同じ方針)。
     manual: dict = {}
     done: bool = False
+    # 自動計測スナップショット (opLog 集計 + R/A 判定)。localStorage 由来で
+    # ブラウザにしか無いため保存時に永続化する (2026-07-05 修正)
+    auto: dict = {}
 
 
 def _dogfooding_dir():

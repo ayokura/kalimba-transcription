@@ -616,7 +616,7 @@ export async function fetchDogfoodingRecord(txId: string): Promise<DogfoodingRec
 
 export async function saveDogfoodingRecord(
   txId: string,
-  record: { manual: DogfoodingManual; done: boolean },
+  record: { manual: DogfoodingManual; done: boolean; auto?: Record<string, unknown> },
 ): Promise<DogfoodingRecord> {
   const response = await fetch(`${API_BASE_URL}/api/dev/dogfooding/${txId}`, {
     method: "PUT",

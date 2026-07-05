@@ -235,13 +235,26 @@ export default function DebugDogfoodingPage() {
     if (!selectedTxId) return;
     setSaveState("saving");
     try {
-      const saved = await saveDogfoodingRecord(selectedTxId, { manual, done });
+      // 自動計測は localStorage (opLog) 由来でブラウザにしか無いため、
+      // 保存時点のスナップショットをサーバー側 JSON にも永続化する
+      // (2026-07-05 第 1 回実施で欠落が発覚した修正)
+      const auto = {
+        opSummary: summary,
+        sourceDurationSec,
+        totalNotes,
+        correctionRate,
+        totalCorrectionOps,
+        reproducedRate,
+        conditions: { r1, r2, r3, r4, r5, a1, a2, a3, a4, a5 },
+        verdict,
+      };
+      const saved = await saveDogfoodingRecord(selectedTxId, { manual, done, auto });
       setSavedAt(saved.updatedAt ?? null);
       setSaveState("saved");
     } catch {
       setSaveState("error");
     }
-  }, [selectedTxId, manual, done]);
+  }, [selectedTxId, manual, done, summary, sourceDurationSec, totalNotes, correctionRate, totalCorrectionOps, reproducedRate, r1, r2, r3, r4, r5, a1, a2, a3, a4, a5, verdict]);
 
   const reportMarkdown = useMemo(() => {
     if (!selectedTxId) return "";
