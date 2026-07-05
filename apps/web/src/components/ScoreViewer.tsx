@@ -10,6 +10,13 @@ import { DoReMiScore } from "@/components/DoReMiScore";
 import { ScoreExportButtons } from "@/components/ScoreExportButtons";
 import { TxIdBadge } from "@/components/TxIdBadge";
 import {
+  boostDbForPeak,
+  closeAudioBoost,
+  ensureAudioBoost,
+  type AudioBoostChain,
+} from "@/lib/audioBoost";
+import { computeAudioLevels } from "@/lib/audio";
+import {
   createTranscriptionWithCapture,
   fetchMemo,
   fetchTranscription,
@@ -45,6 +52,7 @@ type LoadState =
       audioUrl: string;
       initialMemo: string;
       correctedEvents: ScoreEvent[] | null;
+      peakDb: number | null;
     }
   | { kind: "error"; message: string };
 
@@ -67,6 +75,9 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
         ]);
         if (cancelled) return;
         objectUrl = URL.createObjectURL(audioBlob);
+        // 静音録音の試聴ブースト用 (lib/audioBoost)。失敗しても再生には影響しない
+        const levels = await computeAudioLevels(audioBlob).catch(() => null);
+        if (cancelled) return;
         // #202: corrections が保存済みなら編集後イベント列を導出して既定表示に
         // する (表記トグル / export は表示中の列に対して機能する)。
         let correctedEvents: ScoreEvent[] | null = null;
@@ -79,7 +90,14 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
             correctedEvents = null;
           }
         }
-        setState({ kind: "ready", result, audioUrl: objectUrl, initialMemo: memo, correctedEvents });
+        setState({
+          kind: "ready",
+          result,
+          audioUrl: objectUrl,
+          initialMemo: memo,
+          correctedEvents,
+          peakDb: levels?.peakDb ?? null,
+        });
       } catch (err) {
         if (cancelled) return;
         setState({
@@ -119,6 +137,7 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
       audioUrl={state.audioUrl}
       initialMemo={state.initialMemo}
       correctedEvents={state.correctedEvents}
+      peakDb={state.peakDb}
     />
   );
 }
@@ -129,11 +148,22 @@ type ReadyProps = {
   audioUrl: string;
   initialMemo: string;
   correctedEvents: ScoreEvent[] | null;
+  peakDb: number | null;
 };
 
-function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correctedEvents }: ReadyProps) {
+function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correctedEvents, peakDb }: ReadyProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
+
+  // 静音録音のブースト + 片チャンネル無音ステレオの両耳化 (lib/audioBoost)
+  const boostChainRef = useRef<AudioBoostChain | null>(null);
+  const boostDb = boostDbForPeak(peakDb);
+  const ensureBoost = useCallback(() => {
+    ensureAudioBoost(audioRef.current, boostChainRef, boostDb);
+  }, [boostDb]);
+  useEffect(() => {
+    return () => closeAudioBoost(boostChainRef);
+  }, []);
 
   const tonic = result.instrumentTuning.tonic ?? null;
   const movableAvailable = Boolean(tonic);
@@ -248,8 +278,14 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correc
           src={audioUrl}
           controls
           onTimeUpdate={handleTimeUpdate}
+          onPlay={ensureBoost}
           className="score-viewer-audio"
         />
+        {boostDb > 0 ? (
+          <p className="muted score-viewer-boost-note">
+            試聴 +{boostDb.toFixed(0)}dB ブースト中 (元 peak {peakDb?.toFixed(1)}dB の静音録音)
+          </p>
+        ) : null}
       </section>
 
       <section className="score-viewer-score" ref={scoreAreaRef}>

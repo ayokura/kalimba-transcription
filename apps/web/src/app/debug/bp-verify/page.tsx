@@ -20,6 +20,13 @@ import {
   type BpVerifyVerdict,
 } from "@/lib/api";
 import { GtEnergyTrace } from "@/components/GtEnergyTrace";
+import { computeAudioLevels } from "@/lib/audio";
+import {
+  boostDbForPeak,
+  closeAudioBoost,
+  ensureAudioBoost,
+  type AudioBoostChain,
+} from "@/lib/audioBoost";
 
 const PLAY_LEAD_SEC = 1.0;
 const PLAY_SNIPPET_SEC = 2.5;
@@ -105,6 +112,33 @@ export default function DebugBpVerifyPage() {
     () => currentRows.map((row) => ({ timeSec: row.timeSec, notes: [row.note] })),
     [currentRows],
   );
+
+  // 静音録音のブースト + 片チャンネル無音ステレオの両耳化 (lib/audioBoost)。
+  // peak はクライアント側で測る (audio は同一 URL なのでブラウザキャッシュが効く)
+  const boostChainRef = useRef<AudioBoostChain | null>(null);
+  const [peakDb, setPeakDb] = useState<number | null>(null);
+  useEffect(() => {
+    setPeakDb(null);
+    if (!currentTxId) return;
+    let alive = true;
+    fetch(`/api/transcriptions/${currentTxId}/audio`)
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`audio ${r.status}`))))
+      .then((blob) => computeAudioLevels(blob))
+      .then((levels) => {
+        if (alive) setPeakDb(levels.peakDb);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [currentTxId]);
+  const boostDb = boostDbForPeak(peakDb);
+  const ensureBoost = useCallback(() => {
+    ensureAudioBoost(audioRef.current, boostChainRef, boostDb);
+  }, [boostDb]);
+  useEffect(() => {
+    return () => closeAudioBoost(boostChainRef);
+  }, []);
 
   const scheduleSave = useCallback((next: BpVerifyVerdict) => {
     setSaveState("saving");
@@ -250,11 +284,17 @@ export default function DebugBpVerifyPage() {
               src={`/api/transcriptions/${currentTxId}/audio`}
               style={{ width: "100%" }}
               onLoadedMetadata={applyPlaybackRate}
+              onPlay={ensureBoost}
             />
             <div className="row wrap" style={{ gap: 6, alignItems: "center", marginTop: 4 }}>
               <span style={{ fontFamily: "monospace", fontSize: "1.05rem" }}>
                 再生位置: <span ref={playheadRef}>0.000</span>s
               </span>
+              {boostDb > 0 ? (
+                <span className="muted">
+                  試聴 +{boostDb.toFixed(0)}dB ブースト (元 peak {peakDb?.toFixed(1)}dB)
+                </span>
+              ) : null}
               <span className="muted" style={{ marginLeft: 8 }}>速度:</span>
               {[0.25, 0.5, 0.75, 1].map((rate) => (
                 <button

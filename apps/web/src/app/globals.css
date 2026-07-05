@@ -2555,3 +2555,8 @@ button:disabled {
   border-radius: 6px;
   background: #fff;
 }
+
+.score-viewer-boost-note {
+  margin-top: 4px;
+  font-size: 0.8rem;
+}
