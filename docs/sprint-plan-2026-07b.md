@@ -1,6 +1,6 @@
 # 中期作業計画 第 2 期 (2026-07-04 起点、8 スプリント + 中長期展望)
 
-- 作成: 2026-07-04 / **状態: active** / 権威戦略 doc: [`research/20260626-unbiased-amt-reassessment.md`](research/20260626-unbiased-amt-reassessment.md)
+- 作成: 2026-07-04 / **状態: superseded** — [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md) (第 3 期、2026-07-05〜) が本計画を supersede する。S1-S8 相当は 2026-07-04〜05 に消化 (実績は #199 コメント列)。本 doc は実績記録として凍結 / 権威戦略 doc: [`research/20260626-unbiased-amt-reassessment.md`](research/20260626-unbiased-amt-reassessment.md)
 - 前計画 [`sprint-plan-2026-07.md`](sprint-plan-2026-07.md) (superseded) の S1–S5 完了を受けた全面再設計。旧 S6–S8 は本計画に吸収。
 - tracking は引き続き [#199](https://github.com/ayokura/kalimba-transcription/issues/199)。**実績記録は #199 コメントに一本化し、本 doc へのインライン実績追記はしない** (ガードレール 10)。
 - 策定入力: 7 本の現状監査 + 発散提案 2 本 + 敵対的批判 1 本 + 4 視点の計画検証 (2026-07-04)。

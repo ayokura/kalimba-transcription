@@ -1091,6 +1091,25 @@ def main() -> int:
     micro_p = total["tp"] / total["predicted"] if total["predicted"] else 0.0
     micro_r = total["tp"] / total["truth"] if total["truth"] else 0.0
     micro_f1 = 2 * micro_p * micro_r / (micro_p + micro_r) if (micro_p + micro_r) else 0.0
+
+    # Non-saturated subset (third-term guardrail 4): saturated recordings
+    # (baseline minF1 == 1.0) are structurally pinned at F1=1.0 and dilute
+    # the pooled micro (measured 2026-07-05: 69% of pooled truth notes were
+    # saturated, inflating micro F1 0.744 -> 0.926).  The HEADLINE metric is
+    # therefore the non-saturated micro F1 with bootstrap CI; the
+    # all-recordings pooled micro is demoted to a diagnostic.  Recordings
+    # missing from the baseline (fresh GT) are treated as non-saturated.
+    _baseline_recs = load_baseline().get("recordings", {})
+    def _is_saturated(tx_id: str) -> bool:
+        entry = _baseline_recs.get(tx_id)
+        return entry is not None and float(entry.get("minF1", 0.0)) >= 0.9999
+    nonsat_results = [r for r in results if not _is_saturated(r["txId"])]
+    ns_tp = sum(r["tp"] for r in nonsat_results)
+    ns_truth = sum(r["truthNotes"] for r in nonsat_results)
+    ns_pred = sum(r["predictedNotes"] for r in nonsat_results)
+    ns_p = ns_tp / ns_pred if ns_pred else 0.0
+    ns_r = ns_tp / ns_truth if ns_truth else 0.0
+    ns_f1 = 2 * ns_p * ns_r / (ns_p + ns_r) if (ns_p + ns_r) else 0.0
     candidate_bins = []
     candidate_ece = None
     if total["candidateConfidenceCount"]:
@@ -1118,6 +1137,16 @@ def main() -> int:
         "recognizerFingerprint": recognizer_fingerprint(),
         "kalimbaDspFingerprint": kalimba_dsp_fingerprint(),
         "recordings": len(results),
+        # HEADLINE metric (non-saturated subset). All-recordings micro below
+        # is diagnostic-only and must not be reported as the headline.
+        "nonSaturated": {
+            "recordings": len(nonsat_results),
+            "txIds": [r["txId"] for r in nonsat_results],
+            "microPrecision": ns_p,
+            "microRecall": ns_r,
+            "microF1": ns_f1,
+            "bootstrap": bootstrap_micro_f1_ci(nonsat_results),
+        },
         "microPrecision": micro_p,
         "microRecall": micro_r,
         "microF1": micro_f1,
@@ -1204,11 +1233,23 @@ def main() -> int:
                 print(f"    FN {fn['time']:8.3f}s {fn['note']}")
             for fn in r["candidates"].get("hardMissNotes", []):
                 print(f"    HARD_MISS {fn['time']:8.3f}s {fn['note']}")
+    ns = summary["nonSaturated"]
+    ns_boot = ns["bootstrap"]
+    ns_boot_text = (
+        f"[{ns_boot['microF1CI95'][0]:.3f}, {ns_boot['microF1CI95'][1]:.3f}]"
+        if ns_boot else "n/a"
+    )
     print(
-        f"\nmicro P={summary['microPrecision']:.3f} R={summary['microRecall']:.3f}"
-        f" F1={summary['microF1']:.3f}  ({summary['recordings']} recordings,"
-        f" recognizer {summary['recognizerFingerprint']}"
+        f"\nHEADLINE non-saturated (n={ns['recordings']}):"
+        f" P={ns['microPrecision']:.3f} R={ns['microRecall']:.3f}"
+        f" F1={ns['microF1']:.3f}  CI95={ns_boot_text}"
+        f"  (recognizer {summary['recognizerFingerprint']}"
         f" dsp {summary['kalimbaDspFingerprint']})"
+    )
+    print(
+        f"all-recordings micro (diagnostic only, NOT a headline metric):"
+        f" P={summary['microPrecision']:.3f} R={summary['microRecall']:.3f}"
+        f" F1={summary['microF1']:.3f}  ({summary['recordings']} recordings)"
     )
     mir = summary["oneBest"]["mirEvalCompat"]
     boot = summary["bootstrap"]
@@ -1218,7 +1259,7 @@ def main() -> int:
     print(
         f"mir_eval-compat (±50ms fixed, report-only) P={mir['onsetPrecision']:.3f}"
         f" R={mir['onsetRecall']:.3f} F1={mir['onsetF1']:.3f}"
-        f"  bootstrap F1 CI95={boot_text}"
+        f"  all-recordings bootstrap F1 CI95={boot_text}"
     )
     print(
         "candidate "

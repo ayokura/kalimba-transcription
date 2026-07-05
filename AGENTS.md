@@ -10,7 +10,7 @@
 
 - AMT (Automatic Music Transcription) の研究サーベイと現行パイプラインへの適用分析が [`docs/research/`](/docs/research/) にある。読み順は [`index.md`](/docs/research/index.md)。
 - **新規の設計判断やアルゴリズム選択では、まず [`20260626-unbiased-amt-reassessment.md`](/docs/research/20260626-unbiased-amt-reassessment.md) を確認すること** (実コード確認済みの実装事実テーブル + NOW/NEXT/LATER 方針)。旧 `20260406-*` サーベイ群は LLM 由来バイアスありの deprecated 資料であり、設計判断の根拠に使わない。
-- 中期の作業計画とその優先順位は [`docs/sprint-plan-2026-07b.md`](/docs/sprint-plan-2026-07b.md) (第 2 期、2026-07-04〜) を参照。第 1 期 [`docs/sprint-plan-2026-07.md`](/docs/sprint-plan-2026-07.md) は superseded (実績記録として凍結)。
+- 中期の作業計画とその優先順位は [`docs/sprint-plan-2026-07c.md`](/docs/sprint-plan-2026-07c.md) (第 3 期、2026-07-05〜) を参照。第 1 期・第 2 期 (`sprint-plan-2026-07.md` / `-07b.md`) は superseded (実績記録として凍結)。
 - 期をまたぐ戦略判断の経緯は [`docs/decision-log.md`](/docs/decision-log.md) に日付入りで記録されている。大きな方向転換をした時はここに追記する (追記のみ、書き換え不可)。
 - 特に以下の点は設計上の前提として意識する (reassessment §1 の実装事実に基づく):
   - カリンバの倍音は非整数比（梁振動由来）— 整数倍 harmonic comb の限界を認識する
@@ -166,6 +166,10 @@
 
 - Treat repeated-pattern normalizers as suspicious until proven necessary. Favor local/causal explanations over corpus-wide dominant-pattern rewrites.
 - Before large recognizer redesigns, add ablation controls and provenance first.
+- **報告語彙 (第 3 期ガードレール 4): 進捗の headline は「非飽和限定 micro F1 + bootstrap 95% CI 併記」のみ。全録音 pooled micro F1 を headline に使うことは禁止** (飽和録音は回帰網専用。2026-07-05 敵対的レビューで 13 録音 micro 0.926 の 69% が飽和希釈と判明した教訓)。
+- **スプリント境界の硬ゲート (第 3 期ガードレール 11): 人間の明示 GO なしに次スプリントを開始しない。agent の仮判断でスプリント境界を跨がない。** GO 待ち中は非同期継続作業 (到着録音受入・レビュー対応・#202 等) のみ可。
+- **research line の kill 条件は実装前に数値固定 (第 3 期ガードレール 12)**: `docs/research/2026-07-per-tine-kill-criteria.md` 参照。実装後の変更は decision-log 記録 + 別セッションの敵対的レビュー役の監査が必須。
+- **timing-sensitive な実装・評価は spectral pin 済み onset を前提とする (第 3 期ガードレール 13)**: GT の timeSec は approximate であるため。
 - **過適合ゲート: 閾値調整を伴う recognizer 改修は、GT レビュー済みの非飽和録音 (F1 < 1.0) が 2 件以上あることを条件とする。** 非飽和録音 1 件を相手に閾値を調整すると、tuning-set 飽和 (F1=1.000 で指標が何も教えなくなった状態) の再演になる。構造的欠陥の修正 (onset は検出済みなのに segment が形成されない #197 型) はこの条件の対象外。F1=1.000 は成功指標ではなく飽和のサインとして扱う。
 - **Verify the physical premise before implementing rescue/suppression logic.** Before adding a new pass or tuning a gate, confirm with energy trace + narrow FFT probe + broadband onset times (`gapValidatedOnsetTimes`) that the proposed mechanism matches what the audio actually shows. The originally-stated cause is often wrong in subtle ways: e.g., #153 Phase B's E97 G4 was first thought to need a noise-floor multiplier change, but the actual cause was a broadband-detected onset that the segmenter discarded — a different mechanism entirely. Investigation-first prevents whole-day rabbit holes on the wrong rescue path.
 - **Discriminator design beats constant tuning.** When no threshold cleanly separates true positives from false positives, consider whether the candidate iteration order itself is wrong. #153 Phase B replaced narrow-FFT-score-ordered iteration with backward-attack-gain-ordered iteration, which changed the problem from "tighten the constants" to "evaluate the strongest fresh-attack signal first" — and several constants became unnecessary. Ordering by a single physical signal is often cleaner than ordering by a composite score and then patching exceptions.
