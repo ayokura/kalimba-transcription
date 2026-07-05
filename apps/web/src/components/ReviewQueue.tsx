@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { fetchReviewQueue } from "@/lib/api";
+import { TxIdBadge } from "@/components/TxIdBadge";
 import { REVIEW_STATUS_OPTIONS, reviewStatusLabel } from "@/lib/reviewStatus";
 import { ReviewQueueEntry, ReviewStatusValue } from "@/lib/types";
 
@@ -184,6 +185,8 @@ export function ReviewQueue() {
                     </span>
                     <span className="review-queue-item-time muted">
                       {formatCreatedAt(entry.createdAt)}
+                      {" · "}
+                      <TxIdBadge id={entry.transactionId} />
                     </span>
                   </span>
                   <span className="review-queue-item-badges">

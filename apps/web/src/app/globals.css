@@ -2514,3 +2514,22 @@ button:disabled {
   display: block;
   text-align: center;
 }
+
+/* tx-id 短縮バッジ (TxIdBadge): queue 一覧・トップ最近リスト・score ヘッダで
+   録音を人間が識別する導線。クリックでフル UUID コピー。 */
+.tx-id-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+  cursor: copy;
+  white-space: nowrap;
+}
+
+.tx-id-badge.copied {
+  color: var(--accent, #177e89);
+  border-color: var(--accent, #177e89);
+}

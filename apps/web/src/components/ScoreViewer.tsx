@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { BeatGridScore } from "@/components/BeatGridScore";
 import { DoReMiScore } from "@/components/DoReMiScore";
 import { ScoreExportButtons } from "@/components/ScoreExportButtons";
+import { TxIdBadge } from "@/components/TxIdBadge";
 import {
   createTranscriptionWithCapture,
   fetchMemo,
@@ -218,6 +219,7 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correc
             ← トップへ
           </Link>
           <h1 className="score-viewer-title">カリンバ譜面</h1>
+          <TxIdBadge id={transactionId} />
         </div>
         <ShareUrlRow url={shareUrl} />
       </header>

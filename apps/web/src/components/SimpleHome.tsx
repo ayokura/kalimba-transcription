@@ -22,6 +22,7 @@ import {
   ensureAudioBoost,
 } from "@/lib/audioBoost";
 import { collectClientDeviceInfo } from "@/lib/clientInfo";
+import { TxIdBadge } from "@/components/TxIdBadge";
 import {
   loadRecentTranscriptions,
   pushRecentTranscription,
@@ -540,6 +541,8 @@ export function SimpleHome() {
                   </span>
                   <span className="simple-home-recent-secondary">
                     {entry.eventCount} イベント
+                    {" · "}
+                    <TxIdBadge id={entry.transactionId} />
                   </span>
                 </button>
                 <button
