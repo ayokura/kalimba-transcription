@@ -121,3 +121,22 @@
 - **不採用理由**: G5 (1.431 → 0.911, ratio 1.57) や他の resonance 候補が 2.0 以下に収まり catch できない。閾値を 1.4 まで絞ると 34-key C4 (1.31) との margin が 7% しかなくなり不安定。bg-dominance ratio が同じ問題を **物理的により直接的な指標** (in-event note の bg と比較) で解けるため、decay 上限は不要になった
 - **再検討条件**: bg-dominance ratio が future fixture で発火しないが decay 上限が discriminator として機能する場合
 - **注**: decay min ratio (`≥ 0.8`) は採用済み。rising-into-segment 排除（34-key R5 E154 D4 ratio 0.18）は依然必要
+
+## Residual-decay veto (per-tine autopsy) の event 昇格
+
+- **Issue**: #206 / #141 (round 3)
+- **日付**: 2026-07-06
+- **概要**: `residual-decay-no-reattack` で丸ごと棄却された segment 窓を per-tine tracker の検出核で裁定し、優勢な fire を event 昇格する post-stage veto (`use_pertine_residual_autopsy`、コードは research branch に保存)
+- **動機**: #206 の 4 段連鎖 (偽 onset → 再分割 → 一括棄却 → カスケード) の 3-4 段目置換 + forward-scan (recent-note memory 依存 rescue) の退役 = merge 条件 (3) の実証
+- **不採用理由**: 2×2 ablation で統合後の正味 GT 効果が 70cc6637 の FP +1 のみ (probe の FN 回収見込みは較正 guard に抑止されるか round-2 rescue/fscan が回収済み)。metamorphic WARN も解消せず (F5 は救うが +0.1s ずれ、D5 系は純減)。docs/research/pertine-round3-ablation.json、設計 doc §6.5
+- **再検討条件**: (1) lowpass 級の帯域劣化録音が実運用で増え、時刻ずれ許容の緩い評価 (±0.15s 等) が正当化される場合、(2) segment 形成段の頑健化 (下記) が入って偽 onset 由来の再分割が減り、autopsy の裁定対象が「真に全落ちした窓」だけになった場合
+- **コミット**: 755274d (実装) → 933f1d2 (既定 OFF 撤退)
+
+## Lowpass 頑健な segment 形成 (#206 の真因対処)
+
+- **Issue**: #206
+- **日付**: 2026-07-06
+- **概要**: lowpass 8kHz 級の変換で broadband 偽 onset が segment を再分割し event 時刻が動く。#206 WARN の真因は形成段にあり、post-stage 裁定では時刻ずれとして残ることが round 3 で実証された
+- **動機**: metamorphic alarm の lowpass WARN 恒久解消。tracker 特徴 (heterodyne 復調) は lowpass 完全不変 (probe C) なので、per-tine 情報を**形成段の偽 onset 判別**に使う路線は物理的には生きている
+- **不採用理由**: 未着手 (アイデア段階)。events.py 新規 pass 禁止の制約下で形成段 (segments.py) への介入形を要設計。research line の去就判断 (S6 exit) 待ち
+- **再検討条件**: research line 継続 (選択肢 a) が選ばれた場合の第 3 カウント巡ターゲット候補。または metamorphic 警報がトリガー 1 (patch 衝突) を再検出した場合
