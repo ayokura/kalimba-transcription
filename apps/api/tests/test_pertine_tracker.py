@@ -11,6 +11,7 @@ import numpy as np
 from app.transcription.pertine import (
     Rescue,
     _dedup_same_note,
+    adjudicate_residual_slots,
     load_tables,
     tier_of,
     track_and_rescue,
@@ -101,3 +102,86 @@ def test_same_note_double_fire_keeps_stronger_jerk():
 def test_load_tables_unknown_tuning_is_empty():
     partial, coupling = load_tables("no-such-tuning")
     assert partial == {} and coupling == {}
+
+
+# --- residual-decay veto (#206, round 3) ---
+# The veto adjudicates a window broadband already asserted (a dropped
+# segment), so unlike the rescue path it must fire on a *fresh* strike of a
+# quiet tine — pre-ring / re-injection are waived — but only strictly inside
+# the window.
+
+
+def test_veto_fires_on_fresh_strike_of_quiet_tine_inside_window():
+    t = np.arange(int(SR * 3.2)) / SR
+    audio = _strike(t, 2.0, 440.0, 1.0, 0.0)
+    # rescue path refuses (condition 4: no pre-ring) ...
+    assert track_and_rescue(audio, SR, [("A4", 440.0)], existing=[]) == []
+    # ... the veto adjudicates it inside the dropped window.
+    verdicts = adjudicate_residual_slots(
+        audio, SR, [("A4", 440.0)], windows=[(1.9, 2.5)], existing=[],
+    )
+    assert any(abs(r.time - 2.0) <= 0.06 and r.note == "A4" for r in verdicts), verdicts
+
+
+def test_veto_window_membership_is_strict():
+    t = np.arange(int(SR * 3.2)) / SR
+    audio = _strike(t, 2.0, 440.0, 1.0, 0.0)
+    # Window ends before the strike: evidence past a segment's end belongs
+    # to the next segment (the probe's one false veto sat +0.029 s outside).
+    verdicts = adjudicate_residual_slots(
+        audio, SR, [("A4", 440.0)], windows=[(1.0, 1.9)], existing=[],
+    )
+    assert verdicts == []
+
+
+def test_veto_respects_existing_event_duplicate_guard():
+    t = np.arange(int(SR * 3.2)) / SR
+    audio = _strike(t, 2.0, 440.0, 1.0, 0.0)
+    verdicts = adjudicate_residual_slots(
+        audio, SR, [("A4", 440.0)], windows=[(1.9, 2.5)],
+        existing=[(2.1, "A4")],
+    )
+    assert verdicts == []
+
+
+def test_veto_suppresses_fire_when_same_note_event_abuts_window_edge():
+    # The dropped window's edge IS the same note's recognized segment start:
+    # the in-window fire is that attack seen through the segment split, and
+    # promoting it would double-emit the note.
+    t = np.arange(int(SR * 3.2)) / SR
+    audio = _strike(t, 2.0, 440.0, 1.0, 0.0)
+    verdicts = adjudicate_residual_slots(
+        audio, SR, [("A4", 440.0)], windows=[(1.9, 2.5)],
+        existing=[(2.55, "A4")],
+    )
+    assert verdicts == []
+    # Control: a same-note event far from both edges (and beyond the
+    # duplicate tolerance) does not suppress the fire.
+    verdicts = adjudicate_residual_slots(
+        audio, SR, [("A4", 440.0)], windows=[(1.9, 2.5)],
+        existing=[(2.9, "A4")],
+    )
+    assert any(abs(r.time - 2.0) <= 0.06 for r in verdicts), verdicts
+
+
+def test_veto_defers_to_coincident_recognized_event():
+    # An existing event (any note) inside the attacker window means broadband
+    # already adjudicated this instant — the veto must not re-score it.
+    t = np.arange(int(SR * 3.2)) / SR
+    audio = _strike(t, 2.0, 440.0, 1.0, 0.0)
+    verdicts = adjudicate_residual_slots(
+        audio, SR, [("A4", 440.0)], windows=[(1.9, 2.5)],
+        existing=[(2.03, "D5")],
+    )
+    assert verdicts == []
+
+
+def test_veto_does_not_fire_on_pure_decay():
+    # A residual-decay window with no fresh attack: the tine is only
+    # ringing down from an earlier strike — the suppression must stand.
+    t = np.arange(int(SR * 3.2)) / SR
+    audio = _strike(t, 0.5, 440.0, 1.0, 0.0)
+    verdicts = adjudicate_residual_slots(
+        audio, SR, [("A4", 440.0)], windows=[(1.5, 2.2)], existing=[(0.5, "A4")],
+    )
+    assert verdicts == []

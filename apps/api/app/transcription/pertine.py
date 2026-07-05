@@ -17,6 +17,18 @@ rescues over 15 GT recordings + 111 completed fixtures):
 - "candidate": everything that passed the physical rejections but not the
   tier margins -> preserved as low-confidence candidate slots (#178).
 
+Round 3 (#206) adds a second judge, `adjudicate_residual_slots`: a *veto*
+over the residual-decay bulk rejection. Where the rescue path proposes
+onsets broadband never asserted (and therefore needs the carryover
+conditions pre-ring / re-injection), the veto adjudicates a segment
+broadband DID assert and the bulk rejection dropped whole — it only asks
+"which tine shows a fresh attack inside the dropped window", so pre-ring
+and re-injection are deliberately waived while the bleed explaining-away
+battery and the duplicate guard stay (probe: fires on 16/21 FN notes in
+dropped segments, 1/18 on clean suppressions, and that one false fire sat
+outside the segment window — docs/research/
+2026-07-pertine-round3-residual-decay-replacement.md §3).
+
 Signal chain (portable by design — heterodyne mix + 3rd-order butterworth
 low-pass + hop decimation; the same kernel is expressible in the kalimba-dsp
 Rust crate for the browser/WASM track):
@@ -165,6 +177,119 @@ def _demodulate(audio: np.ndarray, sr: int, freq: float, hop: int,
     return np.abs(zh), np.unwrap(np.angle(zh))
 
 
+def _build_tracks(
+    audio: np.ndarray, sr: int, tuning: list[tuple[str, float]],
+) -> tuple[dict[str, tuple[float, np.ndarray, np.ndarray]], float, float] | None:
+    """Demodulate every tine once: (tracks, hop_sec, abs_gate); None if unusable."""
+    hop = int(sr * HOP_SEC)
+    if hop <= 0 or len(audio) < sr // 2:
+        return None
+    hop_sec = hop / sr
+    t_axis = np.arange(len(audio)) / sr
+    tracks: dict[str, tuple[float, np.ndarray, np.ndarray]] = {}
+    for name, freq in tuning:
+        if name in tracks or freq <= 0:
+            continue
+        env, phase = _demodulate(audio, sr, freq, hop, t_axis)
+        tracks[name] = (freq, env, phase)
+    if not tracks:
+        return None
+    abs_gate = (max(tr[1].max() for tr in tracks.values()) or 1.0) * ENV_GATE_FRAC
+    return tracks, hop_sec, abs_gate
+
+
+def _core_candidates(tracks, hop_sec, abs_gate):
+    """Detection-core hits across all tines: (t, note, err, jerk, freq, env)."""
+    cands = []
+    for name, (freq, env, phase) in tracks.items():
+        hits = _candidates_for_track(env, phase, hop_sec, abs_gate, JERK_BAR)
+        sel = [(i, e, j) for i, e, j in hits if e >= PHASE_BAR]
+        for i, e, j in _nms(sel, hop_sec):
+            cands.append((i * hop_sec, name, e, j, freq, float(env[i])))
+    cands.sort()
+    return cands
+
+
+def _env_at(tracks, hop_sec, note: str, t: float) -> float:
+    _f, env, _p = tracks[note]
+    i = min(len(env) - 1, max(0, int(t / hop_sec)))
+    return float(env[i])
+
+
+def _env_window_stat(tracks, hop_sec, note: str, t0: float, t1: float, fn) -> float:
+    _f, env, _p = tracks[note]
+    a = max(0, int(t0 / hop_sec)); b = min(len(env), max(a + 1, int(t1 / hop_sec)))
+    return float(fn(env[a:b]))
+
+
+def _bleed_explained(t, name, freq, e_self, cands, existing, tracks, freqs,
+                     hop_sec, partial_table, coupling_table) -> bool:
+    """Explaining-away battery (2)(3)(6)(7): is e_self at (t, name) explainable
+    as bleed from another tine (measured partial / filter skirt / coincident
+    attack bound / measured coupling)? Shared by the rescue and veto paths."""
+    # (2) measured-partial bleed: candidate k explainable as j's partial?
+    if partial_table:
+        for t2, n2, _e2, _j2, f2, e2 in cands:
+            if n2 == name or abs(t2 - t) > COINCIDENT_SEC:
+                continue
+            for ratio, rel_amp in partial_table.get(n2, []):
+                pf = f2 * ratio
+                if abs(1200 * np.log2(freq / pf)) <= PARTIAL_CENTS \
+                        and e_self <= rel_amp * e2 * PARTIAL_SAFETY:
+                    return True
+    # (3) quantified skirt bleed from a near-frequency neighbour
+    for n2, f2 in freqs.items():
+        if n2 == name:
+            continue
+        if abs(1200 * np.log2(f2 / freq)) <= SKIRT_CENTS \
+                and _env_at(tracks, hop_sec, n2, t) >= e_self * SKIRT_ENV_RATIO:
+            return True
+    # (6) coincident-attack bleed bound
+    coinc_max = 0.0
+    for t2, n2, _e2, _j2, _f2, e2 in cands:
+        if n2 != name and abs(t2 - t) <= COINC_ATTACK_SEC:
+            coinc_max = max(coinc_max, e2)
+    for t0, n0 in existing:
+        if n0 != name and n0 in tracks and abs(t0 - t) <= COINC_ATTACK_SEC:
+            coinc_max = max(coinc_max, _env_at(tracks, hop_sec, n0, min(t0 + 0.03, t + 0.03)))
+    if coinc_max > 0 and e_self < coinc_max * COINC_BLEED_MAX:
+        return True
+    # (7) measured coupling from a coincident striker j
+    if coupling_table:
+        attackers = [(n2, e2) for t2, n2, _e2j, _j2, _f2, e2 in cands
+                     if n2 != name and abs(t2 - t) <= COINC_ATTACK_SEC]
+        attackers += [(n0, _env_at(tracks, hop_sec, n0, min(t0 + 0.03, t + 0.03)))
+                      for t0, n0 in existing
+                      if n0 != name and n0 in tracks and abs(t0 - t) <= COINC_ATTACK_SEC]
+        for n2, e2 in attackers:
+            ratio = coupling_table.get(n2, {}).get(name)
+            if ratio is not None and e_self <= ratio * e2 * COUPLING_SAFETY:
+                return True
+    return False
+
+
+def _attacker_context(t, name, freq, e_self, cands, existing, tracks, freqs,
+                      hop_sec) -> list[dict]:
+    """Every coincident attack within +-ATTACKER_WIN (tier context)."""
+    ctx = []
+    for t2, n2, _e2j, _j2, f2, e2 in cands:
+        if n2 != name and abs(t2 - t) <= ATTACKER_WIN:
+            ctx.append({
+                "note": n2, "dt": round(t2 - t, 4), "kind": "candidate",
+                "cents": round(1200 * float(np.log2(f2 / freq)), 1),
+                "envRatio": round(e_self / e2, 3) if e2 > 0 else None,
+            })
+    for t0, n0 in existing:
+        if n0 != name and n0 in tracks and abs(t0 - t) <= ATTACKER_WIN:
+            e0 = _env_at(tracks, hop_sec, n0, min(t0 + 0.03, t + 0.03))
+            ctx.append({
+                "note": n0, "dt": round(t0 - t, 4), "kind": "event",
+                "cents": round(1200 * float(np.log2(freqs[n0] / freq)), 1),
+                "envRatio": round(e_self / e0, 3) if e0 > 0 else None,
+            })
+    return ctx
+
+
 def _candidates_for_track(env, phase, hop_sec, abs_gate, jerk_floor):
     """All hops passing the fixed gates + jerk floor, with features."""
     n = len(env)
@@ -219,10 +344,13 @@ def _dedup_same_note(rescues: list[Rescue]) -> list[Rescue]:
     return sorted(kept, key=lambda r: r.time)
 
 
-def tier_of(rescue: Rescue) -> str:
-    """"event" (strong) or "candidate" (weak) — see TIER_* rationale."""
-    if rescue.pre_ring_ratio < TIER_MIN_PRE_RING:
-        return "candidate"
+def _attacker_tier(rescue: Rescue) -> str:
+    """Dominance margins vs coincident attackers (shared tier core).
+
+    An isolated rescue (no coincident attack within ATTACKER_WIN) cannot be
+    attack bleed or mount coupling; with coincident attacks the rescue must
+    dominate the strongest attack (>= 1.5x) and clearly re-inject (>= 1.5x
+    recent max)."""
     attackers = rescue.attackers or []
     if not attackers:
         return "event"
@@ -236,6 +364,27 @@ def tier_of(rescue: Rescue) -> str:
     return "event"
 
 
+def tier_of(rescue: Rescue) -> str:
+    """"event" (strong) or "candidate" (weak) — see TIER_* rationale."""
+    if rescue.pre_ring_ratio < TIER_MIN_PRE_RING:
+        return "candidate"
+    return _attacker_tier(rescue)
+
+
+def veto_tier(rescue: Rescue) -> str:
+    """Tier rule for residual-autopsy fires (#206 round 3).
+
+    Pre-ring is waived — the #206 class is a masked tine that was NOT
+    ringing — but the round-2 dominance margins stay: every false fire
+    remaining after the re-injection guard (fixtures 2026-07-06: bwv147 G5
+    envRatio 1.21 vs F5 / triad-02 G4+C4 mutual pair / c4-to-e6 D5 under
+    E5+F5 strikes / ebecf0c6 C6 reinject 1.27) is a quiet tine firing
+    coincident with a stronger strike whose bleed the measured tables fail
+    to explain, exactly the regime the round-2 tier margins were labelled
+    on. Demoted fires surface as low-confidence candidate slots (#178)."""
+    return _attacker_tier(rescue)
+
+
 def track_and_rescue(
     audio: np.ndarray,
     sr: int,
@@ -245,39 +394,12 @@ def track_and_rescue(
     coupling_table: dict[str, dict[str, float]] | None = None,
 ) -> list[Rescue]:
     """Propose rescue onsets the existing event list does not cover."""
-    hop = int(sr * HOP_SEC)
-    if hop <= 0 or len(audio) < sr // 2:
+    built = _build_tracks(audio, sr, tuning)
+    if built is None:
         return []
-    hop_sec = hop / sr
-    t_axis = np.arange(len(audio)) / sr
-    tracks: dict[str, tuple[float, np.ndarray, np.ndarray]] = {}
-    for name, freq in tuning:
-        if name in tracks or freq <= 0:
-            continue
-        env, phase = _demodulate(audio, sr, freq, hop, t_axis)
-        tracks[name] = (freq, env, phase)
-    if not tracks:
-        return []
-    global_peak = max(tr[1].max() for tr in tracks.values()) or 1.0
-    abs_gate = global_peak * ENV_GATE_FRAC
-    cands = []  # (t, note, err, jerk, freq, env_at)
-    for name, (freq, env, phase) in tracks.items():
-        hits = _candidates_for_track(env, phase, hop_sec, abs_gate, JERK_BAR)
-        sel = [(i, e, j) for i, e, j in hits if e >= PHASE_BAR]
-        for i, e, j in _nms(sel, hop_sec):
-            cands.append((i * hop_sec, name, e, j, freq, float(env[i])))
-    cands.sort()
+    tracks, hop_sec, abs_gate = built
+    cands = _core_candidates(tracks, hop_sec, abs_gate)
     freqs = {n: f for n, f in tuning}
-
-    def env_at(note: str, t: float) -> float:
-        _f, env, _p = tracks[note]
-        i = min(len(env) - 1, max(0, int(t / hop_sec)))
-        return float(env[i])
-
-    def env_window_stat(note: str, t0: float, t1: float, fn) -> float:
-        _f, env, _p = tracks[note]
-        a = max(0, int(t0 / hop_sec)); b = min(len(env), max(a + 1, int(t1 / hop_sec)))
-        return float(fn(env[a:b]))
 
     rescues: list[Rescue] = []
     for t, name, err, jerk, freq, e_self in cands:
@@ -285,87 +407,118 @@ def track_and_rescue(
         if any(n == name and abs(t0 - t) <= EXISTING_TOL for t0, n in existing):
             continue
         # (4) carryover-class restriction: the tine must already be ringing
-        pre_ring = env_window_stat(name, t + PRE_RING_WIN[0], t + PRE_RING_WIN[1], np.median)
+        pre_ring = _env_window_stat(tracks, hop_sec, name,
+                                    t + PRE_RING_WIN[0], t + PRE_RING_WIN[1], np.median)
         if pre_ring < abs_gate:
             continue
         # (5) energy re-injection: attack peak reaches its recent ring maximum
-        attack_peak = env_window_stat(name, t, t + 0.06, np.max)
-        recent_max = env_window_stat(name, t - REINJECT_LOOKBACK, t - 0.01, np.max)
+        attack_peak = _env_window_stat(tracks, hop_sec, name, t, t + 0.06, np.max)
+        recent_max = _env_window_stat(tracks, hop_sec, name,
+                                      t - REINJECT_LOOKBACK, t - 0.01, np.max)
         if attack_peak < recent_max * REINJECT_FRAC:
             continue
-        # (2) measured-partial bleed: candidate k explainable as j's partial?
-        explained = False
-        if partial_table:
-            for t2, n2, _e2, _j2, f2, e2 in cands:
-                if n2 == name or abs(t2 - t) > COINCIDENT_SEC:
-                    continue
-                for ratio, rel_amp in partial_table.get(n2, []):
-                    pf = f2 * ratio
-                    if abs(1200 * np.log2(freq / pf)) <= PARTIAL_CENTS \
-                            and e_self <= rel_amp * e2 * PARTIAL_SAFETY:
-                        explained = True
-                        break
-                if explained:
-                    break
-        if explained:
+        # (2)(3)(6)(7) bleed explaining-away battery (shared with the veto path)
+        if _bleed_explained(t, name, freq, e_self, cands, existing, tracks,
+                            freqs, hop_sec, partial_table, coupling_table):
             continue
-        # (3) quantified skirt bleed from a near-frequency neighbour
-        skirt = False
-        for n2, f2 in freqs.items():
-            if n2 == name:
-                continue
-            if abs(1200 * np.log2(f2 / freq)) <= SKIRT_CENTS \
-                    and env_at(n2, t) >= e_self * SKIRT_ENV_RATIO:
-                skirt = True
-                break
-        if skirt:
-            continue
-        # (6) coincident-attack bleed bound
-        coinc_max = 0.0
-        for t2, n2, _e2, _j2, _f2, e2 in cands:
-            if n2 != name and abs(t2 - t) <= COINC_ATTACK_SEC:
-                coinc_max = max(coinc_max, e2)
-        for t0, n0 in existing:
-            if n0 != name and n0 in tracks and abs(t0 - t) <= COINC_ATTACK_SEC:
-                coinc_max = max(coinc_max, env_at(n0, min(t0 + 0.03, t + 0.03)))
-        if coinc_max > 0 and e_self < coinc_max * COINC_BLEED_MAX:
-            continue
-        # (7) measured coupling from a coincident striker j
-        coupled = False
-        if coupling_table:
-            attackers = [(n2, e2) for t2, n2, _e2j, _j2, _f2, e2 in cands
-                         if n2 != name and abs(t2 - t) <= COINC_ATTACK_SEC]
-            attackers += [(n0, env_at(n0, min(t0 + 0.03, t + 0.03))) for t0, n0 in existing
-                          if n0 != name and n0 in tracks and abs(t0 - t) <= COINC_ATTACK_SEC]
-            for n2, e2 in attackers:
-                ratio = coupling_table.get(n2, {}).get(name)
-                if ratio is not None and e_self <= ratio * e2 * COUPLING_SAFETY:
-                    coupled = True
-                    break
-        if coupled:
-            continue
-        # tier context: every coincident attack within +-ATTACKER_WIN
-        attacker_ctx = []
-        for t2, n2, _e2j, _j2, f2, e2 in cands:
-            if n2 != name and abs(t2 - t) <= ATTACKER_WIN:
-                attacker_ctx.append({
-                    "note": n2, "dt": round(t2 - t, 4), "kind": "candidate",
-                    "cents": round(1200 * float(np.log2(f2 / freq)), 1),
-                    "envRatio": round(e_self / e2, 3) if e2 > 0 else None,
-                })
-        for t0, n0 in existing:
-            if n0 != name and n0 in tracks and abs(t0 - t) <= ATTACKER_WIN:
-                e0 = env_at(n0, min(t0 + 0.03, t + 0.03))
-                attacker_ctx.append({
-                    "note": n0, "dt": round(t0 - t, 4), "kind": "event",
-                    "cents": round(1200 * float(np.log2(freqs[n0] / freq)), 1),
-                    "envRatio": round(e_self / e0, 3) if e0 > 0 else None,
-                })
         rescues.append(Rescue(
             round(t, 4), name, round(err, 3), round(jerk, 1), e_self,
             pre_ring_ratio=round(pre_ring / abs_gate, 2),
             reinject_ratio=round(attack_peak / max(recent_max, 1e-12), 2),
-            attackers=attacker_ctx,
+            attackers=_attacker_context(t, name, freq, e_self, cands, existing,
+                                        tracks, freqs, hop_sec),
+        ))
+    return _dedup_same_note(rescues)
+
+
+def adjudicate_residual_slots(
+    audio: np.ndarray,
+    sr: int,
+    tuning: list[tuple[str, float]],
+    windows: list[tuple[float, float]],
+    existing: list[tuple[float, str]],
+    partial_table: dict[str, list[tuple[float, float]]] | None = None,
+    coupling_table: dict[str, dict[str, float]] | None = None,
+) -> list[Rescue]:
+    """Veto judge over residual-decay bulk rejections (#206, round 3).
+
+    `windows` are the [start, end] spans of segments dropped with reason
+    residual-decay-no-reattack. Broadband already asserted an onset inside
+    each window (the segment existed), so unlike track_and_rescue this
+    judge waives the carryover conditions (pre-ring, re-injection) and only
+    asks which tine shows a fresh attack *strictly inside* the window.
+    Strict membership is the window-semantics calibration chosen from the
+    round-3 design's options (§3): the probe's single false veto sat
+    +0.029 s past its segment end, and a segment's evidence ends at its
+    boundary — the next onset belongs to the next segment. Cost measured on
+    the probe: one boundary recovery at +0.017 s (fires 16 -> 15 of 21 FN
+    notes). Bleed explaining-away and the duplicate guard are shared with
+    the rescue path.
+
+    Condition (5) re-injection is RETAINED, unlike the probe's raw bars
+    (implementation-round calibration, 2026-07-06): without it, chord-repeat
+    fixtures over-promote non-played tines wholesale — a4-d4-f4-triad-01
+    alone gained 16 events, all on unplayed C4/E4, every one with reinject
+    0.32-0.86 — because simultaneous ringing tines beat against each other
+    and the beating wobble passes the phase/jerk bars. Re-injection is the
+    calibrated guard for exactly that regime ("beating stays below the decay
+    peak", round 1), and a genuinely masked fresh strike passes it easily
+    (#206 F5: reinject 8.84 / 2.48; a quiet tine's recent max is near zero).
+    Probe-side cost: fires 16 -> 10, recoverable slots 12 -> 6 — but the
+    C5-class losses are the carryover-mask quarry the round-2 rescue path
+    already recovers in the integrated pipeline, so the marginal loss is
+    measured (not assumed) by the 2x2 ablation's autopsy arms. Pre-ring
+    stays waived: the #206 class is a masked tine that was NOT ringing.
+    """
+    if not windows:
+        return []
+    built = _build_tracks(audio, sr, tuning)
+    if built is None:
+        return []
+    tracks, hop_sec, abs_gate = built
+    cands = _core_candidates(tracks, hop_sec, abs_gate)
+    freqs = {n: f for n, f in tuning}
+    rescues: list[Rescue] = []
+    for t, name, err, jerk, freq, e_self in cands:
+        win = next(((w0, w1) for w0, w1 in windows if w0 <= t <= w1), None)
+        if win is None:
+            continue
+        if any(n == name and abs(t0 - t) <= EXISTING_TOL for t0, n in existing):
+            continue
+        # A same-note event at the window's edge means the dropped segment
+        # abuts that note's own recognized segment — the fire inside the
+        # window is the same attack seen through the segment split, and
+        # promoting it double-emits the note (c4-to-e6 fixture: D5 fired at
+        # 4.535 inside the dropped C5-residual window [4.432, 4.859] whose
+        # end IS the recognized D5 event's start).
+        if any(n == name and min(abs(t0 - win[0]), abs(t0 - win[1])) <= EXISTING_TOL
+               for t0, n in existing):
+            continue
+        # A recognized event inside the attacker window means broadband saw
+        # this instant and the full scoring stack already adjudicated its
+        # note set — the veto's mandate is instants the bulk rejection
+        # silenced entirely, not a re-score of decided attacks (17-c bwv147:
+        # a quiet-tine D5 was promoted inside a recognized chord attack that
+        # the chord selector had already rejected it from).
+        if any(abs(t0 - t) <= ATTACKER_WIN for t0, _n0 in existing):
+            continue
+        if _bleed_explained(t, name, freq, e_self, cands, existing, tracks,
+                            freqs, hop_sec, partial_table, coupling_table):
+            continue
+        # (5) energy re-injection — the beating guard (see docstring).
+        attack_peak = _env_window_stat(tracks, hop_sec, name, t, t + 0.06, np.max)
+        recent_max = _env_window_stat(tracks, hop_sec, name,
+                                      t - REINJECT_LOOKBACK, t - 0.01, np.max)
+        if attack_peak < recent_max * REINJECT_FRAC:
+            continue
+        pre_ring = _env_window_stat(tracks, hop_sec, name,
+                                    t + PRE_RING_WIN[0], t + PRE_RING_WIN[1], np.median)
+        rescues.append(Rescue(
+            round(t, 4), name, round(err, 3), round(jerk, 1), e_self,
+            pre_ring_ratio=round(pre_ring / abs_gate, 2),
+            reinject_ratio=round(attack_peak / max(recent_max, 1e-12), 2),
+            attackers=_attacker_context(t, name, freq, e_self, cands, existing,
+                                        tracks, freqs, hop_sec),
         ))
     return _dedup_same_note(rescues)
 
@@ -386,3 +539,19 @@ def propose_rescues(
     strong = [r for r in rescues if tier_of(r) == "event"]
     weak = [r for r in rescues if tier_of(r) == "candidate"]
     return strong, weak
+
+
+def propose_residual_autopsy(
+    audio: np.ndarray,
+    sample_rate: int,
+    tuning: InstrumentTuning,
+    windows: list[tuple[float, float]],
+    existing: list[tuple[float, str]],
+) -> list[Rescue]:
+    """Adjudicated promotions for residual-decay dropped slots (pipeline hook)."""
+    partial_table, coupling_table = load_tables(tuning.id)
+    notes = [(n.note_name, float(n.frequency)) for n in tuning.notes]
+    return adjudicate_residual_slots(
+        np.asarray(audio, dtype=np.float64), sample_rate, notes, windows, existing,
+        partial_table=partial_table, coupling_table=coupling_table,
+    )

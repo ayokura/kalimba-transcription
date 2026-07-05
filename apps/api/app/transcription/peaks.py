@@ -2034,35 +2034,39 @@ def _resolve_primary(
         and evidence.is_residual_decay(primary.candidate.frequency)
         and not evidence.has_mute_dip_reattack(primary.candidate.frequency)
     ):
-        # Forward-scan: check all recent notes for genuine re-attack (mute-dip).
-        _ranked_by_name: dict[str, NoteHypothesis] = {}
-        for h in ranked:
-            if h.candidate.note_name not in _ranked_by_name:
-                _ranked_by_name[h.candidate.note_name] = h
         alternative_primary = None
-        for note_name in ctx.recent_note_names:
-            hyp = _ranked_by_name.get(note_name)
-            if hyp is None:
-                continue
-            if evidence.has_mute_dip_reattack(hyp.candidate.frequency):
-                if alternative_primary is None or hyp.score > alternative_primary.score:
-                    alternative_primary = hyp
-        if alternative_primary is None:
-            # Octave-up rescue: check 1 and 2 octaves above.
-            for octave_mult in (2, 4):
-                target_freq = primary.candidate.frequency * octave_mult
-                for h in ranked:
-                    if abs(h.candidate.frequency - target_freq) / target_freq < 0.03:
-                        # Score gate: candidate must pass the same bar as a
-                        # normal primary — otherwise we rescue with noise.
-                        if h.score < settings.get().primary_rejection_max_score:
+        # #206 round 3: the forward-scan is the recent-note-memory rescue the
+        # per-tine residual autopsy is designed to replace; the ablation
+        # switch exists for the 2x2 replacement measurement (settings.py).
+        if not settings.get().ablate_residual_forward_scan:
+            # Forward-scan: check all recent notes for genuine re-attack (mute-dip).
+            _ranked_by_name: dict[str, NoteHypothesis] = {}
+            for h in ranked:
+                if h.candidate.note_name not in _ranked_by_name:
+                    _ranked_by_name[h.candidate.note_name] = h
+            for note_name in ctx.recent_note_names:
+                hyp = _ranked_by_name.get(note_name)
+                if hyp is None:
+                    continue
+                if evidence.has_mute_dip_reattack(hyp.candidate.frequency):
+                    if alternative_primary is None or hyp.score > alternative_primary.score:
+                        alternative_primary = hyp
+            if alternative_primary is None:
+                # Octave-up rescue: check 1 and 2 octaves above.
+                for octave_mult in (2, 4):
+                    target_freq = primary.candidate.frequency * octave_mult
+                    for h in ranked:
+                        if abs(h.candidate.frequency - target_freq) / target_freq < 0.03:
+                            # Score gate: candidate must pass the same bar as a
+                            # normal primary — otherwise we rescue with noise.
+                            if h.score < settings.get().primary_rejection_max_score:
+                                break
+                            octave_gain = _note_onset_energy_gain(ctx.audio, ctx.sample_rate, ctx.start_time, h.candidate.frequency)
+                            if octave_gain is not None and octave_gain >= RESIDUAL_DECAY_MIN_ONSET_GAIN:
+                                alternative_primary = h
                             break
-                        octave_gain = _note_onset_energy_gain(ctx.audio, ctx.sample_rate, ctx.start_time, h.candidate.frequency)
-                        if octave_gain is not None and octave_gain >= RESIDUAL_DECAY_MIN_ONSET_GAIN:
-                            alternative_primary = h
+                    if alternative_primary is not None:
                         break
-                if alternative_primary is not None:
-                    break
         if alternative_primary is None:
             _rejected = True
             _rejection_reason = "residual-decay-no-reattack"

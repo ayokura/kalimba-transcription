@@ -68,6 +68,8 @@ from .peaks import (
 )
 from .per_note import rescue_gap_mute_dips
 from .pertine import propose_rescues as propose_pertine_rescues
+from .pertine import propose_residual_autopsy as propose_pertine_residual_autopsy
+from .pertine import veto_tier as pertine_veto_tier
 from .quality_indicators import compute_quality_indicators, peak_dbfs_of
 from . import settings as recognizer_settings
 from .tuning_check import analyze_tuning_mismatch
@@ -106,6 +108,9 @@ _DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
     # confidence band as residual-decay: real phase/energy evidence exists
     # but the single strongest fake mode (attack bleed) is not excluded.
     "pertine-weak-rescue": 0.15,
+    # veto fires demoted by the dominance margins (#206 round 3): same tier
+    # calibration as pertine-weak-rescue; no separate data yet.
+    "pertine-autopsy-candidate": 0.15,
     "residual-decay-no-reattack": 0.15,
     "low_register_sparse_gap_tail": 0.10,
     "primary-score-too-low": 0.05,
@@ -635,18 +640,44 @@ async def transcribe_audio(
     # coupling: no new constants/passes in constants.py or events.py).
     pertine_rescue_debug: list[dict[str, Any]] = []
     if recognizer_settings.get().use_pertine_tracker_rescue:
+        _pertine_existing = [
+            (event.start_time, candidate.note_name)
+            for event in merged_events
+            for candidate in event.notes
+        ]
         pertine_strong, pertine_weak = propose_pertine_rescues(
             audio, sample_rate, tuning,
-            existing=[
-                (event.start_time, candidate.note_name)
-                for event in merged_events
-                for candidate in event.notes
-            ],
+            existing=_pertine_existing,
         )
+        # #206 round 3: residual-decay veto — adjudicate the segments the
+        # bulk rejection dropped whole. A dominant firing tine inside the
+        # dropped window becomes an event (broadband asserted the onset; the
+        # veto only decides which tine had the fresh attack); non-dominant
+        # coincident fires demote to candidate slots (veto_tier). Strong
+        # rescues count as existing so the two judges cannot double-emit.
+        pertine_autopsy: list[Any] = []
+        pertine_autopsy_weak: list[Any] = []
+        if recognizer_settings.get().use_pertine_residual_autopsy:
+            _residual_windows = [
+                (slot.start_time, slot.end_time)
+                for slot in dropped_slots
+                if slot.drop_reason == "residual-decay-no-reattack"
+            ]
+            if _residual_windows:
+                _autopsy_all = propose_pertine_residual_autopsy(
+                    audio, sample_rate, tuning,
+                    windows=_residual_windows,
+                    existing=_pertine_existing
+                    + [(r.time, r.note) for r in pertine_strong],
+                )
+                pertine_autopsy = [r for r in _autopsy_all
+                                   if pertine_veto_tier(r) == "event"]
+                pertine_autopsy_weak = [r for r in _autopsy_all
+                                        if pertine_veto_tier(r) == "candidate"]
         _pertine_note_by_name: dict[str, Any] = {}
         for _tn in tuning.notes:
             _pertine_note_by_name.setdefault(_tn.note_name, _tn)
-        for rescue in pertine_strong:
+        for rescue in [*pertine_strong, *pertine_autopsy]:
             _tn = _pertine_note_by_name.get(rescue.note)
             if _tn is None:
                 continue
@@ -659,21 +690,25 @@ async def transcribe_audio(
                 is_gliss_like=False,
                 primary_note_name=rescue.note,
             ))
-        if pertine_strong:
+        if pertine_strong or pertine_autopsy:
             merged_events.sort(key=lambda event: event.start_time)
-        for rescue in pertine_weak:
-            _tn = _pertine_note_by_name.get(rescue.note)
-            if _tn is None:
-                continue
-            dropped_slots.append(_build_candidate_slot(
-                start_time=rescue.time,
-                end_time=rescue.time + 0.2,
-                primary=NoteCandidate(
-                    key=_tn.key, note=Note.from_name(rescue.note), score=0.0,
-                ),
-                ranked_notes=[],
-                drop_reason="pertine-weak-rescue",
-            ))
+        for drop_reason, weak_rescues in (
+            ("pertine-weak-rescue", pertine_weak),
+            ("pertine-autopsy-candidate", pertine_autopsy_weak),
+        ):
+            for rescue in weak_rescues:
+                _tn = _pertine_note_by_name.get(rescue.note)
+                if _tn is None:
+                    continue
+                dropped_slots.append(_build_candidate_slot(
+                    start_time=rescue.time,
+                    end_time=rescue.time + 0.2,
+                    primary=NoteCandidate(
+                        key=_tn.key, note=Note.from_name(rescue.note), score=0.0,
+                    ),
+                    ranked_notes=[],
+                    drop_reason=drop_reason,
+                ))
         if debug:
             pertine_rescue_debug = [
                 {
@@ -685,6 +720,8 @@ async def transcribe_audio(
                 }
                 for tier, tier_rescues in (
                     ("event", pertine_strong), ("candidate", pertine_weak),
+                    ("autopsy-event", pertine_autopsy),
+                    ("autopsy-candidate", pertine_autopsy_weak),
                 )
                 for rescue in tier_rescues
             ]

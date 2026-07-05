@@ -72,9 +72,22 @@ class RecognizerSettings:
     # benchmark measure the integrated recognizer (kill criteria C1/K2-K4);
     # main is the dual-run baseline.
     use_pertine_tracker_rescue: bool = True
+    # #206 / #141 S6 round 3: per-tine veto over the residual-decay bulk
+    # rejection — dropped residual-decay-no-reattack slots are adjudicated by
+    # the tracker's detection core (strict slot-window semantics) and firing
+    # tines are promoted to events. Nested inside use_pertine_tracker_rescue
+    # (dual-run OFF side disables both). Default ON on the research branch,
+    # same rationale as the tracker rescue flag above.
+    use_pertine_residual_autopsy: bool = True
 
     # Ablation switches (True = disable the feature)
     ablate_sparse_gap_tail: bool = False
+    # #206 round 3 2x2 ablation: disable the residual-forward-scan (recent-
+    # note mute-dip scan + octave-up rescue) inside _resolve_primary, so a
+    # residual-decay segment rejects without the recent-note-memory rescue.
+    # The replacement claim "fscan off + autopsy on >= fscan on + autopsy off"
+    # is measured over this switch x use_pertine_residual_autopsy.
+    ablate_residual_forward_scan: bool = False
     ablate_multi_onset_gap: bool = False
     # #197: trailing strummed-chord cluster rescue (one segment per cluster of
     # >=2 gap-validated trailing onsets with a valid-attack anchor).

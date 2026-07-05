@@ -38,6 +38,15 @@
 
 誤 veto 1 (2bf55c75 F#5) は全軸 marginal: phase 0.81 (bar 0.7 直上)、hit 時刻が segment 終端の +0.029s 外、reinject 0.4。**較正手段は複数あり** (窓意味論の厳密化 / phase margin / tier 降格の再利用) が、probe n=1 への過適合を避けるため**選択は実装巡の較正に委ねる** (reinject ≥ 1.0 の一律追加は回収 16 中 5 を失うため不採用と判明済み)。なお 2bf55c75 は corpus floor 1.000 のため、誤 veto の event 化は C1 違反になる — 実装巡の必須解消項目。
 
+**実装巡の較正決定 (2026-07-06 追記、上記の事前判断を fixture 実測で更新)**:
+
+1. **窓意味論の厳密化を採用**: hit は slot の [start, end] 内のみ有効 (pad なし)。誤 veto 1 (+0.029s 外) が閾値追加なしで消える。犠牲は境界 1 発火 (47902d34 F5, +0.017s 外) のみ
+2. **条件 (5) reinject を veto にも復活** — 上記「一律追加は不採用」を覆す。根拠: 検出核のみの veto は和音 repeat 系 fixture で破綻する (a4-d4-f4-triad-repeat-01 単体で +16 event、**全て非演奏 tine C4/E4、全件 reinject 0.32–0.86**。同時リンギング tine の相互 beating が phase/jerk bar を通過する regime で、reinject はまさにその beating guard として round 1 で較正済み)。probe 側の犠牲 (発火 16→10、slot 12→6) のうち C5 系は round-2 rescue path が統合パイプラインで既に回収する carryover-mask 級 (probe は tracker OFF で FN を数えるため重複計上) — 限界損失は 2×2 の arm C vs A で実測する
+3. pre-ring は設計どおり免除を維持 (#206 級 = 鳴っていなかった masked tine の fresh strike)
+4. **既存 event 同時性 guard**: fire が既存 event (任意 note) の ±ATTACKER_WIN 内なら veto 対象外。broadband が event を出した瞬間はフルスコアリング済みで、veto の使命は「全落ちした瞬間」の裁定のみ (17-c bwv147 の D5: 認識済み和音 attack 内で chord selector が棄却済みの音を 3 特徴で再審して誤昇格していた)
+5. **veto tier (dominance margin の再利用)**: reinject guard 後も残る誤発火 4 件 (bwv147 G5 envRatio 1.21 / triad-02 G4+C4 相互 / c4-to-e6 D5 / ebecf0c6 C6 reinject 1.27) はすべて「強い同時 strike に対し非優勢な quiet tine の発火 = table が説明しきれない bleed」で、round-2 tier margin (attacker 比 ≥1.5 + reinject ≥1.5、pre-ring 条項のみ免除) がそのまま分離する。非優勢 fire は event でなく candidate slot (`pertine-autopsy-candidate`) に降格
+6. **窓境界の同 note event 規則**: dropped 窓の縁 (±EXISTING_TOL) に同 note の既存 event が接している場合、窓内 fire はその attack が segment 分割で早く/遅く見えたものであり昇格すると二重発行になる (c4-to-e6: dropped C5-residual 窓 [4.432, 4.859] の終端 = 既存 D5 event の開始で、窓内 D5@4.535 が二重化)
+
 ## 4. 頑健性実測 (Probe C: #206 の lowpass 不変性)
 
 ebecf0c6 baseline vs lowpass 8kHz (metamorphic alarm と同変換、zero-phase):
