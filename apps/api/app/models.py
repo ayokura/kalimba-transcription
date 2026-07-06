@@ -120,6 +120,14 @@ class CorrectionEvent(BaseModel):
 class CorrectionsPayload(BaseModel):
     version: Literal[1] = 1
     updated_at: str | None = Field(default=None, alias="updatedAt")
+    # #204 Phase 3: which recognition run these corrections were made against
+    # ("legacy" for the immutable upload-time response, or a runId from
+    # GET .../runs). Optional so pre-#204 saved corrections keep validating as
+    # "unknown base" rather than failing. This is provenance for future
+    # tooling (e.g. GT promotion, staleness display) - the review UI's onset
+    # rematching (reviewCorrections.ts, +/-50ms window) already tolerates
+    # re-recognition drift independently of this field.
+    base_run_id: str | None = Field(default=None, alias="baseRunId")
     events: list[CorrectionEvent]
 
     model_config = {"populate_by_name": True}
