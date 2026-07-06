@@ -5,12 +5,12 @@ Arms (all real pipeline, settings-flag toggles):
   rescue_only = rescue ON, oracle OFF             (round-2 state)
   full        = branch defaults (rescue ON + oracle ON, OR wiring)
   oracle_only = full + fscan ablated              (fscan marginal arm)
-  no_mutedip  = full + mute-dip OR-backup ablated (mute-dip marginal arm)
 
 Kill continuation (K2/K3/K4, S4 denominators) is judged on full vs base.
 Marginal contributions (merge condition 3 material): oracle = full vs
-rescue_only, fscan = full vs oracle_only, mute-dip backup = full vs
-no_mutedip. Non-saturated set is frozen on the base side (kill-criteria
+rescue_only, fscan = full vs oracle_only. The no_mutedip arm retired with
+the mute-dip OR-backup itself (zero marginal, user-approved removal
+2026-07-06). Non-saturated set is frozen on the base side (kill-criteria
 S4 addendum).
 
 Usage: uv run python scripts/audio-analysis/research/pertine_round4_dualrun.py
@@ -41,7 +41,6 @@ ARMS = {
     "rescue_only": {"use_pertine_residual_oracle": False},
     "full": {},
     "oracle_only": {"ablate_residual_forward_scan": True},
-    "no_mutedip": {"ablate_residual_mute_dip_backup": True},
 }
 
 
@@ -131,13 +130,10 @@ def main() -> int:
 
     oracle_marg = marginal("rescue_only")
     fscan_marg = marginal("oracle_only")
-    mutedip_marg = marginal("no_mutedip")
     print("\noracle marginal (full vs rescue_only), changed recordings:",
           json.dumps(oracle_marg) if oracle_marg else "none")
     print("fscan marginal (full vs oracle_only), changed recordings:",
           json.dumps(fscan_marg) if fscan_marg else "none")
-    print("mute-dip backup marginal (full vs no_mutedip), changed recordings:",
-          json.dumps(mutedip_marg) if mutedip_marg else "none")
 
     OUT.write_text(json.dumps({
         "round": "kill-count 3", "form": "in-stage oracle OR mute-dip (round 4)",
@@ -152,7 +148,6 @@ def main() -> int:
                         "ceiling": S4_BASELINE["k4Ceiling"], "verdict": k4_v}},
         "oracleMarginalChanged": oracle_marg,
         "fscanMarginalChanged": fscan_marg,
-        "muteDipBackupMarginalChanged": mutedip_marg,
         "perRecording": {
             arm: {tx[:8]: {"f1": round(matches[arm][tx]["f1"], 3),
                            "tp": matches[arm][tx]["tp"],

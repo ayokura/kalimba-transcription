@@ -1,5 +1,11 @@
 """Round-4: mute-dip marginal contribution over the in-stage oracle (#206).
 
+NOTE (retirement, user-approved 2026-07-06): the mute-dip OR-backup and its
+provenance marker were physically removed after the held-out measurement
+(zero marginal, 0/17 recordings). On current code this script always
+reports 0 — to re-audit the retirement against a NEW recording set, run it
+on a checkout of 38ad720 (the last marker-instrumented commit).
+
 Counts, per GT recording (branch defaults: oracle ON, OR wiring), the
 provenance marker `residual-fresh-mute-dip-only` — segments the residual-
 decay rejection would have dropped under the oracle alone but mute-dip

@@ -100,13 +100,6 @@ class RecognizerSettings:
     # The replacement claim "fscan off + autopsy on >= fscan on + autopsy off"
     # is measured over this switch x use_pertine_residual_autopsy.
     ablate_residual_forward_scan: bool = False
-    # #206 round 4 merge condition 3: disable the mute-dip OR-backup inside
-    # _residual_fresh_attack (oracle branch only; the legacy no-oracle path is
-    # untouched so base arms stay main-equivalent). Retirement evidence route:
-    # provenance marker `residual-fresh-mute-dip-only` counted 0 corpus-wide
-    # (docs/research/pertine-round4-mutedip-margin.json), this switch lets the
-    # fixture suite verify the same claim.
-    ablate_residual_mute_dip_backup: bool = False
     ablate_multi_onset_gap: bool = False
     # #197: trailing strummed-chord cluster rescue (one segment per cluster of
     # >=2 gap-validated trailing onsets with a valid-attack anchor).

@@ -2162,27 +2162,26 @@ def _residual_fresh_attack(ctx, evidence, note_name: str, frequency: float,
                            promotions: list | None) -> bool:
     """Fresh-attack evidence for the residual-decay rejection (#206 round 4).
 
-    Oracle OR mute-dip: rejection requires both to be negative, so every
-    segment the mute-dip condition saves today stays saved (the round-4
-    dump measured only currently-dropped slots; segments currently SAVED by
-    mute-dip are an unmeasured population — user-flagged 2026-07-06). When
-    only mute-dip fires, a provenance marker is appended to `promotions`
-    so the mute-dip marginal contribution over the oracle is measurable;
-    if it proves ~zero, the mute-dip term retires on that evidence
-    (merge condition 3 route).
+    Oracle branch: same-note re-strike only — a fresh attack on a DIFFERENT
+    tine does not save the segment as-is (kept-residual is harmful, rounds
+    3-4); it is handled by the oracle promotion path in _resolve_primary.
+
+    The former mute-dip OR-backup on this branch retired (merge condition 3,
+    user-approved 2026-07-06): its marginal contribution measured zero by
+    triple evidence — dual-run arm diff none, provenance marker 0/15 then
+    0/17 recordings incl. held-out, ablated fixture suite 609 green. The
+    population is structurally out of its reach: a re-strike strong enough
+    to hold the segment's primary re-injects energy the oracle sees, and
+    one weak enough to need mute-dip loses the primary to the residual ring
+    and is saved by the forward-scan promotion path instead (which keeps
+    mute-dip evidence, as do the low-onset-gain primary keep and branching
+    sites). Revisit route: rerun pertine_round4_mutedip_margin.py on a
+    checkout of 38ad720 (the marker-instrumented code) against the new
+    recording set; muteDipOnlySaves > 0 reopens the retirement decision.
     """
+    del promotions  # provenance marker retired with the mute-dip backup
     if ctx.fresh_attack_oracle is not None:
-        # Same-note re-strike only: a fresh attack on a DIFFERENT tine does
-        # not save the segment as-is (kept-residual is harmful, rounds 3-4);
-        # it is handled by the oracle promotion path in _resolve_primary.
-        if ctx.fresh_attack_oracle(ctx.start_time, ctx.end_time) == note_name:
-            return True
-        if (not settings.get().ablate_residual_mute_dip_backup
-                and evidence.has_mute_dip_reattack(frequency)):
-            if promotions is not None:
-                promotions.append("residual-fresh-mute-dip-only")
-            return True
-        return False
+        return ctx.fresh_attack_oracle(ctx.start_time, ctx.end_time) == note_name
     return evidence.has_mute_dip_reattack(frequency)
 
 
