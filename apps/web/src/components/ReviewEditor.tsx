@@ -16,6 +16,7 @@ import {
   fetchCorrections,
   fetchTranscription,
   fetchTranscriptionAudioBlob,
+  fetchTranscriptionRuns,
   fetchReviewStatus,
   saveCorrections,
 } from "@/lib/api";
@@ -88,6 +89,7 @@ type LoadState =
       corrections: CorrectionsPayload | null;
       reviewStatus: ReviewStatusPayload | null;
       peakDb: number | null;
+      baseRunId: string | null;
     }
   | { kind: "error"; message: string };
 
@@ -103,11 +105,14 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
         // fetchCorrections の失敗を握りつぶさない: 保存済み修正が見えないまま
         // baseline で開くと、次の保存で既存修正を上書きしてしまう。
         // 失敗時はページ全体をエラー表示にする (404 は api.ts 側で null になる)。
-        const [result, audioBlob, corrections, reviewStatus] = await Promise.all([
+        // runs 取得の失敗は致命的ではない (#204 Phase 3 の baseRunId 記録が
+        // 欠けるだけ) なので null にフォールバックする。
+        const [result, audioBlob, corrections, reviewStatus, runs] = await Promise.all([
           fetchTranscription(transactionId),
           fetchTranscriptionAudioBlob(transactionId),
           fetchCorrections(transactionId),
           fetchReviewStatus(transactionId).catch(() => null),
+          fetchTranscriptionRuns(transactionId).catch(() => null),
         ]);
         if (cancelled) return;
         objectUrl = URL.createObjectURL(audioBlob);
@@ -121,6 +126,9 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
           corrections,
           reviewStatus,
           peakDb: levels?.peakDb ?? null,
+          // fetchTranscription は常に最新 run (無ければ legacy) を返すので、
+          // ここで編集しているのはこの run に対する内容 (#204 Phase 3)。
+          baseRunId: runs?.latestRunId ?? null,
         });
       } catch (err) {
         if (cancelled) return;
@@ -165,6 +173,7 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
       initialCorrections={state.corrections}
       initialReviewStatus={state.reviewStatus}
       peakDb={state.peakDb}
+      baseRunId={state.baseRunId}
     />
   );
 }
@@ -176,6 +185,7 @@ type ReadyProps = {
   initialCorrections: CorrectionsPayload | null;
   initialReviewStatus: ReviewStatusPayload | null;
   peakDb: number | null;
+  baseRunId: string | null;
 };
 
 type TimelineItem =
@@ -197,6 +207,7 @@ function ReviewEditorReady({
   initialCorrections,
   initialReviewStatus,
   peakDb,
+  baseRunId,
 }: ReadyProps) {
   const [editHistory, setEditHistory] = useState<EditHistory>(() => ({
     past: [],
@@ -331,13 +342,15 @@ function ReviewEditorReady({
   const handleSave = useCallback(async () => {
     setSaveState("saving");
     try {
-      await saveCorrections(transactionId, payload);
+      // baseRunId は保存時にのみ付与する (dirty 判定用の payload/payloadJson には
+      // 含めない — 内容が同じなら「読み込み時の run」だけで dirty 扱いにしないため)。
+      await saveCorrections(transactionId, { ...payload, baseRunId });
       lastSavedRef.current = payloadJson;
       setSaveState("saved");
     } catch {
       setSaveState("error");
     }
-  }, [transactionId, payload, payloadJson]);
+  }, [transactionId, payload, payloadJson, baseRunId]);
 
   const visibleEvents = useMemo(() => activeEvents(reviewState), [reviewState]);
 

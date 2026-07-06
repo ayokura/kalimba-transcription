@@ -427,9 +427,18 @@ export function hasActiveEventAt(
   );
 }
 
-export function toCorrectionsPayload(state: ReviewState): CorrectionsPayload {
+/**
+ * baseRunId (#204 Phase 3): どの認識結果 (run) に対する差分として保存するかの
+ * 記録。省略時 (undefined) は "unknown base" として baseRunId を出力しない
+ * (呼び出し側が読み込み時の run を把握できなかった場合のフォールバック)。
+ */
+export function toCorrectionsPayload(
+  state: ReviewState,
+  baseRunId?: string | null,
+): CorrectionsPayload {
   return {
     version: 1,
+    ...(baseRunId !== undefined ? { baseRunId } : {}),
     events: activeEvents(state).map((event) => ({
       timeSec: event.timeSec,
       notes: event.notes.map(noteName),
