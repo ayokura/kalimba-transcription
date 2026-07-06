@@ -1,6 +1,6 @@
 # 中期作業計画 第 4 期 (2026-07-07 起点、4 方向 × 8 スプリントの計画ストック)
 
-- 作成: 2026-07-06 (第 3 期 S7)。**状態: draft — ユーザー GO で active 化** (S7 exit の硬ゲート)
+- 作成: 2026-07-06 (第 3 期 S7)。**状態: draft — 別系モデル監査 (docs/research/2026-07-s7-plan-audit-request.md、ユーザー指摘で GO の前提に昇格) → 所見反映 → ユーザー GO で active 化** (S7 exit の硬ゲート)
 - 前計画 [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md) (第 3 期) は S7 完了で superseded (実績記録として凍結)
 - tracking: 第 4 期 tracking issue (GO 時に新設。#203 は第 3 期記録として凍結)
 - **実行体制の前提: Fable 非依存** (ユーザー指示 2026-07-06)。主担当 = Opus 4.8、定型実装 = Sonnet、敵対的レビュー = Codex ([[model-roles-third-term]] 継承)。Fable はサブスク復帰時に「再評価ポイント」で合流する
