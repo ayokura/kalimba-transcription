@@ -42,6 +42,11 @@
    "oracleRejections": 1
   },
   {
+   "tx": "1955b5bd",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 6
+  },
+  {
    "tx": "2bf55c75",
    "muteDipOnlySaves": 0,
    "oracleRejections": 5
@@ -67,6 +72,11 @@
    "oracleRejections": 2
   },
   {
+   "tx": "98019f67",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 3
+  },
+  {
    "tx": "a9e30986",
    "muteDipOnlySaves": 0,
    "oracleRejections": 1
@@ -79,6 +89,6 @@
  ],
  "totals": {
   "muteDipOnlySaves": 0,
-  "oracleRejections": 30
+  "oracleRejections": 39
  }
 }
