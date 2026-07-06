@@ -1,0 +1,110 @@
+{
+ "generator": "fn_taxonomy.py (D1, 4th term)",
+ "classification": "current benchmark (baseline minF1>=1.0 = saturated)",
+ "buckets": {
+  "not-in-candidates": 57,
+  "slot-dropped": 47,
+  "no-broadband-onset": 31,
+  "candidate-not-chosen": 22,
+  "time-mismatch": 10,
+  "no-slot": 3
+ },
+ "perRecording": {
+  "17ea7626": {
+   "fnTotal": 9,
+   "buckets": {
+    "slot-dropped": 3,
+    "no-broadband-onset": 3,
+    "candidate-not-chosen": 1,
+    "not-in-candidates": 2
+   },
+   "f1": 0.878
+  },
+  "98019f67": {
+   "fnTotal": 18,
+   "buckets": {
+    "slot-dropped": 5,
+    "not-in-candidates": 8,
+    "no-broadband-onset": 1,
+    "time-mismatch": 3,
+    "candidate-not-chosen": 1
+   },
+   "f1": 0.721
+  },
+  "9ce7df83": {
+   "fnTotal": 2,
+   "buckets": {
+    "slot-dropped": 2
+   },
+   "f1": 0.857
+  },
+  "d7a82772": {
+   "fnTotal": 10,
+   "buckets": {
+    "no-broadband-onset": 3,
+    "slot-dropped": 2,
+    "time-mismatch": 1,
+    "candidate-not-chosen": 3,
+    "not-in-candidates": 1
+   },
+   "f1": 0.828
+  },
+  "ea7edd71": {
+   "fnTotal": 2,
+   "buckets": {
+    "slot-dropped": 1,
+    "candidate-not-chosen": 1
+   },
+   "f1": 0.865
+  },
+  "ebecf0c6": {
+   "fnTotal": 1,
+   "buckets": {
+    "time-mismatch": 1
+   },
+   "f1": 0.872
+  },
+  "1955b5bd": {
+   "fnTotal": 45,
+   "buckets": {
+    "time-mismatch": 2,
+    "not-in-candidates": 17,
+    "candidate-not-chosen": 10,
+    "slot-dropped": 12,
+    "no-slot": 3,
+    "no-broadband-onset": 1
+   },
+   "f1": 0.509
+  },
+  "47902d34": {
+   "fnTotal": 12,
+   "buckets": {
+    "not-in-candidates": 6,
+    "candidate-not-chosen": 1,
+    "slot-dropped": 3,
+    "time-mismatch": 2
+   },
+   "f1": 0.818
+  },
+  "70cc6637": {
+   "fnTotal": 26,
+   "buckets": {
+    "not-in-candidates": 13,
+    "slot-dropped": 10,
+    "time-mismatch": 1,
+    "candidate-not-chosen": 2
+   },
+   "f1": 0.852
+  },
+  "a9e30986": {
+   "fnTotal": 45,
+   "buckets": {
+    "no-broadband-onset": 23,
+    "slot-dropped": 9,
+    "not-in-candidates": 10,
+    "candidate-not-chosen": 3
+   },
+   "f1": 0.526
+  }
+ }
+}
