@@ -1,6 +1,7 @@
 import {
   CorrectionsPayload,
   InstrumentTuning,
+  RecognitionRunsResponse,
   ReviewQueueEntry,
   ReviewStatusPayload,
   ReviewStatusValue,
@@ -236,6 +237,61 @@ export async function fetchTranscription(transactionId: string): Promise<Transcr
   });
   if (!response.ok) {
     throw new Error("Failed to load transcription.");
+  }
+  return response.json();
+}
+
+// #204 Phase 2: recognition run history (see runs storage in apps/api/app/storage.py).
+
+export async function fetchTranscriptionRuns(
+  transactionId: string,
+): Promise<RecognitionRunsResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/transcriptions/${transactionId}/runs`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to load recognition runs.");
+  }
+  return response.json();
+}
+
+export async function fetchTranscriptionRun(
+  transactionId: string,
+  runId: string,
+): Promise<TranscriptionResult> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/transcriptions/${transactionId}/runs/${encodeURIComponent(runId)}`,
+    { cache: "no-store" },
+  );
+  if (!response.ok) {
+    throw new Error("Failed to load recognition run.");
+  }
+  return response.json();
+}
+
+export type CreateRunResult = {
+  runId: string;
+  transactionId: string;
+  meta: {
+    runId: string;
+    commitSha: string | null;
+    recognizerFingerprint: string | null;
+    dspFingerprint: string | null;
+    ranAt: string;
+  };
+  result: TranscriptionResult;
+};
+
+/** 保存済み録音+チューニングで現行の認識器を再実行し、新しい run を追記する
+ * (#204 Phase 1 のエンドポイント)。force=true の再アップロードと違い、新しい
+ * transactionId は発行されない (重複 tx を作らないのが正規解)。 */
+export async function createTranscriptionRun(transactionId: string): Promise<CreateRunResult> {
+  const response = await fetch(`${API_BASE_URL}/api/transcriptions/${transactionId}/runs`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    const detail = await parseError(response);
+    throw new Error(detail);
   }
   return response.json();
 }

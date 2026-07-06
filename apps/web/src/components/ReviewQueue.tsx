@@ -209,6 +209,14 @@ export function ReviewQueue() {
                         候補 {entry.candidateSlotCount}
                       </span>
                     ) : null}
+                    {entry.isStale ? (
+                      <span
+                        className="review-queue-flag stale"
+                        title="保存されている認識結果は現在の認識器と異なるバージョンです。再認識で最新化できます。"
+                      >
+                        更新あり
+                      </span>
+                    ) : null}
                   </span>
                 </Link>
               </li>

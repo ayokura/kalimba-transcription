@@ -17,10 +17,13 @@ import {
 } from "@/lib/audioBoost";
 import { computeAudioLevels } from "@/lib/audio";
 import {
+  createTranscriptionRun,
   createTranscriptionWithCapture,
   fetchMemo,
   fetchTranscription,
   fetchTranscriptionAudioBlob,
+  fetchTranscriptionRun,
+  fetchTranscriptionRuns,
   fetchTunings,
   fetchCorrections,
   saveMemo,
@@ -35,7 +38,16 @@ import {
   tonicReferenceOctave,
 } from "@/lib/scoreLayout";
 import { restoreStateFromCorrections, toDisplayScoreEvents } from "@/lib/reviewCorrections";
-import { InstrumentTuning, ScoreEvent, TranscriptionResult, TuningMismatch } from "@/lib/types";
+import {
+  InstrumentTuning,
+  RecognitionRun,
+  RecognitionRunsResponse,
+  ScoreEvent,
+  TranscriptionResult,
+  TuningMismatch,
+} from "@/lib/types";
+
+const EMPTY_RUNS: RecognitionRunsResponse = { runs: [], latestRunId: null };
 
 type LabelMode = "fixed" | "movable" | "movableNumber";
 const LABEL_MODE_STORAGE_KEY = "kalimba:score-label-mode";
@@ -53,6 +65,7 @@ type LoadState =
       initialMemo: string;
       correctedEvents: ScoreEvent[] | null;
       peakDb: number | null;
+      runs: RecognitionRunsResponse;
     }
   | { kind: "error"; message: string };
 
@@ -67,11 +80,14 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
 
     async function load() {
       try {
-        const [result, audioBlob, memo, corrections] = await Promise.all([
+        // runs の取得失敗は致命的ではない (#204 Phase 2 の run 切替 UI が
+        // 出せないだけ) なので空扱いにフォールバックする。
+        const [result, audioBlob, memo, corrections, runs] = await Promise.all([
           fetchTranscription(transactionId),
           fetchTranscriptionAudioBlob(transactionId),
           fetchMemo(transactionId).catch(() => ""),
           fetchCorrections(transactionId).catch(() => null),
+          fetchTranscriptionRuns(transactionId).catch(() => EMPTY_RUNS),
         ]);
         if (cancelled) return;
         objectUrl = URL.createObjectURL(audioBlob);
@@ -97,6 +113,7 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
           initialMemo: memo,
           correctedEvents,
           peakDb: levels?.peakDb ?? null,
+          runs,
         });
       } catch (err) {
         if (cancelled) return;
@@ -138,6 +155,7 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
       initialMemo={state.initialMemo}
       correctedEvents={state.correctedEvents}
       peakDb={state.peakDb}
+      initialRuns={state.runs}
     />
   );
 }
@@ -149,11 +167,82 @@ type ReadyProps = {
   initialMemo: string;
   correctedEvents: ScoreEvent[] | null;
   peakDb: number | null;
+  initialRuns: RecognitionRunsResponse;
 };
 
-function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correctedEvents, peakDb }: ReadyProps) {
+function ScoreViewerReady({
+  transactionId,
+  result: latestResult,
+  audioUrl,
+  initialMemo,
+  correctedEvents,
+  peakDb,
+  initialRuns,
+}: ReadyProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
+
+  // #204 Phase 2: 認識履歴 (recognition runs) の切替。selectedRunId が最新 run
+  // (または runs が空) のときは load() が返した最新解決結果をそのまま使う。
+  // それ以外を選ぶと GET .../runs/{runId} で該当 run の全文を取得して表示する。
+  const [runsState, setRunsState] = useState<RecognitionRunsResponse>(initialRuns);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(initialRuns.latestRunId);
+  const [displayResult, setDisplayResult] = useState<TranscriptionResult>(latestResult);
+  const [runSwitchBusy, setRunSwitchBusy] = useState(false);
+  const [runSwitchError, setRunSwitchError] = useState<string | null>(null);
+  const [rerunBusy, setRerunBusy] = useState(false);
+  const [rerunError, setRerunError] = useState<string | null>(null);
+  const isViewingLatestRun = selectedRunId === null || selectedRunId === runsState.latestRunId;
+
+  useEffect(() => {
+    if (isViewingLatestRun) {
+      setDisplayResult(latestResult);
+      setRunSwitchError(null);
+      return;
+    }
+    let cancelled = false;
+    setRunSwitchBusy(true);
+    setRunSwitchError(null);
+    fetchTranscriptionRun(transactionId, selectedRunId as string)
+      .then((run) => {
+        if (cancelled) return;
+        setDisplayResult(run);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setRunSwitchError(
+          err instanceof Error ? err.message : "この認識結果の読み込みに失敗しました。",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setRunSwitchBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRunId, isViewingLatestRun, transactionId]);
+
+  const handleRerun = useCallback(async () => {
+    setRerunBusy(true);
+    setRerunError(null);
+    try {
+      const created = await createTranscriptionRun(transactionId);
+      const refreshed = await fetchTranscriptionRuns(transactionId);
+      setRunsState(refreshed);
+      setSelectedRunId(created.runId);
+      setDisplayResult(created.result);
+    } catch (err) {
+      setRerunError(err instanceof Error ? err.message : "再認識に失敗しました。");
+    } finally {
+      setRerunBusy(false);
+    }
+  }, [transactionId]);
+
+  // ダウンストリームの表示ロジック (labelMode / events / warnings / export 等)
+  // は全て「今表示している認識結果」に対して働けばよいので、result という名前を
+  // ここでシャドウする (result.xxx への既存参照をそのまま activeResult として使う)。
+  const result = displayResult;
 
   // 静音録音のブースト + 片チャンネル無音ステレオの両耳化 (lib/audioBoost)
   const boostChainRef = useRef<AudioBoostChain | null>(null);
@@ -173,10 +262,17 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correc
   );
 
   // #202: 修正済み版があれば既定でそれを表示。認識結果へは切替可能。
+  // correctedEvents は読み込み時の最新 run に対して算出されたものなので
+  // (#204 Phase 2)、それ以外の過去 run を閲覧中は認識結果 (その run の生の
+  // events) を表示する — 過去 run に対する修正差分の整列は Phase 3 未対応。
   const [viewSource, setViewSource] = useState<"corrected" | "recognized">(
     correctedEvents ? "corrected" : "recognized",
   );
-  const events = viewSource === "corrected" && correctedEvents ? correctedEvents : result.events;
+  const showCorrectedToggle = isViewingLatestRun && Boolean(correctedEvents);
+  const events =
+    showCorrectedToggle && viewSource === "corrected" && correctedEvents
+      ? correctedEvents
+      : result.events;
 
   const allNotes = useMemo(
     () => events.flatMap((e) => e.notes),
@@ -254,6 +350,18 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correc
         <ShareUrlRow url={shareUrl} />
       </header>
 
+      <RunHistoryPanel
+        runs={runsState.runs}
+        latestRunId={runsState.latestRunId}
+        selectedRunId={selectedRunId}
+        onSelect={setSelectedRunId}
+        switchBusy={runSwitchBusy}
+        switchError={runSwitchError}
+        onRerun={handleRerun}
+        rerunBusy={rerunBusy}
+        rerunError={rerunError}
+      />
+
       {result.tuningMismatch ? (
         <TuningMismatchBanner
           transactionId={transactionId}
@@ -289,7 +397,7 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correc
       </section>
 
       <section className="score-viewer-score" ref={scoreAreaRef}>
-        {correctedEvents ? (
+        {showCorrectedToggle ? (
           <div className="score-viewer-source-row">
             <span className={`score-source-badge${viewSource === "corrected" ? " corrected" : ""}`}>
               {viewSource === "corrected" ? "修正済み版を表示中" : "認識結果 (未修正) を表示中"}
@@ -302,6 +410,10 @@ function ScoreViewerReady({ transactionId, result, audioUrl, initialMemo, correc
               {viewSource === "corrected" ? "認識結果を表示" : "修正済み版を表示"}
             </button>
           </div>
+        ) : !isViewingLatestRun ? (
+          <p className="muted score-viewer-run-note">
+            過去の認識結果を表示中です (修正済み版との切替は最新の認識結果でのみ利用できます)。
+          </p>
         ) : null}
         <div className="score-viewer-mode-toggle" role="group" aria-label="ドレミ表記">
           <button
@@ -517,6 +629,86 @@ function RetranscribeSection({
       {error || fetchError ? (
         <p className="score-viewer-retranscribe-error">{error ?? fetchError}</p>
       ) : null}
+    </section>
+  );
+}
+
+function formatRunTimestamp(ranAt: string | null): string {
+  if (!ranAt) return "";
+  try {
+    return new Date(ranAt).toLocaleString();
+  } catch {
+    return ranAt;
+  }
+}
+
+function formatRunLabel(run: RecognitionRun): string {
+  if (run.isLegacy) {
+    return `アップロード時点 (レガシー) · ${run.eventCount} events`;
+  }
+  const fp = run.recognizerFingerprint ? run.recognizerFingerprint.slice(0, 8) : "fp不明";
+  return `${formatRunTimestamp(run.ranAt)} · ${fp} · ${run.eventCount} events`;
+}
+
+// #204 Phase 2: 認識履歴 (runs) の切替 + 現行認識器での再認識。
+// GET .../runs で返る全 run (legacy 含む) を新しい順のまま select の選択肢にする。
+function RunHistoryPanel({
+  runs,
+  latestRunId,
+  selectedRunId,
+  onSelect,
+  switchBusy,
+  switchError,
+  onRerun,
+  rerunBusy,
+  rerunError,
+}: {
+  runs: RecognitionRun[];
+  latestRunId: string | null;
+  selectedRunId: string | null;
+  onSelect: (runId: string) => void;
+  switchBusy: boolean;
+  switchError: string | null;
+  onRerun: () => void;
+  rerunBusy: boolean;
+  rerunError: string | null;
+}) {
+  const effectiveSelected = selectedRunId ?? latestRunId ?? "";
+
+  return (
+    <section className="score-viewer-runs">
+      <div className="score-viewer-runs-row">
+        {runs.length > 0 ? (
+          <select
+            className="score-viewer-runs-select"
+            value={effectiveSelected}
+            onChange={(e) => onSelect(e.target.value)}
+            disabled={switchBusy}
+            aria-label="認識結果の履歴"
+          >
+            {runs.map((run) => (
+              <option key={run.runId} value={run.runId}>
+                {run.runId === latestRunId ? "最新 · " : ""}
+                {formatRunLabel(run)}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="muted">認識履歴を取得できませんでした。</span>
+        )}
+        <button
+          type="button"
+          className="score-viewer-rerun-btn"
+          onClick={onRerun}
+          disabled={rerunBusy}
+          title="保存済みの録音+調律のまま、現在の認識器で再認識して履歴に追加します (新しい transaction は作られません)"
+        >
+          {rerunBusy ? "再認識中…" : "現在の認識器で再認識"}
+        </button>
+      </div>
+      {switchBusy ? <p className="muted">読み込み中…</p> : null}
+      {switchError ? <p className="score-viewer-retranscribe-error">{switchError}</p> : null}
+      {rerunError ? <p className="score-viewer-retranscribe-error">{rerunError}</p> : null}
     </section>
   );
 }
