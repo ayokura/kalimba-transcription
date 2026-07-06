@@ -82,6 +82,16 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
   const lastCenterRef = useRef<number>(-999);
   const lastNotesKeyRef = useRef<string>("");
   const computingRef = useRef(false);
+  // hover 状態 (canvas CSS 座標)。state にすると mousemove ごとに再レンダー
+  // されるため ref + canvas 再描画で完結させる
+  const hoverRef = useRef<{ x: number; y: number } | null>(null);
+  const hoverRafRef = useRef(0);
+  const lastDrawRef = useRef<{
+    notes: string[];
+    highlight: Set<string>;
+    trace: { startSec: number; stepSec: number; steps: number; values: Float32Array };
+    centerSec: number;
+  } | null>(null);
 
   // アンカーの時刻列 (プレイヘッド近傍アンカーの決定に使用)
   const rowTimes = useMemo(() => anchors.map((a) => a.timeSec), [anchors]);
@@ -221,6 +231,9 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
     ) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+      // hover 再描画用に最終描画引数を保持 (mousemove は WASM 再計算せず redraw のみ)
+      lastDrawRef.current = { notes, highlight, trace, centerSec };
+      const hover = hoverRef.current;
       const heatmap = notes.length > SPARKLINE_MAX_ROWS;
       const dpr = window.devicePixelRatio || 1;
       const cssWidth = canvas.clientWidth || 600;
@@ -253,6 +266,12 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
         return Math.max(0, 1 - Math.max(db, DB_FLOOR) / DB_FLOOR);
       };
 
+      // hover 行の決定 (プロット領域内のみ。時間軸ラベル帯は除外)
+      const hoverRow =
+        hover && hover.y < notes.length * rowH && hover.x >= 0
+          ? Math.min(notes.length - 1, Math.floor(hover.y / rowH))
+          : -1;
+
       if (heatmap) {
         // ヒートマップ (18 tine 以上 = 34 鍵系の全 tine モード): 1 行 11px、
         // 色の濃さ = dB。ティック/プレイヘッドは後段でセルの上に描かれる。
@@ -261,16 +280,21 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
         for (let n = 0; n < notes.length; n++) {
           const y0 = n * rowH;
           const isHi = highlight.has(notes[n]);
+          const isHover = n === hoverRow;
+          if (isHover) {
+            g.fillStyle = "rgba(23,126,137,0.10)";
+            g.fillRect(0, y0, cssWidth, rowH);
+          }
           for (let s = 0; s < steps; s++) {
             const v = dbNorm(values[n * steps + s] / globalMax);
             if (v <= 0.03) continue;
             g.fillStyle = `rgba(23,126,137,${(0.06 + 0.94 * v).toFixed(3)})`;
             g.fillRect(labelW + s * cellW, y0 + 1, cellW + 0.5, rowH - 2);
           }
-          g.font = isHi
+          g.font = isHi || isHover
             ? "bold 9px ui-monospace, Menlo, monospace"
             : "9px ui-monospace, Menlo, monospace";
-          g.fillStyle = isHi ? "#0f5f67" : "#63615d";
+          g.fillStyle = isHi ? "#0f5f67" : isHover ? "#1e1f1f" : "#63615d";
           if (isHi) g.fillRect(labelW - 4, y0 + 1, 2, rowH - 2);
           g.fillText(noteLabels.get(notes[n]) ?? notes[n], 4, y0 + rowH / 2 + 3);
         }
@@ -302,7 +326,11 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
       for (let n = 0; !heatmap && n < notes.length; n++) {
         const y0 = n * rowH + 4;
         const base = y0 + rowH - 8;
-        const isHi = highlight.has(notes[n]);
+        const isHi = highlight.has(notes[n]) || n === hoverRow;
+        if (n === hoverRow) {
+          g.fillStyle = "rgba(23,126,137,0.08)";
+          g.fillRect(0, n * rowH, cssWidth, rowH);
+        }
         // 行ごと正規化 (波形形状の可視化 — 弱い伴奏でも山が見える)。
         // 相対強度は % ラベル (行 max / 窓内グローバル max) で補う
         let rowMax = 0;
@@ -340,9 +368,52 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
       g.fillText(`${startSec.toFixed(2)}s`, labelW, cssHeight - 4);
       const endLabel = `${(startSec + windowDur).toFixed(2)}s`;
       g.fillText(endLabel, labelW + plotW - g.measureText(endLabel).width, cssHeight - 4);
+
+      // hover ツールチップ: カーソル位置の音名 + 時刻 + 相対強度 (%)
+      if (hover && hoverRow >= 0) {
+        const sec = startSec + ((hover.x - labelW) / Math.max(1, plotW)) * windowDur;
+        const inPlot = hover.x >= labelW && hover.x <= labelW + plotW;
+        const s = inPlot
+          ? Math.max(0, Math.min(steps - 1, Math.round((sec - startSec) / stepSec)))
+          : -1;
+        const pct = s >= 0 ? Math.round((values[hoverRow * steps + s] / globalMax) * 100) : null;
+        const label = noteLabels.get(notes[hoverRow]) ?? notes[hoverRow];
+        const text = pct !== null ? `${label}  ${sec.toFixed(2)}s  ${pct}%` : label;
+        g.font = "bold 11px ui-monospace, Menlo, monospace";
+        const tw = g.measureText(text).width + 10;
+        const tx = Math.min(Math.max(hover.x + 10, labelW), cssWidth - tw - 2);
+        const ty = Math.max(2, hover.y - 22);
+        g.fillStyle = "rgba(30,31,31,0.85)";
+        g.fillRect(tx, ty, tw, 17);
+        g.fillStyle = "#ffffff";
+        g.fillText(text, tx + 5, ty + 12);
+      }
     },
     [rowTimes, noteLabels],
   );
+
+  // マウス hover: カーソル下の行を強調 + ツールチップ (WASM 再計算なしの再描画のみ)
+  const handleCanvasMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = canvasRef.current;
+      const last = lastDrawRef.current;
+      if (!canvas || !last) return;
+      const rect = canvas.getBoundingClientRect();
+      hoverRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      if (hoverRafRef.current) return;
+      hoverRafRef.current = requestAnimationFrame(() => {
+        hoverRafRef.current = 0;
+        const d = lastDrawRef.current;
+        if (d) draw(d.notes, d.highlight, d.trace, d.centerSec);
+      });
+    },
+    [draw],
+  );
+  const handleCanvasMouseLeave = useCallback(() => {
+    hoverRef.current = null;
+    const d = lastDrawRef.current;
+    if (d) draw(d.notes, d.highlight, d.trace, d.centerSec);
+  }, [draw]);
 
   const recompute = useCallback(
     async (force: boolean) => {
@@ -435,7 +506,14 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
         ) : null}
         {enabled && status ? <span className="muted">{status}</span> : null}
       </div>
-      {enabled ? <canvas ref={canvasRef} className="gt-energy-trace-canvas" /> : null}
+      {enabled ? (
+        <canvas
+          ref={canvasRef}
+          className="gt-energy-trace-canvas"
+          onMouseMove={handleCanvasMouseMove}
+          onMouseLeave={handleCanvasMouseLeave}
+        />
+      ) : null}
     </div>
   );
 }
