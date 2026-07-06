@@ -171,19 +171,20 @@ def list_review_queue(limit: int, status: str | None = None) -> list[dict]:
     return results
 
 
-def _resolved_recognizer_fingerprint(tx_dir: Path) -> str | None:
-    """recognizerFingerprint of whichever response a listing currently shows
-    for this transaction (latest run if one exists, else the legacy
-    request.json value). Compared against the running process's own
-    ``recognizer_fingerprint()`` to flag "saved != current recognizer" in
-    listings (#204 Phase 2)."""
-    transaction_id = tx_dir.name
+def resolved_recognizer_fingerprint(transaction_id: str) -> str | None:
+    """recognizerFingerprint of whichever response is currently resolved for
+    this transaction (latest run if one exists, else the legacy
+    request.json value). Public so both listings (``_summarize_transaction``,
+    compared against the running process's own ``recognizer_fingerprint()``
+    to flag "saved != current recognizer") and external tooling (e.g.
+    ``scripts/audio-analysis/bulk_recognition_runs.py``, #204 Phase 3) can
+    determine staleness without duplicating the resolution logic."""
     run_id = latest_run_id(transaction_id)
     if run_id is not None:
         meta = load_run_meta(transaction_id, run_id)
         if meta is not None:
             return meta.get("recognizerFingerprint")
-    request_path = tx_dir / "request.json"
+    request_path = get_transaction_dir(transaction_id) / "request.json"
     if not request_path.exists():
         return None
     try:
@@ -226,7 +227,7 @@ def _summarize_transaction(tx_dir: Path) -> dict | None:
     # plus whether it differs from the recognizer running right now, so the
     # review queue can flag re-recognition candidates. None when the saved
     # fingerprint is unknown (pre-#204 recordings) rather than guessing stale.
-    saved_fingerprint = _resolved_recognizer_fingerprint(tx_dir)
+    saved_fingerprint = resolved_recognizer_fingerprint(tx_dir.name)
     is_stale = None if saved_fingerprint is None else saved_fingerprint != recognizer_fingerprint()
     return {
         "transactionId": tx_dir.name,

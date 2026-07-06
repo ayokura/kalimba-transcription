@@ -267,6 +267,22 @@ uv run python scripts/audio-analysis/metamorphic_alarm.py --tx <tx-id> --json --
 uv run python scripts/audio-analysis/metamorphic_alarm.py --strict
 ```
 
+### bulk_recognition_runs.py
+#204 Phase 3 の「corpus 一括再認識ツール」。`POST /api/transcriptions/{id}/runs`
+(#204 Phase 1、force=true の重複 tx 問題の正規解) を `KALIMBA_DATA_DIR` 配下の
+transaction すべてに対して in-process (TestClient、サーバー不要) で呼び出し、
+保存済み recognizerFingerprint が現行と異なる (または不明な) 録音だけを既定で
+対象にする。前後比較は metamorphic_alarm.py と同じ手法 (`note_f1_benchmark` の
+`match_pairs` を「再認識前の出力 = 疑似正解」として再利用) で added/dropped を
+報告する。report-only ではなく実際に run を追記するツールなので、テスト/デモ
+実行は必ず `--data-dir` で一時ディレクトリの合成データを指す (AGENTS.md)。
+
+```bash
+uv run python scripts/audio-analysis/bulk_recognition_runs.py --dry-run
+uv run python scripts/audio-analysis/bulk_recognition_runs.py --data-dir /tmp/scratch-data
+uv run python scripts/audio-analysis/bulk_recognition_runs.py --all --json
+```
+
 ## 判定基準
 
 ### ノイズ vs 楽音の判定
