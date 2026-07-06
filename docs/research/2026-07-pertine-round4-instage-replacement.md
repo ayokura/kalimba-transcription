@@ -54,8 +54,10 @@ AND NOT tracker_fresh_attack(segment 窓内のいずれかの tine)   # 位相�
 5. held-out 到着後: 全数値を同一集合で 1 回再測 (rescue 寄与・oracle 寄与・fscan 寄与を arm 分解)
 6. merge 条件 (3) の判定材料: `residual-decay` 判定の mute-dip 依存の退役 + (成立すれば) fscan 退役を C2 相談で提案
 
-## 6. 撤退基準 (事前固定)
+## 6. 撤退基準 (事前固定。**発火時は即撤退ではなく再相談** — 2026-07-06 C2 相談でのユーザー条件)
 
-- clean suppression 誤発火が oracle 全数 dump の時点で **3/18 超** → 実装に進まず設計見直し (probe B の 1/18 から大きく悪化 = 前提崩れ)
-- fixture 較正で **pertine.py の既存定数以外の新規閾値**が必要になった → 「素の置換では成立しない」として撤退記録 (第 3 巡と同形式の clean negative)
+- clean suppression 誤発火が oracle 全数 dump の時点で **3/18 超** → 実装に進まず相談 (probe B の 1/18 から大きく悪化 = 前提崩れ)
+- fixture 較正で **pertine.py の既存定数以外の新規閾値**が必要になった → 「素の置換では成立しない」徴候として相談
 - dual-run で K2-K4 のいずれか失敗 → 連続失敗 1/2 として記録し、第 4 カウント巡に進むかはユーザー相談
+
+C2 相談は 2026-07-06 に実施済み・承認 (条件: 撤退基準発火時は撤退実行前に再相談)。#203 記録。
