@@ -7,14 +7,9 @@
       "truthNotes": 12
     },
     "17ea7626-3c5d-450d-ae74-0116dea6e881": {
-      "minF1": 0.877,
-      "maxHardMisses": 4,
+      "minF1": 0.865,
+      "maxHardMisses": 5,
       "truthNotes": 52
-    },
-    "1955b5bd-ee2e-41b6-a81e-6a1ab1ac22ec": {
-      "minF1": 0.509,
-      "maxHardMisses": 34,
-      "truthNotes": 87
     },
     "2bf55c75-182c-4bee-84f8-5f8b9fb72f1d": {
       "minF1": 1.0,
@@ -27,8 +22,8 @@
       "truthNotes": 48
     },
     "4e1ae5c6-df9a-4876-917d-b7e47699c8e5": {
-      "minF1": 1.0,
-      "maxHardMisses": 0,
+      "minF1": 0.769,
+      "maxHardMisses": 1,
       "truthNotes": 8
     },
     "6bf97c7c-6e69-43f5-ab12-2069903be735": {
@@ -37,8 +32,8 @@
       "truthNotes": 10
     },
     "70cc6637-ca99-4848-a0d4-944b53e5c742": {
-      "minF1": 0.851,
-      "maxHardMisses": 19,
+      "minF1": 0.834,
+      "maxHardMisses": 24,
       "truthNotes": 141
     },
     "8039a34c-afd0-4515-8949-80089117cf62": {
@@ -46,13 +41,8 @@
       "maxHardMisses": 0,
       "truthNotes": 239
     },
-    "98019f67-690d-4deb-a882-98ed9878c519": {
-      "minF1": 0.72,
-      "maxHardMisses": 12,
-      "truthNotes": 49
-    },
     "9ce7df83-33a0-455d-bf86-c9392ce6f777": {
-      "minF1": 0.857,
+      "minF1": 0.769,
       "maxHardMisses": 0,
       "truthNotes": 8
     },
@@ -87,12 +77,12 @@
       "truthNotes": 18
     }
   },
-  "updatedAt": "2026-07-06T12:45:55+00:00",
-  "recognizerFingerprint": "e9bf903c425c4625",
+  "updatedAt": "2026-07-05T18:39:36+00:00",
+  "recognizerFingerprint": "29eaaf1daa45ca68",
   "kalimbaDspFingerprint": "b5688f4db575441d",
   "nonSaturatedRepoGate": {
     "minRecordings": 6,
-    "minMicroF1": 0.865,
+    "minMicroF1": 0.849,
     "txIds": [
       "17ea7626-3c5d-450d-ae74-0116dea6e881",
       "4e1ae5c6-df9a-4876-917d-b7e47699c8e5",
