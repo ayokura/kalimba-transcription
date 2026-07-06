@@ -909,12 +909,6 @@ def compute_non_saturated_repo_gate(results: list[dict], baseline: dict) -> dict
 def write_baseline(results: list[dict], *, allow_regression: bool) -> list[str]:
     baseline = load_baseline()
     entries = baseline.setdefault("recordings", {})
-    # Snapshot pre-write baseline for the non-saturated repo gate so its
-    # saturation classification matches the HEADLINE summary printed for this
-    # same run (main() also classifies against the pre-write baseline).
-    measured_gate = compute_non_saturated_repo_gate(
-        results, {"recordings": dict(entries)}
-    )
     messages: list[str] = []
     for r in results:
         measured_min = _baseline_floor_f1(r["f1"])
@@ -954,6 +948,15 @@ def write_baseline(results: list[dict], *, allow_regression: bool) -> list[str]:
             "maxHardMisses": new_hard,
             "truthNotes": r["truthNotes"],
         }
+    # Classify saturation against the POST-write entries so the stored gate
+    # is self-consistent with the per-recording floors written above — the CI
+    # test derives the non-saturated set from those floors. (Pre-write
+    # classification once produced a self-contradictory baseline: a run that
+    # saturates a recording, e.g. 4e1ae5c6 0.769->1.0 after PR #210, wrote a
+    # gate still counting it as non-saturated, and the very commit failed CI.)
+    measured_gate = compute_non_saturated_repo_gate(
+        results, {"recordings": dict(entries)}
+    )
     old_gate = baseline.get("nonSaturatedRepoGate")
     if old_gate is None:
         baseline["nonSaturatedRepoGate"] = measured_gate
