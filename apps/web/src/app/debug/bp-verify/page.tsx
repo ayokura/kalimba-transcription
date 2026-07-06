@@ -5,7 +5,10 @@
 // Basic Pitch は検出した note) を試聴し、「聞こえる (実在)」「聞こえない (GT から
 // 除去候補)」「不明瞭」のワンタップ裁定を自動保存する。/debug/gt-review と同じ
 // 部品・保存方式を踏襲した姉妹ページ。
-// 撤去条件: GT 除染の運用が落ち着いた時点で /api/dev/bp-verify と一緒に削除する。
+// (2026-07-06 追記) ?set=pesto_verify で S6 の PESTO 固有候補 20 音の裁定にも
+// 流用する (pesto_verify_prep.py が rows を生成、#203 事前固定ルール)。
+// 撤去条件: GT 除染 + PESTO 判定の運用が落ち着いた時点で /api/dev/bp-verify と
+// 一緒に削除する。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -79,8 +82,19 @@ export default function DebugBpVerifyPage() {
     applyPlaybackRate();
   }, [applyPlaybackRate, selectedTx8]);
 
+  // ?set= で dataset を切替 (bp_verify | pesto_verify — S6 PESTO verify が同型の
+  // 試聴裁定なので流用、2026-07-06)。dev ページなので useSearchParams の
+  // Suspense 境界は導入せず、マウント後に location から読む。
+  const [dataset, setDataset] = useState<string | null>(null);
   useEffect(() => {
-    fetchBpVerify()
+    const s = new URLSearchParams(window.location.search).get("set");
+    setDataset(s === "pesto_verify" ? "pesto_verify" : "bp_verify");
+  }, []);
+  const isPesto = dataset === "pesto_verify";
+
+  useEffect(() => {
+    if (!dataset) return;
+    fetchBpVerify(dataset)
       .then((doc) => {
         setData(doc);
         const groups = [...new Set(doc.rows.map((r) => r.tx8))];
@@ -89,7 +103,7 @@ export default function DebugBpVerifyPage() {
         setLoadError(null);
       })
       .catch((err) => setLoadError(err instanceof Error ? err.message : "読み込み失敗"));
-  }, []);
+  }, [dataset]);
 
   const rowsByTx = useMemo(() => {
     const groups = new Map<string, BpVerifyRow[]>();
@@ -140,15 +154,19 @@ export default function DebugBpVerifyPage() {
     return () => closeAudioBoost(boostChainRef);
   }, []);
 
-  const scheduleSave = useCallback((next: BpVerifyVerdict) => {
-    setSaveState("saving");
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      saveBpVerifyVerdict(next)
-        .then(() => setSaveState("saved"))
-        .catch(() => setSaveState("error"));
-    }, 600);
-  }, []);
+  const scheduleSave = useCallback(
+    (next: BpVerifyVerdict) => {
+      if (!dataset) return;
+      setSaveState("saving");
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        saveBpVerifyVerdict(next, dataset)
+          .then(() => setSaveState("saved"))
+          .catch(() => setSaveState("error"));
+      }, 600);
+    },
+    [dataset],
+  );
 
   const updateVerdict = useCallback(
     (mutate: (v: BpVerifyVerdict) => BpVerifyVerdict) => {
@@ -199,11 +217,11 @@ export default function DebugBpVerifyPage() {
       <section className="hero">
         <div>
           <p className="eyebrow">Dev bp-verify (temporary)</p>
-          <h1>bp-only 23 件のワンタップ裁定</h1>
+          <h1>{isPesto ? "PESTO 固有候補のワンタップ裁定" : "bp-only 23 件のワンタップ裁定"}</h1>
           <p className="hero-copy">
-            GT にはあるが recognizer が検出せず、Basic Pitch は検出した note です。
-            ▶ で該当時刻を再生し、聞こえるかどうかを裁定してください。裁定は自動保存されます。
-            全件終わったらチャットで知らせてもらえれば、GT 反映はエージェント側で行います。
+            {isPesto
+              ? "PESTO だけが検出した候補です (S6 bets #3、#203 事前固定ルール: 実在と裁定された音が 5 音未満なら PESTO 打ち切り確定)。▶ で該当時刻を再生し、実在の演奏音かどうかを裁定してください。裁定は自動保存されます。全件終わったらチャットで知らせてもらえれば、集計・判定はエージェント側で行います。"
+              : "GT にはあるが recognizer が検出せず、Basic Pitch は検出した note です。▶ で該当時刻を再生し、聞こえるかどうかを裁定してください。裁定は自動保存されます。全件終わったらチャットで知らせてもらえれば、GT 反映はエージェント側で行います。"}
           </p>
         </div>
       </section>
@@ -273,7 +291,9 @@ export default function DebugBpVerifyPage() {
             <div>
               <h2>{selectedTx8}</h2>
             </div>
-            <span className="muted">{currentRows.length} 件の bp-only 候補</span>
+            <span className="muted">
+              {currentRows.length} 件の{isPesto ? " PESTO" : " bp-only"} 候補
+            </span>
           </div>
 
           <div style={{ position: "sticky", top: 0, zIndex: 5, background: "var(--background, #fff)", padding: "6px 0" }}>

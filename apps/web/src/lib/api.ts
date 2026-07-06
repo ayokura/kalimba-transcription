@@ -520,8 +520,13 @@ export function bpVerifyRowKey(row: Pick<BpVerifyRow, "txId" | "timeSec" | "note
   return `${row.txId}:${row.timeSec}:${row.note}`;
 }
 
-export async function fetchBpVerify(): Promise<BpVerifyData> {
-  const response = await fetch(`${API_BASE_URL}/api/dev/bp-verify`, { cache: "no-store" });
+// dataset は API 側の許可リスト ({bp_verify, pesto_verify}) で検証される。
+// 既定は従来どおり bp-only セット。
+export async function fetchBpVerify(dataset = "bp_verify"): Promise<BpVerifyData> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/dev/bp-verify?set=${encodeURIComponent(dataset)}`,
+    { cache: "no-store" },
+  );
   if (!response.ok) {
     const detail = await response.json().catch(() => null);
     throw new Error(detail?.detail ?? "Failed to load bp-verify rows.");
@@ -529,12 +534,18 @@ export async function fetchBpVerify(): Promise<BpVerifyData> {
   return (await response.json()) as BpVerifyData;
 }
 
-export async function saveBpVerifyVerdict(verdict: BpVerifyVerdict): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/dev/bp-verify/verdict`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(verdict),
-  });
+export async function saveBpVerifyVerdict(
+  verdict: BpVerifyVerdict,
+  dataset = "bp_verify",
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/dev/bp-verify/verdict?set=${encodeURIComponent(dataset)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(verdict),
+    },
+  );
   if (!response.ok) throw new Error("Failed to save bp-verify verdict.");
 }
 

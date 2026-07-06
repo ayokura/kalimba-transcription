@@ -4,6 +4,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
+from io import BytesIO
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,18 +20,22 @@ from .models import (
 )
 from .storage import (
     compute_audio_sha256,
+    create_run,
     find_transaction_by_hash_and_tuning,
     generate_transaction_id,
     get_data_dir,
     get_transaction_audio_sha256,
     get_transaction_timestamps,
+    latest_run_id,
     list_recent_transactions,
     list_review_queue,
+    list_runs,
     list_transactions_by_hash,
     load_audio_path,
     load_corrections,
+    load_latest_response,
     load_memo,
-    load_response,
+    load_request,
     load_review_status,
     quarantine_corrections,
     save_corrections,
@@ -150,7 +155,10 @@ async def create_transcription(
     if not dryRun and not force:
         existing_id = find_transaction_by_hash_and_tuning(audio_sha256, parsed_tuning.id)
         if existing_id is not None:
-            existing = load_response(existing_id)
+            # #204 Phase 1: dedup stays recording-scoped (no new tx), but return
+            # the latest recognition run so a re-recognised recording is not
+            # served its stale upload-time snapshot.
+            existing = load_latest_response(existing_id)
             if existing is not None:
                 return TranscriptionResult.model_validate(existing)
 
@@ -347,6 +355,18 @@ def put_dev_gt_draft_verdict(tx8: str, payload: GtDraftVerdictPayload) -> dict:
 # の要検証ポイント) を /debug/bp-verify ページへ供給し、聞こえる/聞こえない/不明瞭
 # の裁定を保存する。gt-drafts と同じ dev-only temporary パターン。
 # temporary — GT 除染の運用が落ち着いたら /debug/bp-verify と一緒に撤去する。
+# (2026-07-06 追記) S6 の PESTO verify (上位 20 音、#203 事前固定ルール) が同型の
+# 「note+時刻を試聴して実在裁定」なので、?set= で dataset を切替可能にして流用する。
+# rows/verdict ファイルは dataset ごとに分離され、bp-only の裁定記録は不変。
+_VERIFY_SETS = frozenset({"bp_verify", "pesto_verify"})
+
+
+def _verify_set_or_400(name: str) -> str:
+    if name not in _VERIFY_SETS:
+        raise HTTPException(status_code=400, detail=f"Unknown verify set: {name}")
+    return name
+
+
 class BpVerifyVerdictPayload(BaseModel):
     # 行キー "<txId>:<timeSec>:<note>" -> {decision?: real|absent|unclear, comment?}
     rows: dict[str, dict]
@@ -354,19 +374,21 @@ class BpVerifyVerdictPayload(BaseModel):
 
 
 @app.get("/api/dev/bp-verify")
-def get_dev_bp_verify() -> dict:
+def get_dev_bp_verify(set: str = "bp_verify") -> dict:
+    dataset = _verify_set_or_400(set)
     drafts_dir = get_data_dir() / "gt_drafts"
-    rows_path = drafts_dir / "bp_verify.rows.json"
+    rows_path = drafts_dir / f"{dataset}.rows.json"
     if not rows_path.is_file():
         raise HTTPException(
             status_code=404,
             detail=(
-                "bp_verify.rows.json not found. Run "
-                "`uv run python scripts/audio-analysis/research/bp_verify_prep.py` first."
+                f"{dataset}.rows.json not found. Run the matching prep script "
+                "(scripts/audio-analysis/research/bp_verify_prep.py or "
+                "pesto_verify_prep.py) first."
             ),
         )
     doc = json.loads(rows_path.read_text(encoding="utf-8"))
-    verdict_path = drafts_dir / "bp_verify.verdict.json"
+    verdict_path = drafts_dir / f"{dataset}.verdict.json"
     doc["verdict"] = (
         json.loads(verdict_path.read_text(encoding="utf-8")) if verdict_path.is_file() else None
     )
@@ -374,13 +396,14 @@ def get_dev_bp_verify() -> dict:
 
 
 @app.put("/api/dev/bp-verify/verdict")
-def put_dev_bp_verify_verdict(payload: BpVerifyVerdictPayload) -> dict:
+def put_dev_bp_verify_verdict(payload: BpVerifyVerdictPayload, set: str = "bp_verify") -> dict:
+    dataset = _verify_set_or_400(set)
     drafts_dir = get_data_dir() / "gt_drafts"
-    if not (drafts_dir / "bp_verify.rows.json").is_file():
-        raise HTTPException(status_code=404, detail="bp-only rows not found.")
+    if not (drafts_dir / f"{dataset}.rows.json").is_file():
+        raise HTTPException(status_code=404, detail="verify rows not found.")
     document = payload.model_dump()
     document["savedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    (drafts_dir / "bp_verify.verdict.json").write_text(
+    (drafts_dir / f"{dataset}.verdict.json").write_text(
         json.dumps(document, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
     )
     return {"verdict": document}
@@ -456,7 +479,10 @@ def put_dev_dogfooding(transaction_id: str, payload: DogfoodingRecordPayload) ->
 @app.get("/api/transcriptions/{transaction_id}")
 def get_transcription(transaction_id: str) -> dict:
     _validate_transaction_id(transaction_id)
-    data = load_response(transaction_id)
+    # #204 Phase 1: resolve to the newest recognition run, falling back to the
+    # immutable legacy response.json. Same response shape as before, so existing
+    # clients render the newer recognition without any change.
+    data = load_latest_response(transaction_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Transaction not found.")
     timestamps = get_transaction_timestamps(transaction_id)
@@ -475,6 +501,91 @@ def get_transcription_alternatives(transaction_id: str) -> list[dict]:
     if audio_sha256 is None:
         return []
     return list_transactions_by_hash(audio_sha256)
+
+
+@app.get("/api/transcriptions/{transaction_id}/runs")
+def get_transcription_runs(transaction_id: str) -> dict:
+    """Recognition history for a recording (#204 Phase 1).
+
+    Newest-first list of runs plus a synthetic ``legacy`` entry for the
+    immutable upload-time response. ``latestRunId`` is the run the read
+    endpoints currently resolve to (``"legacy"`` when no re-recognition run
+    exists yet)."""
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    runs = list_runs(transaction_id)
+    resolved = latest_run_id(transaction_id) or ("legacy" if runs else None)
+    return {"runs": runs, "latestRunId": resolved}
+
+
+@app.post("/api/transcriptions/{transaction_id}/runs")
+async def create_transcription_run(transaction_id: str) -> dict:
+    """Re-recognise a stored recording with the current recognizer and append
+    the result as a new run (#204 Phase 1).
+
+    This is the canonical fix for the force=true duplicate problem: it reuses
+    the stored audio + tuning and never mints a new transaction id."""
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+
+    audio_path = load_audio_path(transaction_id)
+    if audio_path is None:
+        raise HTTPException(status_code=404, detail="Recording audio not found.")
+
+    request_data = load_request(transaction_id)
+    if request_data is None:
+        raise HTTPException(status_code=404, detail="Recording request metadata not found.")
+
+    stored_tuning = request_data.get("tuning")
+    if not isinstance(stored_tuning, dict):
+        raise HTTPException(
+            status_code=422,
+            detail="Recording has no stored tuning; cannot re-recognise.",
+        )
+    parsed_tuning = parse_tuning_json(json.dumps(stored_tuning))
+    disabled_passes = parse_disabled_repeated_pattern_passes(
+        request_data.get("disabledRepeatedPatternPasses")
+    )
+
+    audio_bytes = audio_path.read_bytes()
+    upload = UploadFile(file=BytesIO(audio_bytes), filename="audio.wav")
+    result = await transcribe_audio(
+        upload,
+        parsed_tuning,
+        debug=True,
+        disabled_repeated_pattern_passes=disabled_passes,
+        mid_performance_start=bool(request_data.get("midPerformanceStart", False)),
+        mid_performance_end=bool(request_data.get("midPerformanceEnd", False)),
+    )
+    result.transaction_id = transaction_id
+    response_dict = result.model_dump(by_alias=True)
+    # Debug is persisted only as runs/<runId>/debug.json. Pop (not get) keeps
+    # the run's response.json lean, so every read resolved through
+    # load_latest_response (e.g. GET /api/transcriptions/{id}) serves a lean
+    # payload after re-recognition. Note the legacy upload path is different:
+    # uploads default to debug=Form(True) and store via .get, so legacy
+    # response.json typically DOES carry the debug payload - runs are the
+    # leaner of the two. The returned ``result`` mirrors the stored response
+    # (lean) for consistency; callers needing the debug payload read
+    # runs/<runId>/debug.json.
+    debug_dict = response_dict.pop("debug", None)
+
+    meta = create_run(
+        transaction_id,
+        response_dict,
+        debug_dict,
+        commit_sha=git_head_sha(),
+        recognizer_fingerprint=recognizer_fingerprint(),
+        dsp_fingerprint=kalimba_dsp_fingerprint(),
+    )
+    return {
+        "runId": meta["runId"],
+        "transactionId": transaction_id,
+        "meta": meta,
+        "result": response_dict,
+    }
 
 
 @app.get("/api/transcriptions/{transaction_id}/audio")
