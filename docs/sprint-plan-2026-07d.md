@@ -25,7 +25,7 @@
 
 3 つの数値系が併存しており、**取り違えは偽の進捗/回帰報告になる** (実例: 本計画 v1 が S7 凍結値と現行値を混用して監査で検出された):
 
-| 系 | 現在値 (2026-07-07) | 用途 |
+| 系 | 現在値 (測定 2026-07-06 22:25 JST = benchmark_history 最終行) | 用途 |
 |---|---|---|
 | **current benchmark (authority)** | 非飽和 **n=10 micro F1 0.740 CI95 [0.617, 0.843]** | **headline はこれのみ**。再現: `uv run python scripts/audio-analysis/note_f1_benchmark.py` (HEAD、baseline の minF1≥1.0 を飽和と分類) |
 | S7 frozen artifact | n=11 F1 0.744 CI [0.627, 0.846] | 歴史値 (dual-run 判定時の凍結分類、4e1ae5c6 飽和卒業前)。**進捗比較に使わない** |
