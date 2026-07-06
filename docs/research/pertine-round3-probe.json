@@ -1,0 +1,1286 @@
+{
+ "dropReason": "residual-decay-no-reattack",
+ "probeJerkFloor": 10.0,
+ "coreBars": {
+  "phase": 0.7,
+  "jerk": 150.0
+ },
+ "totals": {
+  "slots": 33,
+  "fnOverlapSlots": 15,
+  "fnNotes": 21,
+  "cleanSlots": 18,
+  "forwardScanPromotions": 10,
+  "vetoFiresOnFn": 16,
+  "vetoFiresOnCleanPrimary": 1
+ },
+ "recordings": [
+  {
+   "tx": "17ea7626",
+   "forwardScan": 0,
+   "slots": [
+    {
+     "win": [
+      11.547,
+      11.707
+     ],
+     "droppedPrimary": "B4",
+     "fnNotesInWindow": [
+      {
+       "t": 11.547,
+       "note": "C5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "B4",
+      "win": [
+       11.447,
+       11.807
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "C5",
+       "win": [
+        11.447,
+        11.647
+       ],
+       "nHits": 40,
+       "t": 11.585,
+       "phaseErr": 0.99,
+       "jerk": 256.4,
+       "reinject": 0.73,
+       "envPeakVsGate": 10.13,
+       "fires": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tx": "4e1ae5c6",
+   "forwardScan": 0,
+   "slots": [
+    {
+     "win": [
+      8.197,
+      9.157
+     ],
+     "droppedPrimary": "B4",
+     "fnNotesInWindow": [
+      {
+       "t": 8.197,
+       "note": "C5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "B4",
+      "win": [
+       8.097,
+       9.257
+      ],
+      "nHits": 13,
+      "t": 8.24,
+      "phaseErr": 0.09,
+      "jerk": 10.8,
+      "reinject": 0.95,
+      "envPeakVsGate": 21.04,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "C5",
+       "win": [
+        8.097,
+        8.297
+       ],
+       "nHits": 28,
+       "t": 8.22,
+       "phaseErr": 2.34,
+       "jerk": 294.3,
+       "reinject": 4.38,
+       "envPeakVsGate": 9.12,
+       "fires": true
+      }
+     ]
+    },
+    {
+     "win": [
+      16.923,
+      18.085
+     ],
+     "droppedPrimary": "B4",
+     "fnNotesInWindow": [
+      {
+       "t": 16.923,
+       "note": "C5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "B4",
+      "win": [
+       16.823,
+       18.185
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "C5",
+       "win": [
+        16.823,
+        17.023
+       ],
+       "nHits": 29,
+       "t": 16.945,
+       "phaseErr": 6.69,
+       "jerk": 268.9,
+       "reinject": 5.95,
+       "envPeakVsGate": 19.63,
+       "fires": true
+      }
+     ]
+    },
+    {
+     "win": [
+      18.475,
+      18.8
+     ],
+     "droppedPrimary": "B4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "B4",
+      "win": [
+       18.375,
+       18.9
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      18.8,
+      19.232
+     ],
+     "droppedPrimary": "B4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "B4",
+      "win": [
+       18.7,
+       19.332
+      ],
+      "nHits": 1,
+      "t": 19.26,
+      "phaseErr": 0.11,
+      "jerk": 10.1,
+      "reinject": 0.51,
+      "envPeakVsGate": 1.61,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      19.232,
+      20.032
+     ],
+     "droppedPrimary": "B4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "B4",
+      "win": [
+       19.132,
+       20.132
+      ],
+      "nHits": 1,
+      "t": 19.26,
+      "phaseErr": 0.11,
+      "jerk": 10.1,
+      "reinject": 0.51,
+      "envPeakVsGate": 1.61,
+      "fires": false
+     },
+     "fnFeatures": []
+    }
+   ]
+  },
+  {
+   "tx": "9ce7df83",
+   "forwardScan": 0,
+   "slots": [
+    {
+     "win": [
+      12.459,
+      13.248
+     ],
+     "droppedPrimary": "B4",
+     "fnNotesInWindow": [
+      {
+       "t": 12.459,
+       "note": "C5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "B4",
+      "win": [
+       12.359,
+       13.348
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "C5",
+       "win": [
+        12.359,
+        12.559
+       ],
+       "nHits": 25,
+       "t": 12.495,
+       "phaseErr": 5.39,
+       "jerk": 186.8,
+       "reinject": 0.49,
+       "envPeakVsGate": 4.72,
+       "fires": true
+      }
+     ]
+    },
+    {
+     "win": [
+      16.811,
+      17.616
+     ],
+     "droppedPrimary": "B4",
+     "fnNotesInWindow": [
+      {
+       "t": 16.811,
+       "note": "C5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "B4",
+      "win": [
+       16.711,
+       17.716
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "C5",
+       "win": [
+        16.711,
+        16.911
+       ],
+       "nHits": 28,
+       "t": 16.84,
+       "phaseErr": 7.21,
+       "jerk": 239.0,
+       "reinject": 1.92,
+       "envPeakVsGate": 8.1,
+       "fires": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tx": "d7a82772",
+   "forwardScan": 0,
+   "slots": [
+    {
+     "win": [
+      4.176,
+      4.336
+     ],
+     "droppedPrimary": "F5",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "F5",
+      "win": [
+       4.076,
+       4.436
+      ],
+      "nHits": 64,
+      "t": 4.425,
+      "phaseErr": 0.19,
+      "jerk": 15.7,
+      "reinject": 0.4,
+      "envPeakVsGate": 6.39,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      7.589,
+      7.776
+     ],
+     "droppedPrimary": "A4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "A4",
+      "win": [
+       7.489,
+       7.876
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    }
+   ]
+  },
+  {
+   "tx": "ea7edd71",
+   "forwardScan": 0,
+   "slots": [
+    {
+     "win": [
+      3.36,
+      3.787
+     ],
+     "droppedPrimary": "D5",
+     "fnNotesInWindow": [
+      {
+       "t": 3.397,
+       "note": "F5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "D5",
+      "win": [
+       3.26,
+       3.887
+      ],
+      "nHits": 21,
+      "t": 3.81,
+      "phaseErr": 3.9,
+      "jerk": 2218.9,
+      "reinject": 2.15,
+      "envPeakVsGate": 29.08,
+      "fires": true
+     },
+     "fnFeatures": [
+      {
+       "note": "F5",
+       "win": [
+        3.297,
+        3.497
+       ],
+       "nHits": 20,
+       "t": 3.445,
+       "phaseErr": 2.57,
+       "jerk": 201.4,
+       "reinject": 0.45,
+       "envPeakVsGate": 8.77,
+       "fires": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tx": "ebecf0c6",
+   "forwardScan": 2,
+   "slots": [
+    {
+     "win": [
+      9.467,
+      9.968
+     ],
+     "droppedPrimary": "D5",
+     "fnNotesInWindow": [
+      {
+       "t": 9.467,
+       "note": "F5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "D5",
+      "win": [
+       9.367,
+       10.068
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "F5",
+       "win": [
+        9.367,
+        9.567
+       ],
+       "nHits": 18,
+       "t": 9.54,
+       "phaseErr": 1.57,
+       "jerk": 22.2,
+       "reinject": 0.24,
+       "envPeakVsGate": 12.07,
+       "fires": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tx": "16b37356",
+   "forwardScan": 0,
+   "slots": [
+    {
+     "win": [
+      3.445,
+      3.781
+     ],
+     "droppedPrimary": "E4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "E4",
+      "win": [
+       3.345,
+       3.881
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    }
+   ]
+  },
+  {
+   "tx": "2bf55c75",
+   "forwardScan": 0,
+   "slots": [
+    {
+     "win": [
+      1.039,
+      1.294
+     ],
+     "droppedPrimary": "G3",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "G3",
+      "win": [
+       0.939,
+       1.395
+      ],
+      "nHits": 15,
+      "t": 1.327,
+      "phaseErr": 0.1,
+      "jerk": 19.1,
+      "reinject": 0.69,
+      "envPeakVsGate": 8.44,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      2.74,
+      2.897
+     ],
+     "droppedPrimary": "G3",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "G3",
+      "win": [
+       2.64,
+       2.997
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      11.569,
+      11.649
+     ],
+     "droppedPrimary": "E5",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "E5",
+      "win": [
+       11.469,
+       11.749
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      37.274,
+      37.343
+     ],
+     "droppedPrimary": "B4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "B4",
+      "win": [
+       37.174,
+       37.444
+      ],
+      "nHits": 6,
+      "t": 37.36,
+      "phaseErr": 0.65,
+      "jerk": 12.8,
+      "reinject": 0.2,
+      "envPeakVsGate": 2.2,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      67.059,
+      67.303
+     ],
+     "droppedPrimary": "F#5",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "F#5",
+      "win": [
+       66.959,
+       67.403
+      ],
+      "nHits": 27,
+      "t": 67.332,
+      "phaseErr": 0.81,
+      "jerk": 269.8,
+      "reinject": 0.4,
+      "envPeakVsGate": 6.7,
+      "fires": true
+     },
+     "fnFeatures": []
+    }
+   ]
+  },
+  {
+   "tx": "47902d34",
+   "forwardScan": 0,
+   "slots": [
+    {
+     "win": [
+      3.275,
+      3.541
+     ],
+     "droppedPrimary": "E4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "E4",
+      "win": [
+       3.175,
+       3.641
+      ],
+      "nHits": 13,
+      "t": 3.575,
+      "phaseErr": 0.06,
+      "jerk": 11.3,
+      "reinject": 0.76,
+      "envPeakVsGate": 13.41,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      4.917,
+      5.136
+     ],
+     "droppedPrimary": "C4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "C4",
+      "win": [
+       4.817,
+       5.236
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      6.944,
+      7.483
+     ],
+     "droppedPrimary": "G4",
+     "fnNotesInWindow": [
+      {
+       "t": 6.944,
+       "note": "G4"
+      },
+      {
+       "t": 7.483,
+       "note": "F5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "G4",
+      "win": [
+       6.844,
+       7.583
+      ],
+      "nHits": 14,
+      "t": 7.51,
+      "phaseErr": 0.05,
+      "jerk": 17.9,
+      "reinject": 0.81,
+      "envPeakVsGate": 14.42,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "G4",
+       "win": [
+        6.844,
+        7.044
+       ],
+       "nHits": 0,
+       "fires": false
+      },
+      {
+       "note": "F5",
+       "win": [
+        7.383,
+        7.583
+       ],
+       "nHits": 16,
+       "t": 7.5,
+       "phaseErr": 1.0,
+       "jerk": 3354.6,
+       "reinject": 15.53,
+       "envPeakVsGate": 1.89,
+       "fires": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tx": "70cc6637",
+   "forwardScan": 6,
+   "slots": [
+    {
+     "win": [
+      2.443,
+      2.715
+     ],
+     "droppedPrimary": "C4",
+     "fnNotesInWindow": [
+      {
+       "t": 2.565,
+       "note": "G4"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "C4",
+      "win": [
+       2.343,
+       2.815
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "G4",
+       "win": [
+        2.465,
+        2.665
+       ],
+       "nHits": 23,
+       "t": 2.59,
+       "phaseErr": 2.39,
+       "jerk": 630.0,
+       "reinject": 0.93,
+       "envPeakVsGate": 19.34,
+       "fires": true
+      }
+     ]
+    },
+    {
+     "win": [
+      10.085,
+      10.635
+     ],
+     "droppedPrimary": "G4",
+     "fnNotesInWindow": [
+      {
+       "t": 10.261,
+       "note": "D5"
+      },
+      {
+       "t": 10.261,
+       "note": "F4"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "G4",
+      "win": [
+       9.985,
+       10.735
+      ],
+      "nHits": 25,
+      "t": 10.67,
+      "phaseErr": 6.86,
+      "jerk": 1296.9,
+      "reinject": 1.16,
+      "envPeakVsGate": 24.29,
+      "fires": true
+     },
+     "fnFeatures": [
+      {
+       "note": "D5",
+       "win": [
+        10.161,
+        10.361
+       ],
+       "nHits": 22,
+       "t": 10.265,
+       "phaseErr": 4.88,
+       "jerk": 20382.4,
+       "reinject": 3.7,
+       "envPeakVsGate": 30.21,
+       "fires": true
+      },
+      {
+       "note": "F4",
+       "win": [
+        10.161,
+        10.361
+       ],
+       "nHits": 40,
+       "t": 10.305,
+       "phaseErr": 7.29,
+       "jerk": 427.3,
+       "reinject": 4.39,
+       "envPeakVsGate": 24.35,
+       "fires": true
+      }
+     ]
+    },
+    {
+     "win": [
+      12.016,
+      12.101
+     ],
+     "droppedPrimary": "C4",
+     "fnNotesInWindow": [
+      {
+       "t": 12.085,
+       "note": "E4"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "C4",
+      "win": [
+       11.916,
+       12.201
+      ],
+      "nHits": 14,
+      "t": 12.14,
+      "phaseErr": 0.06,
+      "jerk": 18.2,
+      "reinject": 0.74,
+      "envPeakVsGate": 7.82,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "E4",
+       "win": [
+        11.985,
+        12.185
+       ],
+       "nHits": 36,
+       "t": 12.115,
+       "phaseErr": 0.59,
+       "jerk": 89.5,
+       "reinject": 1.35,
+       "envPeakVsGate": 23.2,
+       "fires": false
+      }
+     ]
+    },
+    {
+     "win": [
+      14.859,
+      15.189
+     ],
+     "droppedPrimary": "F5",
+     "fnNotesInWindow": [
+      {
+       "t": 14.944,
+       "note": "A4"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "F5",
+      "win": [
+       14.759,
+       15.289
+      ],
+      "nHits": 3,
+      "t": 15.28,
+      "phaseErr": 0.31,
+      "jerk": 38.1,
+      "reinject": 0.56,
+      "envPeakVsGate": 14.1,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "A4",
+       "win": [
+        14.844,
+        15.044
+       ],
+       "nHits": 25,
+       "t": 14.975,
+       "phaseErr": 1.97,
+       "jerk": 213.6,
+       "reinject": 0.95,
+       "envPeakVsGate": 16.55,
+       "fires": true
+      }
+     ]
+    },
+    {
+     "win": [
+      20.08,
+      20.517
+     ],
+     "droppedPrimary": "F4",
+     "fnNotesInWindow": [
+      {
+       "t": 20.187,
+       "note": "F5"
+      },
+      {
+       "t": 20.187,
+       "note": "A4"
+      },
+      {
+       "t": 20.517,
+       "note": "C5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "F4",
+      "win": [
+       19.98,
+       20.617
+      ],
+      "nHits": 123,
+      "t": 20.26,
+      "phaseErr": 0.25,
+      "jerk": 27.3,
+      "reinject": 0.71,
+      "envPeakVsGate": 13.69,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "F5",
+       "win": [
+        20.087,
+        20.287
+       ],
+       "nHits": 31,
+       "t": 20.215,
+       "phaseErr": 3.08,
+       "jerk": 530.9,
+       "reinject": 2.07,
+       "envPeakVsGate": 38.67,
+       "fires": true
+      },
+      {
+       "note": "A4",
+       "win": [
+        20.087,
+        20.287
+       ],
+       "nHits": 24,
+       "t": 20.205,
+       "phaseErr": 8.44,
+       "jerk": 4052.1,
+       "reinject": 11.07,
+       "envPeakVsGate": 21.2,
+       "fires": true
+      },
+      {
+       "note": "C5",
+       "win": [
+        20.417,
+        20.617
+       ],
+       "nHits": 35,
+       "t": 20.545,
+       "phaseErr": 0.29,
+       "jerk": 294.0,
+       "reinject": 1.42,
+       "envPeakVsGate": 17.62,
+       "fires": false
+      }
+     ]
+    },
+    {
+     "win": [
+      26.069,
+      26.165
+     ],
+     "droppedPrimary": "E4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "E4",
+      "win": [
+       25.969,
+       26.265
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      33.872,
+      34.581
+     ],
+     "droppedPrimary": "G4",
+     "fnNotesInWindow": [
+      {
+       "t": 34.005,
+       "note": "C4"
+      },
+      {
+       "t": 34.005,
+       "note": "E4"
+      },
+      {
+       "t": 34.005,
+       "note": "C5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "G4",
+      "win": [
+       33.772,
+       34.681
+      ],
+      "nHits": 24,
+      "t": 34.03,
+      "phaseErr": 1.17,
+      "jerk": 551.4,
+      "reinject": 1.23,
+      "envPeakVsGate": 34.16,
+      "fires": true
+     },
+     "fnFeatures": [
+      {
+       "note": "C4",
+       "win": [
+        33.905,
+        34.105
+       ],
+       "nHits": 37,
+       "t": 33.91,
+       "phaseErr": 10.24,
+       "jerk": 530.0,
+       "reinject": 1.5,
+       "envPeakVsGate": 5.42,
+       "fires": true
+      },
+      {
+       "note": "E4",
+       "win": [
+        33.905,
+        34.105
+       ],
+       "nHits": 40,
+       "t": 33.99,
+       "phaseErr": 7.4,
+       "jerk": 261.7,
+       "reinject": 1.63,
+       "envPeakVsGate": 14.69,
+       "fires": true
+      },
+      {
+       "note": "C5",
+       "win": [
+        33.905,
+        34.105
+       ],
+       "nHits": 20,
+       "t": 34.025,
+       "phaseErr": 1.3,
+       "jerk": 4568.2,
+       "reinject": 6.37,
+       "envPeakVsGate": 9.58,
+       "fires": true
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tx": "8039a34c",
+   "forwardScan": 2,
+   "slots": [
+    {
+     "win": [
+      18.773,
+      18.924
+     ],
+     "droppedPrimary": "C5",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "C5",
+      "win": [
+       18.673,
+       19.024
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      79.389,
+      79.481
+     ],
+     "droppedPrimary": "F4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "F4",
+      "win": [
+       79.289,
+       79.581
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    }
+   ]
+  },
+  {
+   "tx": "a9e30986",
+   "forwardScan": 0,
+   "slots": [
+    {
+     "win": [
+      2.272,
+      2.635
+     ],
+     "droppedPrimary": "D5",
+     "fnNotesInWindow": [
+      {
+       "t": 2.272,
+       "note": "D5"
+      }
+     ],
+     "primaryFeatures": {
+      "note": "D5",
+      "win": [
+       2.172,
+       2.735
+      ],
+      "nHits": 28,
+      "t": 2.66,
+      "phaseErr": 0.05,
+      "jerk": 44.8,
+      "reinject": 0.47,
+      "envPeakVsGate": 7.81,
+      "fires": false
+     },
+     "fnFeatures": [
+      {
+       "note": "D5",
+       "win": [
+        2.172,
+        2.372
+       ],
+       "nHits": 0,
+       "fires": false
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tx": "bbeeaad8",
+   "forwardScan": 0,
+   "slots": [
+    {
+     "win": [
+      8.365,
+      9.264
+     ],
+     "droppedPrimary": "C4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "C4",
+      "win": [
+       8.265,
+       9.364
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    },
+    {
+     "win": [
+      13.462,
+      14.273
+     ],
+     "droppedPrimary": "C4",
+     "fnNotesInWindow": [],
+     "primaryFeatures": {
+      "note": "C4",
+      "win": [
+       13.362,
+       14.373
+      ],
+      "nHits": 0,
+      "fires": false
+     },
+     "fnFeatures": []
+    }
+   ]
+  }
+ ],
+ "lowpassInvariance": {
+  "meta": {
+   "cutoffHz": 8000.0,
+   "order": 4,
+   "clippedFraction": 0.0
+  },
+  "rows": [
+   {
+    "variant": "baseline",
+    "target": "F5@2.603",
+    "note": "F5",
+    "win": [
+     2.483,
+     2.723
+    ],
+    "nHits": 23,
+    "t": 2.625,
+    "phaseErr": 4.05,
+    "jerk": 3471.7,
+    "reinject": 8.84,
+    "envPeakVsGate": 11.24,
+    "fires": true
+   },
+   {
+    "variant": "baseline",
+    "target": "D5(residual)@2.603",
+    "note": "D5",
+    "win": [
+     2.483,
+     2.723
+    ],
+    "nHits": 0,
+    "fires": false
+   },
+   {
+    "variant": "baseline",
+    "target": "F5@3.243",
+    "note": "F5",
+    "win": [
+     3.123,
+     3.363
+    ],
+    "nHits": 23,
+    "t": 3.285,
+    "phaseErr": 1.74,
+    "jerk": 359.5,
+    "reinject": 2.48,
+    "envPeakVsGate": 20.57,
+    "fires": true
+   },
+   {
+    "variant": "baseline",
+    "target": "D5(residual)@3.243",
+    "note": "D5",
+    "win": [
+     3.123,
+     3.363
+    ],
+    "nHits": 0,
+    "fires": false
+   },
+   {
+    "variant": "lowpass8k",
+    "target": "F5@2.603",
+    "note": "F5",
+    "win": [
+     2.483,
+     2.723
+    ],
+    "nHits": 23,
+    "t": 2.625,
+    "phaseErr": 4.05,
+    "jerk": 3471.7,
+    "reinject": 8.84,
+    "envPeakVsGate": 11.24,
+    "fires": true
+   },
+   {
+    "variant": "lowpass8k",
+    "target": "D5(residual)@2.603",
+    "note": "D5",
+    "win": [
+     2.483,
+     2.723
+    ],
+    "nHits": 0,
+    "fires": false
+   },
+   {
+    "variant": "lowpass8k",
+    "target": "F5@3.243",
+    "note": "F5",
+    "win": [
+     3.123,
+     3.363
+    ],
+    "nHits": 23,
+    "t": 3.285,
+    "phaseErr": 1.74,
+    "jerk": 359.5,
+    "reinject": 2.48,
+    "envPeakVsGate": 20.57,
+    "fires": true
+   },
+   {
+    "variant": "lowpass8k",
+    "target": "D5(residual)@3.243",
+    "note": "D5",
+    "win": [
+     3.123,
+     3.363
+    ],
+    "nHits": 0,
+    "fires": false
+   }
+  ]
+ }
+}

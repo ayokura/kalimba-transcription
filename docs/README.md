@@ -16,6 +16,8 @@
 | [`research/2026-07-per-tine-tracker-design.md`](research/2026-07-per-tine-tracker-design.md) | per-tine tracker + causal onset 統合設計 (S3 集大成、S4 判定材料) |
 | [`research/2026-07-s4-gate-materials.md`](research/2026-07-s4-gate-materials.md) | S4 実装ゲート判定資料 (反証 3 系統統合、GO/counter 併記) |
 | [`research/2026-07-s4-adversarial-audit-request.md`](research/2026-07-s4-adversarial-audit-request.md) | S4 敵対的監査の依頼パッケージ (別系モデル用) |
+| [`research/2026-07-pertine-round3-residual-decay-replacement.md`](research/2026-07-pertine-round3-residual-decay-replacement.md) | 第 3 巡 (post-stage autopsy): 設計 + §6.5 測定結果 = clean negative で撤退 (#206) |
+| [`research/2026-07-pertine-round4-instage-replacement.md`](research/2026-07-pertine-round4-instage-replacement.md) | 第 3 カウント巡設計: 棄却判定の in-stage 置換 (mute-dip → 位相リセット証拠。撤退基準・検証プロトコル事前固定) |
 | [`testing.md`](testing.md) | テスト 4 層モデルの詳細・手動テスト手順 |
 | [`task-management.md`](task-management.md) | issue ラベル体系・spike タグ書式 |
 | [`corpus-management.md`](corpus-management.md) | free-performance corpus の管理・権利レビュー |

@@ -1,5 +1,7 @@
 # AMT 研究 再評価 — バイアス除去版 (2026-06-26)
 
+> 📌 **読み方の注意 (2026-07-06 追記)**: 本 doc の**数値系** (fixture 数・テスト数・F1 等) は 2026-06-26 時点のスナップショットであり現行値ではない (現行はテストスイート・`benchmark_baseline.json`・#203 が正)。**構造的事実** (per-tine partial scoring 既定無効、onset gate 弱 AND、note-state machine 不在等) と NOW/NEXT/LATER の方針は引き続き権威。第 3 期での per-tine research line の進行状況は `2026-07-per-tine-kill-criteria.md` と #203 を参照。
+
 ## このドキュメントの目的
 
 `20260406-*` の研究サーベイ群は **LLM 調査レポートを一次ソースとした二次資料**で、

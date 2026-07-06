@@ -1,30 +1,16 @@
 {
   "version": 1,
-  "toleranceSec": 0.05,
+  "toleranceSec": 0.08,
   "source": {
-    "type": "review-corrections",
+    "type": "gt-review-verdict",
     "transactionId": "d7a82772-f77f-4820-9798-00133ae45f4e",
-    "correctionsUpdatedAt": "2026-07-04T11:59:42+00:00",
-    "originCounts": {
-      "recognizer": 19,
-      "inserted-manual": 3,
-      "edited": 5,
-      "inserted-slot": 8
-    },
-    "reviewStatus": "review_completed",
-    "provenance": "tester_corrected",
-    "timingAccuracy": {
-      "onsetTiming": "approximate",
-      "noteIdentity": "review_corrected",
-      "caveat": "Review UI corrections are reliable primarily for note identity, ordering, and grouping. Onset times are approximate: recognizer event starts can deviate from perceptual/spectral onsets, inserted-slot times use dropped-segment boundaries, and inserted-manual times are hand-placed. Use spectral/human verification before timing-sensitive training or calibration."
-    },
-    "postEdits": [
-      {
-        "tag": "bp-verify 2026-07-05",
-        "tool": "bp-verify UI (data/gt_drafts/bp_verify.verdict.json)",
-        "summary": "bp-only 23 件の人手 verify を統合 (real=comment 追記 / absent=note 除去)"
-      }
-    ]
+    "generator": "scripts/audio-analysis/gt_finalize.py",
+    "generatedAt": "2026-07-05T18:20:55+00:00",
+    "verdictSavedAt": "2026-07-05T18:17:51+00:00",
+    "draftGeneratedAt": "2026-07-04T11:51:54+00:00",
+    "expectedSource": "none (free performance — ear-verify all rows)",
+    "reviewDone": true,
+    "comment": ""
   },
   "onsets": [
     {
@@ -32,24 +18,34 @@
       "notes": [
         "E5"
       ],
-      "method": "user_corrected"
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
     },
     {
       "timeSec": 1.4507,
       "notes": [
         "D5"
       ],
-      "method": "user_corrected"
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
     },
     {
-      "timeSec": 2.0593,
+      "timeSec": 1.8827,
       "notes": [
-        "C4",
-        "C5"
+        "C5",
+        "C4"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: C5)"
+    },
+    {
+      "timeSec": 2.2933,
+      "notes": [
+        "E4"
       ],
       "method": "user_corrected",
-      "toleranceSec": 0.1,
-      "comment": "origin=inserted-manual"
+      "comment": "[seeded] review corrections と一致",
+      "role": "accompaniment"
     },
     {
       "timeSec": 2.7093,
@@ -57,6 +53,7 @@
         "G4"
       ],
       "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致",
       "role": "accompaniment"
     },
     {
@@ -64,7 +61,8 @@
       "notes": [
         "D5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 3.5307,
@@ -72,14 +70,15 @@
         "E5"
       ],
       "method": "user_corrected",
-      "comment": "origin=edited"
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 3.9147,
       "notes": [
         "F5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 4.336,
@@ -87,7 +86,8 @@
         "E4",
         "G5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "user corrected (draft: G5); [seeded] review corrections の notes を採用 (draft: G5)"
     },
     {
       "timeSec": 4.768,
@@ -95,8 +95,7 @@
         "G4"
       ],
       "method": "user_corrected",
-      "toleranceSec": 0.08,
-      "comment": "origin=inserted-slot",
+      "comment": "[seeded] review corrections と一致",
       "role": "accompaniment"
     },
     {
@@ -105,6 +104,7 @@
         "B4"
       ],
       "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致",
       "role": "accompaniment"
     },
     {
@@ -112,14 +112,16 @@
       "notes": [
         "A5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 6.5013,
       "notes": [
         "B5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 6.9067,
@@ -128,7 +130,7 @@
         "C6"
       ],
       "method": "user_corrected",
-      "comment": "origin=edited"
+      "comment": "user corrected (draft: C6); [seeded] review corrections の notes を採用 (draft: C6)"
     },
     {
       "timeSec": 7.3493,
@@ -136,8 +138,7 @@
         "A4"
       ],
       "method": "user_corrected",
-      "toleranceSec": 0.08,
-      "comment": "origin=inserted-slot",
+      "comment": "[seeded] review corrections と一致",
       "role": "accompaniment"
     },
     {
@@ -145,14 +146,16 @@
       "notes": [
         "B5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 8.5973,
       "notes": [
         "A5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 9.4187,
@@ -160,7 +163,8 @@
         "C4",
         "G5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "user corrected (draft: G5); [seeded] review corrections の notes を採用 (draft: G5)"
     },
     {
       "timeSec": 9.8293,
@@ -168,8 +172,7 @@
         "E4"
       ],
       "method": "user_corrected",
-      "toleranceSec": 0.08,
-      "comment": "origin=inserted-slot",
+      "comment": "[seeded] review corrections と一致",
       "role": "accompaniment"
     },
     {
@@ -178,8 +181,7 @@
         "G4"
       ],
       "method": "user_corrected",
-      "toleranceSec": 0.08,
-      "comment": "origin=inserted-slot",
+      "comment": "[seeded] review corrections と一致",
       "role": "accompaniment"
     },
     {
@@ -187,14 +189,16 @@
       "notes": [
         "A5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 11.504,
       "notes": [
         "B5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 11.9147,
@@ -203,7 +207,7 @@
         "C6"
       ],
       "method": "user_corrected",
-      "comment": "origin=edited"
+      "comment": "user corrected (draft: C6); [seeded] review corrections の notes を採用 (draft: C6)"
     },
     {
       "timeSec": 12.3253,
@@ -211,8 +215,7 @@
         "A4"
       ],
       "method": "user_corrected",
-      "toleranceSec": 0.08,
-      "comment": "origin=inserted-slot",
+      "comment": "[seeded] review corrections と一致",
       "role": "accompaniment"
     },
     {
@@ -220,24 +223,25 @@
       "notes": [
         "B5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
-      "timeSec": 13.5213,
+      "timeSec": 13.552,
       "notes": [
         "A5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
-      "timeSec": 14.4756,
+      "timeSec": 14.3733,
       "notes": [
         "C4",
         "G5"
       ],
       "method": "user_corrected",
-      "toleranceSec": 0.1,
-      "comment": "origin=inserted-manual; bp-verify 2026-07-05: C4 実在確認 (ear、recognizer FN 確定)"
+      "comment": "user corrected (draft: G5); [seeded] review corrections の notes を採用 (draft: G5)"
     },
     {
       "timeSec": 14.784,
@@ -245,8 +249,7 @@
         "E4"
       ],
       "method": "user_corrected",
-      "toleranceSec": 0.08,
-      "comment": "origin=inserted-slot",
+      "comment": "[seeded] review corrections と一致",
       "role": "accompaniment"
     },
     {
@@ -254,14 +257,16 @@
       "notes": [
         "A5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 15.9947,
       "notes": [
         "B5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 16.8107,
@@ -270,7 +275,7 @@
         "C6"
       ],
       "method": "user_corrected",
-      "comment": "origin=edited"
+      "comment": "user corrected (draft: C6); [seeded] review corrections の notes を採用 (draft: C6)"
     },
     {
       "timeSec": 17.2213,
@@ -278,8 +283,7 @@
         "A4"
       ],
       "method": "user_corrected",
-      "toleranceSec": 0.08,
-      "comment": "origin=inserted-slot; bp-verify 2026-07-05: A4 実在確認 (ear、recognizer FN 確定) — 厳密には直後に立ち上がってるのでほんの少し後ろの時間軸",
+      "comment": "[seeded] review corrections と一致",
       "role": "accompaniment"
     },
     {
@@ -287,7 +291,8 @@
       "notes": [
         "G5"
       ],
-      "method": "user_corrected"
+      "method": "user_corrected",
+      "comment": "[seeded] review corrections と一致"
     },
     {
       "timeSec": 18.608,
@@ -296,8 +301,7 @@
         "F5"
       ],
       "method": "user_corrected",
-      "toleranceSec": 0.08,
-      "comment": "origin=inserted-slot"
+      "comment": "user corrected (draft: F5); [seeded] review corrections の notes を採用 (draft: F5)"
     },
     {
       "timeSec": 20.0267,
@@ -308,7 +312,7 @@
         "E5"
       ],
       "method": "user_corrected",
-      "comment": "origin=edited; bp-verify 2026-07-05: C4 実在確認 (ear、recognizer FN 確定); bp-verify 2026-07-05: E4 実在確認 (ear、recognizer FN 確定); bp-verify 2026-07-05: G4 実在確認 (ear、recognizer FN 確定)"
+      "comment": "user corrected (draft: G4); [seeded] review corrections の notes を採用 (draft: G4)"
     }
   ]
 }

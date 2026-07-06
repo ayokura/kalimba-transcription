@@ -67,7 +67,12 @@ from .peaks import (
     segment_peaks,
 )
 from .per_note import rescue_gap_mute_dips
+from .pertine import build_residual_oracle as build_pertine_residual_oracle
+from .pertine import propose_rescues as propose_pertine_rescues
+from .pertine import propose_residual_autopsy as propose_pertine_residual_autopsy
+from .pertine import veto_tier as pertine_veto_tier
 from .quality_indicators import compute_quality_indicators, peak_dbfs_of
+from . import settings as recognizer_settings
 from .tuning_check import analyze_tuning_mismatch
 from .segments import (
     build_segment_debug_contexts,
@@ -99,7 +104,17 @@ _DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
     # event/slot に現れないケース。broadband onset + narrow FFT の 2 証拠だが
     # gliss 中の残響も拾い得るため低め (placeholder、tulip cR@K で較正予定)。
     "sub-onset-unselected-candidate": 0.30,
+    # #141 S5 round 2: per-tine tracker rescue that passed the physical
+    # rejections but not the event-tier margins (pertine.tier_of). Same
+    # confidence band as residual-decay: real phase/energy evidence exists
+    # but the single strongest fake mode (attack bleed) is not excluded.
+    "pertine-weak-rescue": 0.15,
+    # veto fires demoted by the dominance margins (#206 round 3): same tier
+    # calibration as pertine-weak-rescue; no separate data yet.
+    "pertine-autopsy-candidate": 0.15,
     "residual-decay-no-reattack": 0.15,
+    # round-4 oracle-active variant of the same rejection (same calibration)
+    "residual-decay-no-fresh-attack": 0.15,
     "low_register_sparse_gap_tail": 0.10,
     "primary-score-too-low": 0.05,
     # "onset-gate-no-evidence" no longer reaches here: S5 agenda 2 turned the
@@ -230,6 +245,17 @@ async def transcribe_audio(
     # #178 S3: 全 segment の sub-onset を収集し、後段 (merge 後) で
     # 「最終 event にも slot にも現れない sub-onset」の候補化に使う
     collected_sub_onsets: list[float] = []
+    # #206 round 4 (kill-count round 3): build the per-tine fresh-attack
+    # oracle once per request. Inside the segment loop it replaces the
+    # mute-dip condition of the residual-decay rejection (peaks.py; C2
+    # consulted+approved 2026-07-06). `existing` (coincident-event context
+    # for the bleed battery) is bound per segment from raw_events so far —
+    # segments are processed in time order, so past events approximate the
+    # final coincident context at each decision point.
+    residual_oracle = None
+    if recognizer_settings.get().use_pertine_residual_oracle:
+        residual_oracle = build_pertine_residual_oracle(audio, sample_rate, tuning)
+
     for segment in segments:
         start_time, end_time = segment
         duration = max(end_time - start_time, 0.08)
@@ -270,6 +296,15 @@ async def transcribe_audio(
             confirmed_primary=segment.confirmed_primary,
             sub_onsets=sub_onsets,
             segment_sources=segment.sources,
+            fresh_attack_oracle=(
+                None if residual_oracle is None else (
+                    lambda t0, t1, _ex=[
+                        (event.start_time, candidate.note_name)
+                        for event in raw_events
+                        for candidate in event.notes
+                    ]: residual_oracle(t0, t1, _ex)
+                )
+            ),
         )
         candidates = seg_result.candidates
         candidate_debug = seg_result.debug
@@ -619,6 +654,102 @@ async def transcribe_audio(
     if not merged_events:
         raise HTTPException(status_code=422, detail="No musical notes were detected. Try a clearer recording or a different tuning.")
 
+    # #141 S5 round 2: per-tine phase-tracking rescue (research line,
+    # dual-run). Post-stage judge — proposes additions only, never removes
+    # or reorders broadband events. Strong rescues become single-note events
+    # (the carryover-mask re-strike class broadband cannot see); weak
+    # rescues are preserved as low-confidence candidate slots. Detection
+    # logic and calibration live in pertine.py (kill-criteria C2 minimal
+    # coupling: no new constants/passes in constants.py or events.py).
+    pertine_rescue_debug: list[dict[str, Any]] = []
+    if recognizer_settings.get().use_pertine_tracker_rescue:
+        _pertine_existing = [
+            (event.start_time, candidate.note_name)
+            for event in merged_events
+            for candidate in event.notes
+        ]
+        pertine_strong, pertine_weak = propose_pertine_rescues(
+            audio, sample_rate, tuning,
+            existing=_pertine_existing,
+        )
+        # #206 round 3: residual-decay veto — adjudicate the segments the
+        # bulk rejection dropped whole. A dominant firing tine inside the
+        # dropped window becomes an event (broadband asserted the onset; the
+        # veto only decides which tine had the fresh attack); non-dominant
+        # coincident fires demote to candidate slots (veto_tier). Strong
+        # rescues count as existing so the two judges cannot double-emit.
+        pertine_autopsy: list[Any] = []
+        pertine_autopsy_weak: list[Any] = []
+        if recognizer_settings.get().use_pertine_residual_autopsy:
+            _residual_windows = [
+                (slot.start_time, slot.end_time)
+                for slot in dropped_slots
+                if slot.drop_reason in ("residual-decay-no-reattack",
+                                        "residual-decay-no-fresh-attack")
+            ]
+            if _residual_windows:
+                _autopsy_all = propose_pertine_residual_autopsy(
+                    audio, sample_rate, tuning,
+                    windows=_residual_windows,
+                    existing=_pertine_existing
+                    + [(r.time, r.note) for r in pertine_strong],
+                )
+                pertine_autopsy = [r for r in _autopsy_all
+                                   if pertine_veto_tier(r) == "event"]
+                pertine_autopsy_weak = [r for r in _autopsy_all
+                                        if pertine_veto_tier(r) == "candidate"]
+        _pertine_note_by_name: dict[str, Any] = {}
+        for _tn in tuning.notes:
+            _pertine_note_by_name.setdefault(_tn.note_name, _tn)
+        for rescue in [*pertine_strong, *pertine_autopsy]:
+            _tn = _pertine_note_by_name.get(rescue.note)
+            if _tn is None:
+                continue
+            merged_events.append(RawEvent(
+                start_time=rescue.time,
+                end_time=rescue.time + 0.25,
+                notes=[NoteCandidate(
+                    key=_tn.key, note=Note.from_name(rescue.note), score=0.0,
+                )],
+                is_gliss_like=False,
+                primary_note_name=rescue.note,
+            ))
+        if pertine_strong or pertine_autopsy:
+            merged_events.sort(key=lambda event: event.start_time)
+        for drop_reason, weak_rescues in (
+            ("pertine-weak-rescue", pertine_weak),
+            ("pertine-autopsy-candidate", pertine_autopsy_weak),
+        ):
+            for rescue in weak_rescues:
+                _tn = _pertine_note_by_name.get(rescue.note)
+                if _tn is None:
+                    continue
+                dropped_slots.append(_build_candidate_slot(
+                    start_time=rescue.time,
+                    end_time=rescue.time + 0.2,
+                    primary=NoteCandidate(
+                        key=_tn.key, note=Note.from_name(rescue.note), score=0.0,
+                    ),
+                    ranked_notes=[],
+                    drop_reason=drop_reason,
+                ))
+        if debug:
+            pertine_rescue_debug = [
+                {
+                    "time": rescue.time, "note": rescue.note, "tier": tier,
+                    "phaseErr": rescue.phase_err, "jerk": rescue.jerk,
+                    "preRingRatio": rescue.pre_ring_ratio,
+                    "reinjectRatio": rescue.reinject_ratio,
+                    "attackers": rescue.attackers or [],
+                }
+                for tier, tier_rescues in (
+                    ("event", pertine_strong), ("candidate", pertine_weak),
+                    ("autopsy-event", pertine_autopsy),
+                    ("autopsy-candidate", pertine_autopsy_weak),
+                )
+                for rescue in tier_rescues
+            ]
+
     beat_seconds = 60.0 / tempo
     events: list[ScoreEvent] = []
     warnings: list[str] = []
@@ -769,6 +900,7 @@ async def transcribe_audio(
             "disabledRepeatedPatternPasses": sorted(disabled_repeated_pattern_passes or ()),
             "repeatedPatternPassTrace": repeated_pattern_pass_trace,
             "noiseFloor": noise_floor.to_debug_dict(),
+            "pertineRescues": pertine_rescue_debug,
         }
 
     # #178 S3 (2026-07-05): gliss/密集 segment 内の未カバー sub-onset の候補化。

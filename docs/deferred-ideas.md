@@ -121,3 +121,31 @@
 - **不採用理由**: G5 (1.431 → 0.911, ratio 1.57) や他の resonance 候補が 2.0 以下に収まり catch できない。閾値を 1.4 まで絞ると 34-key C4 (1.31) との margin が 7% しかなくなり不安定。bg-dominance ratio が同じ問題を **物理的により直接的な指標** (in-event note の bg と比較) で解けるため、decay 上限は不要になった
 - **再検討条件**: bg-dominance ratio が future fixture で発火しないが decay 上限が discriminator として機能する場合
 - **注**: decay min ratio (`≥ 0.8`) は採用済み。rising-into-segment 排除（34-key R5 E154 D4 ratio 0.18）は依然必要
+
+## Residual-decay veto (per-tine autopsy) の event 昇格
+
+- **Issue**: #206 / #141 (round 3)
+- **日付**: 2026-07-06
+- **概要**: `residual-decay-no-reattack` で丸ごと棄却された segment 窓を per-tine tracker の検出核で裁定し、優勢な fire を event 昇格する post-stage veto (`use_pertine_residual_autopsy`、コードは research branch に保存)
+- **動機**: #206 の 4 段連鎖 (偽 onset → 再分割 → 一括棄却 → カスケード) の 3-4 段目置換 + forward-scan (recent-note memory 依存 rescue) の退役 = merge 条件 (3) の実証
+- **不採用理由**: 2×2 ablation で統合後の正味 GT 効果が 70cc6637 の FP +1 のみ (probe の FN 回収見込みは較正 guard に抑止されるか round-2 rescue/fscan が回収済み)。metamorphic WARN も解消せず (F5 は救うが +0.1s ずれ、D5 系は純減)。docs/research/pertine-round3-ablation.json、設計 doc §6.5
+- **再検討条件**: (1) lowpass 級の帯域劣化録音が実運用で増え、時刻ずれ許容の緩い評価 (±0.15s 等) が正当化される場合、(2) segment 形成段の頑健化 (下記) が入って偽 onset 由来の再分割が減り、autopsy の裁定対象が「真に全落ちした窓」だけになった場合
+- **コミット**: 755274d (実装) → 933f1d2 (既定 OFF 撤退)
+
+## Lowpass 頑健な segment 形成 (#206 の真因対処)
+
+- **Issue**: #206
+- **日付**: 2026-07-06
+- **概要**: lowpass 8kHz 級の変換で broadband 偽 onset が segment を再分割し event 時刻が動く。#206 WARN の真因は形成段にあり、post-stage 裁定では時刻ずれとして残ることが round 3 で実証された
+- **動機**: metamorphic alarm の lowpass WARN 恒久解消。tracker 特徴 (heterodyne 復調) は lowpass 完全不変 (probe C) なので、per-tine 情報を**形成段の偽 onset 判別**に使う路線は物理的には生きている
+- **不採用理由**: 未着手 (アイデア段階)。events.py 新規 pass 禁止の制約下で形成段 (segments.py) への介入形を要設計。research line の去就判断 (S6 exit) 待ち
+- **再検討条件**: research line 継続 (選択肢 a) が選ばれた場合の第 3 カウント巡ターゲット候補。または metamorphic 警報がトリガー 1 (patch 衝突) を再検出した場合
+
+## 統合 per-tine complex front-end (振幅+位相の同時利用に evidence 系を一本化)
+
+- **Issue**: #141 (umbrella) / #96 (broadband と per-note 判定の分離) 関連
+- **日付**: 2026-07-06 (round-4 merge 条件 3 裁定時のユーザー発案)
+- **概要**: 全 tine の複素復調トレース z_t (heterodyne demod: env=|z|, phase=angle(z)) を常設の共有表現とし、現在バラバラの evidence 計算 — mute-dip / onset gain / residual-decay 判定 (windowed FFT 振幅、Rust note_band_energy) と oracle (demod 位相+env) と fscan (recent-note 走査 + FFT 振幅照会) — を全部この単一表現の読み出しに置換する。統合統計量の本命は複素 AR(1) 予測残差 |z_t − ẑ_t|: 振幅崩壊 (mute)・エネルギー再注入 (attack)・位相リセット (fresh pluck) が単一の残差時系列に統合される。第 3 期 bets で「吸収」判定済みの per-band 予測残差 onset (AR(1)) / 位相コヒーレンス声部分離と同じ物理量
+- **動機**: round-4 の限界寄与測定で「mute-dip 振幅と oracle 位相は相補的な物理証拠なのに別機構・別サイトで評価している」構造が明確化。tracker (pertine.py) は demod で env+phase を既に同時取得しており、統合の下半分は実装済み。fscan は全 tine トレース常設なら「走査」から「参照」に退化する。demod は causal + Rust 化前提 (streaming/WASM 適合) で、windowed FFT primitive の置換は browser 移植の primitive 統一も兼ねる
+- **現時点で不着手の理由**: 実質 per-note onset detection への全面移行 (broadband-vs-per-note-policy の 4 トリガー制で gate)。mute-dip の速い dip (20-50ms、2 窓 fallback が現に必要) を demod の LPF/hop で解像する再設計 + PHASE_BAR/JERK_BAR 級の ROC 再較正が必要で、counted round 相当の投資になる。round 4 時点は evidence サイトを減らすフェーズ (mute-dip OR バックアップ退役) が先
+- **再検討条件**: per-note 移行トリガーのいずれかが発火した時 (その時の evidence 層設計の第一候補)。または fscan/mute-dip の残存サイトに新たな較正問題が出て、個別修正よりも表現統一の方が安い状況になった時

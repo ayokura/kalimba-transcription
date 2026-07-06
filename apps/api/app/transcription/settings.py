@@ -65,9 +65,41 @@ class RecognizerSettings:
     # active in suppress_harmonics (which handles collisions via the
     # fundamental guard) — see 2cd5a7a.
     use_per_tine_partial_scoring: bool = False
+    # #141 S5 round 2: per-tine phase-tracking rescue judge (research line,
+    # dual-run). Post-stage only — proposes carryover re-strike events and
+    # low-confidence candidate slots, never removes broadband events.
+    # Default ON on the research branch so the fixture suite and the corpus
+    # benchmark measure the integrated recognizer (kill criteria C1/K2-K4);
+    # main is the dual-run baseline.
+    use_pertine_tracker_rescue: bool = True
+    # #206 / #141 S6 round 3: per-tine veto over the residual-decay bulk
+    # rejection — dropped residual-decay-no-reattack slots are adjudicated by
+    # the tracker's detection core (strict slot-window semantics) and firing
+    # tines are promoted to events. Nested inside use_pertine_tracker_rescue.
+    # DEFAULT OFF — round-3 measurement (2026-07-06) returned a clean
+    # negative: the 2x2 ablation isolated the integrated net effect to +1 GT
+    # FP on 70cc6637 with zero recall gain (probe-projected recoveries are
+    # suppressed by the calibration guards or already covered by the round-2
+    # rescue / forward-scan), and the #206 metamorphic WARN did not resolve
+    # (dropped 5 -> 4+2 time-shifted, criterion was ->0). Kept as a measured
+    # negative-result asset (docs/research/pertine-round3-ablation.json).
+    use_pertine_residual_autopsy: bool = False
+    # #206 round 4 (kill-count round 3): in-stage fresh-attack oracle —
+    # replaces the mute-dip condition in the residual-decay rejection with
+    # per-tine phase-reset evidence (C2-consulted and approved 2026-07-06;
+    # full-dump gate passed at 2/18 clean false fires). Default ON on the
+    # research branch; dual-run toggles this and the rescue flag together
+    # on the base side.
+    use_pertine_residual_oracle: bool = True
 
     # Ablation switches (True = disable the feature)
     ablate_sparse_gap_tail: bool = False
+    # #206 round 3 2x2 ablation: disable the residual-forward-scan (recent-
+    # note mute-dip scan + octave-up rescue) inside _resolve_primary, so a
+    # residual-decay segment rejects without the recent-note-memory rescue.
+    # The replacement claim "fscan off + autopsy on >= fscan on + autopsy off"
+    # is measured over this switch x use_pertine_residual_autopsy.
+    ablate_residual_forward_scan: bool = False
     ablate_multi_onset_gap: bool = False
     # #197: trailing strummed-chord cluster rescue (one segment per cluster of
     # >=2 gap-validated trailing onsets with a valid-attack anchor).
