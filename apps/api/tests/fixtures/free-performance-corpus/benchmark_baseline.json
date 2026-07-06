@@ -87,14 +87,15 @@
       "truthNotes": 18
     }
   },
-  "updatedAt": "2026-07-06T13:01:00+00:00",
+  "updatedAt": "2026-07-06T13:25:56+00:00",
   "recognizerFingerprint": "e9bf903c425c4625",
   "kalimbaDspFingerprint": "b5688f4db575441d",
   "nonSaturatedRepoGate": {
-    "minRecordings": 5,
-    "minMicroF1": 0.858,
+    "minRecordings": 6,
+    "minMicroF1": 0.825,
     "txIds": [
       "17ea7626-3c5d-450d-ae74-0116dea6e881",
+      "98019f67-690d-4deb-a882-98ed9878c519",
       "9ce7df83-33a0-455d-bf86-c9392ce6f777",
       "d7a82772-f77f-4820-9798-00133ae45f4e",
       "ea7edd71-e815-4638-a248-a47fe21e5061",

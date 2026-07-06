@@ -1,0 +1,76 @@
+{
+ "version": 1,
+ "corpusType": "free-performance",
+ "repositoryManaged": true,
+ "transactionId": "98019f67-690d-4deb-a882-98ed9878c519",
+ "createdAt": "2026-07-05",
+ "promotedAt": "2026-07-06T13:22:53+00:00",
+ "status": "review_completed",
+ "categories": [
+  "tester_capture",
+  "free_performance",
+  "gt_review_verdict",
+  "repo_managed_corpus"
+ ],
+ "recording": {
+  "device": "不明 (request.json に client 情報なし)",
+  "microphone": "不明",
+  "deviceNotes": "テスター録音バッチ (2026-07-05 到着分) の 1 本",
+  "sampleRate": 48000,
+  "channels": 1,
+  "durationSec": 18.52,
+  "peakDb": -20.75,
+  "rmsDb": -43.07
+ },
+ "tuning": {
+  "selectedId": "kalimba-17-c",
+  "correctedId": null
+ },
+ "aggregates": {
+  "groundTruthOnsetCount": 32,
+  "accompanimentRoleOnsets": 13
+ },
+ "copyright": {
+  "status": "public_domain",
+  "workTitle": "Down by the Salley Gardens",
+  "publicDomainReason": "アイルランド民謡の旋律 (The Maids of Mourne Shore / Yeats 詩は 1889 年、旋律は伝統曲) で楽曲は PD。演奏はテスター本人。",
+  "repositoryAllowed": true
+ },
+ "timingAccuracy": {
+  "noteIdentity": "reliable",
+  "noteOrderAndCombination": "reliable",
+  "onsetTiming": "approximate",
+  "method": "user_corrected",
+  "reason": "Onset times come from the gt-review draft (recognizer onset slots); the human verdict verified identity/presence by ear, not timing.",
+  "safeFor": [
+   "score-level evaluation",
+   "note identity / order / combination evaluation"
+  ],
+  "cautionFor": [
+   "timing-sensitive training",
+   "tempo / rhythm modeling",
+   "onset-time learning"
+  ],
+  "refinement": "Optional spectral pin can raise per-onset method to spectrogram_verified."
+ },
+ "rightsReview": {
+  "requiredForRepositoryManagement": true,
+  "status": "approved_for_repository",
+  "reviewedAt": "2026-07-06",
+  "reviewedBy": "ayokura (chat, 2026-07-06)",
+  "decision": "include_audio_and_teacher_data_in_repository",
+  "reason": "ユーザーが 2026-07-06 のチャットで曲名 = サリーガーデン (Down by the Salley Gardens)、PD と確認。"
+ },
+ "captureConsent": {
+  "granted": true,
+  "grantedBy": "ayokura (chat, 2026-07-06)",
+  "grantedAt": "2026-07-05"
+ },
+ "sourceFiles": {
+  "audio": "audio.wav",
+  "request": "request.json",
+  "reviewStatus": "review_status.json",
+  "groundTruth": "ground_truth.json"
+ },
+ "notes": "held-out 2 本のうちユーザー耳裁定側 (56 slot → 32 onsets、ignore 24)。第 3 期 held-out 測定 (2026-07-06) では F1 0.72。伴奏 13 音に role: accompaniment。"
+}

@@ -1,0 +1,303 @@
+{
+  "version": 1,
+  "toleranceSec": 0.08,
+  "source": {
+    "type": "gt-review-verdict",
+    "transactionId": "98019f67-690d-4deb-a882-98ed9878c519",
+    "generator": "scripts/audio-analysis/gt_finalize.py",
+    "generatedAt": "2026-07-06T10:30:09+00:00",
+    "verdictSavedAt": "2026-07-06T10:25:37+00:00",
+    "draftGeneratedAt": "2026-07-05T12:13:22+00:00",
+    "expectedSource": "none (free performance — ear-verify all rows)",
+    "reviewDone": true,
+    "comment": ""
+  },
+  "onsets": [
+    {
+      "timeSec": 0.928,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 1.4293,
+      "notes": [
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: C5)"
+    },
+    {
+      "timeSec": 1.904,
+      "notes": [
+        "E5",
+        "C4"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: E5)"
+    },
+    {
+      "timeSec": 2.3787,
+      "notes": [
+        "E4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 2.7947,
+      "notes": [
+        "G4",
+        "B4",
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: G4)"
+    },
+    {
+      "timeSec": 3.3173,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 3.7813,
+      "notes": [
+        "D5",
+        "A4"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: C5)"
+    },
+    {
+      "timeSec": 4.2613,
+      "notes": [
+        "G4"
+      ],
+      "method": "ear_verified",
+      "comment": "accompanimentOnly マークのみで decision 未設定だった行 — 伴奏マーク=実在判断が前提のため accept と解釈 (agent 補完 2026-07-06、ユーザー報告済み)",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 4.6827,
+      "notes": [
+        "A4",
+        "E5"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: G4)"
+    },
+    {
+      "timeSec": 5.1893,
+      "notes": [
+        "G5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 5.68,
+      "notes": [
+        "A5",
+        "F4"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: A5)"
+    },
+    {
+      "timeSec": 6.1973,
+      "notes": [
+        "A4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 6.6667,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 7.1413,
+      "notes": [
+        "A4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 7.5893,
+      "notes": [
+        "G5",
+        "C4"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: G5)"
+    },
+    {
+      "timeSec": 8.064,
+      "notes": [
+        "G4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 8.544,
+      "notes": [
+        "C6",
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: C6)"
+    },
+    {
+      "timeSec": 9.024,
+      "notes": [
+        "G5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 9.5093,
+      "notes": [
+        "A5",
+        "F4"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: A5)"
+    },
+    {
+      "timeSec": 9.9573,
+      "notes": [
+        "A4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 10.448,
+      "notes": [
+        "G5",
+        "C5",
+        "E5"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: G5)"
+    },
+    {
+      "timeSec": 10.8747,
+      "notes": [
+        "E5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 11.3013,
+      "notes": [
+        "G4",
+        "B4",
+        "D5"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: G4)"
+    },
+    {
+      "timeSec": 11.7973,
+      "notes": [
+        "G4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 12.2347,
+      "notes": [
+        "B4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 12.6827,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    },
+    {
+      "timeSec": 13.1147,
+      "notes": [
+        "C5",
+        "C4"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: C5)"
+    },
+    {
+      "timeSec": 13.6213,
+      "notes": [
+        "E4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 14.0853,
+      "notes": [
+        "G4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 14.5547,
+      "notes": [
+        "B4"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 15.0987,
+      "notes": [
+        "B4",
+        "C4",
+        "E4",
+        "G4"
+      ],
+      "method": "ear_verified",
+      "comment": "user corrected (draft: B4)",
+      "role": "accompaniment"
+    },
+    {
+      "timeSec": 15.2053,
+      "notes": [
+        "C5"
+      ],
+      "method": "ear_verified",
+      "comment": "gt-review verdict"
+    }
+  ]
+}

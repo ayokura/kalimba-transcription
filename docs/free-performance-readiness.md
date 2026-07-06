@@ -4,11 +4,13 @@
 
 各 recognizer コンポーネントについて、Free Performance（楽譜知識なし・Expected Performance なしの自由演奏転写）への適合度を評価する。チケット処理のたびに関連コンポーネントを再評価し、このドキュメントを更新する。
 
-**最終更新: 2026-07-05 (第 3 期 S0: headline 注記 4 を追加。詳細 stage 評価の本体は 2026-04-16 時点、第 3 期 S7 で再評価予定)**
+**最終更新: 2026-07-06 (第 3 期 S7: headline 再測 + per-tine 本線化 + M1 進入判定を注記 0/0b に反映。詳細 stage 評価の本体は 2026-04-16 時点の履歴)**
 
-> **2026-06-27 / 2026-07-05 重要注記 (先に読む):**
+> **2026-06-27 / 2026-07-06 重要注記 (先に読む):**
 >
-> 0. **(2026-07-05) 進捗の headline は「非飽和限定 micro F1 + bootstrap 95% CI」のみ** (第 3 期ガードレール 4)。2026-07-05 時点の実力: **non-saturated (n=7) micro P=0.823 / R=0.678 / F1=0.744、CI95=[0.610, 0.860]**。同日の全録音 pooled micro は 0.926 だが、これは truth notes の 69% を占める飽和録音による希釈であり headline に使ってはならない。非飽和 7 件は全て単一奏者系 (他者演奏はきらきら星 2 本のみ)。計画: [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md)、tracking: #203。
+> 0. **(2026-07-06 S7 再測) 進捗の headline は「非飽和限定 micro F1 + bootstrap 95% CI」のみ** (第 3 期ガードレール 4)。第 3 期終了時の実力: **non-saturated (n=11) micro P=0.802 / R=0.694 / F1=0.744、CI95=[0.627, 0.846]** (per-tine 本線化後、held-out 2 本込み)。n=7→11 に増えて CI が締まりつつ F1 水準は維持 — 難録音 (1955b5bd 0.509 / 98019f67 0.72) の追加と per-tine の改善 (ΔR +0.020 CI [0.0066, 0.0382]) が相殺した形。全録音 pooled micro (0.873) は希釈のため headline 使用禁止。計画: 第 4 期 [`sprint-plan-2026-07d.md`](sprint-plan-2026-07d.md)、tracking: #203。
+>
+> 0b. **(2026-07-06) per-tine research line は本線投入済み (PR #210)**: 位相追跡 tracker (post-stage rescue) + in-stage fresh-attack oracle が既定 ON。K 判定 3 巡 PASS・held-out 汎化確認・mute-dip OR バックアップ退役込み。**M1 進入条件 (非飽和 held-out ≥5 + 他者録音 ≥1) は充足** — 他者演奏 7 本受入済み、うち 34L-C 録音で楽器個体差の実データ (A4 +20c offset、クロマチック配列での partial 実在 tine 着地) を取得。これが第 4 期の較正系 (#172-174) の設計入力。
 >
 > 1. **recognizer は完全に librosa-free (#193, 14584e2)。** 本文中で「`librosa.onset.onset_strength`」「librosa 依存」「broadband onset detector (librosa)」等と記述している箇所は **2026-04-16 (#187) 時点の歴史的記述**であり現在は誤り。`onset_strength` / `rms` / `onset_detect` / `peak_pick` / `backtrack` / `mel` は `segments.py` で pure-numpy 移植済 (librosa 0.11 と数値等価検証済)、production はさらに Rust 共有コア (`kalimba_dsp`) に委譲している。**HPSS path は #193 で drop 済**。librosa は分析スクリプト / skill でのみ使用 (`apps/api/app/transcription/` に import ゼロ)。
 > 2. **onset DSP は Rust/WASM 移植済で `/wasm-demo` で in-browser 稼働。** Stage 2 の Browser 評価が ⚠️ だった主因は「librosa 依存」だったが、その blocker は解消済。残るのは segment 化ロジック (active range / collector / gap rescue) の WASM 移植。

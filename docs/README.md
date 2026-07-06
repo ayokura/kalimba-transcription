@@ -6,6 +6,7 @@
 
 | 文書 | 役割 |
 |---|---|
+| [`sprint-plan-2026-07d.md`](sprint-plan-2026-07d.md) | 次期計画 (第 4 期 draft、4 方向 × 8 スプリントの計画ストック。GO で active 化) |
 | [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md) | 現行計画 (第 3 期、2026-07-05〜)。live 状態は GitHub #203 |
 | [`decision-log.md`](decision-log.md) | 期をまたぐ戦略判断の追記専用記録 |
 | [`research/index.md`](research/index.md) | 研究文書の読み順・deprecated 指定 |
