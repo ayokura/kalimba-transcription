@@ -6,8 +6,7 @@
 
 | 文書 | 役割 |
 |---|---|
-| [`sprint-plan-2026-07d.md`](sprint-plan-2026-07d.md) | 次期計画 (第 4 期 draft、4 方向 × 8 スプリントの計画ストック。GO で active 化) |
-| [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md) | 現行計画 (第 3 期、2026-07-05〜)。live 状態は GitHub #203 |
+| [`sprint-plan-2026-07d.md`](sprint-plan-2026-07d.md) | **現行計画 (第 4 期、2026-07-07 GO)**。5 計画 × 8 スプリントの直列ストック、active = B0-B4 |
 | [`decision-log.md`](decision-log.md) | 期をまたぐ戦略判断の追記専用記録 |
 | [`research/index.md`](research/index.md) | 研究文書の読み順・deprecated 指定 |
 | [`research/20260626-unbiased-amt-reassessment.md`](research/20260626-unbiased-amt-reassessment.md) | 設計判断の権威 (実コード確認済み実装事実 + NOW/NEXT/LATER) |
@@ -36,7 +35,7 @@
 
 ## 参照 (歴史・経緯。凍結ヘッダ付き、設計根拠に使わない)
 
-- 旧計画: [`sprint-plan-2026-07.md`](sprint-plan-2026-07.md) (第 1 期) / [`sprint-plan-2026-07b.md`](sprint-plan-2026-07b.md) (第 2 期) — superseded 明記済み
+- 旧計画: [`sprint-plan-2026-07.md`](sprint-plan-2026-07.md) (第 1 期) / [`sprint-plan-2026-07b.md`](sprint-plan-2026-07b.md) (第 2 期) / [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md) (第 3 期) — superseded 明記済み
 - 旧研究 (LLM バイアスあり deprecated): `research/20260406-*` 3 件 — バイアス警告ヘッダ付き
 - 時点記録 (凍結): [`strategy-b-gap-candidates.md`](strategy-b-gap-candidates.md) / [`issue-43-leading-gap-noise-analysis.md`](issue-43-leading-gap-noise-analysis.md) / [`arpeggio-design.md`](arpeggio-design.md) / [`api-contract-design.md`](api-contract-design.md) / [`browser-migration-analysis.md`](browser-migration-analysis.md) / [`per-note-onset-detection-design.md`](per-note-onset-detection-design.md) (#141 入力としては現役)
 - 計測履歴: [`performance/`](performance/) (2026-04-15 プロファイル基準)
