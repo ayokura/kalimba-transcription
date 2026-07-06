@@ -3,6 +3,7 @@
 - 作成: 2026-07-06 (第 3 期 S7)。**v2: 2026-07-07 — 4 系統評価 (Codex gpt-5.5 監査 2 パス + Fable 3 視点) の所見を全て反映した改訂版**。改訂の経緯と各指摘の採否は #203 の 2026-07-07 コメントと decision-log を参照
 - **状態: active (GO 対象 = 計画 B の B0-B4)** — Codex-fugu 後着監査「このまま GO 可・修正必須なし」(2026-07-07、#203) + ユーザー事前承認 (fugu 反映をもって GO 扱い、2026-07-07) により発効。非ブロッキング推奨 3 点は反映済み
 - 前計画 [`sprint-plan-2026-07c.md`](sprint-plan-2026-07c.md) (第 3 期) は S7 完了で superseded (実績記録として凍結)
+- **やさしい版**: [`sprint-plan-2026-07d-plain.md`](sprint-plan-2026-07d-plain.md) (非技術者向け、用語辞書付き。本 doc 改訂時は plain 版の同期も忘れないこと — 食い違い時は本 doc が正)
 - tracking: 第 4 期 tracking issue (GO 時に新設。#203 は第 3 期記録として凍結)
 - **実行体制の前提: Fable 非依存** (ユーザー指示 2026-07-06)。主担当 = Opus 4.8、定型実装 = Sonnet (spec 固定後のみ)、敵対的レビュー = Codex ([[model-roles-third-term]] 継承)
 

@@ -7,6 +7,7 @@
 | 文書 | 役割 |
 |---|---|
 | [`sprint-plan-2026-07d.md`](sprint-plan-2026-07d.md) | **現行計画 (第 4 期、2026-07-07 GO)**。5 計画 × 8 スプリントの直列ストック、active = B0-B4 |
+| [`sprint-plan-2026-07d-plain.md`](sprint-plan-2026-07d-plain.md) | 第 4 期計画のやさしい版 (専門用語辞書付き、非技術者向け。正本は技術版) |
 | [`decision-log.md`](decision-log.md) | 期をまたぐ戦略判断の追記専用記録 |
 | [`research/index.md`](research/index.md) | 研究文書の読み順・deprecated 指定 |
 | [`research/20260626-unbiased-amt-reassessment.md`](research/20260626-unbiased-amt-reassessment.md) | 設計判断の権威 (実コード確認済み実装事実 + NOW/NEXT/LATER) |
