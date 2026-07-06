@@ -187,6 +187,15 @@ function ScoreViewerReady({
   // それ以外を選ぶと GET .../runs/{runId} で該当 run の全文を取得して表示する。
   const [runsState, setRunsState] = useState<RecognitionRunsResponse>(initialRuns);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(initialRuns.latestRunId);
+  // "最新" の内容そのもの。load() が返した latestResult prop で初期化するが、
+  // 再認識 (handleRerun) が起きるとその新しい run が「最新」になるので更新する。
+  // これを latestResult prop 自体で代用すると (#204 Phase 2 の実装バグとして
+  // 発見): 再認識直後は selectedRunId/runsState.latestRunId が新しい runId に
+  // 揃うため isViewingLatestRun が true に戻り、下の effect が「最新に戻す」
+  // 分岐を実行する。その時 latestResult (初回読み込み時点の古いスナップショット)
+  // へreset してしまうと、再認識で表示したはずの新しい結果が即座に古い結果へ
+  // 巻き戻ってしまう。
+  const [latestKnownResult, setLatestKnownResult] = useState<TranscriptionResult>(latestResult);
   const [displayResult, setDisplayResult] = useState<TranscriptionResult>(latestResult);
   const [runSwitchBusy, setRunSwitchBusy] = useState(false);
   const [runSwitchError, setRunSwitchError] = useState<string | null>(null);
@@ -196,7 +205,7 @@ function ScoreViewerReady({
 
   useEffect(() => {
     if (isViewingLatestRun) {
-      setDisplayResult(latestResult);
+      setDisplayResult(latestKnownResult);
       setRunSwitchError(null);
       return;
     }
@@ -221,7 +230,7 @@ function ScoreViewerReady({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRunId, isViewingLatestRun, transactionId]);
+  }, [selectedRunId, isViewingLatestRun, transactionId, latestKnownResult]);
 
   const handleRerun = useCallback(async () => {
     setRerunBusy(true);
@@ -230,6 +239,7 @@ function ScoreViewerReady({
       const created = await createTranscriptionRun(transactionId);
       const refreshed = await fetchTranscriptionRuns(transactionId);
       setRunsState(refreshed);
+      setLatestKnownResult(created.result);
       setSelectedRunId(created.runId);
       setDisplayResult(created.result);
     } catch (err) {
@@ -262,13 +272,16 @@ function ScoreViewerReady({
   );
 
   // #202: 修正済み版があれば既定でそれを表示。認識結果へは切替可能。
-  // correctedEvents は読み込み時の最新 run に対して算出されたものなので
-  // (#204 Phase 2)、それ以外の過去 run を閲覧中は認識結果 (その run の生の
-  // events) を表示する — 過去 run に対する修正差分の整列は Phase 3 未対応。
+  // correctedEvents は読み込み時の run (initialRuns.latestRunId) に対して
+  // 算出されたものなので (#204 Phase 2)、過去 run を閲覧中はもちろん、
+  // 再認識で「最新」が別の run に変わった後もそのままでは整列が保証できない
+  // (再認識後は isViewingLatestRun は true に戻るが、それは新しい run に
+  // 対して) — なので「読み込み時と同じ run を見ているか」で厳密にゲートする。
+  const isViewingOriginalRun = selectedRunId === initialRuns.latestRunId;
   const [viewSource, setViewSource] = useState<"corrected" | "recognized">(
     correctedEvents ? "corrected" : "recognized",
   );
-  const showCorrectedToggle = isViewingLatestRun && Boolean(correctedEvents);
+  const showCorrectedToggle = isViewingOriginalRun && Boolean(correctedEvents);
   const events =
     showCorrectedToggle && viewSource === "corrected" && correctedEvents
       ? correctedEvents
@@ -410,9 +423,9 @@ function ScoreViewerReady({
               {viewSource === "corrected" ? "認識結果を表示" : "修正済み版を表示"}
             </button>
           </div>
-        ) : !isViewingLatestRun ? (
+        ) : !isViewingOriginalRun && correctedEvents ? (
           <p className="muted score-viewer-run-note">
-            過去の認識結果を表示中です (修正済み版との切替は最新の認識結果でのみ利用できます)。
+            この認識結果は修正済み版の算出元とは異なります (修正済み版との切替は元の認識結果でのみ利用できます)。
           </p>
         ) : null}
         <div className="score-viewer-mode-toggle" role="group" aria-label="ドレミ表記">
