@@ -19,13 +19,21 @@ const POLL_MS = 300;
 const RECOMPUTE_MIN_DELTA_SEC = 0.15;
 const MAX_ROW_MODE_NOTES = 8;
 
-// 17-C の周波数昇順テーブル (隣接 tine = このスケール上の隣)。
-const TUNING_BY_FREQ = [...KALIMBA_17C_TUNING].sort((a, b) => a.frequency - b.frequency);
+// tuning テーブル (周波数昇順)。既定は 17-C。録音の instrumentTuning が
+// 17 音以下 (dedup 後) ならそれに差し替える — G-low 等の 17 鍵別スケール対応
+// (2026-07-06)。34/21 鍵は行数が画面に収まらないため対象外 (ユーザー判断):
+// 従来どおり 17-C fallback + 平均律代用のまま。
+type TuningNoteLite = { noteName: string; frequency: number };
 
-function noteFrequency(noteName: string): number | null {
-  const hit = KALIMBA_17C_TUNING.find((n) => n.noteName === noteName);
+const FALLBACK_TABLE: TuningNoteLite[] = [...KALIMBA_17C_TUNING]
+  .sort((a, b) => a.frequency - b.frequency)
+  .map((n) => ({ noteName: n.noteName, frequency: n.frequency }));
+const MAX_TUNING_TABLE_NOTES = 17;
+
+function noteFrequency(table: TuningNoteLite[], noteName: string): number | null {
+  const hit = table.find((n) => n.noteName === noteName);
   if (hit) return hit.frequency;
-  // 17-C 外 (半音など) は平均律 A4=440 で代用
+  // テーブル外 (半音など) は平均律 A4=440 で代用
   const m = noteName.match(/^([A-G])(#?)(\d)$/);
   if (!m) return null;
   const base: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -33,12 +41,12 @@ function noteFrequency(noteName: string): number | null {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
-function scaleNeighbors(noteName: string): string[] {
-  const i = TUNING_BY_FREQ.findIndex((n) => n.noteName === noteName);
+function scaleNeighbors(table: TuningNoteLite[], noteName: string): string[] {
+  const i = table.findIndex((n) => n.noteName === noteName);
   if (i < 0) return [];
   const out: string[] = [];
-  if (i > 0) out.push(TUNING_BY_FREQ[i - 1].noteName);
-  if (i < TUNING_BY_FREQ.length - 1) out.push(TUNING_BY_FREQ[i + 1].noteName);
+  if (i > 0) out.push(table[i - 1].noteName);
+  if (i < table.length - 1) out.push(table[i + 1].noteName);
   return out;
 }
 
@@ -73,6 +81,38 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
   // アンカーの時刻列 (プレイヘッド近傍アンカーの決定に使用)
   const rowTimes = useMemo(() => anchors.map((a) => a.timeSec), [anchors]);
 
+  // 録音の tuning を取得 (取得失敗・17 音超は 17-C fallback のまま)
+  const [tuningNotes, setTuningNotes] = useState<TuningNoteLite[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setTuningNotes(null);
+    fetch(`/api/transcriptions/${txId}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`tuning ${r.status}`))))
+      .then((doc: { instrumentTuning?: { notes?: TuningNoteLite[] } }) => {
+        if (!alive) return;
+        const notes = doc?.instrumentTuning?.notes;
+        if (Array.isArray(notes) && notes.length > 0) {
+          setTuningNotes(notes.map((n) => ({ noteName: n.noteName, frequency: n.frequency })));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [txId]);
+  const tuningByFreq = useMemo(() => {
+    if (!tuningNotes) return FALLBACK_TABLE;
+    const seen = new Set<string>();
+    const out: TuningNoteLite[] = [];
+    for (const n of [...tuningNotes].sort((a, b) => a.frequency - b.frequency)) {
+      if (seen.has(n.noteName)) continue;
+      seen.add(n.noteName);
+      out.push(n);
+    }
+    // 34/21 鍵: 全 tine 表示が画面に収まらないため差し替えない (冒頭コメント参照)
+    return out.length <= MAX_TUNING_TABLE_NOTES ? out : FALLBACK_TABLE;
+  }, [tuningNotes]);
+
   const notesForCenter = useCallback(
     (centerSec: number): { notes: string[]; highlight: Set<string> } => {
       // プレイヘッドに最も近いアンカーのノートをハイライト対象とする
@@ -93,20 +133,20 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
       if (mode === "all") {
         // 全 tine 表示: 未認識の伴奏ノーツがどこで鳴っているかの探索用。
         // 1 音 3ms 実測 (48kHz/±1s/40ms step) なので 17 tine でも ~50ms
-        const notes = [...TUNING_BY_FREQ].reverse().map((n) => n.noteName);
+        const notes = [...tuningByFreq].reverse().map((n) => n.noteName);
         return { notes, highlight };
       }
       const set = new Set<string>(base);
       if (withNeighbors) {
-        for (const n of base) for (const nb of scaleNeighbors(n)) set.add(nb);
+        for (const n of base) for (const nb of scaleNeighbors(tuningByFreq, n)) set.add(nb);
       }
       const notes = [...set]
-        .filter((n) => noteFrequency(n) !== null)
-        .sort((a, b) => (noteFrequency(b) ?? 0) - (noteFrequency(a) ?? 0))
+        .filter((n) => noteFrequency(tuningByFreq, n) !== null)
+        .sort((a, b) => (noteFrequency(tuningByFreq, b) ?? 0) - (noteFrequency(tuningByFreq, a) ?? 0))
         .slice(0, MAX_ROW_MODE_NOTES);
       return { notes, highlight };
     },
-    [anchors, rowTimes, withNeighbors, mode],
+    [anchors, rowTimes, withNeighbors, mode, tuningByFreq],
   );
 
   const ensureDecoded = useCallback(async (): Promise<DecodedAudio | null> => {
@@ -278,7 +318,7 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
         const startSec = Math.max(0, centerSec - HALF_WINDOW_SEC);
         const endSec = Math.min(audio.durationSec, centerSec + HALF_WINDOW_SEC);
         if (endSec - startSec < STEP_SEC * 4) return;
-        const freqs = notes.map((n) => noteFrequency(n) ?? 0);
+        const freqs = notes.map((n) => noteFrequency(tuningByFreq, n) ?? 0);
         const trace = await traceNoteBandEnergies(
           audio.samples,
           audio.sampleRate,
@@ -295,7 +335,7 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
         computingRef.current = false;
       }
     },
-    [enabled, mode, audioRef, notesForCenter, ensureDecoded, draw],
+    [enabled, mode, audioRef, notesForCenter, ensureDecoded, draw, tuningByFreq],
   );
 
   // 再生位置ポーリング → 閾値超えの移動で再計算
