@@ -72,3 +72,46 @@ C2 相談は 2026-07-06 に実施済み・承認 (条件: 撤退基準発火時�
 3. **fscan fallback 復活**: oracle が棄権/ゲート落ちした時は fscan が走る (直列)。**fscan 退役はまだ earned でない**実測 (c4-to-g4 の軟再打鍵 C5 は oracle 圏外 = round 3 §3 の mute-dip 領分の再確認)。両者の限界寄与は dual-run の arm で定量化する
 
 同 note 救済は「oracle が primary を fresh と判定 OR mute-dip」(マーカー `residual-fresh-mute-dip-only` で mute-dip 限界寄与を実測 — GT 15 録音の途中経過では 0 が続く)。branching 第 2 サイトは同 note + mute-dip のみの保守配線。
+
+## 9. 検証プロトコル実測結果 (2026-07-06、§5 手順 2-4 + merge 条件 3 材料)
+
+全機械出力: `pertine-round4-dualrun.json` / `pertine-round4-mutedip-margin.json` (同 dir)。held-out 2 本 (1955b5bd / 98019f67) は不使用 (裁定待ち、測定 1 回のみの規律)。
+
+### 9.1 第 3 カウント巡判定 — K2/K3/K4 全 PASS (3 巡連続)
+
+dual-run 5 arm (base = rescue OFF + oracle OFF / rescue_only = 第 2 巡状態 / full = branch 既定 / oracle_only = full + fscan 切り / no_mutedip = full + mute-dip OR バックアップ切り)、full vs base、S4 分母:
+
+- K2: carryover recall **14/16 = 0.875** (閾値ちょうど) [PASS]
+- K3: 非飽和 ΔR **+0.021**、paired bootstrap CI95 **[0.0048, 0.0502]** (0 を跨がない) [PASS]
+- K4: 非飽和 FP **53 → 53** (上限 61、増加ゼロ) [PASS]
+- 非飽和 headline: base P=0.852 R=0.724 F1=0.782 → full P=0.855 R=0.745 F1=0.796 CI=[0.6695, 0.8663]
+
+### 9.2 限界寄与の arm 分解 (merge 条件 3 材料)
+
+| 機構 | 測定 | 結果 |
+|---|---|---|
+| oracle (in-stage) | full vs rescue_only | GT 15 録音で**変化なし** (F1 中立) |
+| fscan | full vs oracle_only | **2 録音 +2 TP** (70cc6637 0.848→0.852 / 8039a34c 0.998→1.000) |
+| mute-dip OR バックアップ | full vs no_mutedip + marker 全数 | **変化なし + marker 0/15 録音** (二重測定で寄与ゼロ) |
+
+fixture 側依存地図 (KALIMBA_SETTINGS_OVERRIDES で実 pytest suite):
+
+- **mute-dip バックアップ切り: 609 全 green** → GT・fixture 両側で依存ゼロ = **退役可の証拠成立**
+- **fscan 切り: 3 failed / 606 passed** — fscan 自体の mechanism test (自明) / c4-to-g4-sequence-17-01 / bwv147-sequence-163-01 (163→162 events)
+
+### 9.3 fscan 固有獲物の正体 — 物理 3 event、全て同 note 軟再打鍵
+
+1. 70cc6637 (きらきら星): **C4@25.13s** (直前 C4=23.73s、1.4s 間隔の再打鍵)
+2. 8039a34c: **G4@47.01s** (直前 G4=46.53s、0.48s 間隔)。**8039a34c は bwv147-sequence-163-01 fixture と同一録音** (PCM 全 frame 数一致・max|diff|=1 LSB の再エンコード差のみ) — GT 変化と fixture fail は同一 event
+3. c4-to-g4 E15: **C5@~13.47s** (ミュート後の軟弾き直し。notes.md memo の mute dip 11→0.5→13 に加え、energy trace 再測で 13.425→13.475s に 519→23→198 の急落 → 13.500s に 1987 へ再励起を確認。耳確認記録はなし = #52 の任意残 2 件の 1 つだが、複数観測により実在判断 B+)
+
+3 件とも oracle の promotion 受理ゲート (score bar + per-note onset gain) が構造的に通さない軟再打鍵 regime = round 3 §3 で特定した mute-dip/recent-note 領分。**fscan 退役は not earned** — oracle の直列 fallback として存置が妥当。
+
+### 9.4 metamorphic alarm (ebecf0c6 lowpass、#206 発端)
+
+dropped **5 → 3 (純減、成功条件 ≤4 充足)**。WARN 自体は残存 (diff=6 > threshold 2) — §2 の予見どおり境界移動由来の added/dropped 組が残るが完全解消は非要求。
+
+### 9.5 測定上の注意 (再現用)
+
+- 直 POST の in-process 診断は dedup で 2 回目の応答が汚染される (本巡でも bwv147 probe が一度 on=off=163 の偽結果を返した)。**dryRun+force か nfb.transcribe_payload 経由必須** (memory 済みの既知罠の再演)
+- default 設定 suite は 609 green (新 flag `ablate_residual_mute_dip_backup` は既定 no-op)

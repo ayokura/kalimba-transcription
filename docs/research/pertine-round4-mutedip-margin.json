@@ -1,0 +1,84 @@
+{
+ "marker": "residual-fresh-mute-dip-only",
+ "rows": [
+  {
+   "tx": "17ea7626",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 1
+  },
+  {
+   "tx": "4e1ae5c6",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 3
+  },
+  {
+   "tx": "9ce7df83",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 1
+  },
+  {
+   "tx": "bbd6797f",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 0
+  },
+  {
+   "tx": "d7a82772",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 2
+  },
+  {
+   "tx": "ea7edd71",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 1
+  },
+  {
+   "tx": "ebecf0c6",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 1
+  },
+  {
+   "tx": "16b37356",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 1
+  },
+  {
+   "tx": "2bf55c75",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 5
+  },
+  {
+   "tx": "47902d34",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 3
+  },
+  {
+   "tx": "6bf97c7c",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 0
+  },
+  {
+   "tx": "70cc6637",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 7
+  },
+  {
+   "tx": "8039a34c",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 2
+  },
+  {
+   "tx": "a9e30986",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 1
+  },
+  {
+   "tx": "bbeeaad8",
+   "muteDipOnlySaves": 0,
+   "oracleRejections": 2
+  }
+ ],
+ "totals": {
+  "muteDipOnlySaves": 0,
+  "oracleRejections": 30
+ }
+}

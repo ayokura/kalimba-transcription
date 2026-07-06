@@ -2177,7 +2177,8 @@ def _residual_fresh_attack(ctx, evidence, note_name: str, frequency: float,
         # it is handled by the oracle promotion path in _resolve_primary.
         if ctx.fresh_attack_oracle(ctx.start_time, ctx.end_time) == note_name:
             return True
-        if evidence.has_mute_dip_reattack(frequency):
+        if (not settings.get().ablate_residual_mute_dip_backup
+                and evidence.has_mute_dip_reattack(frequency)):
             if promotions is not None:
                 promotions.append("residual-fresh-mute-dip-only")
             return True
