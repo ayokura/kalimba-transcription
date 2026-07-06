@@ -114,3 +114,12 @@ processing) の混入や低信号録音という **capture 側の問題** と、
 
 **影響**: 第 1 期計画の骨格 (評価基盤 CI 接続 → 候補保持 → 機構別修正)。
 per-note (#141) は移行トリガー 4 条件付きの research line に位置づけ。
+
+## 2026-07-06: per-tine research line を本線投入 (S6 exit、kill 3 巡 PASS)
+
+第 3 期レーン 2 (per-tine 確率トラッカー + in-stage oracle) を PR #210 (9b8fd40) で main に merge。S5-S6 の 4 カウント巡 (offline → 統合 rescue → autopsy 撤退 → in-stage oracle) を経て、事前固定 kill 条件 (K2/K3/K4、S4 分母) を 3 巡連続 PASS、held-out 2 本 (較正不使用・測定 1 回) で汎化確認 (oracle/rescue 各 +1 TP、FP 増ゼロ)。merge 条件 3 条件 (fixture 非劣化 609 green / 非飽和 ΔR +0.021 CI95 [0.0048, 0.0502] / 既存機構削減 = mute-dip OR バックアップ退役 e8b136e) を充足し、ユーザー S6 exit GO + merge 承認 (2026-07-06)。
+
+- 設計原則の実証: 「素の条件差し替え (棄却回避)」は 2 巡連続で有害 (残響 segment の保持が後段と干渉)、「promotion (乗っ取り)」形が正解だった — kept-residual is harmful
+- 34L-C held-out の GT はユーザー耳裁定不能のため agent 主導裁定 (承認済み切替、spectrogram_verified、手法は 38ad720)
+- 退役の再訪手順: 38ad720 checkout の margin probe で muteDipOnlySaves > 0 なら再審
+- 関連: #141 (line umbrella、次の判断は streaming/causal 化 or 統合 front-end #208) / #206 (closed) / kill-criteria doc は本線投入により役目を終了 (K6 消化)
