@@ -19,16 +19,20 @@ const POLL_MS = 300;
 const RECOMPUTE_MIN_DELTA_SEC = 0.15;
 const MAX_ROW_MODE_NOTES = 8;
 
-// tuning テーブル (周波数昇順)。既定は 17-C。録音の instrumentTuning が
-// 17 音以下 (dedup 後) ならそれに差し替える — G-low 等の 17 鍵別スケール対応
-// (2026-07-06)。34/21 鍵は行数が画面に収まらないため対象外 (ユーザー判断):
-// 従来どおり 17-C fallback + 平均律代用のまま。
-type TuningNoteLite = { noteName: string; frequency: number };
+// tuning テーブル (周波数昇順、同名重複は 1 行に統合)。録音の instrumentTuning
+// を常時使用し、取得失敗時のみ 17-C fallback (2026-07-06)。34L-C 等の層跨ぎ
+// 重複音 (C5/F5 が layer 0/1 両方に存在) は dedup し、♯層 (裏列) にしか無い
+// tine はラベルに ¹ マーカーを付ける。18 音以上の「全 tine」表示は sparkline
+// では画面に収まらないためヒートマップ描画に切り替える (ユーザー選定 2026-07-06。
+// 波形の形の精読は「近傍行のノートのみ」sparkline モードが担う)。
+type TuningNoteLite = { noteName: string; frequency: number; layer?: number };
+type TuningRow = { noteName: string; frequency: number; layer1Only: boolean };
 
-const FALLBACK_TABLE: TuningNoteLite[] = [...KALIMBA_17C_TUNING]
+const FALLBACK_TABLE: TuningRow[] = [...KALIMBA_17C_TUNING]
   .sort((a, b) => a.frequency - b.frequency)
-  .map((n) => ({ noteName: n.noteName, frequency: n.frequency }));
-const MAX_TUNING_TABLE_NOTES = 17;
+  .map((n) => ({ noteName: n.noteName, frequency: n.frequency, layer1Only: false }));
+// この行数を超える表示はヒートマップに切り替える (17 鍵の all モードは従来どおり sparkline)
+const SPARKLINE_MAX_ROWS = 17;
 
 function noteFrequency(table: TuningNoteLite[], noteName: string): number | null {
   const hit = table.find((n) => n.noteName === noteName);
@@ -67,8 +71,9 @@ type DecodedAudio = { samples: Float32Array; sampleRate: number; durationSec: nu
 
 export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
   const [enabled, setEnabled] = useState(false);
-  // "all": 全 17 tine を表示 (伴奏として鳴っている未認識ノーツの探索が主用途)。
-  // "row": 近傍行のノート (+隣接 tine) のみ — 行が多い時の縮約表示。
+  // "all": 全 tine を表示 (伴奏として鳴っている未認識ノーツの探索が主用途)。
+  //        17 行以下は sparkline、18 行以上 (34 鍵系) はヒートマップ描画。
+  // "row": 近傍行のノート (+隣接 tine) のみ — 波形の形を精読する縮約表示。
   const [mode, setMode] = useState<"all" | "row">("all");
   const [withNeighbors, setWithNeighbors] = useState(false);
   const [status, setStatus] = useState<string>("");
@@ -81,7 +86,7 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
   // アンカーの時刻列 (プレイヘッド近傍アンカーの決定に使用)
   const rowTimes = useMemo(() => anchors.map((a) => a.timeSec), [anchors]);
 
-  // 録音の tuning を取得 (取得失敗・17 音超は 17-C fallback のまま)
+  // 録音の tuning を取得 (取得失敗時のみ 17-C fallback)
   const [tuningNotes, setTuningNotes] = useState<TuningNoteLite[] | null>(null);
   useEffect(() => {
     let alive = true;
@@ -92,7 +97,9 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
         if (!alive) return;
         const notes = doc?.instrumentTuning?.notes;
         if (Array.isArray(notes) && notes.length > 0) {
-          setTuningNotes(notes.map((n) => ({ noteName: n.noteName, frequency: n.frequency })));
+          setTuningNotes(
+            notes.map((n) => ({ noteName: n.noteName, frequency: n.frequency, layer: n.layer })),
+          );
         }
       })
       .catch(() => {});
@@ -102,16 +109,31 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
   }, [txId]);
   const tuningByFreq = useMemo(() => {
     if (!tuningNotes) return FALLBACK_TABLE;
+    const layersByName = new Map<string, Set<number>>();
+    for (const n of tuningNotes) {
+      const s = layersByName.get(n.noteName) ?? new Set<number>();
+      s.add(n.layer ?? 0);
+      layersByName.set(n.noteName, s);
+    }
     const seen = new Set<string>();
-    const out: TuningNoteLite[] = [];
+    const out: TuningRow[] = [];
     for (const n of [...tuningNotes].sort((a, b) => a.frequency - b.frequency)) {
       if (seen.has(n.noteName)) continue;
       seen.add(n.noteName);
-      out.push(n);
+      out.push({
+        noteName: n.noteName,
+        frequency: n.frequency,
+        layer1Only: !(layersByName.get(n.noteName) ?? new Set([0])).has(0),
+      });
     }
-    // 34/21 鍵: 全 tine 表示が画面に収まらないため差し替えない (冒頭コメント参照)
-    return out.length <= MAX_TUNING_TABLE_NOTES ? out : FALLBACK_TABLE;
+    return out;
   }, [tuningNotes]);
+  // 表示ラベル: ♯層 (裏列) 専用 tine に ¹ を付ける (34L-C の物理配置の手掛かり)
+  const noteLabels = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const n of tuningByFreq) m.set(n.noteName, n.noteName + (n.layer1Only ? "¹" : ""));
+    return m;
+  }, [tuningByFreq]);
 
   const notesForCenter = useCallback(
     (centerSec: number): { notes: string[]; highlight: Set<string> } => {
@@ -199,9 +221,10 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
     ) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+      const heatmap = notes.length > SPARKLINE_MAX_ROWS;
       const dpr = window.devicePixelRatio || 1;
       const cssWidth = canvas.clientWidth || 600;
-      const rowH = notes.length >= 10 ? 24 : 34;
+      const rowH = heatmap ? 11 : notes.length >= 10 ? 24 : 34;
       const cssHeight = Math.max(1, notes.length) * rowH + 18;
       canvas.width = Math.round(cssWidth * dpr);
       canvas.height = Math.round(cssHeight * dpr);
@@ -211,7 +234,7 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
       g.scale(dpr, dpr);
       g.clearRect(0, 0, cssWidth, cssHeight);
 
-      const labelW = 76;
+      const labelW = heatmap ? 48 : 76;
       const plotW = cssWidth - labelW - 6;
       const { startSec, stepSec, steps, values } = trace;
       const windowDur = steps * stepSec;
@@ -220,6 +243,38 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
       if (globalMax <= 0) globalMax = 1;
 
       const xForSec = (sec: number) => labelW + ((sec - startSec) / windowDur) * plotW;
+      // 共通 dB スケール (窓内グローバル max 基準、floor -48dB):
+      // 全行が同じ物差しに載り、行間の相対強度が形/濃さで読める
+      // (2026-07-05 フィードバック — 行別正規化は 1% の音が 100% と同じ
+      // 高さに見えて誤読を招いた。弱音の形は dB が担保する)
+      const DB_FLOOR = -48;
+      const dbNorm = (raw: number) => {
+        const db = raw > 0 ? 20 * Math.log10(raw) : DB_FLOOR;
+        return Math.max(0, 1 - Math.max(db, DB_FLOOR) / DB_FLOOR);
+      };
+
+      if (heatmap) {
+        // ヒートマップ (18 tine 以上 = 34 鍵系の全 tine モード): 1 行 11px、
+        // 色の濃さ = dB。ティック/プレイヘッドは後段でセルの上に描かれる。
+        // 波形の形の精読は「近傍行のノートのみ」sparkline モードで行う
+        const cellW = plotW / steps;
+        for (let n = 0; n < notes.length; n++) {
+          const y0 = n * rowH;
+          const isHi = highlight.has(notes[n]);
+          for (let s = 0; s < steps; s++) {
+            const v = dbNorm(values[n * steps + s] / globalMax);
+            if (v <= 0.03) continue;
+            g.fillStyle = `rgba(23,126,137,${(0.06 + 0.94 * v).toFixed(3)})`;
+            g.fillRect(labelW + s * cellW, y0 + 1, cellW + 0.5, rowH - 2);
+          }
+          g.font = isHi
+            ? "bold 9px ui-monospace, Menlo, monospace"
+            : "9px ui-monospace, Menlo, monospace";
+          g.fillStyle = isHi ? "#0f5f67" : "#63615d";
+          if (isHi) g.fillRect(labelW - 4, y0 + 1, 2, rowH - 2);
+          g.fillText(noteLabels.get(notes[n]) ?? notes[n], 4, y0 + rowH / 2 + 3);
+        }
+      }
 
       // 行 onset の縦ティック (窓内のみ)
       g.strokeStyle = "rgba(30,31,31,0.18)";
@@ -243,7 +298,8 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
       g.stroke();
 
       g.font = "11px ui-monospace, Menlo, monospace";
-      for (let n = 0; n < notes.length; n++) {
+      // sparkline 行 (17 行以下)。heatmap 時はセル描画済み (上のブロック)
+      for (let n = 0; !heatmap && n < notes.length; n++) {
         const y0 = n * rowH + 4;
         const base = y0 + rowH - 8;
         const isHi = highlight.has(notes[n]);
@@ -257,7 +313,7 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
         const pct = Math.round((rowMax / globalMax) * 100);
         g.fillStyle = isHi ? "#0f5f67" : "#63615d";
         if (isHi) g.font = "bold 11px ui-monospace, Menlo, monospace";
-        g.fillText(notes[n], 4, y0 + rowH / 2 + 3);
+        g.fillText(noteLabels.get(notes[n]) ?? notes[n], 4, y0 + rowH / 2 + 3);
         if (isHi) g.font = "11px ui-monospace, Menlo, monospace";
         g.fillStyle = pct >= 20 ? "#177e89" : "#9b9893";
         g.fillText(`${pct}%`, 34, y0 + rowH / 2 + 3);
@@ -269,15 +325,8 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
         g.strokeStyle = isHi ? "#0f5f67" : pct >= 20 ? "#177e89" : "#a8a5a0";
         g.lineWidth = isHi ? 1.8 : 1.2;
         g.beginPath();
-        // 共通 dB スケール (窓内グローバル max 基準、floor -48dB):
-        // 全行の最大値が同じ物差しに載り、行間の相対強度が形で読める
-        // (2026-07-05 フィードバック — 行別正規化は 1% の音が 100% と同じ
-        // 高さに見えて誤読を招いた。弱音の形は dB が担保する)
-        const DB_FLOOR = -48;
         for (let s = 0; s < steps; s++) {
-          const raw = values[n * steps + s] / globalMax;
-          const db = raw > 0 ? 20 * Math.log10(raw) : DB_FLOOR;
-          const v = Math.max(0, 1 - Math.max(db, DB_FLOOR) / DB_FLOOR);
+          const v = dbNorm(values[n * steps + s] / globalMax);
           const x = labelW + (s / Math.max(1, steps - 1)) * plotW;
           const y = base - v * (rowH - 12);
           if (s === 0) g.moveTo(x, y);
@@ -292,7 +341,7 @@ export function GtEnergyTrace({ txId, audioRef, anchors }: Props) {
       const endLabel = `${(startSec + windowDur).toFixed(2)}s`;
       g.fillText(endLabel, labelW + plotW - g.measureText(endLabel).width, cssHeight - 4);
     },
-    [rowTimes],
+    [rowTimes, noteLabels],
   );
 
   const recompute = useCallback(
