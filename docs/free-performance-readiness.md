@@ -8,7 +8,7 @@
 
 > **2026-06-27 / 2026-07-06 重要注記 (先に読む):**
 >
-> 0. **(2026-07-06 S7 再測) 進捗の headline は「非飽和限定 micro F1 + bootstrap 95% CI」のみ** (第 3 期ガードレール 4)。第 3 期終了時の実力: **non-saturated (n=11) micro P=0.802 / R=0.694 / F1=0.744、CI95=[0.627, 0.846]** (per-tine 本線化後、held-out 2 本込み)。n=7→11 に増えて CI が締まりつつ F1 水準は維持 — 難録音 (1955b5bd 0.509 / 98019f67 0.72) の追加と per-tine の改善 (ΔR +0.020 CI [0.0066, 0.0382]) が相殺した形。全録音 pooled micro (0.873) は希釈のため headline 使用禁止。計画: 第 4 期 [`sprint-plan-2026-07d.md`](sprint-plan-2026-07d.md)、tracking: #203。
+> 0. **(2026-07-07 更新 — 数値 authority は第 4 期計画の同名節が正) 進捗の headline は「非飽和限定 micro F1 + bootstrap 95% CI」のみ** (第 3 期ガードレール 4)。**headline authority = current benchmark: non-saturated (n=10) micro F1 0.740、CI95=[0.617, 0.843]** (per-tine 本線化 + 4e1ae5c6 飽和卒業後の HEAD 実走値。再現: `uv run python scripts/audio-analysis/note_f1_benchmark.py`)。S7 凍結時の n=11 F1 0.744 は歴史値 (飽和卒業前の分類) — 進捗比較に使わない (2026-07-07 監査で混用を検出・是正)。難録音 2 本 (1955b5bd 0.509 local-only / 98019f67 0.72) の追加と per-tine の改善 (ΔR +0.020 CI [0.0066, 0.0382]) が相殺し、n 増で F1 水準は維持。全録音 pooled micro は希釈のため headline 使用禁止。計画: 第 4 期 [`sprint-plan-2026-07d.md`](sprint-plan-2026-07d.md)、tracking: #203。
 >
 > 0b. **(2026-07-06) per-tine research line は本線投入済み (PR #210)**: 位相追跡 tracker (post-stage rescue) + in-stage fresh-attack oracle が既定 ON。K 判定 3 巡 PASS・held-out 汎化確認・mute-dip OR バックアップ退役込み。**M1 進入条件 (非飽和 held-out ≥5 + 他者録音 ≥1) は充足** — 他者演奏 7 本受入済み、うち 34L-C 録音で楽器個体差の実データ (A4 +20c offset、クロマチック配列での partial 実在 tine 着地) を取得。これが第 4 期の較正系 (#172-174) の設計入力。
 >
