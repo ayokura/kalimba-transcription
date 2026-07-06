@@ -15,10 +15,10 @@ memory の handoff-next-session (次セッション再開ポインタ) が指す
 
 1. `AGENTS.md` (自動ロード済みのはず — 未読なら読む)
 2. `docs/README.md` (docs 索引 — 現役文書の把握)
-3. 現行 sprint plan (handoff memory が指すもの。例: `docs/sprint-plan-2026-07c.md`)
-4. live issue の最新コメント数件 (handoff memory が指す記録一本化 issue。例: #203)
+3. 現行 sprint plan (handoff memory が指すもの。例: 第 4 期 `docs/sprint-plan-2026-07d.md`)
+4. live issue の最新コメント数件 (handoff memory が指す記録一本化 issue)
 5. `docs/decision-log.md` の直近 3 エントリ
-6. research line が動いている場合: kill 条件文書 + `docs/research/20260626-unbiased-amt-reassessment.md`
+6. research line が動いている場合: その kill 条件文書 + `docs/research/20260626-unbiased-amt-reassessment.md` (per-tine の kill-criteria doc は 2026-07-06 本線化で役目終了 — 歴史資料)
 
 ### 2. 受入チェックに答える
 
@@ -27,7 +27,8 @@ memory の handoff-next-session (次セッション再開ポインタ) が指す
 - **現在地 3 行**: どのスプリントの何が終わっていて、次は何か
 - **硬ゲート状態**: スプリント境界の GO 待ちか、スプリント内継続か (ガードレール 11)
 - **報告語彙の確認**: headline は非飽和限定 micro F1 + CI95 のみ (pooled micro 禁止) を認識しているか
-- **kill 条件の所在**: research line の kill 条件文書の場所と現在の判定状態
+- **kill 条件の所在**: active な research line があればその kill 条件文書の場所と判定状態。なければ「現在 research line なし (per-tine は 2026-07-06 本線化済み)」と言えること
+- **(第 4 期) 計画ストック構造の理解**: 4 計画 (A-D) のどれが active か、計画レベル硬ゲート (ガードレール 15) の認識
 
 ### 3. live issue の動的取得
 
@@ -45,5 +46,5 @@ gh issue list --state open --limit 30
 
 ## 注意
 
-- スプリント境界は人間の明示 GO でのみ跨げる。キックオフ時に「前スプリント完了 → 次を開始してよいか」を自己判断しない。GO 待ちなら非同期継続作業のみ列挙する。
+- スプリント境界は人間の明示 GO でのみ跨げる。キックオフ時に「前スプリント完了 → 次を開始してよいか」を自己判断しない。GO 待ちなら非同期継続作業のみ列挙する。第 4 期はさらに**計画 (A-D) の開始・切替・凍結もユーザー GO** (ガードレール 15)。
 - このスキルの読み順・受入チェック項目が handoff memory と食い違ったら、handoff memory 側が正 (このファイルの更新も提案する)。
