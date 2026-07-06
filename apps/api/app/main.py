@@ -355,6 +355,18 @@ def put_dev_gt_draft_verdict(tx8: str, payload: GtDraftVerdictPayload) -> dict:
 # の要検証ポイント) を /debug/bp-verify ページへ供給し、聞こえる/聞こえない/不明瞭
 # の裁定を保存する。gt-drafts と同じ dev-only temporary パターン。
 # temporary — GT 除染の運用が落ち着いたら /debug/bp-verify と一緒に撤去する。
+# (2026-07-06 追記) S6 の PESTO verify (上位 20 音、#203 事前固定ルール) が同型の
+# 「note+時刻を試聴して実在裁定」なので、?set= で dataset を切替可能にして流用する。
+# rows/verdict ファイルは dataset ごとに分離され、bp-only の裁定記録は不変。
+_VERIFY_SETS = frozenset({"bp_verify", "pesto_verify"})
+
+
+def _verify_set_or_400(name: str) -> str:
+    if name not in _VERIFY_SETS:
+        raise HTTPException(status_code=400, detail=f"Unknown verify set: {name}")
+    return name
+
+
 class BpVerifyVerdictPayload(BaseModel):
     # 行キー "<txId>:<timeSec>:<note>" -> {decision?: real|absent|unclear, comment?}
     rows: dict[str, dict]
@@ -362,19 +374,21 @@ class BpVerifyVerdictPayload(BaseModel):
 
 
 @app.get("/api/dev/bp-verify")
-def get_dev_bp_verify() -> dict:
+def get_dev_bp_verify(set: str = "bp_verify") -> dict:
+    dataset = _verify_set_or_400(set)
     drafts_dir = get_data_dir() / "gt_drafts"
-    rows_path = drafts_dir / "bp_verify.rows.json"
+    rows_path = drafts_dir / f"{dataset}.rows.json"
     if not rows_path.is_file():
         raise HTTPException(
             status_code=404,
             detail=(
-                "bp_verify.rows.json not found. Run "
-                "`uv run python scripts/audio-analysis/research/bp_verify_prep.py` first."
+                f"{dataset}.rows.json not found. Run the matching prep script "
+                "(scripts/audio-analysis/research/bp_verify_prep.py or "
+                "pesto_verify_prep.py) first."
             ),
         )
     doc = json.loads(rows_path.read_text(encoding="utf-8"))
-    verdict_path = drafts_dir / "bp_verify.verdict.json"
+    verdict_path = drafts_dir / f"{dataset}.verdict.json"
     doc["verdict"] = (
         json.loads(verdict_path.read_text(encoding="utf-8")) if verdict_path.is_file() else None
     )
@@ -382,13 +396,14 @@ def get_dev_bp_verify() -> dict:
 
 
 @app.put("/api/dev/bp-verify/verdict")
-def put_dev_bp_verify_verdict(payload: BpVerifyVerdictPayload) -> dict:
+def put_dev_bp_verify_verdict(payload: BpVerifyVerdictPayload, set: str = "bp_verify") -> dict:
+    dataset = _verify_set_or_400(set)
     drafts_dir = get_data_dir() / "gt_drafts"
-    if not (drafts_dir / "bp_verify.rows.json").is_file():
-        raise HTTPException(status_code=404, detail="bp-only rows not found.")
+    if not (drafts_dir / f"{dataset}.rows.json").is_file():
+        raise HTTPException(status_code=404, detail="verify rows not found.")
     document = payload.model_dump()
     document["savedAt"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    (drafts_dir / "bp_verify.verdict.json").write_text(
+    (drafts_dir / f"{dataset}.verdict.json").write_text(
         json.dumps(document, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
     )
     return {"verdict": document}
