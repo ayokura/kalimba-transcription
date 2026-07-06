@@ -37,6 +37,7 @@ from .storage import (
     load_memo,
     load_request,
     load_review_status,
+    load_run_or_legacy_response,
     quarantine_corrections,
     save_corrections,
     save_memo,
@@ -517,6 +518,27 @@ def get_transcription_runs(transaction_id: str) -> dict:
     runs = list_runs(transaction_id)
     resolved = latest_run_id(transaction_id) or ("legacy" if runs else None)
     return {"runs": runs, "latestRunId": resolved}
+
+
+@app.get("/api/transcriptions/{transaction_id}/runs/{run_id}")
+def get_transcription_run(transaction_id: str, run_id: str) -> dict:
+    """A single historical run's full payload (#204 Phase 2).
+
+    ``GET .../runs`` only returns summaries (meta + eventCount) so the
+    run-switcher UI can list history cheaply; this endpoint serves the full
+    response for whichever run the user selects, including the synthetic
+    ``"legacy"`` id for the immutable upload-time response."""
+    _validate_transaction_id(transaction_id)
+    if not transaction_exists(transaction_id):
+        raise HTTPException(status_code=404, detail="Transaction not found.")
+    data = load_run_or_legacy_response(transaction_id, run_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Run not found.")
+    timestamps = get_transaction_timestamps(transaction_id)
+    if timestamps is not None:
+        data["transcribedAt"] = timestamps["transcribedAt"]
+        data["audioFirstSeenAt"] = timestamps["audioFirstSeenAt"]
+    return data
 
 
 @app.post("/api/transcriptions/{transaction_id}/runs")

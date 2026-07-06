@@ -7,6 +7,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .fingerprints import recognizer_fingerprint
+
 
 def get_data_dir() -> Path:
     return Path(os.environ.get("KALIMBA_DATA_DIR", "data"))
@@ -169,6 +171,28 @@ def list_review_queue(limit: int, status: str | None = None) -> list[dict]:
     return results
 
 
+def _resolved_recognizer_fingerprint(tx_dir: Path) -> str | None:
+    """recognizerFingerprint of whichever response a listing currently shows
+    for this transaction (latest run if one exists, else the legacy
+    request.json value). Compared against the running process's own
+    ``recognizer_fingerprint()`` to flag "saved != current recognizer" in
+    listings (#204 Phase 2)."""
+    transaction_id = tx_dir.name
+    run_id = latest_run_id(transaction_id)
+    if run_id is not None:
+        meta = load_run_meta(transaction_id, run_id)
+        if meta is not None:
+            return meta.get("recognizerFingerprint")
+    request_path = tx_dir / "request.json"
+    if not request_path.exists():
+        return None
+    try:
+        data = json.loads(request_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data.get("recognizerFingerprint")
+
+
 def _summarize_transaction(tx_dir: Path) -> dict | None:
     request_path = tx_dir / "request.json"
     response_path = tx_dir / "response.json"
@@ -198,6 +222,12 @@ def _summarize_transaction(tx_dir: Path) -> dict | None:
             memo_text = memo_path.read_text(encoding="utf-8")
         except OSError:
             memo_text = None
+    # #204 Phase 2: expose the fingerprint the shown response was produced with,
+    # plus whether it differs from the recognizer running right now, so the
+    # review queue can flag re-recognition candidates. None when the saved
+    # fingerprint is unknown (pre-#204 recordings) rather than guessing stale.
+    saved_fingerprint = _resolved_recognizer_fingerprint(tx_dir)
+    is_stale = None if saved_fingerprint is None else saved_fingerprint != recognizer_fingerprint()
     return {
         "transactionId": tx_dir.name,
         "createdAt": audio_path.stat().st_mtime,
@@ -215,6 +245,8 @@ def _summarize_transaction(tx_dir: Path) -> dict | None:
         # time.  None for payloads stored before qualityIndicators existed.
         "qualityDifficulty": (response_data.get("qualityIndicators") or {}).get("difficulty"),
         "qualityFlag": (response_data.get("qualityIndicators") or {}).get("flag"),
+        "recognizerFingerprint": saved_fingerprint,
+        "isStale": is_stale,
     }
 
 
@@ -395,6 +427,18 @@ def load_latest_response(transaction_id: str) -> dict | None:
     if latest is not None:
         return latest
     return load_response(transaction_id)
+
+
+def load_run_or_legacy_response(transaction_id: str, run_id: str) -> dict | None:
+    """Full response payload for a specific run id (#204 Phase 2).
+
+    ``run_id == "legacy"`` resolves to the immutable upload-time response, the
+    same synthetic id ``list_runs`` uses for it, so a run-switcher UI can treat
+    every entry from ``GET .../runs`` uniformly. Returns None when the run (or
+    the legacy response) does not exist."""
+    if run_id == "legacy":
+        return load_response(transaction_id)
+    return load_run_response(transaction_id, run_id)
 
 
 def list_runs(transaction_id: str) -> list[dict]:
