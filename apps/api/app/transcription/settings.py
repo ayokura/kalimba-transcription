@@ -84,6 +84,13 @@ class RecognizerSettings:
     # (dropped 5 -> 4+2 time-shifted, criterion was ->0). Kept as a measured
     # negative-result asset (docs/research/pertine-round3-ablation.json).
     use_pertine_residual_autopsy: bool = False
+    # #206 round 4 (kill-count round 3): in-stage fresh-attack oracle —
+    # replaces the mute-dip condition in the residual-decay rejection with
+    # per-tine phase-reset evidence (C2-consulted and approved 2026-07-06;
+    # full-dump gate passed at 2/18 clean false fires). Default ON on the
+    # research branch; dual-run toggles this and the rescue flag together
+    # on the base side.
+    use_pertine_residual_oracle: bool = True
 
     # Ablation switches (True = disable the feature)
     ablate_sparse_gap_tail: bool = False

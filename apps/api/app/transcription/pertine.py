@@ -541,6 +541,88 @@ def propose_rescues(
     return strong, weak
 
 
+def build_residual_oracle(
+    audio: np.ndarray,
+    sample_rate: int,
+    tuning: InstrumentTuning,
+):
+    """Fresh-attack oracle for the in-stage residual-decay decision
+    (#206 round-4 design, kill-count round 3).
+
+    Returns ``oracle(t0, t1, existing) -> bool`` — True iff some tine shows
+    a fresh attack strictly inside [t0, t1]: detection core (phase/jerk
+    bars, NMS) + re-injection (>= REINJECT_FRAC of the recent ring max) +
+    the bleed explaining-away battery. Same semantics as the round-4 full
+    dump (pertine_round4_oracle_dump.py; recovery 9/15 fnOverlap slots,
+    false fires 2/18 clean slots — gate <=3/18 passed 2026-07-06, C2
+    approved). No thresholds beyond pertine.py's existing calibrated
+    constants; ``existing`` supplies coincident-event context for
+    conditions (6)/(7) and is bound per segment by the pipeline.
+
+    Returns None when the audio is unusable (caller falls back to the
+    mute-dip condition).
+    """
+    built = _build_tracks(np.asarray(audio, dtype=np.float64), sample_rate,
+                          [(n.note_name, float(n.frequency)) for n in tuning.notes])
+    if built is None:
+        return None
+    tracks, hop_sec, abs_gate = built
+    cands = _core_candidates(tracks, hop_sec, abs_gate)
+    freqs = {n.note_name: float(n.frequency) for n in tuning.notes}
+    partial_table, coupling_table = load_tables(tuning.id)
+
+    def oracle(t0: float, t1: float,
+               existing: list[tuple[float, str]] = ()) -> str | None:
+        """Strongest-fresh-tine note name inside [t0, t1], or None.
+
+        Option-i wiring (C2 update 2026-07-06): the caller promotes the
+        returned tine via the existing forward-scan promotion plumbing —
+        keeping a saved segment as kept-residual measured as harmful in
+        rounds 3-4 (timing drift / structural disruption), so the fresh
+        note itself must take the segment over.
+        """
+        best_note, best_jerk, best_t = None, -1.0, 0.0
+        for t, name, _err, jerk, freq, e_self in cands:
+            if not (t0 <= t <= t1):
+                continue
+            attack_peak = _env_window_stat(tracks, hop_sec, name, t, t + 0.06, np.max)
+            recent_max = _env_window_stat(tracks, hop_sec, name,
+                                          t - REINJECT_LOOKBACK, t - 0.01, np.max)
+            if attack_peak < recent_max * REINJECT_FRAC:
+                continue
+            if _bleed_explained(t, name, freq, e_self, cands, existing, tracks,
+                                freqs, hop_sec, partial_table, coupling_table):
+                continue
+            if jerk > best_jerk:
+                best_note, best_jerk, best_t = name, jerk, t
+        if best_note is None:
+            return None
+        # Parent-alias redirect (#149-class collision, measured on ebecf0c6:
+        # an F5 strike pumps its quint partial at C6, C6 wins the jerk race
+        # while F5's own track misses the phase bars). If the winner sits on
+        # a measured partial of another tine whose envelope also re-injects
+        # at the same instant, the energy belongs to the parent's strike —
+        # redirect to the parent. Measured tables + existing constants only.
+        bf = freqs[best_note]
+        for parent, parts in (partial_table or {}).items():
+            if parent == best_note or parent not in tracks or parent not in freqs:
+                continue
+            pf = freqs[parent]
+            for ratio, _amp in parts:
+                if abs(1200 * np.log2(bf / (pf * ratio))) <= PARTIAL_CENTS:
+                    a_pk = _env_window_stat(tracks, hop_sec, parent,
+                                            best_t, best_t + 0.06, np.max)
+                    r_mx = _env_window_stat(tracks, hop_sec, parent,
+                                            best_t - REINJECT_LOOKBACK,
+                                            best_t - 0.01, np.max)
+                    if a_pk >= r_mx * REINJECT_FRAC:
+                        return parent
+                    break
+        return best_note
+
+    return oracle
+
+
 def propose_residual_autopsy(
     audio: np.ndarray,
     sample_rate: int,

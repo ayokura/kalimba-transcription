@@ -26,6 +26,7 @@ AND NOT tracker_fresh_attack(segment 窓内のいずれかの tine)   # 位相�
 ```
 
 - **mute-dip 判定の置換**: 位相リセット証拠は mute-dip の上位互換仮説 (probe B: mute-dip が救えなかった FN 21 中 16 に発火)。mute-dip は「指を触れてから弾く」再打鍵しか捕まえられないが、位相リセットは触れずに弾いた再打鍵も、**segment 内の別 tine の fresh attack** (第 3 巡 #206 の F5 型) も捕まえる
+- **(2026-07-06 改訂、ユーザー指摘)**: 初版の「oracle が mute-dip を置換」は誤り — 全数 dump が測ったのは**現在落ちている** 33 slot のみで、**mute-dip が現在救っている segment** (oracle 陰性なら純置換で新規回帰になる集団、repeat 系 fixture が大量に該当) は未測定だった。配線は **oracle OR mute-dip** (棄却には両陰性が必要 = 現行救済の上位集合) とし、mute-dip のみが救ったケースに provenance マーカー `residual-fresh-mute-dip-only` を付けて限界寄与を実測する。寄与 ≈ 0 が実測されたらそのデータを添えて mute-dip 項の退役 (純置換) を判断
 - **gate reason の削減**: `residual-decay-no-reattack` の mute-dip 依存判定が退役。fscan 相乗りが成立すれば recent-note 走査 + octave-up rescue も退役 (merge 条件 3 の実証は前者だけでも成立し得るが、判断はユーザー)
 
 ## 2. post-stage (第 3 巡) との構造差 — なぜ今回は時刻ずれ問題が出ないか
@@ -61,3 +62,13 @@ AND NOT tracker_fresh_attack(segment 窓内のいずれかの tine)   # 位相�
 - dual-run で K2-K4 のいずれか失敗 → 連続失敗 1/2 として記録し、第 4 カウント巡に進むかはユーザー相談
 
 C2 相談は 2026-07-06 に実施済み・承認 (条件: 撤退基準発火時は撤退実行前に再相談)。#203 記録。
+
+## 8. 実装巡の経過記録 (2026-07-06、実装セッションの実測ログ)
+
+素の条件差し替え (OR 配線) は full suite 8 fail (ebecf0c6 で TP 17→14 — 救った残響 segment が後段 merge/suppression と相互作用し正解を壊す)。**再相談 → ユーザー承認で option-i に転換**: oracle は fresh tine の note を返し、既存 forward-scan promotion 経路 (alternative_primary) で segment を乗っ取らせる。その後の較正 3 段 (いずれも既存定数・実測テーブルのみ):
+
+1. **親リダイレクト**: 勝者 tine が他 tine の実測 partial 上にあり親 envelope も同瞬間に re-inject → 親へ差し替え (#149 型衝突。ebecf0c6 F5→C6)
+2. **promotion 受理ゲート**: octave-up rescue と同じ score bar (primary_rejection_max_score) + per-note onset gain (RESIDUAL_DECAY_MIN_ONSET_GAIN) を oracle promotion にも適用 (segment 自身が支持しない音を位相だけで立てない)
+3. **fscan fallback 復活**: oracle が棄権/ゲート落ちした時は fscan が走る (直列)。**fscan 退役はまだ earned でない**実測 (c4-to-g4 の軟再打鍵 C5 は oracle 圏外 = round 3 §3 の mute-dip 領分の再確認)。両者の限界寄与は dual-run の arm で定量化する
+
+同 note 救済は「oracle が primary を fresh と判定 OR mute-dip」(マーカー `residual-fresh-mute-dip-only` で mute-dip 限界寄与を実測 — GT 15 録音の途中経過では 0 が続く)。branching 第 2 サイトは同 note + mute-dip のみの保守配線。

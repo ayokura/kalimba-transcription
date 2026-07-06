@@ -67,6 +67,7 @@ from .peaks import (
     segment_peaks,
 )
 from .per_note import rescue_gap_mute_dips
+from .pertine import build_residual_oracle as build_pertine_residual_oracle
 from .pertine import propose_rescues as propose_pertine_rescues
 from .pertine import propose_residual_autopsy as propose_pertine_residual_autopsy
 from .pertine import veto_tier as pertine_veto_tier
@@ -112,6 +113,8 @@ _DROP_REASON_BASE_CONFIDENCE: dict[str, float] = {
     # calibration as pertine-weak-rescue; no separate data yet.
     "pertine-autopsy-candidate": 0.15,
     "residual-decay-no-reattack": 0.15,
+    # round-4 oracle-active variant of the same rejection (same calibration)
+    "residual-decay-no-fresh-attack": 0.15,
     "low_register_sparse_gap_tail": 0.10,
     "primary-score-too-low": 0.05,
     # "onset-gate-no-evidence" no longer reaches here: S5 agenda 2 turned the
@@ -242,6 +245,17 @@ async def transcribe_audio(
     # #178 S3: 全 segment の sub-onset を収集し、後段 (merge 後) で
     # 「最終 event にも slot にも現れない sub-onset」の候補化に使う
     collected_sub_onsets: list[float] = []
+    # #206 round 4 (kill-count round 3): build the per-tine fresh-attack
+    # oracle once per request. Inside the segment loop it replaces the
+    # mute-dip condition of the residual-decay rejection (peaks.py; C2
+    # consulted+approved 2026-07-06). `existing` (coincident-event context
+    # for the bleed battery) is bound per segment from raw_events so far —
+    # segments are processed in time order, so past events approximate the
+    # final coincident context at each decision point.
+    residual_oracle = None
+    if recognizer_settings.get().use_pertine_residual_oracle:
+        residual_oracle = build_pertine_residual_oracle(audio, sample_rate, tuning)
+
     for segment in segments:
         start_time, end_time = segment
         duration = max(end_time - start_time, 0.08)
@@ -282,6 +296,15 @@ async def transcribe_audio(
             confirmed_primary=segment.confirmed_primary,
             sub_onsets=sub_onsets,
             segment_sources=segment.sources,
+            fresh_attack_oracle=(
+                None if residual_oracle is None else (
+                    lambda t0, t1, _ex=[
+                        (event.start_time, candidate.note_name)
+                        for event in raw_events
+                        for candidate in event.notes
+                    ]: residual_oracle(t0, t1, _ex)
+                )
+            ),
         )
         candidates = seg_result.candidates
         candidate_debug = seg_result.debug
@@ -661,7 +684,8 @@ async def transcribe_audio(
             _residual_windows = [
                 (slot.start_time, slot.end_time)
                 for slot in dropped_slots
-                if slot.drop_reason == "residual-decay-no-reattack"
+                if slot.drop_reason in ("residual-decay-no-reattack",
+                                        "residual-decay-no-fresh-attack")
             ]
             if _residual_windows:
                 _autopsy_all = propose_pertine_residual_autopsy(

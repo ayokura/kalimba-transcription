@@ -1316,6 +1316,10 @@ class _SegmentContext:
     previous_primary_was_singleton: bool
     sub_onsets: tuple[float, ...] = ()
     segment_sources: frozenset[str] = frozenset()
+    # #206 round 4 (kill-count round 3): per-tine fresh-attack oracle.
+    # When provided, replaces the mute-dip condition in the residual-decay
+    # rejection (C2-consulted 2026-07-06). None -> mute-dip fallback.
+    fresh_attack_oracle: object | None = None
 
     @property
     def duration(self) -> float:
@@ -2027,18 +2031,56 @@ def _resolve_primary(
         _rejection_reason = "primary-score-too-low"
     elif (
         # Suppress residual-decay segments: if the primary is a recent note
-        # and shows no mute-dip (smooth decay rather than finger-touch-then-
-        # repluck), the segment is likely resonance from a previous event.
+        # and shows no fresh-attack evidence, the segment is likely resonance
+        # from a previous event. Evidence source (#206 round 4): the per-tine
+        # oracle (phase reset + re-injection, any tine in the segment window)
+        # when available; mute-dip (finger-touch-then-repluck) as fallback —
+        # phase reset subsumes mute-dip and also sees no-touch re-strikes and
+        # other tines' fresh attacks the bulk rejection used to chain-drop.
         ctx.recent_note_names
         and primary.candidate.note_name in ctx.recent_note_names
         and evidence.is_residual_decay(primary.candidate.frequency)
-        and not evidence.has_mute_dip_reattack(primary.candidate.frequency)
+        and not _residual_fresh_attack(ctx, evidence,
+                                       primary.candidate.note_name,
+                                       primary.candidate.frequency, promotions)
     ):
         alternative_primary = None
-        # #206 round 3: the forward-scan is the recent-note-memory rescue the
-        # per-tine residual autopsy is designed to replace; the ablation
-        # switch exists for the 2x2 replacement measurement (settings.py).
-        if not settings.get().ablate_residual_forward_scan:
+        _oracle_promoted = False
+        if ctx.fresh_attack_oracle is not None:
+            # Option-i (#206 round 4, C2 update 2026-07-06): the oracle
+            # replaces the forward-scan as the promotion source. The fresh
+            # tine it identifies takes the segment over via the existing
+            # promotion plumbing — the segment survives as that note's
+            # segment, not as kept residual (kept-residual forms measured
+            # harmful in rounds 3-4: timing drift / structural disruption).
+            _fresh_note = ctx.fresh_attack_oracle(ctx.start_time, ctx.end_time)
+            if _fresh_note is not None:
+                for h in ranked:
+                    if h.candidate.note_name != _fresh_note:
+                        continue
+                    # Same acceptance gates the existing promotion path
+                    # (octave-up rescue) applies: the promoted hypothesis
+                    # must clear the normal primary score bar and show
+                    # per-note onset energy — otherwise the phase evidence
+                    # is promoting a note the segment itself cannot support
+                    # (ebecf0c6 C6@9.29: alias-band winner with no
+                    # segment-level backing).
+                    if h.score < settings.get().primary_rejection_max_score:
+                        break
+                    _og = _note_onset_energy_gain(
+                        ctx.audio, ctx.sample_rate, ctx.start_time,
+                        h.candidate.frequency)
+                    if _og is None or _og < RESIDUAL_DECAY_MIN_ONSET_GAIN:
+                        break
+                    alternative_primary = h
+                    _oracle_promoted = True
+                    break
+        # Forward-scan fallback: runs when the oracle abstained or its
+        # promotion was gated out (measured need: soft same-note re-strikes
+        # with no phase evidence — c4-to-g4 C5 — the mute-dip class round 3
+        # flagged as outside the oracle's reach). fscan retirement is
+        # therefore NOT yet earned; the dual-run quantifies both margins.
+        if alternative_primary is None and not settings.get().ablate_residual_forward_scan:
             # Forward-scan: check all recent notes for genuine re-attack (mute-dip).
             _ranked_by_name: dict[str, NoteHypothesis] = {}
             for h in ranked:
@@ -2069,16 +2111,22 @@ def _resolve_primary(
                         break
         if alternative_primary is None:
             _rejected = True
-            _rejection_reason = "residual-decay-no-reattack"
+            _rejection_reason = (
+                "residual-decay-no-fresh-attack"
+                if ctx.fresh_attack_oracle is not None
+                else "residual-decay-no-reattack"
+            )
         else:
             primary = alternative_primary
             primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
+            _promo_reason = ("residual-oracle-promotion" if _oracle_promoted
+                             else "residual-forward-scan")
             primary_promotion_debug = {
-                "reason": "residual-forward-scan",
+                "reason": _promo_reason,
                 "replacedPrimaryNote": ranked[0].candidate.note_name,
                 "replacementNote": primary.candidate.note_name,
             }
-            promotions.append("residual-forward-scan")
+            promotions.append(_promo_reason)
     # Ensure primary_onset_gain is computed (some promotion paths leave it None).
     if primary_onset_gain is None:
         primary_onset_gain = evidence.onset_gain(primary.candidate.frequency)
@@ -2108,6 +2156,33 @@ def _resolve_primary(
         demoted_reason=_demoted_reason,
     )
     return _PrimaryResult(primary, primary_onset_gain, primary_promotion_debug, decision)
+
+
+def _residual_fresh_attack(ctx, evidence, note_name: str, frequency: float,
+                           promotions: list | None) -> bool:
+    """Fresh-attack evidence for the residual-decay rejection (#206 round 4).
+
+    Oracle OR mute-dip: rejection requires both to be negative, so every
+    segment the mute-dip condition saves today stays saved (the round-4
+    dump measured only currently-dropped slots; segments currently SAVED by
+    mute-dip are an unmeasured population — user-flagged 2026-07-06). When
+    only mute-dip fires, a provenance marker is appended to `promotions`
+    so the mute-dip marginal contribution over the oracle is measurable;
+    if it proves ~zero, the mute-dip term retires on that evidence
+    (merge condition 3 route).
+    """
+    if ctx.fresh_attack_oracle is not None:
+        # Same-note re-strike only: a fresh attack on a DIFFERENT tine does
+        # not save the segment as-is (kept-residual is harmful, rounds 3-4);
+        # it is handled by the oracle promotion path in _resolve_primary.
+        if ctx.fresh_attack_oracle(ctx.start_time, ctx.end_time) == note_name:
+            return True
+        if evidence.has_mute_dip_reattack(frequency):
+            if promotions is not None:
+                promotions.append("residual-fresh-mute-dip-only")
+            return True
+        return False
+    return evidence.has_mute_dip_reattack(frequency)
 
 
 def _extend_gliss_tertiary(
@@ -3351,10 +3426,16 @@ def _evaluate_branch(
         ctx.recent_note_names
         and primary_hyp.candidate.note_name in ctx.recent_note_names
         and evidence.is_residual_decay(primary_hyp.candidate.frequency)
-        and not evidence.has_mute_dip_reattack(primary_hyp.candidate.frequency)
+        and not _residual_fresh_attack(ctx, evidence,
+                                       primary_hyp.candidate.note_name,
+                                       primary_hyp.candidate.frequency, None)
     ):
         _rejected = True
-        _rejection_reason = "residual-decay-no-reattack"
+        _rejection_reason = (
+            "residual-decay-no-fresh-attack"
+            if ctx.fresh_attack_oracle is not None
+            else "residual-decay-no-reattack"
+        )
 
     decision = _PrimaryDecision(
         initial_primary=primary_hyp.candidate.note_name,
@@ -3439,6 +3520,7 @@ def segment_peaks(
     confirmed_primary: Note | None = None,
     sub_onsets: tuple[float, ...] = (),
     segment_sources: frozenset[str] = frozenset(),
+    fresh_attack_oracle=None,
 ) -> SegmentPeaksResult:
     ctx = _SegmentContext(
         audio=audio, sample_rate=sample_rate,
@@ -3456,6 +3538,7 @@ def segment_peaks(
         previous_primary_was_singleton=previous_primary_was_singleton,
         sub_onsets=sub_onsets,
         segment_sources=segment_sources,
+        fresh_attack_oracle=fresh_attack_oracle,
     )
 
     # Layer 1: Signal acquisition
@@ -3529,7 +3612,8 @@ def segment_peaks(
         _apply_final_decisions(ctx, spectral, selection, primary_result, evidence)
         trace = SegmentDecisionTrace(primary=primary_result.decision, candidates=selection.candidate_decisions)
         rejection_debug = None
-        if ctx.debug and primary_result.decision.rejection_reason == "residual-decay-no-reattack":
+        if ctx.debug and primary_result.decision.rejection_reason in (
+                "residual-decay-no-reattack", "residual-decay-no-fresh-attack"):
             rejection_debug = {
                 "startTime": round(ctx.start_time, 6),
                 "endTime": round(ctx.end_time, 6),
