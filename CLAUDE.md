@@ -9,7 +9,7 @@
 
 prod の API/Web/tunnel は systemd user service として常駐し、**127.0.0.1:8000 (api) と 127.0.0.1:3000 (web) を占有している**。dev で素の uvicorn を 8000 に立てると prod とポート競合で落ちるため、用途で使い分ける:
 
-- **prod へコード反映**: prod は `~/kalimba-prod` worktree (detached HEAD) から serve されているため、**`systemctl --user restart` 単独では新コードは反映されない**。`cd ~/kalimba-prod && git fetch origin && git checkout --detach origin/main` → (web 変更時は build) → restart の順。実値・詳細手順は `.runtime-local/deploy.md` (host-local の single source) を読むこと。
+- **prod へコード反映**: prod は `~/kalimba-prod` worktree (detached HEAD) から serve される。**web は zero-downtime デプロイ**: `~/bin/deploy-web.sh` (systemd-socket-proxyd + blue-green standalone backend。`systemctl --user restart` 単独では反映されない)。**API は** `cd ~/kalimba-prod && git fetch origin && git checkout -f --detach origin/main` → `systemctl --user restart kalimba-api`。実値・詳細手順・ロールバック (L1-L3) は `.runtime-local/deploy.md` (host-local の single source) を読むこと。
 - **dev / ブランチ検証で別インスタンスを立てる**: prod (8000/3000) と衝突しない **port 8001** で起動する。`--reload` 付きにすればファイル変更時に自動リロードされ、コード反映のたびにサーバーを kill/restart する必要がない:
 
 ```
