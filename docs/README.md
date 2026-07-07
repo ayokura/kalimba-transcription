@@ -24,6 +24,7 @@
 | [`research/2026-07-pertine-round4-instage-replacement.md`](research/2026-07-pertine-round4-instage-replacement.md) | 第 3 カウント巡設計: 棄却判定の in-stage 置換 (mute-dip → 位相リセット証拠。撤退基準・検証プロトコル事前固定) |
 | [`testing.md`](testing.md) | テスト 4 層モデルの詳細・手動テスト手順 |
 | [`task-management.md`](task-management.md) | issue ラベル体系・spike タグ書式 |
+| [`analysis-request-template.md`](analysis-request-template.md) | 別セッション (Fable/Codex 等) への分析依頼テンプレ — 生データ・再現 pin・罠チェック |
 | [`corpus-management.md`](corpus-management.md) | free-performance corpus の管理・権利レビュー |
 | [`fixture-alignment.md`](fixture-alignment.md) | score_structure / alignment_overrides の schema と規則 |
 | [`recognition-roadmap.md`](recognition-roadmap.md) | fixture 状態の現況 |
