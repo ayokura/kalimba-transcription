@@ -20,6 +20,15 @@ prod と共有の `data/` を汚したくない実験では `KALIMBA_DATA_DIR` �
 
 バックグラウンドで起動した server の停止は、`kill` ではなく **`TaskStop` tool** を使うこと (run_in_background で起動したタスクの task_id を渡す)。`kill` は Claude Code がフリーズする原因になる場合がある。
 
+## Tool 呼び出しの言語安全策 (Opus 4.8 の既知バグ対応、全モデルで無害)
+
+Opus 4.8 には「**複数行の日本語 + コードを含む tool 引数**」で tool 呼び出しの直列化が壊れる既知バグがある (malformed tool_use / 沈黙 turn。GitHub issues #63604/#64658/#68510 等。4.7/Sonnet では非再現)。モデルを問わず次を守ること:
+
+- **日本語の長文 (issue/PR 本文、コメント、レポート) を Bash 引数の heredoc に直接埋めない。** Write でファイルに書き、`gh issue comment --body-file <path>` / `--body-file` 系で渡す
+- 日本語ドキュメントの大きな書き換えは、長い日本語 old_string/new_string の Edit 連打より、Write (全置換) か Python パッチスクリプト経由を優先する
+- commit メッセージは従来どおり英語 (グローバル規約) — 変更不要
+- 症状 (tool call parse 失敗・応答が捨てられ沈黙) が出たら: ユーザーが rewind → 正しい tool 形式で再試行を指示。**発生した事例は model-roles memory の実地観察に記録する** (頻発時は当該セッションのみ 4.7 へ一時切替が既知の回避策 — 恒久採用の変更ではない)
+
 ## Audio Analysis Skills
 
 音声分析用のスキルが `.claude/skills/` に定義されている:
