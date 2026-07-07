@@ -30,7 +30,7 @@ export default function DebugDay2Page() {
   const [result, setResult] = useState<TranscriptionResult | null>(null);
   const [sourceMemo, setSourceMemo] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [mode, setMode] = useState<NotationMode>("vertical");
+  const [mode, setMode] = useState<NotationMode>("score");
 
   const [blob, setBlob] = useState<Blob | null>(null);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
