@@ -16,6 +16,7 @@ import {
   fetchCorrections,
   fetchTranscription,
   fetchTranscriptionAudioBlob,
+  fetchTranscriptionRun,
   fetchTranscriptionRuns,
   fetchReviewStatus,
   saveCorrections,
@@ -107,13 +108,36 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
         // 失敗時はページ全体をエラー表示にする (404 は api.ts 側で null になる)。
         // runs 取得の失敗は致命的ではない (#204 Phase 3 の baseRunId 記録が
         // 欠けるだけ) なので null にフォールバックする。
-        const [result, audioBlob, corrections, reviewStatus, runs] = await Promise.all([
-          fetchTranscription(transactionId),
+        const [audioBlob, corrections, reviewStatus, runs] = await Promise.all([
           fetchTranscriptionAudioBlob(transactionId),
           fetchCorrections(transactionId),
           fetchReviewStatus(transactionId).catch(() => null),
           fetchTranscriptionRuns(transactionId).catch(() => null),
         ]);
+        if (cancelled) return;
+        const latestRunId = runs?.latestRunId ?? null;
+        // #209 review (P1): 既存 corrections はその baseRunId の run に対する diff。
+        // これを latest に rematch して baseRunId=latest で保存し直すと、再認識後は
+        // 人手修正の provenance/内容が silently 別 run へ rebase されてしまう。
+        // → 既存 corrections があるときはその base run (baseRunId、無ければ元 response
+        // = "legacy") の payload を編集ベースにし、保存 baseRunId もそれを維持する。
+        // 新規修正 (corrections 無し) は従来どおり latest run を対象にする。
+        let result: TranscriptionResult;
+        let baseRunId: string | null;
+        if (corrections) {
+          const base = corrections.baseRunId ?? "legacy";
+          try {
+            result = await fetchTranscriptionRun(transactionId, base);
+            baseRunId = base;
+          } catch {
+            // base run が取得できない稀なケースは latest に fallback (latest 扱い)。
+            result = await fetchTranscription(transactionId);
+            baseRunId = latestRunId;
+          }
+        } else {
+          result = await fetchTranscription(transactionId);
+          baseRunId = latestRunId;
+        }
         if (cancelled) return;
         objectUrl = URL.createObjectURL(audioBlob);
         // 静音録音の試聴ブースト量算出用 (失敗しても主導線は妨げない)
@@ -126,9 +150,7 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
           corrections,
           reviewStatus,
           peakDb: levels?.peakDb ?? null,
-          // fetchTranscription は常に最新 run (無ければ legacy) を返すので、
-          // ここで編集しているのはこの run に対する内容 (#204 Phase 3)。
-          baseRunId: runs?.latestRunId ?? null,
+          baseRunId,
         });
       } catch (err) {
         if (cancelled) return;

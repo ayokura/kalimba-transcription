@@ -222,7 +222,7 @@ def test_review_queue_fingerprint_resolves_from_readable_run():
     look fresh)."""
     tid = _create_transaction()
     # Older, readable run recorded with a stale recognizer fingerprint.
-    storage.create_run(
+    older = storage.create_run(
         tid, {"events": []}, None,
         commit_sha=None, recognizer_fingerprint="0ldfp0000stale00", dsp_fingerprint=None,
     )
@@ -239,6 +239,11 @@ def test_review_queue_fingerprint_resolves_from_readable_run():
     entry = _queue_entry(tid)
     assert entry["recognizerFingerprint"] == "0ldfp0000stale00"
     assert entry["isStale"] is True
+
+    # /runs latestRunId must follow the displayed (readable) run, not the corrupt
+    # newest one, so a client selector stays aligned with what is shown (#209).
+    runs_body = client.get(f"/api/transcriptions/{tid}/runs").json()
+    assert runs_body["latestRunId"] == older["runId"]
 
 
 def test_review_queue_isstale_none_when_fingerprint_unknown():

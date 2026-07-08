@@ -204,6 +204,19 @@ def resolved_recognizer_fingerprint(transaction_id: str) -> str | None:
     return resolved_output_fingerprints(transaction_id)[0]
 
 
+def latest_displayed_run_id(transaction_id: str) -> str | None:
+    """Run id whose response ``load_latest_response`` actually returns — the
+    newest *readable* run, else None (caller falls back to the legacy response).
+
+    Callers that must stay aligned with the shown payload (e.g. the /runs
+    ``latestRunId`` the score viewer initializes its selector from, #209 review)
+    should use this rather than ``latest_run_id``: when the newest run directory
+    has an unreadable response.json, display resolution skips it, and a selector
+    keyed off ``latest_run_id`` would otherwise point at a run that is not shown
+    (and whose GET .../runs/{id} 404s)."""
+    return _latest_readable_run_id_for_dir(get_transaction_dir(transaction_id))
+
+
 def is_response_stale(transaction_id: str) -> bool | None:
     """Whether the displayed response was produced by a different recognizer
     *output* than the one running now — the single source of truth for both the

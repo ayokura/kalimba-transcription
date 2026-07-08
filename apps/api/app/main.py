@@ -26,7 +26,7 @@ from .storage import (
     get_data_dir,
     get_transaction_audio_sha256,
     get_transaction_timestamps,
-    latest_run_id,
+    latest_displayed_run_id,
     list_recent_transactions,
     list_review_queue,
     list_runs,
@@ -510,13 +510,15 @@ def get_transcription_runs(transaction_id: str) -> dict:
 
     Newest-first list of runs plus a synthetic ``legacy`` entry for the
     immutable upload-time response. ``latestRunId`` is the run the read
-    endpoints currently resolve to (``"legacy"`` when no re-recognition run
-    exists yet)."""
+    endpoints actually resolve to — the newest *readable* run (``"legacy"`` when
+    no re-recognition run exists yet, or when the newest run's response is
+    unreadable and display falls back), so a client keying its selector off
+    ``latestRunId`` stays aligned with the shown payload (#209 review)."""
     _validate_transaction_id(transaction_id)
     if not transaction_exists(transaction_id):
         raise HTTPException(status_code=404, detail="Transaction not found.")
     runs = list_runs(transaction_id)
-    resolved = latest_run_id(transaction_id) or ("legacy" if runs else None)
+    resolved = latest_displayed_run_id(transaction_id) or ("legacy" if runs else None)
     return {"runs": runs, "latestRunId": resolved}
 
 

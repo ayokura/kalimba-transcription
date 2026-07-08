@@ -95,16 +95,31 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
         // 静音録音の試聴ブースト用 (lib/audioBoost)。失敗しても再生には影響しない
         const levels = await computeAudioLevels(audioBlob).catch(() => null);
         if (cancelled) return;
-        // #202: corrections が保存済みなら編集後イベント列を導出して既定表示に
-        // する (表記トグル / export は表示中の列に対して機能する)。
+        // #202 / #209 review: corrections が保存済みなら編集後イベント列を導出する。
+        // corrections はその baseRunId の run に対する diff なので、latest ではなく
+        // その base run の payload に restore する (latest に rematch すると再認識後に
+        // 誤整列した corrected を表示してしまう)。baseRunId 無しの旧 corrections は
+        // 元 response = "legacy" に対するものとみなす。
         let correctedEvents: ScoreEvent[] | null = null;
+        let correctionsBaseRunId: string | null = null;
         if (corrections && corrections.events.length > 0) {
+          correctionsBaseRunId = corrections.baseRunId ?? "legacy";
+          let baseResult = result; // base===latest の一般ケースは latest を再利用
+          if (correctionsBaseRunId !== runs.latestRunId) {
+            try {
+              baseResult = await fetchTranscriptionRun(transactionId, correctionsBaseRunId);
+            } catch {
+              baseResult = result; // base run が取れないときは latest に best-effort
+            }
+            if (cancelled) return;
+          }
           try {
             correctedEvents = toDisplayScoreEvents(
-              restoreStateFromCorrections(result, corrections),
+              restoreStateFromCorrections(baseResult, corrections),
             );
           } catch {
             correctedEvents = null;
+            correctionsBaseRunId = null;
           }
         }
         setState({
@@ -113,9 +128,9 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
           audioUrl: objectUrl,
           initialMemo: memo,
           correctedEvents,
-          // #209 review: どの run に対して保存された corrections かを保持し、
-          // corrected トグルを「その run を見ているときだけ」に厳密化する材料にする。
-          correctionsBaseRunId: corrections?.baseRunId ?? null,
+          // #209 review: corrections がどの run に対するものかを保持し、その run を
+          // 閲覧しているときだけ corrected を出す (別 run 閲覧時は note で誘導)。
+          correctionsBaseRunId,
           peakDb: levels?.peakDb ?? null,
           runs,
         });
@@ -197,7 +212,11 @@ function ScoreViewerReady({
   // (または runs が空) のときは load() が返した最新解決結果をそのまま使う。
   // それ以外を選ぶと GET .../runs/{runId} で該当 run の全文を取得して表示する。
   const [runsState, setRunsState] = useState<RecognitionRunsResponse>(initialRuns);
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(initialRuns.latestRunId);
+  // #209 review: corrections があれば既定でその base run を選択して corrected を
+  // 既定表示する (#202「修正済みを既定表示」を run-correct に踏襲)。無ければ latest。
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(
+    correctionsBaseRunId ?? initialRuns.latestRunId,
+  );
   // "最新" の内容そのもの。load() が返した latestResult prop で初期化するが、
   // 再認識 (handleRerun) が起きるとその新しい run が「最新」になるので更新する。
   // これを latestResult prop 自体で代用すると (#204 Phase 2 の実装バグとして
@@ -304,19 +323,20 @@ function ScoreViewerReady({
   // 再認識で「最新」が別の run に変わった後もそのままでは整列が保証できない
   // (再認識後は isViewingLatestRun は true に戻るが、それは新しい run に
   // 対して) — なので「読み込み時と同じ run を見ているか」で厳密にゲートする。
-  const isViewingOriginalRun = selectedRunId === initialRuns.latestRunId;
-  // #209 review (P1): corrections が「ロード時に表示している run」以外に対して
-  // 保存されている (baseRunId が食い違う = 保存後に再認識された) 場合、それを今の
-  // run へ ±50ms で rematch した corrected 列は整列を保証できない。安全側に倒して
-  // corrected トグル自体を出さず、誤整列した corrected の表示/export を防ぐ。
-  // baseRunId が無い旧 corrections はロード時 run に対するものとみなす (従来挙動)。
-  const correctionsMatchLoadedRun =
-    correctionsBaseRunId === null || correctionsBaseRunId === initialRuns.latestRunId;
+  // #209 review: corrections はその base run に束ねる。いま選んでいる run が
+  // corrections の base run のときだけ corrected を出す (selectedRunId===null は
+  // 「最新」= runsState.latestRunId を指す)。別 run を閲覧中は無言で消さず note で
+  // base run へ誘導する。これで再認識後に誤整列した corrected を表示しない。
+  const normalizedSelectedRunId = selectedRunId ?? runsState.latestRunId;
+  const isViewingCorrectionsBase =
+    correctionsBaseRunId !== null && normalizedSelectedRunId === correctionsBaseRunId;
   const [viewSource, setViewSource] = useState<"corrected" | "recognized">(
-    correctedEvents && correctionsMatchLoadedRun ? "corrected" : "recognized",
+    correctedEvents ? "corrected" : "recognized",
   );
-  const showCorrectedToggle =
-    isViewingOriginalRun && correctionsMatchLoadedRun && Boolean(correctedEvents);
+  const showCorrectedToggle = isViewingCorrectionsBase && Boolean(correctedEvents);
+  // corrections はあるが別 run (再認識後の新 run 等) を閲覧中: 保存済み修正を
+  // 無言で消さず、base run を選べば見られる旨の note を出す (P3)。
+  const showCorrectionsElsewhereNote = Boolean(correctedEvents) && !isViewingCorrectionsBase;
   const events =
     showCorrectedToggle && viewSource === "corrected" && correctedEvents
       ? correctedEvents
@@ -458,9 +478,9 @@ function ScoreViewerReady({
               {viewSource === "corrected" ? "認識結果を表示" : "修正済み版を表示"}
             </button>
           </div>
-        ) : !isViewingOriginalRun && correctedEvents ? (
+        ) : showCorrectionsElsewhereNote ? (
           <p className="muted score-viewer-run-note">
-            この認識結果は修正済み版の算出元とは異なります (修正済み版との切替は元の認識結果でのみ利用できます)。
+            この録音には別の認識結果に対して保存された修正版があります。上の履歴からその認識結果を選ぶと修正版を表示・切替できます。
           </p>
         ) : null}
         <div className="score-viewer-mode-toggle" role="group" aria-label="ドレミ表記">
