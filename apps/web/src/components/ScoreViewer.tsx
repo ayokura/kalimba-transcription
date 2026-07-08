@@ -64,6 +64,7 @@ type LoadState =
       audioUrl: string;
       initialMemo: string;
       correctedEvents: ScoreEvent[] | null;
+      correctionsBaseRunId: string | null;
       peakDb: number | null;
       runs: RecognitionRunsResponse;
     }
@@ -112,6 +113,9 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
           audioUrl: objectUrl,
           initialMemo: memo,
           correctedEvents,
+          // #209 review: どの run に対して保存された corrections かを保持し、
+          // corrected トグルを「その run を見ているときだけ」に厳密化する材料にする。
+          correctionsBaseRunId: corrections?.baseRunId ?? null,
           peakDb: levels?.peakDb ?? null,
           runs,
         });
@@ -148,12 +152,17 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
   }
 
   return (
+    // key で transactionId ごとに remount させ、run 切替用の useState が前の
+    // 録音の値を持ち越さないようにする (#209 review: 同一インスタンスに別
+    // transactionId が来ても useState 初期化子は再実行されないため)。
     <ScoreViewerReady
+      key={transactionId}
       transactionId={transactionId}
       result={state.result}
       audioUrl={state.audioUrl}
       initialMemo={state.initialMemo}
       correctedEvents={state.correctedEvents}
+      correctionsBaseRunId={state.correctionsBaseRunId}
       peakDb={state.peakDb}
       initialRuns={state.runs}
     />
@@ -166,6 +175,7 @@ type ReadyProps = {
   audioUrl: string;
   initialMemo: string;
   correctedEvents: ScoreEvent[] | null;
+  correctionsBaseRunId: string | null;
   peakDb: number | null;
   initialRuns: RecognitionRunsResponse;
 };
@@ -176,6 +186,7 @@ function ScoreViewerReady({
   audioUrl,
   initialMemo,
   correctedEvents,
+  correctionsBaseRunId,
   peakDb,
   initialRuns,
 }: ReadyProps) {
@@ -207,6 +218,10 @@ function ScoreViewerReady({
     if (isViewingLatestRun) {
       setDisplayResult(latestKnownResult);
       setRunSwitchError(null);
+      // #209 review: 履歴 run の fetch 進行中に「最新」へ戻ると、前 effect の
+      // cleanup が cancelled=true にして in-flight の finally が busy 解除を
+      // skip する。この分岐でも解除しないと selector が disabled のまま固まる。
+      setRunSwitchBusy(false);
       return;
     }
     let cancelled = false;
@@ -237,11 +252,23 @@ function ScoreViewerReady({
     setRerunError(null);
     try {
       const created = await createTranscriptionRun(transactionId);
-      const refreshed = await fetchTranscriptionRuns(transactionId);
-      setRunsState(refreshed);
+      // #209 review: created は既にサーバへ append 済み。まず結果を表示に反映
+      // してから履歴一覧を更新する。こうしないと後続の fetchTranscriptionRuns が
+      // 失敗したとき「再認識は成功したのに失敗表示 → ユーザー再試行で重複 run」
+      // に陥る (runs は append-only)。
       setLatestKnownResult(created.result);
-      setSelectedRunId(created.runId);
       setDisplayResult(created.result);
+      try {
+        const refreshed = await fetchTranscriptionRuns(transactionId);
+        setRunsState(refreshed);
+        setSelectedRunId(created.runId);
+      } catch {
+        // 履歴一覧の更新だけ失敗: created は表示済み。selectedRunId=null で
+        // 「最新」扱いにして created.result を表示し続ける (dropdown は次回
+        // ロードで整合)。重複 run を生む再試行を促さない。
+        setSelectedRunId(null);
+        setRunSwitchError("再認識は成功しましたが履歴一覧の更新に失敗しました。リロードで反映されます。");
+      }
     } catch (err) {
       setRerunError(err instanceof Error ? err.message : "再認識に失敗しました。");
     } finally {
@@ -278,10 +305,18 @@ function ScoreViewerReady({
   // (再認識後は isViewingLatestRun は true に戻るが、それは新しい run に
   // 対して) — なので「読み込み時と同じ run を見ているか」で厳密にゲートする。
   const isViewingOriginalRun = selectedRunId === initialRuns.latestRunId;
+  // #209 review (P1): corrections が「ロード時に表示している run」以外に対して
+  // 保存されている (baseRunId が食い違う = 保存後に再認識された) 場合、それを今の
+  // run へ ±50ms で rematch した corrected 列は整列を保証できない。安全側に倒して
+  // corrected トグル自体を出さず、誤整列した corrected の表示/export を防ぐ。
+  // baseRunId が無い旧 corrections はロード時 run に対するものとみなす (従来挙動)。
+  const correctionsMatchLoadedRun =
+    correctionsBaseRunId === null || correctionsBaseRunId === initialRuns.latestRunId;
   const [viewSource, setViewSource] = useState<"corrected" | "recognized">(
-    correctedEvents ? "corrected" : "recognized",
+    correctedEvents && correctionsMatchLoadedRun ? "corrected" : "recognized",
   );
-  const showCorrectedToggle = isViewingOriginalRun && Boolean(correctedEvents);
+  const showCorrectedToggle =
+    isViewingOriginalRun && correctionsMatchLoadedRun && Boolean(correctedEvents);
   const events =
     showCorrectedToggle && viewSource === "corrected" && correctedEvents
       ? correctedEvents

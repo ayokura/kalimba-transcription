@@ -38,10 +38,12 @@ Data dir: like the API server itself, this reads ``KALIMBA_DATA_DIR`` (via
 ``app.storage``'s own env lookup, re-evaluated on every call) or defaults to
 `./data`. Pass ``--data-dir`` to point at a scratch/synthetic directory
 instead of touching real local data — this is REQUIRED for any test/demo run
-of this script per AGENTS.md ("一括再認識の実行テストは必ず一時ディレクトリ
-の合成データで行う"); never point it at the shared repo `data/` directory or
-at `apps/api/tests/fixtures/free-performance-corpus/` from an automated
-run.
+of this script: never point it at the shared repo `data/` directory or at
+`apps/api/tests/fixtures/free-performance-corpus/` from an automated run.
+This follows AGENTS.md's Fixture Policy / Corpus Management sections (committed
+corpus and shared transaction data are not to be mutated by tooling), even
+though the specific wording here is this script's own, not a quote from
+AGENTS.md.
 
 REPORT + PERSIST (not report-only): unlike metamorphic_alarm.py, this tool
 actually appends recognition runs (unless --dry-run is passed). It has no
@@ -211,11 +213,13 @@ def main() -> int:
     targets: list[str] = []
     skipped_fresh: list[str] = []
     for tx_id in candidates:
-        saved_fp = storage.resolved_recognizer_fingerprint(tx_id)
-        # Unknown fingerprint counts as a target (see module docstring): unlike
-        # the review-queue badge, this tool does not need to be conservative
-        # about guessing, since re-running is safe and append-only.
-        is_fresh = saved_fp is not None and saved_fp == current_fp
+        # Reuse the review-queue's composite (recognizer + kalimba_dsp) staleness
+        # signal so a DSP-only change is not silently treated as fresh (#209
+        # review). Only a verified-current recording (is_response_stale is False)
+        # is skipped; unknown (None) counts as a target — see module docstring:
+        # unlike the badge, this tool need not be conservative about guessing,
+        # since re-running is safe and append-only.
+        is_fresh = storage.is_response_stale(tx_id) is False
         if args.all or not is_fresh:
             targets.append(tx_id)
         else:

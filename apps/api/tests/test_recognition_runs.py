@@ -18,7 +18,7 @@ from pathlib import Path
 
 from conftest import client, synthesize_note, wav_bytes
 from app import storage
-from app.fingerprints import recognizer_fingerprint
+from app.fingerprints import kalimba_dsp_fingerprint, recognizer_fingerprint
 
 RUN_ID_RE = re.compile(r"^\d{8}T\d{6}\.\d{6}Z-[0-9a-z]{8}$")
 MISSING_ID = "00000000-0000-0000-0000-000000000000"
@@ -180,6 +180,64 @@ def test_review_queue_flags_stale_when_saved_fingerprint_differs():
     )
     entry = _queue_entry(tid)
     assert entry["recognizerFingerprint"] == "deadbeefcafef00d"
+    assert entry["isStale"] is True
+
+
+def test_review_queue_flags_stale_when_only_dsp_fingerprint_differs():
+    """#209 review: a kalimba_dsp-only change leaves recognizer_fingerprint()
+    unchanged (it hashes the Python sources) yet still alters output, so isStale
+    keys off a recognizer+dsp composite, not the recognizer alone."""
+    tid = _create_transaction()
+    current_fp = recognizer_fingerprint()
+    current_dsp = kalimba_dsp_fingerprint()
+
+    # recognizer matches AND dsp matches → fresh.
+    storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint=current_fp, dsp_fingerprint=current_dsp,
+    )
+    assert _queue_entry(tid)["isStale"] is False
+
+    # recognizer still matches but dsp differs → stale (the gap this fixes).
+    storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint=current_fp, dsp_fingerprint="deadbeefdsp00000",
+    )
+    assert _queue_entry(tid)["isStale"] is True
+
+    # recognizer matches, dsp unknown (run predating dsp fingerprints) → do not
+    # fabricate staleness: fresh.
+    storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint=current_fp, dsp_fingerprint=None,
+    )
+    assert _queue_entry(tid)["isStale"] is False
+
+
+def test_review_queue_fingerprint_resolves_from_readable_run():
+    """#209 review: when the newest run's response.json exists but is unreadable,
+    display resolution falls back to the previous good run — and the flagged
+    fingerprint must come from that same readable run, not the corrupt newest one
+    (else a half-written current-fingerprint run makes an older shown response
+    look fresh)."""
+    tid = _create_transaction()
+    # Older, readable run recorded with a stale recognizer fingerprint.
+    storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint="0ldfp0000stale00", dsp_fingerprint=None,
+    )
+    # Newest run: meta claims the current fingerprint, but its response.json is
+    # corrupt, so the shown response must skip it for the older good run.
+    newest = storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint=recognizer_fingerprint(), dsp_fingerprint=None,
+    )
+    (storage.get_runs_dir(tid) / newest["runId"] / "response.json").write_text(
+        "{ not valid json", encoding="utf-8"
+    )
+
+    entry = _queue_entry(tid)
+    assert entry["recognizerFingerprint"] == "0ldfp0000stale00"
     assert entry["isStale"] is True
 
 

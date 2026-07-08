@@ -275,7 +275,9 @@ transaction すべてに対して in-process (TestClient、サーバー不要) �
 対象にする。前後比較は metamorphic_alarm.py と同じ手法 (`note_f1_benchmark` の
 `match_pairs` を「再認識前の出力 = 疑似正解」として再利用) で added/dropped を
 報告する。report-only ではなく実際に run を追記するツールなので、テスト/デモ
-実行は必ず `--data-dir` で一時ディレクトリの合成データを指す (AGENTS.md)。
+実行は必ず `--data-dir` で一時ディレクトリの合成データを指す (共有 `data/` や
+committed corpus を tooling で変更しない — AGENTS.md の Fixture Policy /
+Corpus Management)。
 
 ```bash
 uv run python scripts/audio-analysis/bulk_recognition_runs.py --dry-run
