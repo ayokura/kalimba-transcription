@@ -96,14 +96,14 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
         const levels = await computeAudioLevels(audioBlob).catch(() => null);
         if (cancelled) return;
         // #202 / #209 review: corrections が保存済みなら編集後イベント列を導出する。
-        // corrections はその baseRunId の run に対する diff なので、latest ではなく
-        // その base run の payload に restore する (latest に rematch すると再認識後に
-        // 誤整列した corrected を表示してしまう)。baseRunId 無しの旧 corrections は
-        // 元 response = "legacy" に対するものとみなす。
+        // corrections はその base run に対する diff。明示 baseRunId があればその run の
+        // payload に restore する (latest に rematch すると再認識後に誤整列した corrected
+        // を表示してしまう)。baseRunId 無しの corrections は "legacy" と決めつけず latest
+        // に対するものとみなす (#209 review @128、#202 の既定挙動を踏襲・no-regression)。
         let correctedEvents: ScoreEvent[] | null = null;
         let correctionsBaseRunId: string | null = null;
-        if (corrections && corrections.events.length > 0) {
-          correctionsBaseRunId = corrections.baseRunId ?? "legacy";
+        if (corrections && corrections.events.length > 0 && runs.latestRunId) {
+          correctionsBaseRunId = corrections.baseRunId ?? runs.latestRunId;
           let baseResult = result; // base===latest の一般ケースは latest を再利用
           if (correctionsBaseRunId !== runs.latestRunId) {
             try {

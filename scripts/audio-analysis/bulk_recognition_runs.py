@@ -89,7 +89,10 @@ def candidate_transaction_ids(tx_root: Path) -> list[str]:
 def process_transaction(client, storage, tx_id: str, *, dry_run: bool) -> dict:
     before_response = storage.load_latest_response(tx_id) or {}
     before_notes = nfb.collect_one_best(before_response) if before_response.get("events") else []
-    before_run_id = storage.latest_run_id(tx_id) or "legacy"
+    # #209 review: before_response is display-resolved (newest *readable* run), so
+    # name the same run — not latest_run_id, which points at a corrupt newest dir
+    # whose notes were not the ones diffed.
+    before_run_id = storage.latest_displayed_run_id(tx_id) or "legacy"
     saved_fingerprint = storage.resolved_recognizer_fingerprint(tx_id)
 
     if dry_run:
@@ -200,7 +203,7 @@ def main() -> int:
 
     from fastapi.testclient import TestClient
     from apps.api.app import storage
-    from apps.api.app.fingerprints import recognizer_fingerprint
+    from apps.api.app.fingerprints import kalimba_dsp_fingerprint, recognizer_fingerprint
     from apps.api.app.main import app
 
     tx_root = storage.get_transactions_dir()
@@ -210,16 +213,22 @@ def main() -> int:
         return 1
 
     current_fp = recognizer_fingerprint()
+    current_dsp = kalimba_dsp_fingerprint()
     targets: list[str] = []
     skipped_fresh: list[str] = []
     for tx_id in candidates:
-        # Reuse the review-queue's composite (recognizer + kalimba_dsp) staleness
-        # signal so a DSP-only change is not silently treated as fresh (#209
-        # review). Only a verified-current recording (is_response_stale is False)
-        # is skipped; unknown (None) counts as a target — see module docstring:
-        # unlike the badge, this tool need not be conservative about guessing,
-        # since re-running is safe and append-only.
-        is_fresh = storage.is_response_stale(tx_id) is False
+        # Backfill policy (distinct from the review-queue badge's conservative None,
+        # #209 review): skip only recordings VERIFIED current on *both* output
+        # components — recognizer (Python) AND kalimba_dsp (Rust). Anything with a
+        # differing OR unknown fingerprint (incl. runs predating dsp fingerprints)
+        # is targeted, per this tool's "unknown provenance → re-run" stance (safe &
+        # append-only). A DSP-only change is therefore not silently treated as fresh.
+        saved_fp, saved_dsp = storage.resolved_output_fingerprints(tx_id)
+        is_fresh = (
+            saved_fp == current_fp
+            and saved_dsp is not None
+            and saved_dsp == current_dsp
+        )
         if args.all or not is_fresh:
             targets.append(tx_id)
         else:

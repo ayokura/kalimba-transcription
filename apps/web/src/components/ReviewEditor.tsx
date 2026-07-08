@@ -116,19 +116,22 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
         ]);
         if (cancelled) return;
         const latestRunId = runs?.latestRunId ?? null;
-        // #209 review (P1): 既存 corrections はその baseRunId の run に対する diff。
+        // #209 review (P1): 明示 baseRunId を持つ corrections はその run に対する diff。
         // これを latest に rematch して baseRunId=latest で保存し直すと、再認識後は
         // 人手修正の provenance/内容が silently 別 run へ rebase されてしまう。
-        // → 既存 corrections があるときはその base run (baseRunId、無ければ元 response
-        // = "legacy") の payload を編集ベースにし、保存 baseRunId もそれを維持する。
-        // 新規修正 (corrections 無し) は従来どおり latest run を対象にする。
+        // → 明示 baseRunId があるときはその run の payload を編集ベースにし、保存
+        // baseRunId もそれを維持する。
+        // baseRunId 無しの corrections (新規、または Phase 3 以前の保存) は従来どおり
+        // latest run を編集ベースにする。無しを "legacy" と決めつけない (#209 review
+        // @128: Phase 1 期に再認識済み録音へ付けた修正は元 response ではなく当時の
+        // latest run に対するものなので、legacy 固定は誤った timeline へ移してしまう)。
+        const explicitBaseRunId = corrections?.baseRunId ?? null;
         let result: TranscriptionResult;
         let baseRunId: string | null;
-        if (corrections) {
-          const base = corrections.baseRunId ?? "legacy";
+        if (explicitBaseRunId) {
           try {
-            result = await fetchTranscriptionRun(transactionId, base);
-            baseRunId = base;
+            result = await fetchTranscriptionRun(transactionId, explicitBaseRunId);
+            baseRunId = explicitBaseRunId;
           } catch {
             // base run が取得できない稀なケースは latest に fallback (latest 扱い)。
             result = await fetchTranscription(transactionId);
