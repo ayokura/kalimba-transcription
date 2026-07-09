@@ -65,6 +65,31 @@ def test_corrections_roundtrip():
     assert get_response.json()["corrections"] == saved
 
 
+def test_corrections_base_run_id_roundtrip():
+    """#204 Phase 3: corrections optionally record which recognition run they
+    were made against (runId, or the synthetic "legacy" id)."""
+    tid = _create_transaction()
+    payload = {
+        "version": 1,
+        "baseRunId": "legacy",
+        "events": [{"timeSec": 1.0, "notes": ["C4"], "origin": "recognizer"}],
+    }
+    put_response = client.put(f"/api/transcriptions/{tid}/corrections", json=payload)
+    assert put_response.status_code == 200
+    saved = put_response.json()["corrections"]
+    assert saved["baseRunId"] == "legacy"
+
+    get_response = client.get(f"/api/transcriptions/{tid}/corrections")
+    assert get_response.json()["corrections"]["baseRunId"] == "legacy"
+
+
+def test_corrections_base_run_id_omitted_defaults_to_none():
+    tid = _create_transaction()
+    payload = {"version": 1, "events": [{"timeSec": 1.0, "notes": ["C4"]}]}
+    put_response = client.put(f"/api/transcriptions/{tid}/corrections", json=payload)
+    assert put_response.json()["corrections"]["baseRunId"] is None
+
+
 def test_corrections_overwrite_replaces_previous():
     tid = _create_transaction()
     first = {"version": 1, "events": [{"timeSec": 1.0, "notes": ["C4"]}]}

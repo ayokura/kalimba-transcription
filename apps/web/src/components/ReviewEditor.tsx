@@ -16,6 +16,8 @@ import {
   fetchCorrections,
   fetchTranscription,
   fetchTranscriptionAudioBlob,
+  fetchTranscriptionRun,
+  fetchTranscriptionRuns,
   fetchReviewStatus,
   saveCorrections,
 } from "@/lib/api";
@@ -88,6 +90,7 @@ type LoadState =
       corrections: CorrectionsPayload | null;
       reviewStatus: ReviewStatusPayload | null;
       peakDb: number | null;
+      baseRunId: string | null;
     }
   | { kind: "error"; message: string };
 
@@ -103,12 +106,38 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
         // fetchCorrections の失敗を握りつぶさない: 保存済み修正が見えないまま
         // baseline で開くと、次の保存で既存修正を上書きしてしまう。
         // 失敗時はページ全体をエラー表示にする (404 は api.ts 側で null になる)。
-        const [result, audioBlob, corrections, reviewStatus] = await Promise.all([
-          fetchTranscription(transactionId),
+        // runs 取得の失敗は致命的ではない (#204 Phase 3 の baseRunId 記録が
+        // 欠けるだけ) なので null にフォールバックする。
+        const [audioBlob, corrections, reviewStatus, runs] = await Promise.all([
           fetchTranscriptionAudioBlob(transactionId),
           fetchCorrections(transactionId),
           fetchReviewStatus(transactionId).catch(() => null),
+          fetchTranscriptionRuns(transactionId).catch(() => null),
         ]);
+        if (cancelled) return;
+        const latestRunId = runs?.latestRunId ?? null;
+        // #209 review (P1): 明示 baseRunId を持つ corrections はその run に対する diff。
+        // これを latest に rematch して baseRunId=latest で保存し直すと、再認識後は
+        // 人手修正の provenance/内容が silently 別 run へ rebase されてしまう。
+        // → 明示 baseRunId があるときはその run の payload を編集ベースにし、保存
+        // baseRunId もそれを維持する。
+        // baseRunId 無しの corrections (新規、または Phase 3 以前の保存) は従来どおり
+        // latest run を編集ベースにする。無しを "legacy" と決めつけない (#209 review
+        // @128: Phase 1 期に再認識済み録音へ付けた修正は元 response ではなく当時の
+        // latest run に対するものなので、legacy 固定は誤った timeline へ移してしまう)。
+        const explicitBaseRunId = corrections?.baseRunId ?? null;
+        let result: TranscriptionResult;
+        let baseRunId: string | null;
+        if (explicitBaseRunId) {
+          // 明示 base は当該 run でしか安全に編集できない。取得失敗時に latest へ
+          // fallback すると別 timeline への rebase になるため、fallback せず上位 catch の
+          // エラー表示に委ねる (#209 review @138: provenance を書き換えない)。
+          result = await fetchTranscriptionRun(transactionId, explicitBaseRunId);
+          baseRunId = explicitBaseRunId;
+        } else {
+          result = await fetchTranscription(transactionId);
+          baseRunId = latestRunId;
+        }
         if (cancelled) return;
         objectUrl = URL.createObjectURL(audioBlob);
         // 静音録音の試聴ブースト量算出用 (失敗しても主導線は妨げない)
@@ -121,6 +150,7 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
           corrections,
           reviewStatus,
           peakDb: levels?.peakDb ?? null,
+          baseRunId,
         });
       } catch (err) {
         if (cancelled) return;
@@ -165,6 +195,7 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
       initialCorrections={state.corrections}
       initialReviewStatus={state.reviewStatus}
       peakDb={state.peakDb}
+      baseRunId={state.baseRunId}
     />
   );
 }
@@ -176,6 +207,7 @@ type ReadyProps = {
   initialCorrections: CorrectionsPayload | null;
   initialReviewStatus: ReviewStatusPayload | null;
   peakDb: number | null;
+  baseRunId: string | null;
 };
 
 type TimelineItem =
@@ -197,6 +229,7 @@ function ReviewEditorReady({
   initialCorrections,
   initialReviewStatus,
   peakDb,
+  baseRunId,
 }: ReadyProps) {
   const [editHistory, setEditHistory] = useState<EditHistory>(() => ({
     past: [],
@@ -331,13 +364,15 @@ function ReviewEditorReady({
   const handleSave = useCallback(async () => {
     setSaveState("saving");
     try {
-      await saveCorrections(transactionId, payload);
+      // baseRunId は保存時にのみ付与する (dirty 判定用の payload/payloadJson には
+      // 含めない — 内容が同じなら「読み込み時の run」だけで dirty 扱いにしないため)。
+      await saveCorrections(transactionId, { ...payload, baseRunId });
       lastSavedRef.current = payloadJson;
       setSaveState("saved");
     } catch {
       setSaveState("error");
     }
-  }, [transactionId, payload, payloadJson]);
+  }, [transactionId, payload, payloadJson, baseRunId]);
 
   const visibleEvents = useMemo(() => activeEvents(reviewState), [reviewState]);
 

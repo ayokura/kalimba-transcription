@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { mockTranscriptionApi } from "./fixtures/reviewMock";
+import { mockTranscriptionApi, transcription } from "./fixtures/reviewMock";
 
 test("browser-only WASM demo page renders", async ({ page }) => {
   await page.goto("/wasm-demo");
@@ -171,4 +171,74 @@ test("saved corrections survive re-transcription onset shifts (round-trip)", asy
   await expect(page.getByText("削除済")).toHaveCount(0);
   // 復元直後は保存済み状態と等価 (dirty ではない) — 保存ボタンは無効のまま
   await expect(page.getByRole("button", { name: "修正を保存" })).toBeDisabled();
+});
+
+test("editor preserves the corrections base run on save (does not rebase to latest)", async ({ page }) => {
+  // #209 review (P1): 再認識で latest が run-new になっていても、既存 corrections は
+  // その base run (run-old) に対する diff。editor はその base run をロードして編集し、
+  // 保存 baseRunId を latest に silently 書き換えない (provenance を保全)。
+  await mockTranscriptionApi(page);
+  await page.route("**/api/transcriptions/tx-e2e/runs", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        runs: [
+          { runId: "run-new-1234", isLegacy: false, eventCount: 1 },
+          { runId: "run-old-5678", isLegacy: false, eventCount: 1 },
+        ],
+        latestRunId: "run-new-1234",
+      }),
+    });
+  });
+  // corrections の base run (run-old) の全文。editor はこれを編集ベースにする。
+  await page.route("**/api/transcriptions/tx-e2e/runs/run-old-5678", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(transcription),
+    });
+  });
+  await page.route("**/api/transcriptions/tx-e2e/corrections", async (route) => {
+    if (route.request().method() === "PUT") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ corrections: route.request().postDataJSON() }),
+      });
+      return;
+    }
+    // GET: run-old に対して保存された修正 (baseRunId = run-old-5678)
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        corrections: {
+          version: 1,
+          baseRunId: "run-old-5678",
+          events: [{ timeSec: 0, notes: ["C4", "E4"], origin: "edited" }],
+        },
+      }),
+    });
+  });
+
+  await page.goto("/score/tx-e2e/review");
+  await expect(page.getByRole("heading", { name: "確認と修正" })).toBeVisible();
+
+  // dirty にするための編集 (FP 削除) → 保存。
+  await page.getByRole("button", { name: /0\.00s/ }).click();
+  await page.getByRole("button", { name: "このイベントを削除" }).click();
+  const saveBtn = page.getByRole("button", { name: "修正を保存" });
+  await expect(saveBtn).toBeEnabled();
+  const [saveReq] = await Promise.all([
+    page.waitForRequest(
+      (r) => r.url().includes("/tx-e2e/corrections") && r.method() === "PUT",
+    ),
+    saveBtn.click(),
+  ]);
+
+  // P1: 保存 payload の baseRunId は corrections の base run のまま。latest(run-new)に
+  // rebase されない。
+  const body = saveReq.postDataJSON();
+  expect(body.baseRunId).toBe("run-old-5678");
 });

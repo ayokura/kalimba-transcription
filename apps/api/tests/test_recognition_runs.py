@@ -18,6 +18,7 @@ from pathlib import Path
 
 from conftest import client, synthesize_note, wav_bytes
 from app import storage
+from app.fingerprints import kalimba_dsp_fingerprint, recognizer_fingerprint
 
 RUN_ID_RE = re.compile(r"^\d{8}T\d{6}\.\d{6}Z-[0-9a-z]{8}$")
 MISSING_ID = "00000000-0000-0000-0000-000000000000"
@@ -154,6 +155,111 @@ def test_get_runs_unknown_transaction_404():
     assert client.get(f"/api/transcriptions/{MISSING_ID}/runs").status_code == 404
 
 
+def _queue_entry(tid: str) -> dict:
+    rows = client.get("/api/review-queue?limit=200").json()
+    return next(r for r in rows if r["transactionId"] == tid)
+
+
+def test_review_queue_flags_stale_when_saved_fingerprint_differs():
+    """#204 Phase 2: queue rows expose recognizerFingerprint/isStale so a
+    "saved != current recognizer" badge can be shown."""
+    tid = _create_transaction()
+    current_fp = recognizer_fingerprint()
+
+    # A freshly created transaction's request.json records the current
+    # fingerprint, so its (legacy) resolved response is not stale.
+    entry = _queue_entry(tid)
+    assert entry["recognizerFingerprint"] == current_fp
+    assert entry["isStale"] is False
+
+    # A sentinel run recorded with a different fingerprint becomes the newest
+    # resolved response, flipping isStale to True.
+    storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint="deadbeefcafef00d", dsp_fingerprint=None,
+    )
+    entry = _queue_entry(tid)
+    assert entry["recognizerFingerprint"] == "deadbeefcafef00d"
+    assert entry["isStale"] is True
+
+
+def test_review_queue_flags_stale_when_only_dsp_fingerprint_differs():
+    """#209 review: a kalimba_dsp-only change leaves recognizer_fingerprint()
+    unchanged (it hashes the Python sources) yet still alters output, so isStale
+    keys off a recognizer+dsp composite, not the recognizer alone."""
+    tid = _create_transaction()
+    current_fp = recognizer_fingerprint()
+    current_dsp = kalimba_dsp_fingerprint()
+
+    # recognizer matches AND dsp matches → fresh.
+    storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint=current_fp, dsp_fingerprint=current_dsp,
+    )
+    assert _queue_entry(tid)["isStale"] is False
+
+    # recognizer still matches but dsp differs → stale (the gap this fixes).
+    storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint=current_fp, dsp_fingerprint="deadbeefdsp00000",
+    )
+    assert _queue_entry(tid)["isStale"] is True
+
+    # recognizer matches, dsp unknown (run predating dsp fingerprints) → do not
+    # fabricate staleness: fresh.
+    storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint=current_fp, dsp_fingerprint=None,
+    )
+    assert _queue_entry(tid)["isStale"] is False
+
+
+def test_review_queue_fingerprint_resolves_from_readable_run():
+    """#209 review: when the newest run's response.json exists but is unreadable,
+    display resolution falls back to the previous good run — and the flagged
+    fingerprint must come from that same readable run, not the corrupt newest one
+    (else a half-written current-fingerprint run makes an older shown response
+    look fresh)."""
+    tid = _create_transaction()
+    # Older, readable run recorded with a stale recognizer fingerprint.
+    older = storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint="0ldfp0000stale00", dsp_fingerprint=None,
+    )
+    # Newest run: meta claims the current fingerprint, but its response.json is
+    # corrupt, so the shown response must skip it for the older good run.
+    newest = storage.create_run(
+        tid, {"events": []}, None,
+        commit_sha=None, recognizer_fingerprint=recognizer_fingerprint(), dsp_fingerprint=None,
+    )
+    (storage.get_runs_dir(tid) / newest["runId"] / "response.json").write_text(
+        "{ not valid json", encoding="utf-8"
+    )
+
+    entry = _queue_entry(tid)
+    assert entry["recognizerFingerprint"] == "0ldfp0000stale00"
+    assert entry["isStale"] is True
+
+    # /runs latestRunId must follow the displayed (readable) run, not the corrupt
+    # newest one, so a client selector stays aligned with what is shown (#209).
+    runs_body = client.get(f"/api/transcriptions/{tid}/runs").json()
+    assert runs_body["latestRunId"] == older["runId"]
+
+
+def test_review_queue_isstale_none_when_fingerprint_unknown():
+    """Pre-#204 recordings have no recognizerFingerprint in request.json; the
+    queue must not guess staleness for them (None, not True/False)."""
+    tid = _create_transaction()
+    request_path = _tx_root() / tid / "request.json"
+    request_data = json.loads(request_path.read_text(encoding="utf-8"))
+    request_data.pop("recognizerFingerprint", None)
+    request_path.write_text(json.dumps(request_data), encoding="utf-8")
+
+    entry = _queue_entry(tid)
+    assert entry["recognizerFingerprint"] is None
+    assert entry["isStale"] is None
+
+
 def test_recent_listing_reflects_latest_run_event_count():
     tid = _create_transaction()
     sentinel_events = [
@@ -171,6 +277,43 @@ def test_recent_listing_reflects_latest_run_event_count():
     recent = client.get("/api/transcriptions/recent?limit=100").json()
     entry = next(e for e in recent if e["transactionId"] == tid)
     assert entry["eventCount"] == 7
+
+
+def test_get_specific_run_by_id():
+    tid = _create_transaction()
+    run_id = client.post(f"/api/transcriptions/{tid}/runs").json()["runId"]
+
+    resp = client.get(f"/api/transcriptions/{tid}/runs/{run_id}")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert isinstance(body["events"], list)
+    assert "transcribedAt" in body
+    assert "audioFirstSeenAt" in body
+
+
+def test_get_legacy_run_by_synthetic_id():
+    tid = _create_transaction()
+    legacy = storage.load_response(tid)
+    # Appending a fresh run must not disturb the legacy synthetic id's content.
+    client.post(f"/api/transcriptions/{tid}/runs")
+
+    resp = client.get(f"/api/transcriptions/{tid}/runs/legacy")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["events"] == legacy["events"]
+
+
+def test_get_run_unknown_run_id_404():
+    tid = _create_transaction()
+    assert client.get(f"/api/transcriptions/{tid}/runs/not-a-real-run").status_code == 404
+
+
+def test_get_run_unknown_transaction_404():
+    assert client.get(f"/api/transcriptions/{MISSING_ID}/runs/legacy").status_code == 404
+
+
+def test_get_run_invalid_transaction_id_400():
+    assert client.get("/api/transcriptions/not-a-uuid/runs/legacy").status_code == 400
 
 
 def test_dedup_returns_latest_run_content():

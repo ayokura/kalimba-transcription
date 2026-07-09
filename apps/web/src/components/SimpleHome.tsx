@@ -273,9 +273,16 @@ export function SimpleHome() {
     setPendingRestore(null);
   }
 
-  function handleDiscardPending() {
+  async function handleDiscardPending() {
+    // clear の永続化を待ってから prompt を閉じる。prompt が消える = 破棄完了、
+    // というシグナルにすることで「破棄 → 即リロードで pending が残る」race を断つ
+    // (#211: IndexedDB clear が未コミットのままリロードすると復元プロンプトが再出現)。
+    try {
+      await clearPendingRecordings();
+    } catch {
+      // IndexedDB が使えない環境でも UI は閉じる
+    }
     setPendingRestore(null);
-    clearPendingRecordings().catch(() => {});
   }
 
   const runTranscription = useCallback(

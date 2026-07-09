@@ -7,6 +7,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .fingerprints import kalimba_dsp_fingerprint, recognizer_fingerprint
+
 
 def get_data_dir() -> Path:
     return Path(os.environ.get("KALIMBA_DATA_DIR", "data"))
@@ -169,6 +171,77 @@ def list_review_queue(limit: int, status: str | None = None) -> list[dict]:
     return results
 
 
+def resolved_output_fingerprints(transaction_id: str) -> tuple[str | None, str | None]:
+    """(recognizerFingerprint, dspFingerprint) of whichever response is currently
+    *displayed* for this transaction: the newest run whose response.json actually
+    loads, else the legacy request.json values.
+
+    Resolving from the run that ``_load_latest_response_for_dir`` actually reads
+    — not merely ``latest_run_id()`` — keeps the flagged fingerprints aligned with
+    the response the UI shows (#209 review): a newest run whose response.json is
+    present but unreadable must not lend its (fresh) meta to an older response that
+    is what actually gets displayed."""
+    tx_dir = get_transaction_dir(transaction_id)
+    run_id = _latest_readable_run_id_for_dir(tx_dir)
+    if run_id is not None:
+        meta = load_run_meta(transaction_id, run_id) or {}
+        return meta.get("recognizerFingerprint"), meta.get("dspFingerprint")
+    request_path = tx_dir / "request.json"
+    if not request_path.exists():
+        return None, None
+    try:
+        data = json.loads(request_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None, None
+    return data.get("recognizerFingerprint"), data.get("dspFingerprint")
+
+
+def resolved_recognizer_fingerprint(transaction_id: str) -> str | None:
+    """recognizerFingerprint of the displayed response (see
+    ``resolved_output_fingerprints``). Kept for external tooling
+    (``scripts/audio-analysis/bulk_recognition_runs.py``, #204 Phase 3) that
+    reports the recognizer fingerprint on its own."""
+    return resolved_output_fingerprints(transaction_id)[0]
+
+
+def latest_displayed_run_id(transaction_id: str) -> str | None:
+    """Run id whose response ``load_latest_response`` actually returns — the
+    newest *readable* run, else None (caller falls back to the legacy response).
+
+    Callers that must stay aligned with the shown payload (e.g. the /runs
+    ``latestRunId`` the score viewer initializes its selector from, #209 review)
+    should use this rather than ``latest_run_id``: when the newest run directory
+    has an unreadable response.json, display resolution skips it, and a selector
+    keyed off ``latest_run_id`` would otherwise point at a run that is not shown
+    (and whose GET .../runs/{id} 404s)."""
+    return _latest_readable_run_id_for_dir(get_transaction_dir(transaction_id))
+
+
+def is_response_stale(transaction_id: str) -> bool | None:
+    """Whether the displayed response was produced by a different recognizer
+    *output* than the one running now — the single source of truth for both the
+    review-queue ``isStale`` badge and the bulk re-recognition tool's freshness
+    filter (#204 Phase 2 / #209 review).
+
+    Compares a composite of the recognizer (Python transcription sources) and the
+    kalimba_dsp (Rust extension) fingerprints, because a DSP-only change leaves
+    ``recognizer_fingerprint()`` unchanged yet still alters the output.
+
+    - ``None``  — recognizer fingerprint unknown (pre-#204 recordings); do not guess.
+    - ``True``  — recognizer differs, or recognizer matches but a *known* saved DSP
+      fingerprint differs from the current one.
+    - ``False`` — recognizer matches and the DSP fingerprint matches (or the saved
+      DSP fingerprint is unknown, in which case we do not fabricate staleness)."""
+    saved_recognizer, saved_dsp = resolved_output_fingerprints(transaction_id)
+    if saved_recognizer is None:
+        return None
+    if saved_recognizer != recognizer_fingerprint():
+        return True
+    if saved_dsp is not None and saved_dsp != kalimba_dsp_fingerprint():
+        return True
+    return False
+
+
 def _summarize_transaction(tx_dir: Path) -> dict | None:
     request_path = tx_dir / "request.json"
     response_path = tx_dir / "response.json"
@@ -198,6 +271,13 @@ def _summarize_transaction(tx_dir: Path) -> dict | None:
             memo_text = memo_path.read_text(encoding="utf-8")
         except OSError:
             memo_text = None
+    # #204 Phase 2: expose the fingerprint the shown response was produced with,
+    # plus whether it differs from the recognizer output running right now, so the
+    # review queue can flag re-recognition candidates. isStale is a composite of
+    # the recognizer + kalimba_dsp fingerprints (#209 review) and is None when the
+    # saved fingerprint is unknown (pre-#204 recordings) rather than guessing stale.
+    saved_fingerprint = resolved_recognizer_fingerprint(tx_dir.name)
+    is_stale = is_response_stale(tx_dir.name)
     return {
         "transactionId": tx_dir.name,
         "createdAt": audio_path.stat().st_mtime,
@@ -215,6 +295,8 @@ def _summarize_transaction(tx_dir: Path) -> dict | None:
         # time.  None for payloads stored before qualityIndicators existed.
         "qualityDifficulty": (response_data.get("qualityIndicators") or {}).get("difficulty"),
         "qualityFlag": (response_data.get("qualityIndicators") or {}).get("flag"),
+        "recognizerFingerprint": saved_fingerprint,
+        "isStale": is_stale,
     }
 
 
@@ -366,9 +448,11 @@ def load_run_meta(transaction_id: str, run_id: str) -> dict | None:
         return None
 
 
-def _load_latest_response_for_dir(tx_dir: Path) -> dict | None:
-    """Newest readable run response for a tx dir, else None. Legacy fallback is
-    the caller's responsibility."""
+def _latest_readable_run_id_for_dir(tx_dir: Path) -> str | None:
+    """Newest run id whose response.json is present *and* parseable — the run
+    ``_load_latest_response_for_dir`` actually displays. None if no run has a
+    readable response. Shared so staleness metadata can be read from the same run
+    whose response loads (#209 review)."""
     runs_dir = tx_dir / "runs"
     if not runs_dir.is_dir():
         return None
@@ -380,10 +464,24 @@ def _load_latest_response_for_dir(tx_dir: Path) -> dict | None:
     for run_id in reversed(run_ids):
         path = runs_dir / run_id / "response.json"
         try:
-            return json.loads(path.read_text(encoding="utf-8"))
+            json.loads(path.read_text(encoding="utf-8"))
+            return run_id
         except (OSError, json.JSONDecodeError):
             continue
     return None
+
+
+def _load_latest_response_for_dir(tx_dir: Path) -> dict | None:
+    """Newest readable run response for a tx dir, else None. Legacy fallback is
+    the caller's responsibility."""
+    run_id = _latest_readable_run_id_for_dir(tx_dir)
+    if run_id is None:
+        return None
+    path = tx_dir / "runs" / run_id / "response.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def load_latest_response(transaction_id: str) -> dict | None:
@@ -395,6 +493,18 @@ def load_latest_response(transaction_id: str) -> dict | None:
     if latest is not None:
         return latest
     return load_response(transaction_id)
+
+
+def load_run_or_legacy_response(transaction_id: str, run_id: str) -> dict | None:
+    """Full response payload for a specific run id (#204 Phase 2).
+
+    ``run_id == "legacy"`` resolves to the immutable upload-time response, the
+    same synthetic id ``list_runs`` uses for it, so a run-switcher UI can treat
+    every entry from ``GET .../runs`` uniformly. Returns None when the run (or
+    the legacy response) does not exist."""
+    if run_id == "legacy":
+        return load_response(transaction_id)
+    return load_run_response(transaction_id, run_id)
 
 
 def list_runs(transaction_id: str) -> list[dict]:

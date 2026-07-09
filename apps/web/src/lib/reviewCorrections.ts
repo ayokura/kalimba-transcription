@@ -427,6 +427,12 @@ export function hasActiveEventAt(
   );
 }
 
+/**
+ * baseRunId (#204 Phase 3) は「保存時にどの run に対する差分か」を記録するもので、
+ * dirty 判定用の payload には含めたくない (内容が同じなら run だけで dirty 扱いに
+ * しないため)。そのため付与は ReviewEditor の保存時スプレッド 1 箇所に集約し、この
+ * 関数では扱わない (#209 review: 未使用の任意引数による二重機構を排除)。
+ */
 export function toCorrectionsPayload(state: ReviewState): CorrectionsPayload {
   return {
     version: 1,

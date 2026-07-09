@@ -1599,6 +1599,59 @@ button:disabled {
   color: var(--danger);
 }
 
+/* #204 Phase 2: 認識履歴 (recognition runs) の切替 + 再認識 */
+.score-viewer-runs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  margin: 10px 0;
+}
+
+.score-viewer-runs-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.score-viewer-runs-select {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: white;
+}
+
+.score-viewer-rerun-btn {
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  border-radius: 10px;
+  background: var(--accent);
+  color: white;
+  border: 1px solid var(--accent-strong);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.score-viewer-rerun-btn:not(:disabled):hover {
+  background: var(--accent-strong);
+}
+
+.score-viewer-rerun-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.score-viewer-run-note {
+  margin: 0;
+}
+
 .score-viewer-share-row {
   display: flex;
   gap: 8px;
@@ -1932,6 +1985,12 @@ button:disabled {
 .review-queue-flag.warn {
   border-color: #c08a00;
   color: #8a6300;
+}
+
+/* #204 Phase 2: 保存済み response が現行 recognizer と異なるバージョンの目印 */
+.review-queue-flag.stale {
+  border-color: #2a6bc0;
+  color: #1f5aa8;
 }
 
 .simple-home-recent-head {
