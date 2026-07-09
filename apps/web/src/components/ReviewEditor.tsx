@@ -129,14 +129,11 @@ export function ReviewEditor({ transactionId }: { transactionId: string }) {
         let result: TranscriptionResult;
         let baseRunId: string | null;
         if (explicitBaseRunId) {
-          try {
-            result = await fetchTranscriptionRun(transactionId, explicitBaseRunId);
-            baseRunId = explicitBaseRunId;
-          } catch {
-            // base run が取得できない稀なケースは latest に fallback (latest 扱い)。
-            result = await fetchTranscription(transactionId);
-            baseRunId = latestRunId;
-          }
+          // 明示 base は当該 run でしか安全に編集できない。取得失敗時に latest へ
+          // fallback すると別 timeline への rebase になるため、fallback せず上位 catch の
+          // エラー表示に委ねる (#209 review @138: provenance を書き換えない)。
+          result = await fetchTranscriptionRun(transactionId, explicitBaseRunId);
+          baseRunId = explicitBaseRunId;
         } else {
           result = await fetchTranscription(transactionId);
           baseRunId = latestRunId;
