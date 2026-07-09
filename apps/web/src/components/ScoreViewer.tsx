@@ -106,24 +106,30 @@ export function ScoreViewer({ transactionId }: { transactionId: string }) {
         let correctionsBaseRunId: string | null = null;
         if (corrections && corrections.events.length > 0) {
           const explicitBase = corrections.baseRunId ?? null;
-          let baseResult = result; // 既定は latest (表示中の解決済み result)
+          // 既定は latest (表示中の解決済み result)。明示 base があればその run を取得。
+          // 取得失敗時は latest に rematch せず null にして corrected を出さない
+          // (#209 review @114: 誤 run に整列した corrected の表示/export を防ぐ。
+          // editor 側 @138 と同じ「別 timeline に寄せない」原則)。
+          let baseResult: TranscriptionResult | null = result;
           if (explicitBase && explicitBase !== runs.latestRunId) {
             try {
               baseResult = await fetchTranscriptionRun(transactionId, explicitBase);
             } catch {
-              baseResult = result; // base run が取れないときは latest に best-effort
+              baseResult = null;
             }
             if (cancelled) return;
           }
-          try {
-            correctedEvents = toDisplayScoreEvents(
-              restoreStateFromCorrections(baseResult, corrections),
-            );
-            // 明示 base があればその run、無ければ latest (null = runs 不明時)。
-            correctionsBaseRunId = explicitBase ?? runs.latestRunId ?? null;
-          } catch {
-            correctedEvents = null;
-            correctionsBaseRunId = null;
+          if (baseResult) {
+            try {
+              correctedEvents = toDisplayScoreEvents(
+                restoreStateFromCorrections(baseResult, corrections),
+              );
+              // 明示 base があればその run、無ければ latest (null = runs 不明時)。
+              correctionsBaseRunId = explicitBase ?? runs.latestRunId ?? null;
+            } catch {
+              correctedEvents = null;
+              correctionsBaseRunId = null;
+            }
           }
         }
         setState({
@@ -332,9 +338,11 @@ function ScoreViewerReady({
   // 「最新」= runsState.latestRunId を指す)。別 run を閲覧中は無言で消さず note で
   // base run へ誘導する。これで再認識後に誤整列した corrected を表示しない。
   const normalizedSelectedRunId = selectedRunId ?? runsState.latestRunId;
-  // 明示 base が無い corrections (correctionsBaseRunId=null) は latest に対するものと
-  // みなす (#202)。runs 不明時は latestRunId も null になり、既定選択も null なので一致する。
-  const effectiveCorrectionsRun = correctionsBaseRunId ?? runsState.latestRunId;
+  // 明示 base が無い corrections (correctionsBaseRunId=null) は「読み込み時の latest」に
+  // 対して算出済み。mutable な runsState.latestRunId ではなく安定な initialRuns.latestRunId
+  // に pin する — こうしないと再認識で latest が変わったとき null-base corrected が新 run へ
+  // float してしまう (#209 review @337)。runs 不明時は両者 null で一致する。
+  const effectiveCorrectionsRun = correctionsBaseRunId ?? initialRuns.latestRunId;
   const isViewingCorrectionsBase =
     correctedEvents !== null && normalizedSelectedRunId === effectiveCorrectionsRun;
   const [viewSource, setViewSource] = useState<"corrected" | "recognized">(
